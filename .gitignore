@@ -1,0 +1,126 @@
+# Dependencies
+node_modules/
+vendor/
+.pnpm-store/
+
+# Build outputs
+dist/
+dist-ssr/
+build/
+.next/
+out/
+.turbo/
+public/build/
+public/hot/
+public/storage/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+storage/logs/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.backup
+.env.production
+*.env
+!.env.example
+auth.json
+
+# IDE / Editor
+.vscode/
+.idea/
+.codex
+.cursor/
+.nova
+.zed
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage/
+.nyc_output/
+.phpunit.result.cache
+.phpunit.cache/
+tests/TestCase.php.bak
+
+# Cache / Temp
+.eslintcache
+.stylelintcache
+.prettiercache
+storage/*.key
+storage/pail/
+_ide_helper.php
+Homestead.json
+Homestead.yaml
+.stylelintcache
+.prettiercache
+
+# Consolidated from apps/api/database/.gitignore
+/apps/api/database/*.sqlite*
+
+# Consolidated from apps/api/storage/app/.gitignore
+/apps/api/storage/app/*
+!/apps/api/storage/app/private/
+!/apps/api/storage/app/public/
+!/apps/api/storage/app/.gitkeep
+
+# Consolidated from apps/api/storage/app/private/.gitignore
+/apps/api/storage/app/private/*
+!/apps/api/storage/app/private/.gitkeep
+
+# Consolidated from apps/api/storage/app/public/.gitignore
+/apps/api/storage/app/public/*
+!/apps/api/storage/app/public/.gitkeep
+
+# Consolidated from apps/api/storage/framework/.gitignore
+/apps/api/storage/framework/compiled.php
+/apps/api/storage/framework/config.php
+/apps/api/storage/framework/down
+/apps/api/storage/framework/events.scanned.php
+/apps/api/storage/framework/maintenance.php
+/apps/api/storage/framework/routes.php
+/apps/api/storage/framework/routes.scanned.php
+/apps/api/storage/framework/schedule-*
+/apps/api/storage/framework/services.json
+
+# Consolidated from apps/api/storage/framework/cache/.gitignore
+/apps/api/storage/framework/cache/*
+!/apps/api/storage/framework/cache/data/
+!/apps/api/storage/framework/cache/.gitkeep
+
+# Consolidated from apps/api/storage/framework/cache/data/.gitignore
+/apps/api/storage/framework/cache/data/*
+!/apps/api/storage/framework/cache/data/.gitkeep
+
+# Consolidated from apps/api/storage/framework/sessions/.gitignore
+/apps/api/storage/framework/sessions/*
+!/apps/api/storage/framework/sessions/.gitkeep
+
+# Consolidated from apps/api/storage/framework/testing/.gitignore
+/apps/api/storage/framework/testing/*
+!/apps/api/storage/framework/testing/.gitkeep
+
+# Consolidated from apps/api/storage/framework/views/.gitignore
+/apps/api/storage/framework/views/*
+!/apps/api/storage/framework/views/.gitkeep
+
+# Consolidated from apps/api/storage/logs/.gitignore
+/apps/api/storage/logs/*
+!/apps/api/storage/logs/.gitkeep
+
+# Consolidated from apps/api/vendor/hamcrest/hamcrest-php/.gitignore
+/apps/api/vendor/hamcrest/hamcrest-php/composer.lock
+/apps/api/vendor/hamcrest/hamcrest-php/tests/.phpunit.result.cache
+/apps/api/vendor/hamcrest/hamcrest-php/vendor
+

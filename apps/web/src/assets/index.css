@@ -1,0 +1,147 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { 
+    font-family: 'Inter', sans-serif;
+    @apply text-slate-700 antialiased bg-clinical;
+  }
+
+  body {
+    @apply min-h-screen text-sm;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold text-primary tracking-tight uppercase;
+  }
+
+  /* Transition for state changes */
+  * {
+    @apply transition-all duration-150 ease-out;
+  }
+}
+
+@layer components {
+  /* ---- Cards (Instrument Module) ---- */
+  .card {
+    @apply bg-white border border-slate-200 rounded-none;
+  }
+  .card-hover {
+    @apply hover:border-primary/30;
+  }
+
+  /* ---- Instrument Inputs (Blueprint 5.1) ---- */
+  .input-wrapper {
+    @apply flex flex-col gap-0.5;
+  }
+  .input-label {
+    @apply block text-[10px] font-bold uppercase tracking-widest text-slate-800 mb-1.5;
+  }
+  .input {
+    @apply w-full border border-slate-300 rounded-none px-3 py-2 text-sm outline-none transition-all duration-150 ease-out bg-white;
+    @apply focus:ring-2 focus:ring-primary focus:border-primary focus:ring-offset-1;
+  }
+  .input-error {
+    @apply border-danger focus:border-danger bg-danger/5;
+  }
+
+  /* ---- Buttons (Mechanical Controls) ---- */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-none font-bold text-xs uppercase tracking-widest transition-all duration-150 ease-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-primary-600 active:bg-primary-700;
+  }
+  .btn-cta {
+    @apply bg-primary-600 text-white border border-primary-400 shadow-[0_0_10px_rgba(0,0,0,0.1)] px-5 py-2.5 text-sm font-black
+           hover:bg-primary hover:border-white hover:shadow-[0_0_20px_rgba(0,0,0,0)] hover:shadow-primary/60 hover:-translate-y-0.5
+           active:scale-95 active:translate-y-0 active:bg-primary-700 transition-all duration-300 ease-out;
+  }
+  .btn-secondary {
+    @apply bg-white text-primary border border-slate-200 hover:bg-slate-50 active:bg-slate-100;
+  }
+  .btn-ghost {
+    @apply text-slate-500 hover:bg-slate-100 hover:text-slate-800;
+  }
+  .btn-danger {
+    @apply bg-danger text-white hover:bg-red-700 active:bg-red-800;
+  }
+  .btn-sm {
+    @apply px-2 py-1 text-[10px];
+  }
+  .btn-icon {
+    @apply p-1.5 text-slate-500 hover:bg-slate-100 hover:text-primary rounded-none;
+  }
+
+  /* ---- Status Badges (Signal Light) ---- */
+  .badge {
+    @apply inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest bg-slate-50 border border-slate-200 text-slate-700 rounded-none;
+  }
+
+  /* ---- Laboratory Spreadsheet (High-Density Table) ---- */
+  .table-base {
+    @apply w-full text-xs text-left border-collapse border border-slate-200;
+  }
+  .table-base th {
+    @apply px-3 py-2 font-bold text-[10px] uppercase tracking-widest text-slate-900
+           bg-slate-200 border-b border-r border-slate-300 sticky top-0;
+  }
+  .table-base td {
+    @apply px-3 py-2 border-b border-r border-slate-100 text-slate-600 font-mono align-middle;
+  }
+  .table-base tr:hover td {
+    @apply bg-slate-50/80;
+  }
+  .table-base tr.active td {
+    @apply bg-primary/5 border-l-2 border-l-primary;
+  }
+
+  /* ---- KPI Module ---- */
+  .kpi-card {
+    @apply card p-4 flex flex-col gap-0.5;
+  }
+  .kpi-value {
+    @apply text-xl font-bold text-primary font-mono tracking-tighter;
+  }
+  .kpi-label {
+    @apply text-[10px] font-bold text-slate-800 uppercase tracking-widest;
+  }
+
+  /* ---- Sidebar (Station Control) ---- */
+  .sidebar-link {
+    @apply flex items-center gap-3 px-4 py-3 text-sm font-bold uppercase tracking-wide
+           text-slate-200 border-l-2 border-transparent
+           hover:bg-primary-600/20 hover:text-white;
+  }
+  .sidebar-link.active {
+    @apply bg-primary-600/30 text-white border-l-white;
+  }
+
+  /* ---- Divider ---- */
+  .divider {
+    @apply border-t border-slate-200 my-4;
+  }
+
+  /* ---- OCR Flag (Clinical Pulse) ---- */
+  .ocr-flag {
+    @apply bg-warning/20 border border-yellow-200 animate-pulse;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar { width: 4px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { @apply bg-slate-200; }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}

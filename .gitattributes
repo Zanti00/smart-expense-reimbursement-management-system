@@ -1,0 +1,23 @@
+# Handle line endings automatically for files detected as text 
+# and ensure LF (Unix-style) line endings are used on checkout.
+* text=auto eol=lf
+
+# Specialized diffing for different file types
+*.blade.php diff=html
+*.css diff=css
+*.html diff=html
+*.md diff=markdown
+*.php diff=php
+*.js diff=javascript
+*.ts diff=typescript
+*.json diff=json
+
+# Folders/files to exclude from git archive (e.g. when creating a zip for release)
+/.github export-ignore
+/tests export-ignore
+/docs export-ignore
+CHANGELOG.md export-ignore
+.gitignore export-ignore
+.gitattributes export-ignore
+.styleci.yml export-ignore
+phpunit.xml export-ignore
