@@ -1,0 +1,75 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: serms_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: serms
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_PASSWORD: secret
+      MYSQL_USER: serms_user
+    ports:
+      - "3306:3306"
+    volumes:
+      - serms_mysql_data:/var/lib/mysql
+    networks:
+      - serms_network
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: serms_api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./apps/api:/var/www
+    depends_on:
+      - mysql
+    networks:
+      - serms_network
+    environment:
+      - DB_HOST=mysql
+      - DB_DATABASE=serms
+      - DB_USERNAME=root
+      - DB_PASSWORD=secret
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    container_name: serms_web
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+    networks:
+      - serms_network
+    command: npm run dev -- --host
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: serms_phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      - PMA_ARBITRARY=1
+      - PMA_HOST=mysql
+      - PMA_PORT=3306
+      - PMA_USER=root
+      - PMA_PASSWORD=secret
+    depends_on:
+      - mysql
+    networks:
+      - serms_network
+
+networks:
+  serms_network:
+    driver: bridge
+
+volumes:
+  serms_mysql_data:
