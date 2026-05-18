@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('uploaded_by')->constrained('users')->cascadeOnDelete();
             $table->string('file_path');
             $table->char('file_hash', 64);
-            $table->enum('file_type', ['jpeg', 'png']);
+            $table->enum('file_type', ['jpeg', 'png', 'pdf']);
             $table->unsignedInteger('file_size_bytes');
             $table->string('vendor_name')->nullable();
             $table->date('transaction_date')->nullable();
