@@ -27,112 +27,127 @@ onMounted(async () => {
   await Promise.all([rStore.fetchAll(), caStore.fetchAll()])
 })
 
-// KPIs (Instrument Modules)
+// KPIs
 const kpis = computed(() => [
   {
     label: 'Total Reimbursed',
     value: `₱${rStore.approved.reduce((s, i) => s + i.amount, 0).toLocaleString()}`,
-    meter: 'MONTHLY',
+    sub: 'This month',
     icon: TrendingUp,
-    color: 'text-success',
-    border: 'border-l-success'
+    iconBg: 'bg-emerald-100',
+    iconColor: 'text-emerald-600',
+    accent: 'from-emerald-400 to-emerald-600',
   },
   {
     label: 'Awaiting Approval',
     value: rStore.pending.length,
-    meter: 'PENDING',
+    sub: 'Pending review',
     icon: Clock,
-    color: 'text-warning',
-    border: 'border-l-warning'
+    iconBg: 'bg-amber-100',
+    iconColor: 'text-amber-600',
+    accent: 'from-amber-400 to-amber-600',
   },
   {
     label: 'Open Advances',
     value: `₱${caStore.totalOutstanding.toLocaleString()}`,
-    meter: 'OUTSTANDING',
+    sub: 'Outstanding',
     icon: Wallet,
-    color: 'text-primary',
-    border: 'border-l-primary'
+    iconBg: 'bg-accent-100',
+    iconColor: 'text-accent-600',
+    accent: 'from-accent-400 to-accent',
   },
   {
     label: 'Issues Found',
     value: 1,
-    meter: 'ALERTS',
+    sub: 'Requires attention',
     icon: AlertTriangle,
-    color: 'text-danger',
-    border: 'border-l-danger'
+    iconBg: 'bg-red-100',
+    iconColor: 'text-red-500',
+    accent: 'from-red-400 to-red-600',
   }
 ])
 
 const cutoffDays = ref(5)
 const cutoffHours = ref(14)
 
-// Bar chart — Monthly Spend (Clinical Telemetry)
+// Bar chart
 const barData = {
-  labels: ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN'],
+  labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
   datasets: [{
-    label: 'DATASET-01',
+    label: 'Monthly Spend',
     data: [42000, 68000, 55000, 91000, 47000, 73000],
-    backgroundColor: '#252578',
-    hoverBackgroundColor: '#1D1D61',
-    borderRadius: 0,
-    barPercentage: 0.6
+    backgroundColor: 'rgba(46,133,216,0.85)',
+    hoverBackgroundColor: '#252578',
+    borderRadius: 6,
+    barPercentage: 0.55,
   }]
 }
 const barOptions = {
   responsive: true,
   maintainAspectRatio: false,
-  plugins: { 
-    legend: { display: false }, 
-    tooltip: { 
-      backgroundColor: '#0E0E33',
-      titleFont: { family: 'JetBrains Mono', size: 10 },
-      bodyFont: { family: 'JetBrains Mono', size: 12 },
-      cornerRadius: 0,
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      backgroundColor: '#1D1D61',
+      titleFont: { family: 'Poppins', size: 11, weight: '600' },
+      bodyFont: { family: 'Open Sans', size: 12 },
+      cornerRadius: 8,
       padding: 12,
       displayColors: false,
       callbacks: {
-        label: (ctx) => ` ₱${ctx.raw.toLocaleString()} (${((ctx.raw / 333000) * 100).toFixed(1)}%)`
+        label: (ctx) => ` ₱${ctx.raw.toLocaleString()}`
       }
-    } 
+    }
   },
   scales: {
-    x: { 
-      grid: { display: false }, 
-      ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 9 } } 
+    x: {
+      grid: { display: false },
+      ticks: { color: '#94a3b8', font: { family: 'Open Sans', size: 11 } }
     },
     y: {
-      grid: { color: '#E8EBF5', borderDash: [2, 2] },
-      ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 9 }, callback: v => `₱${(v/1000).toFixed(0)}K` }
+      grid: { color: 'rgba(148,163,184,0.12)', borderDash: [4, 4] },
+      ticks: {
+        color: '#94a3b8',
+        font: { family: 'Open Sans', size: 11 },
+        callback: v => `₱${(v / 1000).toFixed(0)}K`
+      }
     }
   }
 }
 
-// Doughnut — By Category
+// Doughnut chart
 const doughnutData = {
   labels: ['Lab Supplies', 'Transport', 'Client Meeting', 'Maintenance', 'Office'],
   datasets: [{
     data: [35, 20, 15, 20, 10],
-    backgroundColor: ['#252578', '#1e293b', '#475569', '#94a3b8', '#e2e8f0'],
-    borderWidth: 1,
-    borderColor: '#ffffff'
+    backgroundColor: ['#252578', '#2E85D8', '#2F2F7E', '#93c5fd', '#dbeafe'],
+    borderWidth: 2,
+    borderColor: '#ffffff',
+    hoverOffset: 4,
   }]
 }
 const doughnutOptions = {
   responsive: true,
   maintainAspectRatio: false,
-  cutout: '75%',
+  cutout: '72%',
   plugins: {
     legend: {
       position: 'right',
-      labels: { boxWidth: 8, padding: 12, color: '#475569', font: { family: 'Inter', size: 10, weight: 'bold' } }
+      labels: {
+        boxWidth: 8,
+        boxHeight: 8,
+        padding: 14,
+        color: '#475569',
+        font: { family: 'Open Sans', size: 11, weight: '500' }
+      }
     },
     tooltip: {
-      backgroundColor: '#0E0E33',
-      titleFont: { family: 'JetBrains Mono', size: 10 },
-      bodyFont: { family: 'JetBrains Mono', size: 12 },
-      cornerRadius: 0,
+      backgroundColor: '#1D1D61',
+      titleFont: { family: 'Poppins', size: 11 },
+      bodyFont: { family: 'Open Sans', size: 12 },
+      cornerRadius: 8,
       callbacks: {
-        label: (ctx) => ` ${ctx.raw}% TOTAL SPEND`
+        label: (ctx) => ` ${ctx.raw}% of total spend`
       }
     }
   }
@@ -152,178 +167,230 @@ function isAmberWarning(dateStr) {
 </script>
 
 <template>
-  <div class="flex flex-col gap-6 font-sans">
-    <!-- Header Console -->
-    <div class="flex items-end justify-between border-b border-slate-200 pb-6">
+  <div class="flex flex-col gap-6 font-sans animate-fade-up">
+
+    <!-- ── Page Header ── -->
+    <div class="flex items-end justify-between">
       <div>
-        <div class="flex items-center gap-2 mb-1">
-          <Activity class="w-3.5 h-3.5 text-success" />
-          <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">System Monitoring</span>
+        <div class="flex items-center gap-2 mb-2">
+          <div class="w-1.5 h-1.5 bg-success rounded-full animate-pulse" />
+          <span class="section-label">Financial Overview</span>
         </div>
-        <h1 class="text-2xl font-bold text-primary tracking-tight uppercase">
-          Welcome, {{ auth.user?.name?.split(' ')[0] }}
+        <h1 class="text-2xl font-bold text-slate-800 leading-tight"
+            style="font-family: 'Poppins', sans-serif; letter-spacing: -0.02em;">
+          Welcome back, <span class="text-primary">{{ auth.user?.name?.split(' ')[0] }}</span> 👋
         </h1>
-        <p class="text-xs font-medium text-slate-400 mt-1 uppercase tracking-wider">
-          Financial Overview — April 2024
+        <p class="text-sm text-slate-400 mt-1" style="font-family: 'Open Sans', sans-serif;">
+          Here's what's happening with your finances today.
         </p>
       </div>
       <BaseButton v-if="!auth.isAdmin" id="dashboard-new-claim" variant="cta" @click="router.push('/reimbursements/new')">
-        <Plus class="w-5 h-5 mr-1" /> SUBMIT NEW REQUEST
+        <Plus class="w-4 h-4" /> New Request
       </BaseButton>
       <BaseButton v-else variant="cta" @click="router.push('/reimbursements')">
-        <Activity class="w-5 h-5 mr-1" /> REVIEW QUEUE
+        <Activity class="w-4 h-4" /> Review Queue
       </BaseButton>
     </div>
 
-    <!-- DEADLINE CUTOFF WIDGET -->
-    <div class="bg-primary text-white p-4 flex flex-col sm:flex-row sm:items-center justify-between border-l-4 border-l-warning shadow-sm gap-4">
-      <div class="flex items-center gap-3">
-        <Clock class="w-6 h-6 text-warning shrink-0" />
-        <div>
-          <h3 class="text-xs font-bold uppercase tracking-widest text-warning">Active Cutoff Period</h3>
-          <p class="text-[11px] font-mono text-slate-300">NEXT LIQUIDATION DEADLINE IS APPROACHING</p>
+    <!-- ── Deadline Cutoff Widget ── -->
+    <div class="rounded-xl overflow-hidden shadow-sm"
+         style="background: linear-gradient(120deg, #252578 0%, #2F2F7E 60%, #2E85D8 100%);">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between p-5 gap-4">
+        <div class="flex items-center gap-4">
+          <div class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0">
+            <Clock class="w-5 h-5 text-warning" />
+          </div>
+          <div>
+            <h3 class="text-sm font-semibold text-warning" style="font-family: 'Poppins', sans-serif;">
+              Upcoming Liquidation Deadline
+            </h3>
+            <p class="text-white/50 text-xs mt-0.5" style="font-family: 'Open Sans', sans-serif;">
+              Next cutoff period is approaching. Submit your liquidations on time.
+            </p>
+          </div>
         </div>
-      </div>
-      <div class="flex items-center gap-4 border border-warning/30 bg-warning/5 px-4 py-2">
-        <div class="flex flex-col items-center">
-          <span class="text-xl font-mono font-bold leading-none text-white">{{ String(cutoffDays).padStart(2, '0') }}</span>
-          <span class="text-[9px] uppercase font-bold tracking-widest text-warning">DAYS</span>
-        </div>
-        <span class="text-2xl font-mono text-warning/50">:</span>
-        <div class="flex flex-col items-center">
-          <span class="text-xl font-mono font-bold leading-none text-white">{{ String(cutoffHours).padStart(2, '0') }}</span>
-          <span class="text-[9px] uppercase font-bold tracking-widest text-warning">HRS</span>
+
+        <div class="flex items-center gap-3 bg-white/10 border border-white/20 rounded-xl px-5 py-3 backdrop-blur-sm self-start sm:self-auto">
+          <div class="flex flex-col items-center">
+            <span class="text-2xl font-bold text-white leading-none" style="font-family: 'Poppins', sans-serif;">
+              {{ String(cutoffDays).padStart(2, '0') }}
+            </span>
+            <span class="text-[10px] text-warning/80 font-semibold tracking-widest mt-0.5">DAYS</span>
+          </div>
+          <span class="text-2xl text-white/30 font-thin">:</span>
+          <div class="flex flex-col items-center">
+            <span class="text-2xl font-bold text-white leading-none" style="font-family: 'Poppins', sans-serif;">
+              {{ String(cutoffHours).padStart(2, '0') }}
+            </span>
+            <span class="text-[10px] text-warning/80 font-semibold tracking-widest mt-0.5">HRS</span>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- KPI Matrix -->
+    <!-- ── KPI Cards ── -->
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
       <div
         v-for="kpi in kpis"
         :key="kpi.label"
-        :class="['kpi-card border-l-2', kpi.border]"
+        class="kpi-card group"
       >
+        <!-- Colored top bar per card -->
+        <div :class="['absolute top-0 left-0 right-0 h-0.5 rounded-t-xl bg-gradient-to-r', kpi.accent]" />
+
         <div class="flex items-center justify-between mb-4">
-          <span class="text-[9px] font-mono font-bold text-slate-300 tracking-tighter">{{ kpi.meter }}</span>
-          <component :is="kpi.icon" :class="['w-4 h-4', kpi.color]" />
+          <span class="text-xs text-slate-400" style="font-family: 'Open Sans', sans-serif;">{{ kpi.sub }}</span>
+          <div :class="['w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0', kpi.iconBg]">
+            <component :is="kpi.icon" :class="['w-4 h-4', kpi.iconColor]" />
+          </div>
         </div>
-        <div>
-          <p class="kpi-value text-2xl">{{ kpi.value }}</p>
-          <p class="kpi-label mt-1 opacity-80">{{ kpi.label }}</p>
-        </div>
+        <p class="kpi-value">{{ kpi.value }}</p>
+        <p class="kpi-label">{{ kpi.label }}</p>
       </div>
     </div>
 
-    <!-- Analytical Modules -->
+    <!-- ── Charts Row ── -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div class="card p-5 lg:col-span-2 shadow-sm">
-        <div class="flex items-center justify-between mb-6 border-b border-slate-50 pb-4">
-          <h3 class="text-[11px] font-bold uppercase tracking-widest text-primary flex items-center gap-2">
-            <span class="w-1.5 h-1.5 bg-primary" /> Monthly Spending Trend
-          </h3>
-          <span class="text-[10px] font-mono text-slate-400 uppercase">MONTHLY_REPORT</span>
+
+      <!-- Bar Chart -->
+      <div class="card p-6 lg:col-span-2">
+        <div class="flex items-center justify-between mb-5">
+          <div>
+            <h3 class="text-sm font-semibold text-slate-800" style="font-family: 'Poppins', sans-serif;">
+              Monthly Spending Trend
+            </h3>
+            <p class="text-xs text-slate-400 mt-0.5">January – June 2024</p>
+          </div>
+          <span class="text-[10px] font-semibold text-accent bg-accent/10 border border-accent/20 rounded-full px-2.5 py-1">
+            2024
+          </span>
         </div>
-        <div class="h-64">
+        <div class="h-56">
           <Bar :data="barData" :options="barOptions" />
         </div>
       </div>
 
-      <div class="card p-5 shadow-sm">
-        <h3 class="text-[11px] font-bold uppercase tracking-widest text-primary mb-6 flex items-center gap-2">
-          <span class="w-1.5 h-1.5 bg-primary" /> Spending by Category
-        </h3>
-        <div class="h-64">
+      <!-- Doughnut Chart -->
+      <div class="card p-6">
+        <div class="mb-5">
+          <h3 class="text-sm font-semibold text-slate-800" style="font-family: 'Poppins', sans-serif;">
+            Spend by Category
+          </h3>
+          <p class="text-xs text-slate-400 mt-0.5">Distribution breakdown</p>
+        </div>
+        <div class="h-56">
           <Doughnut :data="doughnutData" :options="doughnutOptions" />
         </div>
       </div>
     </div>
 
-    <!-- Dual Role Readouts -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      
-      <!-- Employee Focus: History -->
-      <div v-if="!auth.isAdmin" class="card shadow-sm border-t-2 border-t-primary lg:col-span-2">
-        <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 bg-slate-50/50">
-          <h3 class="text-[11px] font-bold uppercase tracking-widest text-primary">Personal History Tracker</h3>
-          <button class="text-[10px] font-bold uppercase tracking-widest text-primary hover:text-primary-700 flex items-center gap-1" @click="router.push('/reimbursements')">
-            VIEW ALL RECORDS <ArrowRight class="w-3 h-3" />
-          </button>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="table-base border-0">
-            <thead>
-              <tr>
-                <th class="!border-l-0">Ref #</th>
-                <th>Description</th>
-                <th>Category</th>
-                <th>Amount (PHP)</th>
-                <th>Date</th>
-                <th class="!border-r-0">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="item in recentItems"
-                :key="item.id"
-                class="hover:bg-slate-50"
-              >
-                <td class="!border-l-0 text-slate-400">#{{ item.id }}</td>
-                <td class="!font-sans font-bold text-slate-700 uppercase tracking-tight text-xs">{{ item.description }}</td>
-                <td>
-                  <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{{ item.category }}</span>
-                </td>
-                <td class="font-bold text-primary">₱{{ item.amount.toLocaleString() }}</td>
-                <td class="text-slate-400 uppercase">{{ item.date }}</td>
-                <td class="!border-r-0"><StatusBadge :status="item.status" /></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+    <!-- ── Employee History Table ── -->
+    <div v-if="!auth.isAdmin" class="card overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+        <h3 class="text-sm font-semibold text-slate-800" style="font-family: 'Poppins', sans-serif;">
+          My Recent Submissions
+        </h3>
+        <button
+          class="text-xs font-semibold text-accent hover:text-accent-700 flex items-center gap-1 transition-colors"
+          style="font-family: 'Open Sans', sans-serif;"
+          @click="router.push('/reimbursements')"
+        >
+          View all <ArrowRight class="w-3.5 h-3.5" />
+        </button>
       </div>
-
-      <!-- Admin Focus: Review Queue (Overdue Advances highlighted) -->
-      <div v-if="auth.isAdmin" class="card shadow-sm border-t-2 border-t-warning lg:col-span-2">
-        <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 bg-slate-50/50">
-          <h3 class="text-[11px] font-bold uppercase tracking-widest text-warning-700 flex items-center gap-2">
-            <AlertTriangle class="w-3.5 h-3.5" /> Cash Advance Recovery Queue
-          </h3>
-          <button class="text-[10px] font-bold uppercase tracking-widest text-primary hover:text-primary-700 flex items-center gap-1" @click="router.push('/cash-advances')">
-            VIEW FULL TABLE <ArrowRight class="w-3 h-3" />
-          </button>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="table-base border-0">
-            <thead>
-              <tr>
-                <th class="!border-l-0">Employee</th>
-                <th>Purpose</th>
-                <th>Amount</th>
-                <th>Due Date</th>
-                <th class="!border-r-0">Status Flags</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="item in activeAdvances"
-                :key="item.id"
-                class="hover:bg-slate-50"
-                :class="isOverdue(item.dueDate) ? 'bg-danger/5 border-l-4 border-l-danger' : isAmberWarning(item.dueDate) ? 'bg-warning/5 border-l-4 border-l-warning' : ''"
-              >
-                <td class="!border-l-0 font-bold uppercase text-slate-700">{{ item.requestedBy }}</td>
-                <td class="!font-sans text-xs">{{ item.purpose }}</td>
-                <td class="font-bold text-primary">₱{{ item.amount.toLocaleString() }}</td>
-                <td class="font-mono text-slate-500 uppercase">{{ item.dueDate }}</td>
-                <td class="!border-r-0 flex items-center gap-2">
-                  <span v-if="isOverdue(item.dueDate)" class="badge bg-danger text-white border-0 animate-pulse">OVERDUE</span>
-                  <span v-else-if="isAmberWarning(item.dueDate)" class="badge bg-warning text-white border-0">DUE SOON</span>
-                  <StatusBadge :status="item.status" />
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+      <div class="overflow-x-auto">
+        <table class="table-base">
+          <thead>
+            <tr>
+              <th>Ref #</th>
+              <th>Description</th>
+              <th>Category</th>
+              <th>Amount (PHP)</th>
+              <th>Date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in recentItems" :key="item.id">
+              <td class="font-mono text-slate-400 text-xs">#{{ item.id }}</td>
+              <td class="font-semibold text-slate-700">{{ item.description }}</td>
+              <td>
+                <span class="text-xs font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                  {{ item.category }}
+                </span>
+              </td>
+              <td class="font-semibold text-primary font-mono">₱{{ item.amount.toLocaleString() }}</td>
+              <td class="text-slate-400 text-xs">{{ item.date }}</td>
+              <td><StatusBadge :status="item.status" /></td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
+
+    <!-- ── Admin: Cash Advance Recovery Queue ── -->
+    <div v-if="auth.isAdmin" class="card overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+        <div class="flex items-center gap-2">
+          <AlertTriangle class="w-4 h-4 text-warning" />
+          <h3 class="text-sm font-semibold text-slate-800" style="font-family: 'Poppins', sans-serif;">
+            Cash Advance Recovery Queue
+          </h3>
+        </div>
+        <button
+          class="text-xs font-semibold text-accent hover:text-accent-700 flex items-center gap-1 transition-colors"
+          style="font-family: 'Open Sans', sans-serif;"
+          @click="router.push('/cash-advances')"
+        >
+          View full table <ArrowRight class="w-3.5 h-3.5" />
+        </button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="table-base">
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Purpose</th>
+              <th>Amount</th>
+              <th>Due Date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="item in activeAdvances"
+              :key="item.id"
+              :class="[
+                isOverdue(item.dueDate) ? 'border-l-2 border-l-danger' :
+                isAmberWarning(item.dueDate) ? 'border-l-2 border-l-warning' : ''
+              ]"
+            >
+              <td class="font-semibold text-slate-700">{{ item.requestedBy }}</td>
+              <td class="text-slate-500 text-xs">{{ item.purpose }}</td>
+              <td class="font-semibold text-primary font-mono">₱{{ item.amount.toLocaleString() }}</td>
+              <td class="font-mono text-slate-400 text-xs">{{ item.dueDate }}</td>
+              <td class="flex items-center gap-2 flex-wrap">
+                <span
+                  v-if="isOverdue(item.dueDate)"
+                  class="badge bg-red-50 border-red-200 text-red-600 animate-pulse"
+                >
+                  <span class="w-1.5 h-1.5 bg-red-400 rounded-full" />
+                  Overdue
+                </span>
+                <span
+                  v-else-if="isAmberWarning(item.dueDate)"
+                  class="badge bg-amber-50 border-amber-200 text-amber-700"
+                >
+                  <span class="w-1.5 h-1.5 bg-amber-400 rounded-full" />
+                  Due Soon
+                </span>
+                <StatusBadge :status="item.status" />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
 </template>
