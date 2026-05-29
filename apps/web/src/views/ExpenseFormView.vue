@@ -1,68 +1,31 @@
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useReimbursementStore } from '@/stores/reimbursement'
-import { usePolicyStore } from '@/stores/policy'
-import { useAuthStore } from '@/stores/auth'
+import { useExpenseStore } from '@/stores/expense'
 import FileUpload from '@/components/base/FileUpload.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import ReceiptViewfinder from '@/components/base/ReceiptViewfinder.vue'
 import OCRExtractedFields from '@/components/base/OCRExtractedFields.vue'
-import { UploadCloud, Tag, Send, Activity, PackageCheck, Receipt } from 'lucide-vue-next'
-import { onMounted } from 'vue'
+import { UploadCloud, Send, Activity, PackageCheck, Receipt, ChevronLeft, X } from 'lucide-vue-next'
 
-const store = useReimbursementStore()
-const policyStore = usePolicyStore()
-const authStore = useAuthStore()
+const store = useExpenseStore()
 const router = useRouter()
-
-onMounted(() => {
-  policyStore.fetchAll()
-})
 
 const submitting = ref(false)
 const submitted = ref(false)
+const errorMsg = ref('')
 
 const form = reactive({
-  description: '',
-  category: '',
-  amount: '', // Set by OCR, but mutable
+  amount: '',
   vat: '',
   tin: '',
-  notes: '',
   receipts: []
 })
 
 const activeReceipt = computed(() => form.receipts[0])
 
-// Provide defaults to avoid undefined errors during processing
 const defaultOcr = { amount: '', vendor: '', date: '', vat: '', tin: '', confidence: 100 }
 const ocrResult = ref({ ...defaultOcr })
-
-const CATEGORIES = [
-  'LAB-SUPPLIES', 'TRANSPORT', 'CLIENT-FAC',
-  'EQUIP-MAINT', 'OFFICE-SYS', 'STAFF-DEV', 'UTIL-OPER', 'OTHER-MISC'
-]
-
-const overLimit = computed(() => {
-  if (!form.category) return null
-  const user = authStore.user
-  const limitRule = policyStore.getApplicableLimit(
-    form.category, 
-    user?.grade || 'ALL', 
-    user?.department || 'ALL', 
-    new Date().toISOString().split('T')[0]
-  )
-  
-  if (!limitRule) return null
-
-  const val = Number(form.amount) || Number(ocrResult.value.amount)
-  if (val > limitRule.limit) {
-    const excess = val - limitRule.limit
-    return `SYSTEM ALERT: LIMIT EXCEEDED BY ₱${excess.toLocaleString()} (MAX ₱${limitRule.limit.toLocaleString()})`
-  }
-  return null
-})
 
 const invalidTin = computed(() => {
   const tinValue = form.tin || ocrResult.value.tin
@@ -76,8 +39,44 @@ const invalidTin = computed(() => {
 
 const canProceed = computed(() => {
   const amt = Number(form.amount) || Number(ocrResult.value.amount)
-  return form.description && form.category && amt > 0 && !overLimit.value && !invalidTin.value && activeReceipt.value?.ocrStatus === 'done'
+  return amt > 0 && !invalidTin.value && activeReceipt.value?.ocrStatus === 'done'
 })
+
+// If navigated from ExpenseManagementView with a pending file, auto-load it
+onMounted(() => {
+  if (store.pendingFile) {
+    const pf = store.pendingFile
+    const entry = {
+      file: pf.file,
+      name: pf.file.name,
+      size: pf.file.size,
+      preview: pf.file.type.startsWith('image/') ? URL.createObjectURL(pf.file) : null,
+      ocrStatus: 'idle',
+      ocrData: null
+    }
+    form.receipts = [entry]
+    simulateOCR(form.receipts[0])
+    store.clearPendingFile()
+  }
+})
+
+function simulateOCR(entry) {
+  entry.ocrStatus = 'processing'
+  setTimeout(() => {
+    const confidence = 85 + Math.random() * 15 // High confidence
+    entry.ocrStatus = 'done'
+    const data = {
+      amount: '1250.00',
+      vat: '150.00',
+      tin: '000-123-456-000',
+      vendor: 'Supermarket Corp.',
+      date: new Date().toISOString().split('T')[0],
+      confidence: Math.round(confidence)
+    }
+    entry.ocrData = data
+    handleOcr(data)
+  }, 200)
+}
 
 function handleOcr(data) {
   ocrResult.value = data
@@ -86,31 +85,44 @@ function handleOcr(data) {
   if (!form.tin && data.tin) form.tin = data.tin
 }
 
+function handleFileOcr(data) {
+  handleOcr(data)
+  if (form.receipts[0]) {
+    form.receipts[0].ocrStatus = 'done'
+  }
+}
+
 function resetForm() {
   submitted.value = false
-  Object.assign(form, { description: '', category: '', amount: '', vat: '', tin: '', notes: '', receipts: [] })
+  Object.assign(form, { amount: '', vat: '', tin: '', receipts: [] })
   ocrResult.value = { ...defaultOcr }
 }
 
 async function handleSubmit() {
   submitting.value = true
+  errorMsg.value = ''
   try {
-    // Merge OCR Fields into form if they weren't explicitly bound to form
     const finalAmount = form.amount || ocrResult.value.amount
     const finalVat = form.vat || ocrResult.value.vat
     const finalTin = form.tin || ocrResult.value.tin
 
-    await store.submit({ 
-      ...form, 
+    await store.submit({
       amount: finalAmount,
       vat: finalVat,
       tin: finalTin,
       vendor: ocrResult.value.vendor,
       date: ocrResult.value.date,
-      status: 'pending', 
-      submittedBy: authStore.user?.name || 'System Operator'  
+      ocrConfidence: ocrResult.value.confidence,
+      fileName: activeReceipt.value?.name || '',
+      fileType: activeReceipt.value?.file?.type || '',
+      fileSize: activeReceipt.value?.size || 0,
+      thumbnail: activeReceipt.value?.preview || null,
+      file: activeReceipt.value?.file,
     })
     submitted.value = true
+  } catch (error) {
+    console.error('Save failed:', error)
+    errorMsg.value = error.message || 'An unexpected error occurred while saving the receipt.'
   } finally {
     submitting.value = false
   }
@@ -124,10 +136,16 @@ async function handleSubmit() {
       <div>
         <div class="flex items-center gap-2 mb-1">
           <Receipt class="w-3.5 h-3.5 text-primary" />
-          <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Process: New Claim</span>
+          <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Process: New Expense</span>
         </div>
-        <h1 class="text-xl font-bold text-primary uppercase tracking-widest">Submit for Settlement</h1>
+        <h1 class="text-xl font-bold text-primary uppercase tracking-widest">Store Receipt</h1>
       </div>
+      <button
+        class="text-[10px] font-bold text-slate-400 hover:text-primary uppercase tracking-widest flex items-center gap-1 transition"
+        @click="router.push('/expense-management')"
+      >
+        <ChevronLeft class="w-3.5 h-3.5" /> Back to Expense Management
+      </button>
     </div>
 
     <!-- Processing Success -->
@@ -136,13 +154,13 @@ async function handleSubmit() {
         <PackageCheck class="w-6 h-6 text-emerald-600" />
       </div>
       <div>
-        <h2 class="text-xs font-bold text-primary uppercase tracking-[0.2em] mb-2">Settlement Request Submitted</h2>
-        <p class="text-[11px] font-medium text-slate-500 uppercase tracking-widest">Your data has been successfully ingested to the ledger.</p>
+        <h2 class="text-xs font-bold text-primary uppercase tracking-[0.2em] mb-2">Expense Record Saved</h2>
+        <p class="text-[11px] font-medium text-slate-500 uppercase tracking-widest">Your receipt has been stored successfully.</p>
       </div>
       <div class="flex gap-2">
-        <BaseButton variant="primary" @click="router.push('/reimbursements')">VIEW QUEUE</BaseButton>
+        <BaseButton variant="primary" @click="router.push('/expense-management')">VIEW EXPENSES</BaseButton>
         <BaseButton variant="secondary" @click="resetForm">
-          PROCESS NEXT
+          ADD ANOTHER
         </BaseButton>
       </div>
     </div>
@@ -153,7 +171,7 @@ async function handleSubmit() {
         <h3 class="text-[11px] font-bold text-primary uppercase tracking-widest mb-6 flex items-center gap-2">
           <UploadCloud class="w-4 h-4" /> [01] INGEST RECEIPT
         </h3>
-        <FileUpload v-model="form.receipts" @ocr-result="handleOcr" class="w-full max-w-lg" />
+        <FileUpload v-model="form.receipts" @ocr-result="handleFileOcr" class="w-full max-w-lg" />
       </div>
 
       <!-- Form State: SPLIT CONSOLE (Scan & Verify) -->
@@ -168,6 +186,17 @@ async function handleSubmit() {
 
         <!-- RIGHT COLUMN: Data Readout (60%) -->
         <div class="lg:w-[60%] flex flex-col gap-6 w-full">
+
+          <!-- Error Alert Banner -->
+          <div v-if="errorMsg" class="card border border-rose-500/20 bg-rose-50 px-4 py-3 flex items-start justify-between gap-3 text-rose-800">
+            <div class="flex flex-col gap-1">
+              <span class="text-[10px] font-bold uppercase tracking-widest text-rose-500">Submission Error</span>
+              <p class="text-[11px] font-medium leading-relaxed">{{ errorMsg }}</p>
+            </div>
+            <button class="text-rose-400 hover:text-rose-600 transition p-1" @click="errorMsg = ''">
+              <X class="w-3.5 h-3.5" />
+            </button>
+          </div>
           
           <!-- Extracted Fields -->
           <div class="card p-0 overflow-hidden relative">
@@ -188,41 +217,17 @@ async function handleSubmit() {
               v-model:date="ocrResult.date"
               :confidence="ocrResult.confidence"
               :ocr-status="activeReceipt.ocrStatus"
-              :over-limit="overLimit"
+              :over-limit="null"
               :invalid-tin="invalidTin"
             />
           </div>
 
-          <!-- Manual Enrichment -->
-          <div class="card p-0 overflow-hidden">
-            <div class="bg-slate-50 border-b border-slate-200 px-4 py-2">
-              <h4 class="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-2">
-                <Tag class="w-3.5 h-3.5" /> MANUAL ENRICHMENT
-              </h4>
-            </div>
-            <div class="p-4 flex flex-col gap-4 bg-white">
-              <div class="input-wrapper">
-                <label class="input-label">DESCRIPTION *</label>
-                <input v-model="form.description" type="text" class="input uppercase" placeholder="PURPOSE OF EXPENSE" />
-              </div>
-              <div class="input-wrapper">
-                <label class="input-label">EXPENSE CLASSIFICATION *</label>
-                <select v-model="form.category" class="input uppercase font-bold text-xs tracking-widest">
-                  <option disabled value="">SELECT CLASSIFICATION</option>
-                  <option v-for="cat in CATEGORIES" :key="cat" :value="cat">{{ cat }}</option>
-                </select>
-              </div>
-              <div class="input-wrapper">
-                <label class="input-label">REMARKS / NOTES</label>
-                <textarea v-model="form.notes" rows="2" class="input !font-sans resize-none" placeholder="OPTIONAL REMARKS" />
-              </div>
-            </div>
-          </div>
+
 
           <!-- Station Controls -->
           <div class="flex items-center justify-end mt-2">
             <BaseButton
-              id="submit-claim-btn"
+              id="submit-expense-btn"
               variant="primary"
               :disabled="!canProceed || submitting"
               :require-hold="true"
@@ -232,7 +237,7 @@ async function handleSubmit() {
             >
               <Activity v-if="submitting" class="animate-spin w-3 h-3" />
               <Send v-else class="w-3 h-3" />
-              <span class="tracking-widest">{{ submitting ? 'TRANSMITTING...' : 'SUBMIT FOR SETTLEMENT' }}</span>
+              <span class="tracking-widest">{{ submitting ? 'SAVING...' : 'SAVE EXPENSE RECORD' }}</span>
             </BaseButton>
           </div>
 

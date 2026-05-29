@@ -35,4 +35,21 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Capstone Auth Module
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for the external capstone-auth-module microservice that
+    | handles authentication (login, registration, OTP/MFA, token issuance).
+    | SERMS delegates all auth flows to this service and validates JWTs
+    | locally using the shared secret.
+    |
+    */
+
+    'capstone_auth' => [
+        'url'        => env('AUTH_SERVICE_URL', 'http://capstone-auth:3000'),
+        'jwt_secret' => env('JWT_SECRET'),
+    ],
+
 ];

@@ -24,6 +24,7 @@ class NotificationDeliveryService
             'ADVANCE_DISBURSED',
             'LIQUIDATION_OVERDUE',
             'PENALTY_INCURRED',
+            'RECEIPT_DELETION_WARNING',
         ];
 
         if (!in_array($templateName, $validTemplates)) {

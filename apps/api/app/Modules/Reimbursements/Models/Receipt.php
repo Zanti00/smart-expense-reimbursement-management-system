@@ -26,6 +26,8 @@ class Receipt extends Model
         'ocr_confidence_score',
         'ocr_flagged',
         'is_archived',
+        'category',
+        'deletion_warning_sent',
     ];
 
     protected $casts = [
@@ -35,6 +37,7 @@ class Receipt extends Model
         'ocr_flagged' => 'boolean',
         'is_archived' => 'boolean',
         'transaction_date' => 'date',
+        'deletion_warning_sent' => 'boolean',
     ];
 
     public function uploader()

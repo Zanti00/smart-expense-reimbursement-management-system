@@ -3,9 +3,9 @@ import { useAuthStore } from '@/stores/auth'
 
 const routes = [
   {
-    path: '/login',
-    name: 'Login',
-    component: () => import('@/views/LoginView.vue'),
+    path: '/auth/callback',
+    name: 'AuthCallback',
+    component: () => import('@/views/AuthCallbackView.vue'),
     meta: { public: true }
   },
   {
@@ -48,10 +48,16 @@ const routes = [
         meta: { title: 'Liquidations' }
       },
       {
-        path: 'receipts',
-        name: 'Receipts',
-        component: () => import('@/views/ReceiptRepositoryView.vue'),
-        meta: { title: 'Receipt Repository' }
+        path: 'expense-management',
+        name: 'ExpenseManagement',
+        component: () => import('@/views/ExpenseManagementView.vue'),
+        meta: { title: 'Expense Management' }
+      },
+      {
+        path: 'expense-management/new',
+        name: 'ExpenseForm',
+        component: () => import('@/views/ExpenseFormView.vue'),
+        meta: { title: 'New Expense' }
       },
       {
         path: 'admin/policy',
@@ -80,21 +86,29 @@ const routes = [
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory('/serms/'),
   routes,
   scrollBehavior: () => ({ top: 0 })
 })
 
-// Navigation guard
+// Navigation guard — redirect unauthenticated users to the capstone-auth-module
 router.beforeEach((to) => {
   const auth = useAuthStore()
-  if (!to.meta.public && !auth.isAuthenticated) {
-    return { name: 'Login', query: { redirect: to.fullPath } }
+
+  // Allow public routes
+  if (to.meta.public) {
+    return
   }
+
+  // Redirect to external auth module if not authenticated
+  if (!auth.isAuthenticated) {
+    auth.redirectToLogin(to.fullPath)
+    // Return false to cancel the current navigation
+    return false
+  }
+
+  // Role-based access control
   if (to.meta.roles && !to.meta.roles.includes(auth.user?.role)) {
-    return { name: 'Dashboard' }
-  }
-  if (to.name === 'Login' && auth.isAuthenticated) {
     return { name: 'Dashboard' }
   }
 })

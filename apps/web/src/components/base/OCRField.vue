@@ -7,13 +7,18 @@ const props = defineProps({
   type: { type: String, default: 'text' },
   confidence: { type: Number, default: 100 },
   error: { type: Boolean, default: false },
-  errorMessage: { type: String, default: 'SYSTEM ALERT: ERROR' }
+  errorMessage: { type: String, default: 'SYSTEM ALERT: ERROR' },
+  maxlength: { type: [Number, String], default: null }
 })
 
 const emit = defineEmits(['update:modelValue', 'focus', 'blur'])
 
 const requiresReview = computed(() => props.confidence < 80)
-const isMono = computed(() => props.type === 'number')
+const isMono = computed(() => 
+  props.type === 'number' || 
+  props.type === 'date' || 
+  props.label.toLowerCase().includes('tin')
+)
 
 function onInput(e) {
   emit('update:modelValue', props.type === 'number' ? Number(e.target.value) : e.target.value)
@@ -37,6 +42,7 @@ function onInput(e) {
       <input 
         :type="type" 
         :value="modelValue"
+        :maxlength="maxlength"
         class="w-full text-sm border border-slate-300 rounded-none px-3 py-1.5 outline-none bg-white focus:ring-2 focus:ring-primary focus:ring-offset-1 focus:border-primary transition-all duration-150 ease-out"
         :class="[
           isMono ? 'font-mono tabular-nums' : 'font-sans',

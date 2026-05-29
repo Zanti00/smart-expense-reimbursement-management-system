@@ -6,11 +6,14 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use App\Modules\Users\Models\User;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Auth;
 
 class AuthenticateWithExternalService
 {
     /**
-     * Handle an incoming request.
+     * Handle an incoming request by validating the token via the
+     * capstone-auth-module and provisioning a local user profile.
      */
     public function handle(Request $request, Closure $next): Response
     {
@@ -18,43 +21,68 @@ class AuthenticateWithExternalService
 
         if (!$authorizationHeader || !str_starts_with($authorizationHeader, 'Bearer ')) {
             return response()->json([
-                'message' => 'Unauthorized. External JWT or Auth Token missing or invalid.',
+                'message' => 'Unauthorized. Bearer token missing.',
             ], 401);
         }
 
         $token = str_replace('Bearer ', '', $authorizationHeader);
+        $token = urldecode($token);
 
-        // In a production application, you would invoke the external OAuth2/OIDC/JWT verification key system.
-        // For local development and demonstration, we parse the simulated token 'mock_token_{id}'
-        if (!str_starts_with($token, 'mock_token_')) {
-            return response()->json([
-                'message' => 'Unauthorized. External token verification failed.',
-            ], 401);
-        }
-
-        $idSuffix = str_replace('mock_token_', '', $token);
+        // Since capstone-auth-module uses Laravel Sanctum (not stateless JWTs),
+        // we must call its internal verification endpoint.
+        $authUrl = env('AUTH_SERVICE_URL', 'http://auth-service:8000');
         
-        // Find or provision local user context based on external ID/email
-        // Typically, the external JWT claims contain email, role, etc.
-        // We will provision profiles dynamically to support clean testing.
-        $user = null;
-        if ($idSuffix == '1') {
+        try {
+            $response = Http::withHeaders([
+                'Accept' => 'application/json',
+            ])->post("{$authUrl}/api/internal/verify-token", [
+                'token' => $token
+            ]);
+
+            if (!$response->successful() || !$response->json('valid')) {
+                return response()->json(['message' => 'Unauthorized. Token verification failed.'], 401);
+            }
+
+            $userData = $response->json('user');
+
+            $rawRole = strtolower($userData['role'] ?? '');
+            $sermsRole = 'employee';
+            if (in_array($rawRole, ['it admin', 'admin', 'super admin'])) {
+                $sermsRole = 'admin';
+            } elseif (in_array($rawRole, ['manager', 'finance manager', 'approver'])) {
+                $sermsRole = 'approver';
+            }
+
+            // Find or create the user in the local SERMS database to maintain foreign keys
             $user = User::firstOrCreate(
-                ['email' => 'admin@serms.com'],
-                ['name' => 'Alex Reyes', 'role' => 'admin', 'grade' => 'EXEC', 'department' => 'FINANCE', 'avatar' => 'AR']
+                ['email' => $userData['email']],
+                [
+                    'name' => trim(($userData['first_name'] ?? '') . ' ' . ($userData['last_name'] ?? '')),
+                    'role' => $sermsRole,
+                    'department' => $userData['department'] ?? 'General',
+                ]
             );
-        } else {
-            $user = User::firstOrCreate(
-                ['email' => 'employee@serms.com'],
-                ['name' => 'John Santos', 'role' => 'employee', 'grade' => 'L2', 'department' => 'SALES', 'avatar' => 'JS']
-            );
+
+            // Update user details if they changed
+            $user->update([
+                'name' => trim(($userData['first_name'] ?? '') . ' ' . ($userData['last_name'] ?? '')),
+                'role' => $sermsRole,
+                'department' => $userData['department'] ?? 'General',
+            ]);
+
+            // Set the authenticated user for the current request without starting a session
+            Auth::setUser($user);
+
+            // Associate user profile with current request so $request->user() works
+            $request->setUserResolver(function () use ($user) {
+                return $user;
+            });
+
+            return $next($request);
+
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('External auth verification failed: ' . $e->getMessage());
+            return response()->json(['message' => 'Unauthorized. Authentication service unavailable.'], 401);
         }
-
-        // Associate user profile with current request
-        $request->setUserResolver(function () use ($user) {
-            return $user;
-        });
-
-        return $next($request);
     }
 }

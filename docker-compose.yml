@@ -21,14 +21,13 @@ services:
       dockerfile: Dockerfile
     container_name: serms_api
     restart: unless-stopped
-    ports:
-      - "8000:8000"
     volumes:
       - ./apps/api:/var/www
     depends_on:
       - mysql
     networks:
       - serms_network
+      - shared-capstone-network
     environment:
       - DB_HOST=mysql
       - DB_DATABASE=serms
@@ -41,14 +40,13 @@ services:
       dockerfile: Dockerfile
     container_name: serms_web
     restart: unless-stopped
-    ports:
-      - "5173:5173"
     volumes:
       - ./apps/web:/app
       - /app/node_modules
     networks:
       - serms_network
-    command: npm run dev -- --host
+      - shared-capstone-network
+    command: npm run dev -- --host --port 5002
 
   phpmyadmin:
     image: phpmyadmin:latest
@@ -70,6 +68,8 @@ services:
 networks:
   serms_network:
     driver: bridge
+  shared-capstone-network:
+    external: true
 
 volumes:
   serms_mysql_data:

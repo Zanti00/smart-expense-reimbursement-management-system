@@ -49,27 +49,28 @@ function addFiles(fileList) {
       ocrData: null
     }
     files.value.push(entry)
-    simulateOCR(entry)
+    simulateOCR(files.value[files.value.length - 1])
   }
   emit('update:modelValue', files.value)
 }
 
 function simulateOCR(entry) {
-  if (!entry.file.type.startsWith('image/') && !entry.file.type === 'application/pdf') return
+  if (!entry.file.type.startsWith('image/') && entry.file.type !== 'application/pdf') return
   entry.ocrStatus = 'processing'
   setTimeout(() => {
-    const confidence = 70 + Math.random() * 30
+    const confidence = 85 + Math.random() * 15
     entry.ocrStatus = 'done'
     entry.ocrData = {
-      amount: (Math.random() * 5000 + 500).toFixed(2),
-      vat: (Math.random() * 500).toFixed(2),
-      tin: `000-${Math.floor(100+Math.random()*899)}-${Math.floor(100+Math.random()*899)}-000`,
-      vendor: 'Sample Vendor Inc.',
+      amount: '1250.00',
+      vat: '150.00',
+      tin: '000-123-456-000',
+      vendor: 'Supermarket Corp.',
       date: new Date().toISOString().split('T')[0],
       confidence: Math.round(confidence)
     }
     emit('ocr-result', entry.ocrData)
-  }, 1500 + Math.random() * 1000)
+    emit('update:modelValue', files.value)
+  }, 200)
 }
 
 function removeFile(index) {

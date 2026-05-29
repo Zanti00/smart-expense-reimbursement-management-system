@@ -17,9 +17,15 @@ class SharedServiceProvider extends ServiceProvider
     /**
      * Bootstrap any shared services.
      */
-    public function boot(): void
+    public function boot(\Illuminate\Routing\Router $router): void
     {
         // Register the external auth middleware alias
-        $this->app['router']->aliasMiddleware('auth.external', \App\Modules\Shared\Http\Middleware\AuthenticateWithExternalService::class);
+        $router->aliasMiddleware('auth.external', \App\Modules\Shared\Http\Middleware\AuthenticateWithExternalService::class);
+
+        // Load Shared module routes
+        $routesPath = __DIR__ . '/../routes/api.php';
+        if (file_exists($routesPath)) {
+            $this->loadRoutesFrom($routesPath);
+        }
     }
 }
