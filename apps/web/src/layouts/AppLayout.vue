@@ -17,10 +17,10 @@ import {
   Bell,
   LogOut,
   Menu,
-  X,
   ChevronRight,
-  FlaskConical,
   FileCheck,
+  Search,
+  Sparkles,
 } from "lucide-vue-next";
 
 const auth = useAuthStore();
@@ -33,10 +33,10 @@ onMounted(() => {
   if (route.query.message) {
     addToast({
       message: route.query.message,
-      type: 'success',
-      duration: 5000
+      type: "success",
+      duration: 5000,
     });
-    
+
     // Clean up URL so it doesn't persist on refresh
     const query = { ...route.query };
     delete query.message;
@@ -55,7 +55,7 @@ const navLinks = computed(() => {
     { name: "Reimbursements", to: "/reimbursements", icon: Receipt },
     { name: "Cash Advances", to: "/cash-advances", icon: Wallet },
     { name: "Liquidations", to: "/liquidations", icon: FilePieChart },
-    { name: "Expenses", to: "/expense-management", icon: FileCheck },
+    { name: "Receipts", to: "/receipts", icon: FileCheck },
   ];
   const admin = [
     { header: "SYSTEM ADMIN" },
@@ -83,22 +83,32 @@ async function logout() {
 
 <template>
   <div class="flex h-screen overflow-hidden bg-clinical font-sans select-none">
-    <ToastNotification />
     <!-- ======================== SIDEBAR ======================== -->
     <!-- Mobile overlay -->
-    <div
-      v-if="mobileOpen"
-      class="fixed inset-0 z-20 bg-black/40 lg:hidden"
-      @click="mobileOpen = false"
-    />
+    <Transition name="fade">
+      <div
+        v-if="mobileOpen"
+        class="fixed inset-0 z-20 bg-slate-900/50 backdrop-blur-sm lg:hidden"
+        @click="mobileOpen = false"
+      />
+    </Transition>
 
+    <!-- ======================== SIDEBAR ======================== -->
     <aside
       :class="[
-        'flex flex-col bg-primary z-30 transition-all duration-150 ease-out border-r border-white/10 flex-shrink-0',
+        'flex flex-col z-30 transition-all duration-300 ease-out flex-shrink-0',
         'fixed lg:relative inset-y-0 left-0',
         sidebarOpen ? 'w-[240px]' : 'w-16',
         mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
       ]"
+      style="
+        background: linear-gradient(
+          160deg,
+          #252578 0%,
+          #2f2f7e 50%,
+          #1d1d61 100%
+        );
+      "
     >
       <!-- Branding Module -->
       <div
@@ -120,11 +130,11 @@ async function logout() {
         </Transition>
       </div>
 
-      <!-- Navigation Log -->
-      <nav class="flex-1 px-0 py-4 space-y-0 overflow-y-auto scrollbar-thin">
+      <!-- Navigation -->
+      <nav class="flex-1 px-0 py-4 overflow-y-auto scrollbar-thin space-y-0.5">
         <template v-for="(link, i) in navLinks" :key="i">
-          <div v-if="link.divider" class="border-t border-white/5 my-4 mx-4" />
-          <div v-else-if="link.header" class="px-6 py-2">
+          <div v-if="link.divider" class="border-t border-white/10 my-4 mx-4" />
+          <div v-else-if="link.header" class="px-4 pt-3 pb-1">
             <Transition name="fade">
               <span
                 v-if="sidebarOpen"
@@ -150,7 +160,10 @@ async function logout() {
               ]"
             />
             <Transition name="fade">
-              <span v-if="sidebarOpen" class="truncate">{{ link.name }}</span>
+              <ChevronRight
+                v-if="sidebarOpen && isActive(link.to)"
+                class="w-3 h-3 ml-auto text-white/60"
+              />
             </Transition>
           </RouterLink>
         </template>
@@ -183,7 +196,7 @@ async function logout() {
           </Transition>
           <button
             v-if="sidebarOpen"
-            class="text-white/30 hover:text-white transition-none p-1"
+            class="text-white/30 hover:text-white/80 p-1.5 rounded-lg hover:bg-white/10 flex-shrink-0"
             title="Logout"
             @click="logout"
           >
@@ -193,7 +206,7 @@ async function logout() {
       </div>
     </aside>
 
-    <!-- ======================== WORKSPACE (MAIN) ======================== -->
+    <!-- ======================== MAIN AREA ======================== -->
     <div class="flex flex-col flex-1 min-w-0 overflow-hidden">
       <!-- Console Header -->
       <header
@@ -204,24 +217,27 @@ async function logout() {
           <Menu class="w-5 h-5" />
         </button>
 
-        <!-- Sidebar Controller -->
+        <!-- Collapse toggle -->
         <button
-          class="hidden lg:flex btn btn-secondary !p-1.5"
-          :title="sidebarOpen ? 'Contract' : 'Expand'"
+          class="hidden lg:flex btn-icon !p-2"
+          :title="sidebarOpen ? 'Collapse' : 'Expand'"
           @click="sidebarOpen = !sidebarOpen"
         >
-          <Menu class="w-3.5 h-3.5" />
+          <Menu class="w-4 h-4" />
         </button>
 
-        <div class="flex-1">
-          <!-- Page title removed as requested -->
-        </div>
+        <div class="flex-1" />
 
-        <!-- Search Module -->
-        <div class="hidden md:block">
-          <div class="input-wrapper w-64">
-            <input placeholder="Search..." class="input !py-1 text-[11px]" />
-          </div>
+        <!-- Search -->
+        <div
+          class="hidden md:flex items-center gap-2 bg-slate-100/80 border border-slate-200/80 rounded-lg px-3 py-2 w-56 hover:border-accent/30 focus-within:border-accent/50 focus-within:bg-white transition-all duration-200"
+        >
+          <Search class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+          <input
+            placeholder="Search…"
+            class="bg-transparent text-sm text-slate-600 placeholder-slate-400 outline-none flex-1 min-w-0"
+            style="transition: none"
+          />
         </div>
 
         <!-- System Alerts -->
@@ -233,7 +249,7 @@ async function logout() {
           <Bell class="w-4 h-4" />
           <span
             v-if="unreadCount > 0"
-            class="absolute -top-1 -right-1 w-4 h-4 bg-danger text-white text-[9px] font-bold flex items-center justify-center border border-white"
+            class="absolute -top-0.5 -right-0.5 w-4 h-4 bg-gradient-to-br from-danger to-red-600 text-white text-[9px] font-bold flex items-center justify-center rounded-full border-2 border-white shadow-sm"
           >
             {{ unreadCount }}
           </span>
