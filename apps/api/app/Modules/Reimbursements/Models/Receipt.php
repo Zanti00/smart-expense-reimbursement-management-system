@@ -26,7 +26,7 @@ class Receipt extends Model
         'ocr_confidence_score',
         'ocr_flagged',
         'is_archived',
-        'category',
+        'expense_category_id',
         'deletion_warning_sent',
     ];
 
@@ -43,5 +43,10 @@ class Receipt extends Model
     public function uploader()
     {
         return $this->belongsTo(User::class, 'uploaded_by');
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(ExpenseCategory::class, 'expense_category_id');
     }
 }

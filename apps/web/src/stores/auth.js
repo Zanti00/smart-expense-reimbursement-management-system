@@ -1,23 +1,25 @@
-import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { defineStore } from "pinia";
+import { ref, computed } from "vue";
 
-const AUTH_MODULE_URL = import.meta.env.VITE_AUTH_MODULE_URL || 'http://localhost:3001'
+const AUTH_MODULE_URL =
+  import.meta.env.VITE_AUTH_MODULE_URL || "http://localhost:3001";
 
-export const useAuthStore = defineStore('auth', () => {
-  const user = ref(null)
+export const useAuthStore = defineStore("auth", () => {
+  const user = ref(null);
+  const token = ref(localStorage.getItem("serms_token") || null);
 
-  const isAuthenticated = computed(() => !!user.value)
-  const isAdmin = computed(() => user.value?.role === 'admin')
-  const token = computed(() => user.value?.token || '')
+  const isAuthenticated = computed(() => !!user.value);
+  const isAdmin = computed(() => user.value?.role === "admin");
+  const token = computed(() => user.value?.token || "");
 
   /**
    * Restore session from localStorage on app boot.
    * If a token exists but no user profile is cached, attempt to fetch it.
    */
   function restoreSession() {
-    const stored = localStorage.getItem('serms_user')
+    const stored = localStorage.getItem("serms_user");
     if (stored) {
-      user.value = JSON.parse(stored)
+      user.value = JSON.parse(stored);
     }
   }
 
@@ -28,15 +30,15 @@ export const useAuthStore = defineStore('auth', () => {
    * @param {string} [redirectPath] — the SERMS path to return to after login
    * @param {string} [errorMessage] — an optional error message to show on the login page
    */
-  function redirectToLogin(redirectPath = '/dashboard', errorMessage = null) {
-    const callbackUrl = `${window.location.origin}/serms/auth/callback`
-    let loginUrl = `${AUTH_MODULE_URL}/login?redirect_uri=${encodeURIComponent(callbackUrl)}&state=${encodeURIComponent(redirectPath)}`
-    
+  function redirectToLogin(redirectPath = "/dashboard", errorMessage = null) {
+    const callbackUrl = `${window.location.origin}/serms/auth/callback`;
+    let loginUrl = `${AUTH_MODULE_URL}/login?redirect_uri=${encodeURIComponent(callbackUrl)}&state=${encodeURIComponent(redirectPath)}`;
+
     if (errorMessage) {
-      loginUrl += `&error=${encodeURIComponent(errorMessage)}`
+      loginUrl += `&error=${encodeURIComponent(errorMessage)}`;
     }
-    
-    window.location.href = loginUrl
+
+    window.location.href = loginUrl;
   }
 
   /**
@@ -46,8 +48,8 @@ export const useAuthStore = defineStore('auth', () => {
    * @returns {Promise<object>} — the user profile
    */
   async function handleCallback() {
-    const profile = await fetchProfile()
-    return profile
+    const profile = await fetchProfile();
+    return profile;
   }
 
   /**
@@ -57,23 +59,30 @@ export const useAuthStore = defineStore('auth', () => {
    * @returns {Promise<object>} — the user profile
    */
   async function fetchProfile() {
-    const response = await fetch('/api/serms/auth/me', {
-      headers: {
-        'Accept': 'application/json'
-      },
-      credentials: 'include'
-    })
+    const headers = {
+      Accept: "application/json",
+    };
+    if (token.value) {
+      headers["Authorization"] = `Bearer ${token.value}`;
+    }
+
+    const response = await fetch("/api/serms/auth/me", {
+      headers,
+      credentials: "include",
+    });
 
     if (!response.ok) {
       // Token is invalid or expired — clear session
-      clearSession()
-      throw new Error('Failed to fetch user profile. Session may have expired.')
+      clearSession();
+      throw new Error(
+        "Failed to fetch user profile. Session may have expired.",
+      );
     }
 
-    const data = await response.json()
-    user.value = data
-    localStorage.setItem('serms_user', JSON.stringify(user.value))
-    return user.value
+    const data = await response.json();
+    user.value = data;
+    localStorage.setItem("serms_user", JSON.stringify(user.value));
+    return user.value;
   }
 
   /**
@@ -81,20 +90,22 @@ export const useAuthStore = defineStore('auth', () => {
    * capstone-auth-module's logout endpoint to invalidate the token server-side.
    */
   function logout() {
-    clearSession()
+    clearSession();
 
     // Redirect to auth module to clear server-side session.
     // We intentionally omit redirect_uri so it stays on the login screen and displays a success toast.
-    const logoutUrl = `${AUTH_MODULE_URL}/logout`
-    window.location.href = logoutUrl
+    const logoutUrl = `${AUTH_MODULE_URL}/logout`;
+    window.location.href = logoutUrl;
   }
 
   /**
    * Clear all local auth state without redirecting.
    */
   function clearSession() {
-    user.value = null
-    localStorage.removeItem('serms_user')
+    user.value = null;
+    token.value = null;
+    localStorage.removeItem("serms_user");
+    localStorage.removeItem("serms_token");
   }
 
   return {
@@ -107,6 +118,6 @@ export const useAuthStore = defineStore('auth', () => {
     handleCallback,
     fetchProfile,
     logout,
-    clearSession
-  }
-})
+    clearSession,
+  };
+});
