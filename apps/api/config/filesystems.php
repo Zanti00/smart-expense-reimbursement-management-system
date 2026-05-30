@@ -60,6 +60,21 @@ return [
             'report' => false,
         ],
 
+        'supabase' => [
+            'driver' => env('SUPABASE_STORAGE_DRIVER', 'local'),
+            'root' => env('SUPABASE_STORAGE_DRIVER', 'local') === 'local' ? storage_path('app/public/supabase') : '',
+            'url' => env('SUPABASE_STORAGE_DRIVER', 'local') === 'local' ? env('APP_URL').'/storage/supabase' : env('SUPABASE_URL').'/storage/v1/object/public/'.env('SUPABASE_BUCKET'),
+            'key' => env('SUPABASE_ACCESS_KEY_ID'),
+            'secret' => env('SUPABASE_SECRET_ACCESS_KEY'),
+            'region' => env('SUPABASE_REGION'),
+            'bucket' => env('SUPABASE_BUCKET'),
+            'endpoint' => env('SUPABASE_ENDPOINT'),
+            'use_path_style_endpoint' => true,
+            'visibility' => 'public',
+            'throw' => true,
+            'report' => true,
+        ],
+
     ],
 
     /*

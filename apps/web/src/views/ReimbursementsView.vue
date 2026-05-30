@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth'
 import BaseTable from '@/components/base/BaseTable.vue'
 import StatusBadge from '@/components/base/StatusBadge.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
+import BaseModal from '@/components/base/BaseModal.vue'
 import { Plus, FileText, Activity, ShieldCheck, X, CheckCircle, XCircle } from 'lucide-vue-next'
 
 const store = useReimbursementStore()
@@ -15,6 +16,7 @@ const router = useRouter()
 const rejectingId = ref(null)
 const rejectionComment = ref('')
 const viewingRecord = ref(null)
+const approvingId = ref(null)
 
 function closeDetails() {
   viewingRecord.value = null
@@ -33,7 +35,19 @@ const columns = [
   { key: 'actions',     label: 'Actions',      sortable: false },
 ]
 
-async function quickApprove(id) { await store.approve(id) }
+function openApproveModal(id) {
+  approvingId.value = id
+}
+
+function cancelApprove() {
+  approvingId.value = null
+}
+
+async function confirmApprove() {
+  if (!approvingId.value) return
+  await store.approve(approvingId.value)
+  cancelApprove()
+}
 
 function openRejectModal(id) {
   rejectingId.value = id
@@ -132,7 +146,7 @@ async function confirmReject() {
         <div v-if="auth.isAdmin && row.status === 'submitted'" class="flex gap-1.5" @click.stop>
           <button
             class="btn btn-sm bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100"
-            @click="quickApprove(row.id)"
+            @click="openApproveModal(row.id)"
           >
             <CheckCircle class="w-3 h-3" /> Approve
           </button>
@@ -149,58 +163,80 @@ async function confirmReject() {
       </template>
     </BaseTable>
 
-    <!-- ── Rejection Modal ── -->
-    <Transition name="modal">
-      <div v-if="rejectingId"
-           class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 backdrop-blur-sm p-4">
-        <div class="w-full max-w-md overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl">
-          <!-- Header -->
-          <div class="px-6 py-4 flex items-center gap-3 border-b border-slate-200 bg-slate-50/80">
-            <div class="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center">
-              <XCircle class="w-5 h-5 text-red-500" />
-            </div>
-            <div>
-              <h3 class="font-heading text-sm font-semibold text-slate-800">
-                Reject Claim
-              </h3>
-              <p class="text-xs text-slate-400 mt-0.5">Ref #{{ rejectingId }}</p>
-            </div>
-          </div>
+    <!-- ── Approval Modal ── -->
+    <BaseModal
+      :isOpen="!!approvingId"
+      @close="cancelApprove"
+      contentClass="text-center p-8"
+    >
+      <div class="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 mb-6">
+        <CheckCircle class="h-10 w-10" />
+      </div>
+      <h3 class="font-heading text-xl font-bold text-slate-900">
+        Approve Claim Request?
+      </h3>
+      <p class="mt-2 text-sm leading-relaxed text-slate-500">
+        Confirming this action will finalize the approval for Claim Ref #{{ approvingId }}.
+      </p>
+      <div class="mt-8 flex gap-3">
+        <BaseButton variant="secondary" class="flex-1" @click="cancelApprove">Go Back</BaseButton>
+        <BaseButton variant="primary" class="flex-1" @click="confirmApprove">
+          Confirm Approval
+        </BaseButton>
+      </div>
+    </BaseModal>
 
-          <!-- Body -->
-          <div class="p-6 flex flex-col gap-4">
-            <p class="text-sm text-slate-600">
-              Please provide a reason for rejecting this reimbursement claim.
-            </p>
-            <div class="input-wrapper">
-              <label class="input-label">Rejection Reason</label>
-              <textarea
-                v-model="rejectionComment"
-                rows="3"
-                class="input resize-none"
-                :class="rejectionComment.length > 0 && rejectionComment.length < 10 ? 'input-error' : ''"
-                placeholder="Describe the reason (minimum 10 characters)…"
-              />
-              <div class="flex justify-between items-center mt-1"
-                   :class="rejectionComment.length < 10 ? 'text-danger' : 'text-success'">
-                <span class="text-[10px] font-medium">Minimum 10 characters required</span>
-                <span class="text-[10px] font-semibold">{{ rejectionComment.length }} / 10+</span>
-              </div>
-            </div>
-            <div class="flex items-center justify-end gap-2.5 mt-1">
-              <BaseButton variant="secondary" @click="cancelReject">Cancel</BaseButton>
-              <BaseButton
-                variant="danger"
-                :disabled="rejectionComment.length < 10"
-                @click="confirmReject"
-              >
-                <XCircle class="w-4 h-4" /> Confirm Rejection
-              </BaseButton>
-            </div>
-          </div>
+    <!-- ── Rejection Modal ── -->
+    <BaseModal
+      :isOpen="!!rejectingId"
+      @close="cancelReject"
+      contentClass="!p-0"
+    >
+      <!-- Header -->
+      <div class="px-6 py-4 flex items-center gap-3 border-b border-slate-200 bg-slate-50/80">
+        <div class="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center">
+          <XCircle class="w-5 h-5 text-red-500" />
+        </div>
+        <div>
+          <h3 class="font-heading text-sm font-semibold text-slate-800">
+            Reject Claim
+          </h3>
+          <p class="text-xs text-slate-400 mt-0.5">Ref #{{ rejectingId }}</p>
         </div>
       </div>
-    </Transition>
+
+      <!-- Body -->
+      <div class="p-6 flex flex-col gap-4">
+        <p class="text-sm text-slate-600">
+          Please provide a reason for rejecting this reimbursement claim.
+        </p>
+        <div class="input-wrapper">
+          <label class="input-label">Rejection Reason</label>
+          <textarea
+            v-model="rejectionComment"
+            rows="3"
+            class="input resize-none"
+            :class="rejectionComment.length > 0 && rejectionComment.length < 10 ? 'input-error' : ''"
+            placeholder="Describe the reason (minimum 10 characters)…"
+          />
+          <div class="flex justify-between items-center mt-1"
+               :class="rejectionComment.length < 10 ? 'text-danger' : 'text-success'">
+            <span class="text-[10px] font-medium">Minimum 10 characters required</span>
+            <span class="text-[10px] font-semibold">{{ rejectionComment.length }} / 10+</span>
+          </div>
+        </div>
+        <div class="flex items-center justify-end gap-2.5 mt-1">
+          <BaseButton variant="secondary" @click="cancelReject">Cancel</BaseButton>
+          <BaseButton
+            variant="danger"
+            :disabled="rejectionComment.length < 10"
+            @click="confirmReject"
+          >
+            <XCircle class="w-4 h-4" /> Confirm Rejection
+          </BaseButton>
+        </div>
+      </div>
+    </BaseModal>
 
     <!-- ── Record Detail Panel ── -->
     <Transition name="modal">
@@ -298,7 +334,7 @@ async function confirmReject() {
             </button>
             <button
               class="btn btn-cta px-5"
-              @click="quickApprove(viewingRecord.id); closeDetails()"
+              @click="openApproveModal(viewingRecord.id); closeDetails()"
             >
               <CheckCircle class="w-4 h-4" /> Approve & Authorize
             </button>
