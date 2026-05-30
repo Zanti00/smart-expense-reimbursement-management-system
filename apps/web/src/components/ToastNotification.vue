@@ -1,6 +1,6 @@
 <template>
-  <div class="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none">
-    <TransitionGroup name="toast">
+  <div class="fixed top-4 right-4 z-[9999] pointer-events-none w-80 max-w-full">
+    <TransitionGroup name="toast" tag="div" class="flex flex-col gap-3">
       <div 
         v-for="toast in toasts" 
         :key="toast.id"

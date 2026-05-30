@@ -7,11 +7,12 @@ import { useCashAdvanceList } from "@/composables/useCashAdvanceList";
 import ToastNotification from "@/components/ToastNotification.vue";
 
 import BaseFilterTabs from "@/components/base/BaseFilterTabs.vue";
-import CashAdvanceMetrics from "@/components/cash-advances/CashAdvanceMetrics.vue";
+import BaseKpiGrid from "@/components/base/BaseKpiGrid.vue";
 import CashAdvanceTable from "@/components/cash-advances/CashAdvanceTable.vue";
 import RejectionModal from "@/components/cash-advances/RejectionModal.vue";
 import CashAdvanceDetailsModal from "@/components/cash-advances/CashAdvanceDetailsModal.vue";
-import { Plus, Wallet } from "lucide-vue-next";
+import { Plus, Wallet, Activity, ShieldCheck, X } from "lucide-vue-next";
+import { formatPeso } from "@/utils/formatters";
 
 const store = useCashAdvanceStore();
 const auth = useAuthStore();
@@ -91,6 +92,70 @@ async function confirmReject(reason) {
     addToast({ message: error.message || "Failed to reject", type: "error" });
   }
 }
+
+const kpis = computed(() => {
+  const m = activeMetrics.value;
+  if (!m) return [];
+  const admin = auth.isAdmin;
+  const cards = [];
+
+  if (!admin) {
+    cards.push({
+      label: "Total Amount",
+      value: formatPeso(m.totalAmount || 0),
+      sub: "Total requested",
+      icon: Wallet,
+      iconBg: "bg-blue-900/10",
+      iconColor: "text-blue-900",
+      accent: "from-blue-900 to-blue-700",
+    });
+  }
+
+  cards.push({
+    label: admin ? "Pending Advances" : "Pending",
+    value: m.pending || 0,
+    sub: "Needs action",
+    icon: Activity,
+    iconBg: "bg-amber-500/10",
+    iconColor: "text-amber-500",
+    accent: "from-amber-400 to-amber-600",
+  });
+
+  cards.push({
+    label: admin ? "Approved Advances" : "Approved",
+    value: m.approved || 0,
+    sub: "Processed",
+    icon: ShieldCheck,
+    iconBg: "bg-emerald-500/10",
+    iconColor: "text-emerald-500",
+    accent: "from-emerald-400 to-emerald-600",
+  });
+
+  cards.push({
+    label: admin ? "Rejected Advances" : "Rejected",
+    value: m.rejected || 0,
+    sub: "Denied",
+    icon: X,
+    iconBg: "bg-red-500/10",
+    iconColor: "text-red-500",
+    accent: "from-red-400 to-red-600",
+  });
+
+  cards.push({
+    label: admin ? "Total Outstanding Balance" : "Outstanding Balance",
+    value: formatPeso(m.outstanding || 0),
+    sub: admin ? "" : "To be settled",
+    subtext: admin
+      ? `(Total employees with outstanding balance: ${m.outstandingEmployees || 0})`
+      : undefined,
+    icon: Wallet,
+    iconBg: "bg-blue-900/10",
+    iconColor: "text-blue-900",
+    accent: "from-blue-900 to-blue-700",
+  });
+
+  return cards;
+});
 </script>
 
 <template>
@@ -130,7 +195,7 @@ async function confirmReject(reason) {
     </section>
 
     <!-- Analytics Metrics -->
-    <CashAdvanceMetrics :metrics="activeMetrics" :isAdmin="auth.isAdmin" />
+    <BaseKpiGrid :kpis="kpis" :gridClasses="auth.isAdmin ? 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4' : 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4'" />
 
     <!-- Filter Status Tabs -->
     <section class="overflow-x-auto mb-2">

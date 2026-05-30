@@ -20,7 +20,7 @@ export function useToast() {
       type: options.type || 'info',
       duration: options.duration || 5000
     }
-    toasts.value.push(toast)
+    toasts.value = [...toasts.value, toast]
 
     if (toast.duration && toast.duration > 0) {
       setTimeout(() => {
@@ -34,10 +34,7 @@ export function useToast() {
    * @param {number} id - The toast ID to remove
    */
   const removeToast = (id) => {
-    const index = toasts.value.findIndex(t => t.id === id)
-    if (index > -1) {
-      toasts.value.splice(index, 1)
-    }
+    toasts.value = toasts.value.filter(t => t.id !== id)
   }
 
   return {

@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { ref, reactive, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useReimbursementStore } from "@/stores/reimbursement";
@@ -26,7 +26,7 @@ import {
   X,
 } from "lucide-vue-next";
 
-// ── Props & Emits ─────────────────────────────────────────────────
+// â”€â”€ Props & Emits â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const props = defineProps({
   forwardedReceipts: {
     type: Array,
@@ -35,7 +35,7 @@ const props = defineProps({
 });
 const emit = defineEmits(["submitted", "close"]);
 
-// ── Stores ────────────────────────────────────────────────────────
+// â”€â”€ Stores â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const store = useReimbursementStore();
 const policyStore = usePolicyStore();
 const authStore = useAuthStore();
@@ -45,14 +45,14 @@ onMounted(() => {
   policyStore.fetchAll();
 });
 
-// ── Local state per receipt (editable copies so form is mutable) ──
+// â”€â”€ Local state per receipt (editable copies so form is mutable) â”€â”€
 const receipts = computed(() => {
   if (props.forwardedReceipts.length > 0) return props.forwardedReceipts;
-  // Standalone page fallback — single empty receipt
+  // Standalone page fallback â€” single empty receipt
   return [];
 });
 
-// ── Form State ────────────────────────────────────────────────────
+// â”€â”€ Form State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const submitting = ref(false);
 const submitted = ref(false);
 const cutoffPeriod = ref("");
@@ -60,7 +60,7 @@ const reportFile = ref(null);
 const reportDrag = ref(false);
 const reportInput = ref(null);
 
-// ── Financials (aggregate across all forwarded receipts) ──────────
+// â”€â”€ Financials (aggregate across all forwarded receipts) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const totalAmount = computed(() =>
   receipts.value.reduce((sum, r) => sum + (Number(r.amount) || 0), 0),
 );
@@ -87,7 +87,7 @@ function formatCurrency(v) {
   }).format(v);
 }
 function formatDate(d) {
-  if (!d) return "—";
+  if (!d) return "â€”";
   const dt = new Date(d);
   if (isNaN(dt)) return d;
   return dt.toLocaleDateString("en-US", {
@@ -100,17 +100,17 @@ function cleanName(fileName) {
   return (fileName || "").replace(/\.[^.]+$/, "").replace(/[_-]/g, " ");
 }
 
-// ── Cutoff options ────────────────────────────────────────────────
+// â”€â”€ Cutoff options â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const CUTOFF_OPTIONS = [
-  "Jan 01 – Jan 15, 2025",
-  "Jan 16 – Jan 31, 2025",
-  "Feb 01 – Feb 15, 2025",
-  "Feb 16 – Feb 28, 2025",
-  "Mar 01 – Mar 15, 2025",
-  "Mar 16 – Mar 31, 2025",
+  "Jan 01 â€“ Jan 15, 2025",
+  "Jan 16 â€“ Jan 31, 2025",
+  "Feb 01 â€“ Feb 15, 2025",
+  "Feb 16 â€“ Feb 28, 2025",
+  "Mar 01 â€“ Mar 15, 2025",
+  "Mar 16 â€“ Mar 31, 2025",
 ];
 
-// ── Categories ────────────────────────────────────────────────────
+// â”€â”€ Categories â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const CATEGORIES = [
   "Food & Dining",
   "Transportation",
@@ -121,16 +121,16 @@ const CATEGORIES = [
   "Other",
 ];
 
-// ── Mock extracted items per category ────────────────────────────
+// â”€â”€ Mock extracted items per category â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const MOCK_ITEMS = {
   Lodging: [
-    "1 Night – Deluxe Room",
+    "1 Night â€“ Deluxe Room",
     "Breakfast Buffet (x2)",
     "Airport Transfer",
   ],
   Transportation: [
-    "GrabCar Ride – Terminal to CBD",
-    "Toll Fee – SLEX",
+    "GrabCar Ride â€“ Terminal to CBD",
+    "Toll Fee â€“ SLEX",
     "Parking Fee",
   ],
   Meals: ["Set Meal A (x2)", "Drinks & Dessert", "Service Charge"],
@@ -141,12 +141,12 @@ function getItems(cat) {
   return MOCK_ITEMS[cat] || MOCK_ITEMS.Uncategorized;
 }
 
-// ── Validation ────────────────────────────────────────────────────
+// â”€â”€ Validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const canProceed = computed(
   () => receipts.value.length >= 2 && cutoffPeriod.value,
 );
 
-// ── Submit ────────────────────────────────────────────────────────
+// â”€â”€ Submit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function handleSubmit() {
   if (!canProceed.value) return;
   submitting.value = true;
@@ -156,7 +156,7 @@ async function handleSubmit() {
       category: receipts.value[0]?.category || "General",
       amount: totalAmount.value,
       vat: totalVat.value,
-      tin: "—",
+      tin: "â€”",
       notes: "",
       receipts: receipts.value,
       status: "submitted",
@@ -169,7 +169,7 @@ async function handleSubmit() {
   }
 }
 
-// ── Attachment ────────────────────────────────────────────────────
+// â”€â”€ Attachment â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function handleReportDrop(e) {
   reportDrag.value = false;
   const file = e.dataTransfer.files[0];
@@ -180,7 +180,7 @@ function handleReportSelect(e) {
   if (file) reportFile.value = file;
 }
 
-// ── Dismiss ───────────────────────────────────────────────────────
+// â”€â”€ Dismiss â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function dismiss() {
   emit("close");
   // If opened standalone (via route), go back
@@ -190,7 +190,7 @@ function dismiss() {
 
 <template>
   <div class="max-w-5xl mx-auto flex flex-col gap-6 pb-12 animate-fade-up">
-    <!-- ── Page Header (standalone route mode only) ── -->
+    <!-- â”€â”€ Page Header (standalone route mode only) â”€â”€ -->
     <div v-if="!forwardedReceipts.length" class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
       <div class="flex items-start gap-3">
         <button
@@ -214,7 +214,7 @@ function dismiss() {
       </div>
     </div>
 
-    <!-- ── Success State ── -->
+    <!-- â”€â”€ Success State â”€â”€ -->
     <div
       v-if="submitted"
       class="card p-16 flex flex-col items-center gap-5 text-center"
@@ -227,7 +227,7 @@ function dismiss() {
       <div>
         <h2
           class="text-lg font-bold text-slate-800 mb-1"
-          style="font-family: &quot;Poppins&quot;, sans-serif"
+          style="font-family: 'Poppins', sans-serif"
         >
           Reimbursement Submitted!
         </h2>
@@ -246,7 +246,7 @@ function dismiss() {
     </div>
 
     <template v-else>
-      <!-- ── Alert Banner (forwarded mode) ── -->
+      <!-- â”€â”€ Alert Banner (forwarded mode) â”€â”€ -->
       <div
         v-if="forwardedReceipts.length"
         class="flex items-center gap-3 px-4 py-3 bg-emerald-50 border border-emerald-100 rounded-xl"
@@ -260,7 +260,7 @@ function dismiss() {
         </p>
       </div>
 
-      <!-- ── Empty State (standalone + no upload yet) ── -->
+      <!-- â”€â”€ Empty State (standalone + no upload yet) â”€â”€ -->
       <div
         v-if="receipts.length === 0"
         class="card p-16 flex flex-col items-center gap-4 border-2 border-dashed border-slate-200 text-center"
@@ -273,7 +273,7 @@ function dismiss() {
         <div>
           <p
             class="text-sm font-semibold text-slate-700"
-            style="font-family: &quot;Poppins&quot;, sans-serif"
+            style="font-family: 'Poppins', sans-serif"
           >
             Select receipts in My Expense first
           </p>
@@ -288,13 +288,13 @@ function dismiss() {
       </div>
 
       <template v-else>
-        <!-- ── CARD 1: Upload Receipt Management ── -->
+        <!-- â”€â”€ CARD 1: Upload Receipt Management â”€â”€ -->
         <section class="card p-6">
           <div class="flex items-center justify-between mb-5">
             <div class="flex items-center gap-3">
               <h2
                 class="text-lg font-bold text-primary"
-                style="font-family: &quot;Poppins&quot;, sans-serif"
+                style="font-family: 'Poppins', sans-serif"
               >
                 Forwarded Receipts
               </h2>
@@ -341,12 +341,12 @@ function dismiss() {
           </div>
         </section>
 
-        <!-- ── CARD 2: One Scanned Receipt Block Per Receipt ── -->
+        <!-- â”€â”€ CARD 2: One Scanned Receipt Block Per Receipt â”€â”€ -->
         <section class="card p-6">
           <div class="flex items-center justify-between mb-5">
             <h2
               class="text-lg font-bold text-primary"
-              style="font-family: &quot;Poppins&quot;, sans-serif"
+              style="font-family: 'Poppins', sans-serif"
             >
               Scanned Receipts
             </h2>
@@ -359,8 +359,8 @@ function dismiss() {
               >
                 {{ receipts.length }} uploaded{{
                   receipts.length < 2
-                    ? " — need at least 2 to proceed"
-                    : " — ready!"
+                    ? " â€” need at least 2 to proceed"
+                    : " â€” ready!"
                 }}
               </span>
               <button
@@ -386,7 +386,7 @@ function dismiss() {
                 >
                 <span
                   class="text-xs font-bold text-primary"
-                  style="font-family: &quot;Poppins&quot;, sans-serif"
+                  style="font-family: 'Poppins', sans-serif"
                   >{{ cleanName(receipt.fileName) }}</span
                 >
                 <span class="ml-auto text-[10px] font-mono text-slate-400">{{
@@ -420,7 +420,7 @@ function dismiss() {
                       <ImageIcon v-else class="w-12 h-12 opacity-40" />
                       <p
                         class="text-[10px] font-semibold uppercase tracking-widest"
-                        style="font-family: &quot;Poppins&quot;, sans-serif"
+                        style="font-family: 'Poppins', sans-serif"
                       >
                         No Preview
                       </p>
@@ -611,14 +611,14 @@ function dismiss() {
           </div>
         </section>
 
-        <!-- ── CARD 3: Meta & Attachments ── -->
+        <!-- â”€â”€ CARD 3: Meta & Attachments â”€â”€ -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <!-- Cutoff Period -->
           <section class="card p-6 flex flex-col gap-4">
             <div>
               <h3
                 class="text-base font-bold text-primary mb-1"
-                style="font-family: &quot;Poppins&quot;, sans-serif"
+                style="font-family: 'Poppins', sans-serif"
               >
                 Cutoff Period <span class="text-danger">*</span>
               </h3>
@@ -646,7 +646,7 @@ function dismiss() {
           <section class="card p-6 flex flex-col gap-4">
             <h3
               class="text-base font-bold text-primary"
-              style="font-family: &quot;Poppins&quot;, sans-serif"
+              style="font-family: 'Poppins', sans-serif"
             >
               Report Attachment
               <span class="text-slate-400 font-normal text-sm">(optional)</span>
@@ -671,7 +671,7 @@ function dismiss() {
                 <div>
                   <p
                     class="text-sm font-semibold text-slate-700"
-                    style="font-family: &quot;Poppins&quot;, sans-serif"
+                    style="font-family: 'Poppins', sans-serif"
                   >
                     {{ reportFile ? reportFile.name : "No file selected" }}
                   </p>
@@ -697,13 +697,13 @@ function dismiss() {
           </section>
         </div>
 
-        <!-- ── Summary Panel ── -->
+        <!-- â”€â”€ Summary Panel â”€â”€ -->
         <section
           class="bg-emerald-50 border border-emerald-100 rounded-xl p-6 space-y-4"
         >
           <h3
             class="text-base font-bold text-primary"
-            style="font-family: &quot;Poppins&quot;, sans-serif"
+            style="font-family: 'Poppins', sans-serif"
           >
             Summary
           </h3>
@@ -717,7 +717,7 @@ function dismiss() {
                 "
               >
                 {{ receipts.length
-                }}{{ receipts.length < 2 ? " (need at least 2)" : " ✓" }}
+                }}{{ receipts.length < 2 ? " (need at least 2)" : " âœ“" }}
               </span>
             </div>
             <div class="flex justify-between items-center text-sm">
@@ -743,7 +743,7 @@ function dismiss() {
             <div class="flex justify-between items-center pt-2">
               <span
                 class="text-base font-bold text-primary"
-                style="font-family: &quot;Poppins&quot;, sans-serif"
+                style="font-family: 'Poppins', sans-serif"
                 >Total Amount</span
               >
               <span class="text-2xl font-black text-emerald-600 font-mono">{{
@@ -753,7 +753,7 @@ function dismiss() {
           </div>
         </section>
 
-        <!-- ── Footer Actions ── -->
+        <!-- â”€â”€ Footer Actions â”€â”€ -->
         <div class="flex justify-end gap-4 pb-4">
           <button class="btn btn-secondary !px-8" @click="dismiss">
             Cancel

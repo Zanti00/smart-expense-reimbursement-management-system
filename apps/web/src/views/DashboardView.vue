@@ -6,6 +6,7 @@ import { useReimbursementStore } from '@/stores/reimbursement'
 import { useCashAdvanceStore } from '@/stores/cashAdvance'
 import StatusBadge from '@/components/base/StatusBadge.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
+import BaseKpiGrid from '@/components/base/BaseKpiGrid.vue'
 import { Bar, Doughnut } from 'vue-chartjs'
 import {
   Chart as ChartJS, CategoryScale, LinearScale, BarElement,
@@ -228,25 +229,7 @@ function isAmberWarning(dateStr) {
     </div>
 
     <!-- ── KPI Cards ── -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-      <div
-        v-for="kpi in kpis"
-        :key="kpi.label"
-        class="kpi-card group"
-      >
-        <!-- Colored top bar per card -->
-        <div :class="['absolute top-0 left-0 right-0 h-0.5 rounded-t-xl bg-gradient-to-r', kpi.accent]" />
-
-        <div class="flex items-center justify-between mb-4">
-          <span class="text-xs text-slate-400" style="font-family: 'Open Sans', sans-serif;">{{ kpi.sub }}</span>
-          <div :class="['w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0', kpi.iconBg]">
-            <component :is="kpi.icon" :class="['w-4 h-4', kpi.iconColor]" />
-          </div>
-        </div>
-        <p class="kpi-value">{{ kpi.value }}</p>
-        <p class="kpi-label">{{ kpi.label }}</p>
-      </div>
-    </div>
+    <BaseKpiGrid :kpis="kpis" gridClasses="grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4" />
 
     <!-- ── Charts Row ── -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">

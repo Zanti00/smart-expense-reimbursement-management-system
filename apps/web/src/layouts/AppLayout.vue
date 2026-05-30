@@ -57,7 +57,7 @@ const navLinks = computed(() => {
     { name: "Liquidations", to: "/liquidations", icon: FilePieChart },
   ];
   const employee = [
-    { name: "My Expense", to: "/receipts", icon: FileCheck },
+    { name: "My Expense", to: "/my-expense", icon: FileCheck },
   ];
   const admin = [
     { header: "SYSTEM ADMIN" },
@@ -277,6 +277,9 @@ async function logout() {
 
     <!-- Notification Sidebar -->
     <NotificationPanel :open="notifOpen" @close="notifOpen = false" />
+    
+    <!-- Global Toast Notifications -->
+    <ToastNotification />
   </div>
 </template>
 

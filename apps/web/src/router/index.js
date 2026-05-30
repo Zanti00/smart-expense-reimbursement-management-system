@@ -54,22 +54,10 @@ const routes = [
         meta: { title: "Liquidations" },
       },
       {
-        path: "receipts",
-        name: "Receipts",
-        component: () => import("@/views/ReceiptRepositoryView.vue"),
-        meta: { title: "Receipt Repository" },
-      },
-      {
-        path: "expense-management",
-        name: "ExpenseManagement",
-        component: () => import("@/views/ExpenseManagementView.vue"),
-        meta: { title: "Expense Management" },
-      },
-      {
-        path: "expense-management/new",
-        name: "ExpenseForm",
-        component: () => import("@/views/ExpenseFormView.vue"),
-        meta: { title: "New Expense" },
+        path: "my-expense",
+        name: "MyExpense",
+        component: () => import("@/views/MyExpenseView.vue"),
+        meta: { title: "My Expense" },
       },
       {
         path: "admin/policy",
