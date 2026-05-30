@@ -26,6 +26,11 @@ onMounted(async () => {
     redirectPath += (redirectPath.includes('?') ? '&' : '?') + 'message=' + encodeURIComponent(message)
   }
 
+  const token = route.query.token
+  if (token) {
+    auth.setToken(Array.isArray(token) ? token[0] : token)
+  }
+
   try {
     await auth.handleCallback()
     router.replace(redirectPath)

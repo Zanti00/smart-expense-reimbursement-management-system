@@ -5,9 +5,19 @@ const AUTH_MODULE_URL = import.meta.env.VITE_AUTH_MODULE_URL || 'http://localhos
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
+  const token = ref(localStorage.getItem('serms_token') || null)
 
   const isAuthenticated = computed(() => !!user.value)
   const isAdmin = computed(() => user.value?.role === 'admin')
+
+  function setToken(newToken) {
+    token.value = newToken
+    if (newToken) {
+      localStorage.setItem('serms_token', newToken)
+    } else {
+      localStorage.removeItem('serms_token')
+    }
+  }
 
   /**
    * Restore session from localStorage on app boot.
@@ -56,10 +66,15 @@ export const useAuthStore = defineStore('auth', () => {
    * @returns {Promise<object>} — the user profile
    */
   async function fetchProfile() {
+    const headers = {
+      'Accept': 'application/json'
+    }
+    if (token.value) {
+      headers['Authorization'] = `Bearer ${token.value}`
+    }
+
     const response = await fetch('/api/serms/auth/me', {
-      headers: {
-        'Accept': 'application/json'
-      },
+      headers,
       credentials: 'include'
     })
 
@@ -92,13 +107,17 @@ export const useAuthStore = defineStore('auth', () => {
    */
   function clearSession() {
     user.value = null
+    token.value = null
     localStorage.removeItem('serms_user')
+    localStorage.removeItem('serms_token')
   }
 
   return {
     user,
     isAuthenticated,
     isAdmin,
+    token,
+    setToken,
     restoreSession,
     redirectToLogin,
     handleCallback,

@@ -159,6 +159,9 @@ async function logout() {
                 isActive(link.to) ? 'text-white' : 'text-slate-400',
               ]"
             />
+            <Transition name="fade-text">
+              <span v-if="sidebarOpen" class="flex-1 truncate">{{ link.name }}</span>
+            </Transition>
             <Transition name="fade">
               <ChevronRight
                 v-if="sidebarOpen && isActive(link.to)"

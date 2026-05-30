@@ -29,5 +29,21 @@ export const useNotificationStore = defineStore('notification', () => {
     })
   }
 
-  return { alerts, unreadCount, markRead, markAllRead, push }
+  function info(message) {
+    push({ type: 'info', message })
+  }
+
+  function success(message) {
+    push({ type: 'success', message })
+  }
+
+  function warning(message) {
+    push({ type: 'warning', message })
+  }
+
+  function error(message) {
+    push({ type: 'danger', message })
+  }
+
+  return { alerts, unreadCount, markRead, markAllRead, push, info, success, warning, error }
 })
