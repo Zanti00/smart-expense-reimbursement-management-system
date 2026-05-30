@@ -159,12 +159,9 @@ async function logout() {
               ]"
             />
             <Transition name="fade-text">
-              <span v-if="sidebarOpen" class="flex-1 truncate">{{ link.name }}</span>
-            </Transition>
-            <Transition name="fade">
               <span
                 v-if="sidebarOpen"
-                class="truncate text-sm font-semibold"
+                class="flex-1 truncate text-sm font-semibold"
               >
                 {{ link.name }}
               </span>

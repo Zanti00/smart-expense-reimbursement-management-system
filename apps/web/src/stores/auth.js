@@ -10,7 +10,6 @@ export const useAuthStore = defineStore("auth", () => {
 
   const isAuthenticated = computed(() => !!user.value);
   const isAdmin = computed(() => user.value?.role === "admin");
-  const token = computed(() => user.value?.token || "");
 
   /**
    * Restore session from localStorage on app boot.
