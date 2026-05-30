@@ -191,26 +191,26 @@ function dismiss() {
 <template>
   <div class="max-w-5xl mx-auto flex flex-col gap-6 pb-12 animate-fade-up">
     <!-- ── Page Header (standalone route mode only) ── -->
-    <div v-if="!forwardedReceipts.length" class="flex items-center gap-3">
-      <button
-        @click="dismiss"
-        class="w-9 h-9 rounded-full bg-white border border-slate-200 flex items-center justify-center hover:bg-slate-50 hover:text-primary shadow-sm text-slate-500 transition-all"
-      >
-        <ArrowLeft class="w-4 h-4" />
-      </button>
-      <div>
-        <h1
-          class="text-2xl font-bold text-primary leading-tight"
-          style="
-            font-family: &quot;Poppins&quot;, sans-serif;
-            letter-spacing: -0.02em;
-          "
+    <div v-if="!forwardedReceipts.length" class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div class="flex items-start gap-3">
+        <button
+          @click="dismiss"
+          class="w-9 h-9 rounded-full bg-white border border-slate-200 flex items-center justify-center hover:bg-slate-50 hover:text-primary shadow-sm text-slate-500 transition-all"
         >
-          New Reimbursement
-        </h1>
-        <p class="text-xs text-slate-400 mt-0.5">
-          Submit your expense reimbursement request
-        </p>
+          <ArrowLeft class="w-4 h-4" />
+        </button>
+        <div class="min-w-0">
+          <div class="mb-2 flex items-center gap-2">
+            <FileText class="h-3.5 w-3.5 text-accent" />
+            <span class="section-label">Claim Submission</span>
+          </div>
+          <h1 class="font-heading text-2xl font-bold leading-tight text-slate-800">
+            New Reimbursement
+          </h1>
+          <p class="mt-1 text-sm text-slate-400">
+            Submit your expense reimbursement request
+          </p>
+        </div>
       </div>
     </div>
 

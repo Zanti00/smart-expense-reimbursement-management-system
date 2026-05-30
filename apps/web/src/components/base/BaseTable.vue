@@ -128,7 +128,7 @@ function nextPage() { if (currentPage.value < totalPages.value) currentPage.valu
     </div>
 
     <!-- Pagination / Footer -->
-    <div class="flex items-center justify-between border border-slate-200 border-t-0 bg-white px-3 py-1.5 rounded-none">
+    <div class="flex items-center justify-between border border-black/5 border-t-0 bg-white/90 px-3 py-2 rounded-b-card shadow-sm">
       <div class="text-[10px] font-bold uppercase tracking-widest text-slate-500">
         Record {{ Math.min((currentPage - 1) * pageSize + 1, filtered.length) }}–{{ Math.min(currentPage * pageSize, filtered.length) }}
         / Total: {{ filtered.length }}

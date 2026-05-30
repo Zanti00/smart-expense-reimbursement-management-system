@@ -8,6 +8,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => !!user.value)
   const isAdmin = computed(() => user.value?.role === 'admin')
+  const token = computed(() => user.value?.token || '')
 
   /**
    * Restore session from localStorage on app boot.
@@ -71,8 +72,8 @@ export const useAuthStore = defineStore('auth', () => {
 
     const data = await response.json()
     user.value = data
-    localStorage.setItem('serms_user', JSON.stringify(data))
-    return data
+    localStorage.setItem('serms_user', JSON.stringify(user.value))
+    return user.value
   }
 
   /**
@@ -81,6 +82,7 @@ export const useAuthStore = defineStore('auth', () => {
    */
   function logout() {
     clearSession()
+
     // Redirect to auth module to clear server-side session.
     // We intentionally omit redirect_uri so it stays on the login screen and displays a success toast.
     const logoutUrl = `${AUTH_MODULE_URL}/logout`
@@ -99,6 +101,7 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     isAuthenticated,
     isAdmin,
+    token,
     restoreSession,
     redirectToLogin,
     handleCallback,

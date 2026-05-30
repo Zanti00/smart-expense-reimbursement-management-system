@@ -60,6 +60,12 @@ const routes = [
         meta: { title: 'New Expense' }
       },
       {
+        path: 'receipts',
+        name: 'Receipts',
+        component: () => import('@/views/ReceiptRepositoryView.vue'),
+        meta: { title: 'Receipts' }
+      },
+      {
         path: 'admin/policy',
         name: 'Policy',
         component: () => import('@/views/admin/PolicyView.vue'),

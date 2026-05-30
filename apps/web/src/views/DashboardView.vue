@@ -170,17 +170,16 @@ function isAmberWarning(dateStr) {
   <div class="flex flex-col gap-6 font-sans animate-fade-up">
 
     <!-- ── Page Header ── -->
-    <div class="flex items-end justify-between">
-      <div>
-        <div class="flex items-center gap-2 mb-2">
+    <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div class="min-w-0">
+        <div class="mb-2 flex items-center gap-2">
           <div class="w-1.5 h-1.5 bg-success rounded-full animate-pulse" />
           <span class="section-label">Financial Overview</span>
         </div>
-        <h1 class="text-2xl font-bold text-slate-800 leading-tight"
-            style="font-family: 'Poppins', sans-serif; letter-spacing: -0.02em;">
+        <h1 class="font-heading text-2xl font-bold leading-tight text-slate-800">
           Welcome back, <span class="text-primary">{{ auth.user?.name?.split(' ')[0] }}</span> 👋
         </h1>
-        <p class="text-sm text-slate-400 mt-1" style="font-family: 'Open Sans', sans-serif;">
+        <p class="mt-1 text-sm text-slate-400">
           Here's what's happening with your finances today.
         </p>
       </div>

@@ -9,18 +9,44 @@ export default {
       colors: {
         primary: {
           DEFAULT: '#252578',
-          50: '#F8FAFC', // Sterile neutral
-          100: '#E8EBF5',
-          200: '#C9D1E6',
-          300: '#9FB0D1',
-          400: '#6B8BB8',
+          50: '#F4F5FF',
+          100: '#E6E8FF',
+          200: '#C8CCFF',
+          300: '#9EA5F8',
+          400: '#676DCD',
           500: '#252578',
-          600: '#1D1D61',
-          700: '#16164A',
-          800: '#0E0E33',
-          900: '#07071D',
+          600: '#20206C',
+          700: '#1A1A59',
+          800: '#11113F',
+          900: '#090923',
         },
-        clinical: '#F8FAFC',
+        secondary: {
+          DEFAULT: '#2F2F7E',
+          50: '#F4F4FF',
+          100: '#E8E8FF',
+          200: '#CBCBFF',
+          300: '#A2A2F4',
+          400: '#6C6CCD',
+          500: '#2F2F7E',
+          600: '#28286F',
+          700: '#20205B',
+          800: '#171746',
+          900: '#0B0B26',
+        },
+        accent: {
+          DEFAULT: '#2E85D8',
+          50: '#EFF7FF',
+          100: '#DCEEFF',
+          200: '#B9DCFA',
+          300: '#86C2F4',
+          400: '#54A5EA',
+          500: '#2E85D8',
+          600: '#1F6EBB',
+          700: '#185695',
+          800: '#153F6C',
+          900: '#102A47',
+        },
+        clinical: '#F7F9FD',
         sterile: '#FFFFFF',
         slate: {
           300: '#94A3B8', // Previously 400
@@ -41,17 +67,20 @@ export default {
         'slate-600': '#334155', // Match definition
       },
       fontFamily: {
-        sans: ['Inter', 'Public Sans', 'sans-serif'],
+        sans: ['Open Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        heading: ['Poppins', 'Montserrat', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['Montserrat', 'Poppins', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
       },
       boxShadow: {
-        sm: '0 1px 2px 0 rgba(37,37,120,0.05)',
-        card: '0 1px 3px 0 rgba(37,37,120,0.08)',
-        'card-hover': '0 2px 8px 0 rgba(37,37,120,0.1)',
+        sm: '0 1px 2px 0 rgba(0,0,0,0.05)',
+        card: '0 18px 48px -36px rgba(37,37,120,0.35)',
+        'card-hover': '0 24px 64px -34px rgba(46,133,216,0.38)',
+        'xl-soft': '0 24px 72px -48px rgba(37,37,120,0.5)',
       },
       borderRadius: {
-        card: '0.125rem', // sm
-        sm: '0.125rem',
+        card: '0.5rem',
+        sm: '0.375rem',
       }
     }
   },

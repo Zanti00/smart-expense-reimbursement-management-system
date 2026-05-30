@@ -56,17 +56,16 @@ async function confirmReject() {
   <div class="flex flex-col gap-6 font-sans animate-fade-up">
 
     <!-- ── Page Header ── -->
-    <div class="flex items-end justify-between">
-      <div>
-        <div class="flex items-center gap-2 mb-2">
+    <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div class="min-w-0">
+        <div class="mb-2 flex items-center gap-2">
           <Activity class="w-3.5 h-3.5 text-accent" />
           <span class="section-label">Claim Records</span>
         </div>
-        <h1 class="text-2xl font-bold text-slate-800 leading-tight"
-            style="font-family: 'Poppins', sans-serif; letter-spacing: -0.02em;">
+        <h1 class="font-heading text-2xl font-bold leading-tight text-slate-800">
           Reimbursements
         </h1>
-        <p class="text-sm text-slate-400 mt-1" style="font-family: 'Open Sans', sans-serif;">
+        <p class="mt-1 text-sm text-slate-400">
           Manage and track all submitted expense claims.
         </p>
       </div>
@@ -153,16 +152,15 @@ async function confirmReject() {
     <!-- ── Rejection Modal ── -->
     <Transition name="modal">
       <div v-if="rejectingId"
-           class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-        <div class="card w-full max-w-md shadow-2xl overflow-hidden border border-red-100">
+           class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 backdrop-blur-sm p-4">
+        <div class="w-full max-w-md overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl">
           <!-- Header -->
-          <div class="px-6 py-4 flex items-center gap-3 border-b border-red-100"
-               style="background: linear-gradient(135deg, #FEF2F2 0%, #FFF5F5 100%);">
-            <div class="w-9 h-9 rounded-lg bg-red-100 flex items-center justify-center">
+          <div class="px-6 py-4 flex items-center gap-3 border-b border-slate-200 bg-slate-50/80">
+            <div class="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center">
               <XCircle class="w-5 h-5 text-red-500" />
             </div>
             <div>
-              <h3 class="text-sm font-semibold text-slate-800" style="font-family: 'Poppins', sans-serif;">
+              <h3 class="font-heading text-sm font-semibold text-slate-800">
                 Reject Claim
               </h3>
               <p class="text-xs text-slate-400 mt-0.5">Ref #{{ rejectingId }}</p>
@@ -171,7 +169,7 @@ async function confirmReject() {
 
           <!-- Body -->
           <div class="p-6 flex flex-col gap-4">
-            <p class="text-sm text-slate-600" style="font-family: 'Open Sans', sans-serif;">
+            <p class="text-sm text-slate-600">
               Please provide a reason for rejecting this reimbursement claim.
             </p>
             <div class="input-wrapper">
@@ -207,25 +205,24 @@ async function confirmReject() {
     <!-- ── Record Detail Panel ── -->
     <Transition name="modal">
       <div v-if="viewingRecord"
-           class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-        <div class="card w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+           class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 backdrop-blur-sm p-4">
+        <div class="w-full max-w-3xl overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl flex flex-col max-h-[90vh]">
 
           <!-- Header -->
-          <div class="px-6 py-4 flex items-center justify-between border-b border-slate-100"
-               style="background: linear-gradient(135deg, #252578 0%, #2F2F7E 100%);">
+          <div class="px-6 py-4 flex items-center justify-between border-b border-slate-200 bg-slate-50/80">
             <div class="flex items-center gap-3">
-              <div class="w-9 h-9 rounded-lg bg-white/15 flex items-center justify-center">
-                <FileText class="w-4.5 h-4.5 w-[18px] h-[18px] text-white" />
+              <div class="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                <FileText class="w-4.5 h-4.5 w-[18px] h-[18px] text-primary" />
               </div>
               <div>
-                <h3 class="text-sm font-semibold text-white" style="font-family: 'Poppins', sans-serif;">
+                <h3 class="font-heading text-sm font-semibold text-primary">
                   Reimbursement Details
                 </h3>
-                <p class="text-white/50 text-xs mt-0.5">Ref #{{ viewingRecord.id }}</p>
+                <p class="text-slate-500 text-xs mt-0.5">Ref #{{ viewingRecord.id }}</p>
               </div>
             </div>
             <button
-              class="text-white/40 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/10"
+              class="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-danger"
               @click="closeDetails"
             >
               <X class="w-5 h-5" />

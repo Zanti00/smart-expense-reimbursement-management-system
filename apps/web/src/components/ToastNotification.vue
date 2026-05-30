@@ -4,11 +4,11 @@
       <div 
         v-for="toast in toasts" 
         :key="toast.id"
-        class="toast-item pointer-events-auto flex items-center p-4 rounded-none shadow-lg text-sm min-w-[300px] max-w-md transform transition-all border-l-4"
+        class="toast-item pointer-events-auto flex items-center p-4 rounded-card shadow-card text-sm min-w-[300px] max-w-md transform transition-all duration-200 ease-out border-l-4 backdrop-blur-sm"
         :class="[
-          toast.type === 'error' ? 'bg-white text-slate-700 border border-slate-200 border-l-danger shadow-sm' : '',
-          toast.type === 'success' ? 'bg-white text-slate-700 border border-slate-200 border-l-success shadow-sm' : '',
-          toast.type === 'info' ? 'bg-white text-slate-700 border border-slate-200 border-l-primary shadow-sm' : ''
+          toast.type === 'error' ? 'bg-white/95 text-slate-700 border border-black/5 border-l-danger' : '',
+          toast.type === 'success' ? 'bg-white/95 text-slate-700 border border-black/5 border-l-success' : '',
+          toast.type === 'info' ? 'bg-white/95 text-slate-700 border border-black/5 border-l-accent' : ''
         ]"
       >
         <div class="flex-1 font-bold tracking-wide uppercase">{{ toast.message }}</div>

@@ -131,17 +131,22 @@ async function handleSubmit() {
 
 <template>
   <div class="max-w-5xl mx-auto flex flex-col gap-6 font-sans">
-    <!-- Component Header -->
-    <div class="flex items-end justify-between border-b border-slate-200 pb-4">
-      <div>
-        <div class="flex items-center gap-2 mb-1">
-          <Receipt class="w-3.5 h-3.5 text-primary" />
-          <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Process: New Expense</span>
+    <!-- Page Header -->
+    <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div class="min-w-0">
+        <div class="mb-2 flex items-center gap-2">
+          <Receipt class="h-3.5 w-3.5 text-accent" />
+          <span class="section-label">New Expense</span>
         </div>
-        <h1 class="text-xl font-bold text-primary uppercase tracking-widest">Store Receipt</h1>
+        <h1 class="font-heading text-2xl font-bold leading-tight text-slate-800">
+          Store Receipt
+        </h1>
+        <p class="mt-1 text-sm text-slate-400">
+          Upload and validate a new expense receipt
+        </p>
       </div>
       <button
-        class="text-[10px] font-bold text-slate-400 hover:text-primary uppercase tracking-widest flex items-center gap-1 transition"
+        class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 transition hover:text-primary"
         @click="router.push('/expense-management')"
       >
         <ChevronLeft class="w-3.5 h-3.5" /> Back to Expense Management

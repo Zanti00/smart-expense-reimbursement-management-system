@@ -5,7 +5,50 @@ import { useAuthStore } from './auth'
 export const useReceiptStore = defineStore('receipts', () => {
   const auth = useAuthStore()
   
-  const receipts = ref([])
+  const receipts = ref([
+    {
+      id: 'RCPT-2026-088',
+      uploader: 'kyle.l',
+      fileName: 'bir_official_receipt_meals.png',
+      fileType: 'image/png',
+      fileSize: 1048576,
+      date: '03/15/2026',
+      amount: 450.00,
+      category: 'Meals',
+      status: 'Pending',
+      hash: '7f83b123456789abcdef7f83b123456789abcdef7f83b123456789abcdef1234',
+      thumbnail: null,
+      isDeleted: false
+    },
+    {
+      id: 'RCPT-2026-089',
+      uploader: 'kyle.l',
+      fileName: 'taxi_fare_manila.pdf',
+      fileType: 'application/pdf',
+      fileSize: 2097152,
+      date: '03/05/2026',
+      amount: 650.00,
+      category: 'Transportation',
+      status: 'Pending',
+      hash: '8f83b123456789abcdef7f83b123456789abcdef7f83b123456789abcdef5678',
+      thumbnail: null,
+      isDeleted: false
+    },
+    {
+      id: 'RCPT-2026-090',
+      uploader: 'kyle.l',
+      fileName: 'office_supplies_notebooks.jpg',
+      fileType: 'image/jpeg',
+      fileSize: 524288,
+      date: '05/15/2026',
+      amount: 1250.00,
+      category: 'Supplies',
+      status: 'Pending',
+      hash: '9f83b123456789abcdef7f83b123456789abcdef7f83b123456789abcdef9999',
+      thumbnail: null,
+      isDeleted: false
+    }
+  ])
 
   // Filters State
   const filters = ref({

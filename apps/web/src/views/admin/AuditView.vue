@@ -37,15 +37,19 @@ const ACTION_MAP = {
 
 <template>
   <div class="flex flex-col gap-6 font-sans">
-    <!-- Component Header -->
-    <div class="flex items-end justify-between border-b border-slate-200 pb-5 text-primary">
-      <div>
-        <div class="flex items-center gap-2 mb-1">
-          <Activity class="w-3.5 h-3.5" />
-          <span class="text-[10px] font-bold uppercase tracking-widest opacity-60">Control: Oversight & Assurance</span>
+    <!-- Page Header -->
+    <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div class="min-w-0">
+        <div class="mb-2 flex items-center gap-2">
+          <Activity class="h-3.5 w-3.5 text-accent" />
+          <span class="section-label">Oversight & Assurance</span>
         </div>
-        <h1 class="text-xl font-bold uppercase tracking-widest">Audit & Compliance</h1>
-        <p class="text-[10px] font-bold opacity-40 uppercase tracking-wider mt-1">Immutable system activity logs and compliance reports</p>
+        <h1 class="font-heading text-2xl font-bold leading-tight text-slate-800">
+          Audit & Compliance
+        </h1>
+        <p class="mt-1 text-sm text-slate-400">
+          Immutable system activity logs and compliance reports
+        </p>
       </div>
     </div>
 

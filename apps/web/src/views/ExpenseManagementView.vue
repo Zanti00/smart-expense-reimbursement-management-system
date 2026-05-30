@@ -280,16 +280,18 @@ function handleDelete(item) {
 
 <template>
   <div class="space-y-6 max-w-7xl mx-auto pb-12">
-    <!-- Header -->
-    <header
-      class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
-    >
-      <div>
-        <h1 class="text-2xl font-bold text-primary tracking-tight">
+    <!-- Page Header -->
+    <header class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div class="min-w-0">
+        <div class="mb-2 flex items-center gap-2">
+          <FileText class="h-3.5 w-3.5 text-accent" />
+          <span class="section-label">Expense Records</span>
+        </div>
+        <h1 class="font-heading text-2xl font-bold leading-tight text-slate-800">
           Expense Management
         </h1>
-        <p class="text-xs text-slate-500 font-mono mt-1">
-          SECURE EXPENSE VALIDATION MODULE
+        <p class="mt-1 text-sm text-slate-400">
+          Secure expense validation module
         </p>
       </div>
       <div class="flex items-center gap-2">
@@ -635,20 +637,22 @@ function handleDelete(item) {
     <!-- Delete Modal (2FA / Confirmation) -->
     <div
       v-if="deleteModalOpen"
-      class="fixed inset-0 z-50 bg-slate-900/40 flex items-center justify-center p-4"
+      class="fixed inset-0 z-50 bg-slate-950/35 backdrop-blur-sm flex items-center justify-center p-4"
     >
       <div
-        class="bg-white rounded-lg shadow-xl w-full max-w-sm overflow-hidden animate-fade-in border border-slate-200"
+        class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden animate-fade-in border border-slate-200"
       >
-        <div class="p-5">
-          <div class="flex items-center gap-3 text-danger mb-4">
+        <div class="border-b border-slate-200 bg-slate-50/80 px-5 py-4">
+          <div class="flex items-center gap-3 text-danger">
             <div
-              class="w-10 h-10 bg-red-50 rounded-full flex items-center justify-center flex-shrink-0"
+              class="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center flex-shrink-0"
             >
               <Trash2 class="w-5 h-5" />
             </div>
-            <h3 class="text-lg font-bold">Delete Receipt</h3>
+            <h3 class="font-heading text-lg font-bold text-slate-800">Delete Receipt</h3>
           </div>
+        </div>
+        <div class="p-5">
           <p class="text-sm text-slate-600 mb-4">
             You are about to soft-delete this record. Please type
             <strong class="text-slate-900">DELETE</strong> to confirm this
@@ -662,7 +666,7 @@ function handleDelete(item) {
           />
         </div>
         <div
-          class="bg-slate-50 p-4 border-t border-slate-100 flex justify-end gap-2"
+          class="bg-slate-50/80 p-4 border-t border-slate-200 flex justify-end gap-2"
         >
           <button class="btn btn-secondary" @click="deleteModalOpen = false">
             Cancel
@@ -681,7 +685,7 @@ function handleDelete(item) {
     <!-- View Receipt Modal -->
     <div
       v-if="viewModalOpen && viewedReceipt"
-      class="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4 lg:p-8 backdrop-blur-sm"
+      class="fixed inset-0 z-50 bg-slate-950/35 flex items-center justify-center p-4 lg:p-8 backdrop-blur-sm"
       @click="closeViewModal"
     >
       <div

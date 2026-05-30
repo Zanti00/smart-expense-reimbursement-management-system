@@ -55,7 +55,9 @@ const navLinks = computed(() => {
     { name: "Reimbursements", to: "/reimbursements", icon: Receipt },
     { name: "Cash Advances", to: "/cash-advances", icon: Wallet },
     { name: "Liquidations", to: "/liquidations", icon: FilePieChart },
-    { name: "Receipts", to: "/receipts", icon: FileCheck },
+  ];
+  const employee = [
+    { name: "My Expense", to: "/receipts", icon: FileCheck },
   ];
   const admin = [
     { header: "SYSTEM ADMIN" },
@@ -63,7 +65,7 @@ const navLinks = computed(() => {
     { name: "Audit Log", to: "/admin/audit", icon: ClipboardList },
     { name: "Reports", to: "/admin/reports", icon: FileBarChart2 },
   ];
-  return auth.isAdmin ? [...base, { divider: true }, ...admin] : base;
+  return auth.isAdmin ? [...base, { divider: true }, ...admin] : [...base, ...employee];
 });
 
 const unreadCount = computed(() => notif.alerts.filter((a) => !a.read).length);
@@ -82,7 +84,7 @@ async function logout() {
 </script>
 
 <template>
-  <div class="flex h-screen overflow-hidden bg-clinical font-sans select-none">
+  <div class="flex h-screen overflow-hidden bg-clinical font-sans text-slate-700 select-none">
     <!-- ======================== SIDEBAR ======================== -->
     <!-- Mobile overlay -->
     <Transition name="fade">
@@ -102,12 +104,9 @@ async function logout() {
         mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
       ]"
       style="
-        background: linear-gradient(
-          160deg,
-          #252578 0%,
-          #2f2f7e 50%,
-          #1d1d61 100%
-        );
+        background:
+          radial-gradient(circle at top left, rgba(46, 133, 216, 0.32), transparent 34%),
+          linear-gradient(160deg, #252578 0%, #2f2f7e 58%, #000000 135%);
       "
     >
       <!-- Branding Module -->
@@ -115,14 +114,14 @@ async function logout() {
         class="flex items-center gap-3 px-4 py-6 border-b border-white/10 min-h-[70px]"
       >
         <div
-          class="w-8 h-8 border border-white/30 flex items-center justify-center bg-white/10 flex-shrink-0"
+          class="w-8 h-8 rounded-md border border-white/10 flex items-center justify-center bg-white/10 shadow-sm flex-shrink-0"
         >
-          <FlaskConical class="w-4 h-4 text-white" />
+          <Sparkles class="w-4 h-4 text-white" />
         </div>
         <Transition name="fade">
           <div v-if="sidebarOpen" class="overflow-hidden whitespace-nowrap">
             <p
-              class="text-white font-bold text-base tracking-widest uppercase leading-none"
+              class="text-white font-heading font-bold text-base leading-none"
             >
               SERMS
             </p>
@@ -138,9 +137,9 @@ async function logout() {
             <Transition name="fade">
               <span
                 v-if="sidebarOpen"
-                class="text-[11px] font-bold uppercase tracking-wider text-primary-300 opacity-80 flex items-center gap-2"
+                class="text-[10px] font-heading font-bold uppercase text-white/45 flex items-center gap-2"
               >
-                <div class="w-1.5 h-1.5 bg-primary-400 opacity-50" />
+                <div class="w-1.5 h-1.5 rounded-full bg-accent opacity-70" />
                 {{ link.header }}
               </span>
             </Transition>
@@ -160,6 +159,14 @@ async function logout() {
               ]"
             />
             <Transition name="fade">
+              <span
+                v-if="sidebarOpen"
+                class="truncate text-sm font-semibold"
+              >
+                {{ link.name }}
+              </span>
+            </Transition>
+            <Transition name="fade">
               <ChevronRight
                 v-if="sidebarOpen && isActive(link.to)"
                 class="w-3 h-3 ml-auto text-white/60"
@@ -173,21 +180,21 @@ async function logout() {
       <div class="border-t border-white/10 bg-black/10 p-4">
         <div class="flex items-center gap-3">
           <div
-            class="w-8 h-8 border border-white/20 flex items-center justify-center flex-shrink-0 text-white text-[10px] font-bold font-mono"
+            class="w-8 h-8 rounded-md border border-white/10 bg-white/10 flex items-center justify-center flex-shrink-0 text-white text-[10px] font-bold font-mono shadow-sm"
           >
             {{ auth.user?.avatar }}
           </div>
           <Transition name="fade">
             <div v-if="sidebarOpen" class="flex-1 min-w-0">
               <p
-                class="text-white text-xs font-bold uppercase truncate tracking-wide"
+                class="text-white text-xs font-heading font-bold truncate"
               >
                 {{ auth.user?.name }}
               </p>
               <div class="flex items-center gap-1.5 mt-0.5">
                 <div class="w-1.5 h-1.5 bg-success rounded-full" />
                 <p
-                  class="text-white/70 text-[10px] font-bold uppercase tracking-wider"
+                  class="text-white/60 text-[10px] font-heading font-bold uppercase"
                 >
                   {{ auth.user?.role }}
                 </p>
@@ -196,7 +203,7 @@ async function logout() {
           </Transition>
           <button
             v-if="sidebarOpen"
-            class="text-white/30 hover:text-white/80 p-1.5 rounded-lg hover:bg-white/10 flex-shrink-0"
+            class="text-white/35 hover:text-white p-1.5 rounded-md hover:bg-white/10 flex-shrink-0 transition-all duration-200 ease-out"
             title="Logout"
             @click="logout"
           >
@@ -210,7 +217,7 @@ async function logout() {
     <div class="flex flex-col flex-1 min-w-0 overflow-hidden">
       <!-- Console Header -->
       <header
-        class="flex items-center gap-4 px-4 lg:px-6 py-3 bg-white border-b border-slate-200 z-10 min-h-[70px]"
+        class="flex items-center gap-4 px-4 lg:px-6 py-3 bg-white/85 border-b border-black/5 shadow-sm backdrop-blur-md z-10 min-h-[70px]"
       >
         <!-- Mobile Trigger -->
         <button class="lg:hidden btn-icon" @click="mobileOpen = !mobileOpen">
@@ -230,7 +237,7 @@ async function logout() {
 
         <!-- Search -->
         <div
-          class="hidden md:flex items-center gap-2 bg-slate-100/80 border border-slate-200/80 rounded-lg px-3 py-2 w-56 hover:border-accent/30 focus-within:border-accent/50 focus-within:bg-white transition-all duration-200"
+          class="hidden md:flex items-center gap-2 bg-white/80 border border-black/5 rounded-md px-3 py-2 w-56 shadow-sm hover:border-accent/30 focus-within:border-accent/50 focus-within:bg-white transition-all duration-200"
         >
           <Search class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
           <input
@@ -258,7 +265,7 @@ async function logout() {
 
       <!-- Active Workspace -->
       <main
-        class="flex-1 overflow-y-auto scrollbar-thin p-6 animate-fade-in bg-clinical/50"
+        class="flex-1 overflow-y-auto scrollbar-thin p-6 animate-fade-in bg-clinical"
       >
         <RouterView v-slot="{ Component }">
           <Transition name="page" mode="out-in">

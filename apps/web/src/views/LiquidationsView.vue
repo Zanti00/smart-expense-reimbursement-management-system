@@ -83,15 +83,19 @@ function selectAdvance(adv) {
 
 <template>
   <div class="flex flex-col gap-6 font-sans">
-    <!-- Component Header -->
-    <div class="flex items-end justify-between border-b border-slate-200 pb-5 text-primary">
-      <div>
-        <div class="flex items-center gap-2 mb-1">
-          <ArchiveRestore class="w-3.5 h-3.5" />
-          <span class="text-[10px] font-bold uppercase tracking-widest opacity-60">Section: Settlement Operations</span>
+    <!-- Page Header -->
+    <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div class="min-w-0">
+        <div class="mb-2 flex items-center gap-2">
+          <ArchiveRestore class="h-3.5 w-3.5 text-accent" />
+          <span class="section-label">Settlement Operations</span>
         </div>
-        <h1 class="text-xl font-bold uppercase tracking-widest">Liquidation Console</h1>
-        <p class="text-[10px] font-bold opacity-40 uppercase tracking-wider mt-1">Reconcile outstanding advances and settle balances</p>
+        <h1 class="font-heading text-2xl font-bold leading-tight text-slate-800">
+          Liquidation Console
+        </h1>
+        <p class="mt-1 text-sm text-slate-400">
+          Reconcile outstanding advances and settle balances
+        </p>
       </div>
     </div>
 

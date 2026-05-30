@@ -88,13 +88,40 @@ function forwardSelected() {
 }
 
 // ── Category Filter ───────────────────────────────────────────────
-const CATEGORIES = ['all', 'Lodging', 'Transportation', 'Meals', 'Supplies', 'Uncategorized']
+const CATEGORIES = []
 const activeCategory = ref('all')
+const statusFilter = ref('all')
+const categoryFilter = ref('all')
+
+const STATUS_FILTERS = [
+  { label: 'All Statuses', value: 'all' },
+  { label: 'Pending', value: 'Pending' },
+  { label: 'Approved', value: 'Approved' },
+  { label: 'Rejected', value: 'Rejected' },
+]
+
+const ADVANCED_CATEGORY_FILTERS = [
+  { label: 'All Categories', value: 'all' },
+  { label: 'Food & Dining', value: 'Meals' },
+  { label: 'Gas', value: 'Gas' },
+  { label: 'Hotels', value: 'Lodging' },
+  { label: 'Supplies', value: 'Supplies' },
+  { label: 'Transportation', value: 'Transportation' },
+  { label: 'Toll Fee', value: 'Toll Fee' },
+]
 
 const filteredReceipts = computed(() => {
-  const base = receiptsStore.visibleReceipts
-  if (activeCategory.value === 'all') return base
-  return base.filter(r => r.category === activeCategory.value)
+  let base = receiptsStore.visibleReceipts
+
+  if (statusFilter.value !== 'all') {
+    base = base.filter(r => r.status === statusFilter.value)
+  }
+
+  if (categoryFilter.value !== 'all') {
+    base = base.filter(r => r.category === categoryFilter.value)
+  }
+
+  return base
 })
 
 // ── Metrics ───────────────────────────────────────────────────────
@@ -218,28 +245,36 @@ const kpis = computed(() => [
   <div class="flex flex-col gap-6 max-w-7xl mx-auto pb-12 animate-fade-up">
 
     <!-- ── Page Header ── -->
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-      <div>
+    <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div class="min-w-0">
         <div class="flex items-center gap-2 mb-2">
           <DatabaseZap class="w-3.5 h-3.5 text-accent" />
           <span class="section-label">Expense Validation Module</span>
         </div>
-        <h1 class="text-2xl font-bold text-slate-800 leading-tight" style="font-family:'Poppins',sans-serif; letter-spacing:-0.02em;">My Expense</h1>
-        <p class="text-sm text-slate-400 mt-1" style="font-family:'Open Sans',sans-serif;">Organize and manage your receipts</p>
+        <h1 class="font-heading text-2xl font-bold leading-tight text-slate-800">
+          My Expense
+        </h1>
+        <p class="mt-1 text-sm text-slate-400">
+          Organize and manage your receipts
+        </p>
       </div>
       <div class="flex flex-wrap items-center gap-3">
         <!-- Forward to Reimbursement -->
         <button
           @click="forwardSelected"
           :disabled="selectedCount === 0"
-          class="btn"
-          :class="selectedCount > 0 ? 'btn-primary' : 'btn-secondary opacity-50 cursor-not-allowed'"
+          class="btn px-5 py-2.5 text-sm min-h-[42px]"
+          :class="selectedCount > 0
+            ? 'btn-primary'
+            : 'bg-white/80 text-slate-400 border border-black/5 shadow-sm cursor-not-allowed'"
         >
           <Send class="w-4 h-4" />
-          Forward to Reimbursement{{ selectedCount > 0 ? ` (${selectedCount})` : '' }}
+          <span class="whitespace-nowrap">
+            Forward to Reimbursement{{ selectedCount > 0 ? ` (${selectedCount})` : '' }}
+          </span>
         </button>
         <!-- Upload Receipt -->
-        <button @click="uploadModalOpen = true" class="btn btn-cta">
+        <button @click="uploadModalOpen = true" class="btn btn-cta min-h-[42px]">
           <UploadCloud class="w-4 h-4" />
           Upload Receipt
         </button>
@@ -268,21 +303,66 @@ const kpis = computed(() => [
     </div>
 
     <!-- ── Category Filter Tabs ── -->
-    <div class="flex flex-wrap gap-2">
+    <div v-if="false" class="hidden">
       <button
         v-for="cat in CATEGORIES"
         :key="cat"
         @click="activeCategory = cat"
-        class="px-5 py-2 rounded-full text-[13px] font-semibold transition-all capitalize"
+        class="px-5 py-2 rounded-md text-[13px] font-semibold transition-all duration-200 ease-out capitalize"
         :class="activeCategory === cat
-          ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-sm'
-          : 'bg-white border border-slate-200 text-slate-500 hover:border-primary/30 hover:text-primary hover:bg-primary-50'"
+          ? 'bg-primary text-white shadow-sm'
+          : 'bg-white/90 border border-black/5 text-slate-500 shadow-sm hover:border-accent/20 hover:text-accent-700 hover:bg-accent-50 hover:scale-[1.01]'"
       >
         {{ cat }}
       </button>
     </div>
 
     <!-- ── Receipt Card Grid ── -->
+    <!-- Compact Advanced Filters -->
+    <div class="flex flex-col gap-3 rounded-xl border border-black/5 bg-white/90 p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div class="relative min-w-[190px]">
+          <label class="section-label mb-1 block" for="receipt-status-filter">Status</label>
+          <select
+            id="receipt-status-filter"
+            v-model="statusFilter"
+            class="input !h-10 !py-2 !pr-10 text-sm font-semibold text-slate-700 appearance-none"
+          >
+            <option
+              v-for="option in STATUS_FILTERS"
+              :key="option.value"
+              :value="option.value"
+            >
+              {{ option.label }}
+            </option>
+          </select>
+          <ChevronDown class="pointer-events-none absolute bottom-3 right-3 h-4 w-4 text-slate-400" />
+        </div>
+
+        <div class="relative min-w-[220px]">
+          <label class="section-label mb-1 block" for="receipt-category-filter">Category</label>
+          <select
+            id="receipt-category-filter"
+            v-model="categoryFilter"
+            class="input !h-10 !py-2 !pr-10 text-sm font-semibold text-slate-700 appearance-none"
+          >
+            <option
+              v-for="option in ADVANCED_CATEGORY_FILTERS"
+              :key="option.value"
+              :value="option.value"
+            >
+              {{ option.label }}
+            </option>
+          </select>
+          <ChevronDown class="pointer-events-none absolute bottom-3 right-3 h-4 w-4 text-slate-400" />
+        </div>
+      </div>
+
+      <p class="text-xs font-semibold text-slate-400">
+        Showing {{ filteredReceipts.length }} of {{ receiptsStore.visibleReceipts.length }} receipts
+      </p>
+    </div>
+
     <TransitionGroup 
       v-if="filteredReceipts.length > 0" 
       tag="div" 
@@ -292,10 +372,10 @@ const kpis = computed(() => [
       <div
         v-for="receipt in filteredReceipts"
         :key="receipt.id"
-        class="bg-white rounded-xl overflow-hidden flex flex-col group transition-all hover:shadow-card-hover relative cursor-pointer"
+        class="bg-white/95 rounded-card overflow-hidden flex flex-col group transition-all duration-200 ease-out hover:shadow-card-hover hover:scale-[1.01] relative cursor-pointer"
         :class="selectedIds.has(receipt.id)
-          ? 'border-2 border-primary shadow-md'
-          : 'border border-slate-100 shadow-card'"
+          ? 'border border-accent shadow-card-hover'
+          : 'border border-black/5 shadow-card'"
         @click="toggleSelect(receipt.id)"
       >
         <!-- Selected Badge -->
@@ -311,7 +391,7 @@ const kpis = computed(() => [
         </Transition>
 
         <!-- Receipt Image Preview -->
-        <div class="aspect-square w-full bg-slate-50 overflow-hidden flex-shrink-0 border-b border-slate-100">
+        <div class="aspect-square w-full bg-slate-50/80 overflow-hidden flex-shrink-0 border-b border-black/5">
           <img
             v-if="receipt.thumbnail"
             :src="receipt.thumbnail"
@@ -323,7 +403,7 @@ const kpis = computed(() => [
               <FileText v-if="receipt.fileType === 'application/pdf' || receipt.fileType === 'pdf'" class="w-6 h-6 text-primary/40" />
               <ImageIcon v-else class="w-6 h-6 text-primary/40" />
             </div>
-            <p class="text-[10px] text-slate-300 font-semibold uppercase tracking-widest" style="font-family:'Poppins',sans-serif;">No Preview</p>
+            <p class="text-[10px] text-slate-300 font-heading font-semibold uppercase">No Preview</p>
           </div>
         </div>
 
@@ -331,7 +411,7 @@ const kpis = computed(() => [
         <div class="p-4 flex flex-col flex-1">
           <!-- File / Merchant Info -->
           <div class="mb-3">
-            <h3 class="font-bold text-slate-800 text-[13px] leading-snug truncate" style="font-family:'Poppins',sans-serif;">
+            <h3 class="font-heading font-bold text-slate-800 text-[13px] leading-snug truncate">
               {{ receipt.fileName.replace(/\.[^.]+$/, '').replace(/_/g, ' ') }}
             </h3>
             <p class="text-slate-400 text-[11px] mt-0.5 font-mono">{{ receipt.id }}</p>
@@ -340,7 +420,7 @@ const kpis = computed(() => [
 
           <!-- Category + Amount -->
           <div class="mt-auto flex items-center justify-between mb-3">
-            <span class="px-2.5 py-1 bg-primary/5 text-primary-600 rounded-md text-[11px] font-semibold border border-primary/10 truncate max-w-[55%]" style="font-family:'Poppins',sans-serif;">
+            <span class="px-2.5 py-1 bg-accent/5 text-accent-700 rounded-md text-[11px] font-heading font-semibold border border-accent/10 truncate max-w-[55%]">
               {{ receipt.category }}
             </span>
             <span class="font-bold text-[14px] text-success font-mono">
@@ -360,7 +440,7 @@ const kpis = computed(() => [
               class="px-3 py-2 rounded-lg border transition-all flex items-center justify-center"
               :class="selectedIds.has(receipt.id)
                 ? 'border-danger/30 text-danger hover:bg-red-50'
-                : 'border-slate-200 text-slate-400 hover:border-danger/30 hover:text-danger hover:bg-red-50'"
+                : 'border-black/5 text-slate-400 hover:border-danger/30 hover:text-danger hover:bg-red-50'"
               @click.stop="promptDelete(receipt.id)"
               title="Delete"
             >
@@ -377,7 +457,7 @@ const kpis = computed(() => [
         <Search class="w-7 h-7 text-primary/30" />
       </div>
       <div>
-        <p class="text-sm font-semibold text-slate-600" style="font-family:'Poppins',sans-serif;">No receipts found</p>
+        <p class="text-sm font-heading font-semibold text-slate-600">No receipts found</p>
         <p class="text-xs text-slate-400 mt-1">Try a different category filter or upload a new receipt.</p>
       </div>
       <button @click="uploadModalOpen = true" class="btn btn-cta mt-2">
@@ -389,19 +469,19 @@ const kpis = computed(() => [
 
   <!-- ── Upload / Receipt Scanned Modal ── -->
   <Transition name="modal">
-    <div v-if="uploadModalOpen" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" @click="uploadModalOpen = false">
-      <div class="card w-full max-w-5xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300" @click.stop>
+    <div v-if="uploadModalOpen" class="fixed inset-0 z-50 bg-slate-950/35 backdrop-blur-sm flex items-center justify-center p-4" @click="uploadModalOpen = false">
+      <div class="w-full max-w-5xl overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl animate-in fade-in zoom-in duration-300" @click.stop>
         
         <!-- Modal Header -->
-        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
+        <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/80 sticky top-0 z-10">
           <div class="flex items-center gap-3">
-            <h2 class="text-xl font-bold text-primary" style="font-family:'Poppins',sans-serif;">Receipt Scanned</h2>
+            <h2 class="font-heading text-xl font-bold text-primary">Receipt Scanned</h2>
             <span class="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-[11px] font-bold flex items-center gap-1.5 border border-emerald-100">
               <Sparkles class="w-3.5 h-3.5 fill-emerald-600" />
               AI Read
             </span>
           </div>
-          <button @click="uploadModalOpen = false" class="p-2 text-slate-400 hover:text-primary transition-colors">
+          <button @click="uploadModalOpen = false" class="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-danger">
             <X class="w-5 h-5" />
           </button>
         </div>
@@ -526,7 +606,7 @@ const kpis = computed(() => [
         </div>
 
         <!-- Modal Footer -->
-        <div class="px-6 py-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3 sticky bottom-0">
+        <div class="px-6 py-6 border-t border-slate-200 bg-slate-50/80 flex justify-end gap-3 sticky bottom-0">
           <button @click="uploadModalOpen = false" class="btn btn-secondary !px-8">
             Discard All
           </button>
@@ -541,19 +621,19 @@ const kpis = computed(() => [
 
   <!-- ── Delete Confirmation Modal ── -->
   <Transition name="modal">
-    <div v-if="deleteModalOpen" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-      <div class="card w-full max-w-sm shadow-2xl overflow-hidden">
-        <div class="px-6 py-4 flex items-center gap-3 border-b border-red-100" style="background: linear-gradient(135deg, #FEF2F2 0%, #FFF5F5 100%);">
-          <div class="w-9 h-9 rounded-xl bg-red-100 flex items-center justify-center">
+    <div v-if="deleteModalOpen" class="fixed inset-0 z-50 bg-slate-950/35 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="w-full max-w-sm overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl">
+        <div class="px-6 py-4 flex items-center gap-3 border-b border-slate-200 bg-slate-50/80">
+          <div class="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center">
             <Trash2 class="w-4 h-4 text-danger" />
           </div>
           <div>
-            <h3 class="text-sm font-semibold text-slate-800" style="font-family:'Poppins',sans-serif;">Delete Receipt</h3>
+            <h3 class="font-heading text-sm font-semibold text-slate-800">Delete Receipt</h3>
             <p class="text-xs text-slate-400 mt-0.5">This action cannot be undone.</p>
           </div>
         </div>
         <div class="p-6 flex flex-col gap-4">
-          <p class="text-sm text-slate-600" style="font-family:'Open Sans',sans-serif;">
+          <p class="text-sm text-slate-600">
             Type <strong class="text-slate-900 font-bold">DELETE</strong> to confirm this action.
           </p>
           <div class="input-wrapper">
@@ -576,21 +656,21 @@ const kpis = computed(() => [
 
   <!-- ── View Receipt Modal ── -->
   <Transition name="modal">
-    <div v-if="viewModalOpen && viewedReceipt" class="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4 lg:p-8 backdrop-blur-sm" @click="closeViewModal">
-      <div class="card w-full max-w-4xl max-h-[92vh] overflow-hidden flex flex-col shadow-2xl" @click.stop>
+    <div v-if="viewModalOpen && viewedReceipt" class="fixed inset-0 z-50 bg-slate-950/35 flex items-center justify-center p-4 lg:p-8 backdrop-blur-sm" @click="closeViewModal">
+      <div class="w-full max-w-4xl max-h-[92vh] overflow-hidden flex flex-col rounded-xl border border-slate-200 bg-white shadow-2xl" @click.stop>
         
         <!-- HEADER -->
-        <header class="px-6 py-4 flex items-center justify-between sticky top-0 z-20 text-white" style="background: linear-gradient(135deg, #252578 0%, #2F2F7E 100%);">
+        <header class="px-6 py-4 flex items-center justify-between sticky top-0 z-20 border-b border-slate-200 bg-slate-50/80">
           <div class="flex items-center gap-4">
-            <div class="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center">
-              <Receipt class="w-5 h-5 text-white" />
+            <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Receipt class="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h2 class="text-lg font-bold leading-tight" style="font-family:'Poppins',sans-serif;">Receipt Details</h2>
-              <p class="text-xs text-white/70">{{ viewedReceipt.fileName }}</p>
+              <h2 class="font-heading text-lg font-bold leading-tight text-primary">Receipt Details</h2>
+              <p class="text-xs text-slate-500">{{ viewedReceipt.fileName }}</p>
             </div>
           </div>
-          <button @click="closeViewModal" class="w-10 h-10 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors">
+          <button @click="closeViewModal" class="w-10 h-10 rounded-full hover:bg-slate-100 text-slate-500 hover:text-danger flex items-center justify-center transition-colors">
             <X class="w-5 h-5" />
           </button>
         </header>

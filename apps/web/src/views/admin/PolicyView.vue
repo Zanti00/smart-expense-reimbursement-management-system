@@ -71,15 +71,19 @@ function formatDate(ds) {
 
 <template>
   <div class="flex flex-col gap-6 font-sans">
-    <!-- Component Header -->
-    <div class="flex items-end justify-between border-b border-slate-200 pb-5">
-      <div>
-        <div class="flex items-center gap-2 mb-1">
-          <ShieldCheck class="w-3.5 h-3.5 text-primary" />
-          <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Settings: Configuration</span>
+    <!-- Page Header -->
+    <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div class="min-w-0">
+        <div class="mb-2 flex items-center gap-2">
+          <ShieldCheck class="h-3.5 w-3.5 text-accent" />
+          <span class="section-label">Settings Configuration</span>
         </div>
-        <h1 class="text-xl font-bold text-primary uppercase tracking-widest">Policy Engine</h1>
-        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Manage limits, penalties, and thresholds</p>
+        <h1 class="font-heading text-2xl font-bold leading-tight text-slate-800">
+          Policy Engine
+        </h1>
+        <p class="mt-1 text-sm text-slate-400">
+          Manage limits, penalties, and thresholds
+        </p>
       </div>
       <div v-if="activeTab === 'limits'">
         <BaseButton id="add-policy-btn" variant="cta" @click="showAddLimit = true">
