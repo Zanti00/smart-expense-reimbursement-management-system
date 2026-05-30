@@ -42,6 +42,12 @@ const routes = [
         meta: { title: "Cash Advances" },
       },
       {
+        path: "cash-advances/new",
+        name: "CashAdvanceForm",
+        component: () => import("@/views/CashAdvanceFormView.vue"),
+        meta: { title: "New Cash Advance" },
+      },
+      {
         path: "liquidations",
         name: "Liquidations",
         component: () => import("@/views/LiquidationsView.vue"),
