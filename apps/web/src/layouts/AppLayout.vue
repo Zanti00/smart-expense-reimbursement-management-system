@@ -267,9 +267,9 @@ async function logout() {
       <main
         class="flex-1 overflow-y-auto scrollbar-thin p-6 animate-fade-in bg-clinical"
       >
-        <RouterView v-slot="{ Component }">
+        <RouterView v-slot="{ Component, route: viewRoute }">
           <Transition name="page" mode="out-in">
-            <component :is="Component" />
+            <component :is="Component" :key="viewRoute.path" />
           </Transition>
         </RouterView>
       </main>

@@ -140,8 +140,8 @@ function goBack() {
 </script>
 
 <template>
-  <ToastNotification />
   <div class="flex flex-col bg-clinical min-h-full">
+    <ToastNotification />
     <header
       class="sticky top-0 z-10 flex flex-shrink-0 items-center gap-3 px-6 py-4 text-white shadow-sm"
       style="background: linear-gradient(135deg, #252578 0%, #2f2f7e 100%)"

@@ -12,6 +12,15 @@ export const useAuthStore = defineStore("auth", () => {
   const isAdmin = computed(() => user.value?.role === "admin");
 
   /**
+   * Persist a JWT token received from the auth callback.
+   * @param {string} newToken — the JWT token to store
+   */
+  function setToken(newToken) {
+    token.value = newToken;
+    localStorage.setItem("serms_token", newToken);
+  }
+
+  /**
    * Restore session from localStorage on app boot.
    * If a token exists but no user profile is cached, attempt to fetch it.
    */
@@ -112,6 +121,7 @@ export const useAuthStore = defineStore("auth", () => {
     isAuthenticated,
     isAdmin,
     token,
+    setToken,
     restoreSession,
     redirectToLogin,
     handleCallback,

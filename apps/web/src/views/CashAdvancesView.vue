@@ -3,101 +3,24 @@ import { ref, computed, onMounted } from "vue";
 import { useCashAdvanceStore } from "@/stores/cashAdvance";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "@/composables/useToast";
+import { useCashAdvanceList } from "@/composables/useCashAdvanceList";
 import ToastNotification from "@/components/ToastNotification.vue";
 
 import BaseFilterTabs from "@/components/base/BaseFilterTabs.vue";
-import CashAdvanceMetrics from "@/components/CashAdvanceMetrics.vue";
-import CashAdvanceTable from "@/components/CashAdvanceTable.vue";
-import RejectionModal from "@/components/RejectionModal.vue";
-import CashAdvanceDetailsModal from "@/components/CashAdvanceDetailsModal.vue";
-import { formatPeso, getInitials } from "@/utils/formatters";
-import {
-  Plus,
-  Wallet,
-} from "lucide-vue-next";
+import CashAdvanceMetrics from "@/components/cash-advances/CashAdvanceMetrics.vue";
+import CashAdvanceTable from "@/components/cash-advances/CashAdvanceTable.vue";
+import RejectionModal from "@/components/cash-advances/RejectionModal.vue";
+import CashAdvanceDetailsModal from "@/components/cash-advances/CashAdvanceDetailsModal.vue";
+import { Plus, Wallet } from "lucide-vue-next";
 
 const store = useCashAdvanceStore();
 const auth = useAuthStore();
 const { addToast } = useToast();
 
+const { activeStatus, statusTabs, filteredRows, activeMetrics } =
+  useCashAdvanceList(store, auth);
+
 onMounted(() => store.fetchAll());
-
-const statusTabs = computed(() => {
-  const baseTabs = ["All", "Pending", "Approved", "Rejected", "Disbursed"];
-  return auth.isAdmin ? [...baseTabs, "Me"] : baseTabs;
-});
-const activeStatus = ref("All");
-
-
-
-const formattedItems = computed(() => {
-  return store.items.map((item) => ({
-    ...item,
-    fileDescription: item.document?.file_name || "Document Attached",
-    documentUrl: item.documentUrl,
-    requested: item.date ? new Date(item.date).toLocaleDateString() : "--",
-    dueDate: item.dueDate ? new Date(item.dueDate).toLocaleDateString() : "--",
-    user: item.requestedBy || "Unknown User",
-    initials: getInitials(item.requestedBy || "Unknown User"),
-    outstanding: item.balance || 0,
-  }));
-});
-
-const filteredRows = computed(() => {
-  let items = formattedItems.value;
-  if (activeStatus.value !== "All") {
-    if (activeStatus.value === "Me") {
-      items = items.filter((row) => row.userId === auth.user?.id);
-    } else {
-      items = items.filter(
-        (row) => row.status === activeStatus.value.toLowerCase(),
-      );
-    }
-  }
-  return items;
-});
-
-const adminMetrics = computed(() => {
-  const items = formattedItems.value;
-  const outstandingRows = items.filter((row) => Number(row.outstanding) > 0);
-
-  const uniqueEmployees = new Set(outstandingRows.map((row) => row.user));
-
-  return {
-    pending: items.filter((row) => row.status === "pending").length,
-    approved: items.filter((row) => row.status === "approved").length,
-    rejected: items.filter((row) => row.status === "rejected").length,
-    outstanding: outstandingRows.reduce(
-      (sum, row) => sum + (Number(row.outstanding) || 0),
-      0,
-    ),
-    outstandingEmployees: uniqueEmployees.size,
-  };
-});
-
-const userMetrics = computed(() => {
-  const items = formattedItems.value;
-  const outstandingRows = items.filter((row) => Number(row.outstanding) > 0);
-
-  return {
-    totalAmount: items.reduce((sum, row) => sum + (Number(row.amount) || 0), 0),
-    pending: items.filter((row) => row.status === "pending").length,
-    approved: items.filter((row) => row.status === "approved").length,
-    rejected: items.filter((row) => row.status === "rejected").length,
-    outstanding: outstandingRows.reduce(
-      (sum, row) => sum + (Number(row.outstanding) || 0),
-      0,
-    ),
-  };
-});
-
-const activeMetrics = computed(() => {
-  return auth.isAdmin ? adminMetrics.value : userMetrics.value;
-});
-
-
-
-
 
 function openDetails(row) {
   viewingRecord.value = {
@@ -171,8 +94,8 @@ async function confirmReject(reason) {
 </script>
 
 <template>
-  <ToastNotification />
   <div class="mx-auto flex w-full max-w-7xl flex-col gap-6 font-sans">
+    <ToastNotification />
     <!-- Page Header -->
     <section
       class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"

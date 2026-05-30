@@ -364,6 +364,7 @@ const kpis = computed(() => [
 </script>
 
 <template>
+  <div>
   <div class="flex flex-col gap-6 max-w-7xl mx-auto pb-12 animate-fade-up">
     <!-- ── Page Header ── -->
     <div
@@ -1247,6 +1248,7 @@ const kpis = computed(() => [
       </div>
     </div>
   </Transition>
+  </div>
 </template>
 
 <style scoped>
