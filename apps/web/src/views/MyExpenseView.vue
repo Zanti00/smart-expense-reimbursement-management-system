@@ -12,6 +12,7 @@ import BaseKpiGrid from "@/components/base/BaseKpiGrid.vue";
 import BaseFilterTabs from "@/components/base/BaseFilterTabs.vue";
 import ReceiptViewModal from "@/components/expenses/ReceiptViewModal.vue";
 import ExpenseCard from "@/components/expenses/ExpenseCard.vue";
+import ExpenseCardSkeleton from "@/components/expenses/ExpenseCardSkeleton.vue";
 import ReceiptUploadModal from "@/components/expenses/ReceiptUploadModal.vue";
 import DeleteConfirmModal from "@/components/base/DeleteConfirmModal.vue";
 import ReimbursementFormView from "@/views/ReimbursementFormView.vue";
@@ -203,6 +204,7 @@ const kpis = computed(() => [
       <!-- ── KPI Cards ── -->
       <BaseKpiGrid
         :kpis="kpis"
+        :is-loading="receiptsStore.isLoading"
         gridClasses="grid-cols-1 sm:grid-cols-3 gap-4"
       />
 
@@ -216,7 +218,16 @@ const kpis = computed(() => [
 
       <!-- ── Receipt Card Grid ── -->
       <TransitionGroup
-        v-if="filteredReceipts.length > 0"
+        v-if="receiptsStore.isLoading"
+        tag="div"
+        name="list"
+        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
+      >
+        <ExpenseCardSkeleton v-for="i in 8" :key="'skeleton-' + i" />
+      </TransitionGroup>
+
+      <TransitionGroup
+        v-else-if="filteredReceipts.length > 0"
         tag="div"
         name="list"
         class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"

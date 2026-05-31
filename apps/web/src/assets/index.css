@@ -1,14 +1,18 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Montserrat:wght@600;700;800&family=Open+Sans:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Montserrat:wght@600;700;800&family=Open+Sans:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap");
 
 @import "tailwindcss/base";
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
 
 @layer base {
-  *, *::before, *::after { box-sizing: border-box; }
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
 
   html {
-    font-family: 'Open Sans', sans-serif;
+    font-family: "Open Sans", sans-serif;
     letter-spacing: 0;
     @apply text-slate-700 antialiased bg-clinical;
   }
@@ -17,8 +21,13 @@
     @apply min-h-screen text-sm leading-relaxed;
   }
 
-  h1, h2, h3, h4, h5, h6 {
-    font-family: 'Poppins', 'Montserrat', sans-serif;
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: "Poppins", "Montserrat", sans-serif;
     letter-spacing: 0;
     @apply font-bold text-primary;
   }
@@ -32,10 +41,10 @@
 @layer components {
   /* ---- Cards (Instrument Module) ---- */
   .card {
-    @apply bg-white/95 border border-black/5 rounded-card shadow-card backdrop-blur-sm;
+    @apply bg-white/95 border border-black/5 rounded-card shadow-sm backdrop-blur-sm;
   }
   .card-hover {
-    @apply hover:border-accent/20 hover:shadow-card-hover hover:scale-[1.01];
+    @apply hover:border-accent/20 hover:shadow-xl hover:scale-[1.01];
   }
 
   /* ---- Instrument Inputs (Blueprint 5.1) ---- */
@@ -43,7 +52,7 @@
     @apply flex flex-col gap-1;
   }
   .input-label {
-    font-family: 'Poppins', 'Montserrat', sans-serif;
+    font-family: "Poppins", "Montserrat", sans-serif;
     letter-spacing: 0.04em;
     @apply block text-[10px] font-bold uppercase text-slate-600 mb-1.5;
   }
@@ -52,7 +61,7 @@
     @apply placeholder:text-slate-300 focus:bg-white;
   }
   .input:focus {
-    border-color: #2E85D8;
+    border-color: #2e85d8;
     box-shadow: 0 0 0 2px rgba(46, 133, 216, 0.2);
   }
   .input-error {
@@ -61,27 +70,29 @@
 
   /* ---- Buttons (Mechanical Controls) ---- */
   .btn {
-    font-family: 'Poppins', 'Montserrat', sans-serif;
+    font-family: "Poppins", "Montserrat", sans-serif;
     letter-spacing: 0.02em;
     @apply inline-flex items-center justify-center gap-2 rounded-md font-bold text-xs transition-all duration-200 ease-out focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .btn:focus {
-    box-shadow: 0 0 0 2px #FFFFFF, 0 0 0 4px rgba(46, 133, 216, 0.3);
+    box-shadow:
+      0 0 0 2px #ffffff,
+      0 0 0 4px rgba(46, 133, 216, 0.3);
   }
   .btn-primary {
-    @apply text-white shadow-sm hover:shadow-card-hover hover:scale-[1.01] active:scale-[0.99];
+    @apply text-white shadow-sm hover:shadow-xl hover:scale-[1.01] active:scale-[0.99];
     background-color: #252578;
   }
   .btn-primary:hover {
-    background-color: #2F2F7E;
+    background-color: #2f2f7e;
   }
   .btn-cta {
-    @apply bg-accent text-white border border-white/10 shadow-card px-5 py-2.5 text-sm font-black
-           hover:bg-accent-600 hover:shadow-card-hover hover:scale-[1.01]
+    @apply bg-accent text-white border border-white/10 shadow-md px-5 py-2.5 text-sm font-black
+           hover:bg-accent-600 hover:shadow-xl hover:scale-[1.01]
            active:scale-[0.99] active:bg-accent-700 transition-all duration-200 ease-out;
   }
   .btn-secondary {
-    @apply bg-white/90 text-primary border border-black/5 shadow-sm hover:bg-accent-50 hover:text-accent-700 hover:border-accent/20 hover:scale-[1.01] active:scale-[0.99];
+    @apply bg-white/90 text-primary border border-black/5 shadow-sm px-4 py-2 hover:bg-accent-50 hover:text-accent-700 hover:border-accent/20 hover:scale-[1.01] active:scale-[0.99];
   }
   .btn-ghost {
     @apply text-slate-500 hover:bg-primary/5 hover:text-primary;
@@ -98,7 +109,7 @@
 
   /* ---- Status Badges (Signal Light) ---- */
   .badge {
-    font-family: 'Poppins', 'Montserrat', sans-serif;
+    font-family: "Poppins", "Montserrat", sans-serif;
     letter-spacing: 0.04em;
     @apply inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold uppercase bg-slate-50 border border-black/5 text-slate-700 rounded-md;
   }
@@ -108,7 +119,7 @@
     @apply w-full text-xs text-left border-collapse border border-black/5 overflow-hidden;
   }
   .table-base th {
-    font-family: 'Poppins', 'Montserrat', sans-serif;
+    font-family: "Poppins", "Montserrat", sans-serif;
     letter-spacing: 0.04em;
     @apply px-3 py-2.5 font-bold text-[10px] uppercase text-slate-700
            bg-slate-50/90 border-b border-r border-black/5 sticky top-0;
@@ -125,22 +136,22 @@
 
   /* ---- KPI Module ---- */
   .kpi-card {
-    @apply card p-5 flex flex-col gap-0.5 relative overflow-hidden hover:shadow-card-hover hover:scale-[1.01] transition-all duration-200 ease-out;
+    @apply card p-5 flex flex-col gap-0.5 relative overflow-hidden transition-all duration-200 ease-out;
   }
   .kpi-value {
-    font-family: 'Poppins', 'Montserrat', sans-serif;
+    font-family: "Poppins", "Montserrat", sans-serif;
     letter-spacing: 0;
     @apply text-2xl font-bold text-primary;
   }
   .kpi-label {
-    font-family: 'Poppins', 'Montserrat', sans-serif;
+    font-family: "Poppins", "Montserrat", sans-serif;
     letter-spacing: 0.04em;
     @apply text-[10px] font-bold text-slate-500 uppercase;
   }
 
   /* ---- Sidebar (Station Control) ---- */
   .sidebar-link {
-    font-family: 'Poppins', 'Montserrat', sans-serif;
+    font-family: "Poppins", "Montserrat", sans-serif;
     letter-spacing: 0;
     @apply flex items-center gap-3 mx-2 px-3 py-3 text-sm font-semibold
            text-white/70 border border-transparent rounded-md
@@ -151,7 +162,7 @@
   }
 
   .section-label {
-    font-family: 'Poppins', 'Montserrat', sans-serif;
+    font-family: "Poppins", "Montserrat", sans-serif;
     letter-spacing: 0.06em;
     @apply text-[10px] font-bold uppercase text-accent;
   }
@@ -172,8 +183,12 @@
     scrollbar-width: thin;
     scrollbar-color: #cbd5e1 transparent;
   }
-  .scrollbar-thin::-webkit-scrollbar { width: 4px; }
-  .scrollbar-thin::-webkit-scrollbar-thumb { @apply bg-slate-200; }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-slate-200;
+  }
 
   .tabular-nums {
     font-variant-numeric: tabular-nums;

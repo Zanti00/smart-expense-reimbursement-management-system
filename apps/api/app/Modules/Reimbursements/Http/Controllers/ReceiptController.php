@@ -19,7 +19,7 @@ class ReceiptController extends Controller
     {
         $user = $request->user();
 
-        $query = Receipt::with('category');
+        $query = Receipt::with('category', 'uploader', 'items');
 
         if ($user->role === 'employee') {
             $query->where('uploaded_by', $user->id);
@@ -37,16 +37,26 @@ class ReceiptController extends Controller
      */
     public function store(Request $request)
     {
+        if ($request->has('items')) {
+            $request->merge([
+                'items' => is_string($request->items) ? json_decode($request->items, true) : $request->items,
+            ]);
+        }
+
         $validated = $request->validate([
-            'file' => 'nullable|file|mimes:jpeg,png,pdf|max:10240',
+            'file' => 'required|file|mimes:jpeg,png,pdf|max:2048',
             'expense_category_id' => 'required|exists:expense_categories,id',
-            'vendor_name' => 'nullable|string|max:255',
-            'transaction_date' => 'nullable|date',
-            'total_amount' => 'nullable|numeric|min:0',
-            'vat_amount' => 'nullable|numeric|min:0',
-            'tin' => 'nullable|string|max:255',
-            'invoice_number' => 'nullable|string|max:255',
-            'vat_classification' => 'nullable|in:vat,non-vat',
+            'vendor_name' => 'required|string|max:255',
+            'transaction_date' => 'required|date',
+            'total_amount' => 'required|numeric|min:0',
+            'vat_amount' => 'required_if:vat_classification,vat|nullable|numeric|min:0',
+            'tin' => 'required|string|max:255',
+            'invoice_number' => 'required|string|max:255',
+            'vat_classification' => 'required|in:vat,non-vat',
+            'items' => 'nullable|array',
+            'items.*.name' => 'required_with:items|string|max:255',
+            'items.*.quantity' => 'required_with:items|integer|min:1',
+            'items.*.price' => 'required_with:items|numeric|min:0',
         ]);
 
         $path = null;
@@ -57,8 +67,8 @@ class ReceiptController extends Controller
         if ($request->hasFile('file')) {
             $file = $request->file('file');
             
-            // Store locally (use 'supabase' disk in production)
-            $path = $file->store('receipts', 'local');
+            // Store in Supabase bucket as per requirements
+            $path = $file->store('receipts', 'supabase');
             $fileHash = hash_file('sha256', $file->getRealPath());
             
             $fileType = $file->extension();
@@ -86,8 +96,12 @@ class ReceiptController extends Controller
             'is_archived' => false,
         ]);
 
-        // Load category relation for the response
-        $receipt->load('category');
+        if (!empty($validated['items'])) {
+            $receipt->items()->createMany($validated['items']);
+        }
+
+        // Load relations for the response
+        $receipt->load('category', 'items', 'uploader');
 
         return response()->json([
             'message' => 'Receipt uploaded and stored successfully.',

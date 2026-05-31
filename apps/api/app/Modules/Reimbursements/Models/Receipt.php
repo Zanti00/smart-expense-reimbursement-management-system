@@ -30,6 +30,24 @@ class Receipt extends Model
         'deletion_warning_sent',
     ];
 
+    protected $appends = ['file_url'];
+
+    public function getFileUrlAttribute()
+    {
+        if (!$this->file_path) {
+            return null;
+        }
+        try {
+            return \Illuminate\Support\Facades\Storage::disk('supabase')->url($this->file_path);
+        } catch (\Exception $e) {
+            $baseUrl = config('filesystems.disks.supabase.url');
+            if ($baseUrl) {
+                return rtrim($baseUrl, '/') . '/' . ltrim($this->file_path, '/');
+            }
+            return null;
+        }
+    }
+
     protected $casts = [
         'total_amount' => 'decimal:2',
         'vat_amount' => 'decimal:2',
@@ -48,5 +66,10 @@ class Receipt extends Model
     public function category()
     {
         return $this->belongsTo(ExpenseCategory::class, 'expense_category_id');
+    }
+
+    public function items()
+    {
+        return $this->hasMany(ReceiptItem::class, 'receipt_id');
     }
 }

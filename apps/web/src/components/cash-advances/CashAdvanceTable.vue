@@ -1,6 +1,7 @@
 <script setup>
 import { Eye } from "lucide-vue-next";
 import { formatPeso } from "@/utils/formatters";
+import CashAdvanceTableSkeleton from "./CashAdvanceTableSkeleton.vue";
 
 defineProps({
   rows: {
@@ -123,53 +124,11 @@ function statusClass(status) {
         </thead>
         <tbody class="divide-y divide-slate-100">
           <template v-if="isLoading">
-            <tr v-for="i in 5" :key="`skeleton-${i}`" class="whitespace-nowrap">
-              <td v-if="isAdmin" class="px-5 py-5">
-                <div class="h-5 w-6 animate-pulse rounded bg-slate-200"></div>
-              </td>
-              <td v-if="isAdmin" class="px-5 py-5">
-                <div class="h-4 w-24 animate-pulse rounded bg-slate-200"></div>
-              </td>
-              <td class="px-5 py-5">
-                <div class="h-4 w-32 animate-pulse rounded bg-slate-200"></div>
-              </td>
-              <td class="px-5 py-5">
-                <div class="h-4 w-20 animate-pulse rounded bg-slate-200"></div>
-              </td>
-              <td class="px-5 py-5">
-                <div class="h-4 w-20 animate-pulse rounded bg-slate-200"></div>
-              </td>
-              <td class="px-5 py-5 text-right">
-                <div
-                  class="ml-auto h-5 w-20 animate-pulse rounded bg-slate-200"
-                ></div>
-              </td>
-              <td class="px-5 py-5 text-right">
-                <div
-                  class="ml-auto h-4 w-16 animate-pulse rounded bg-slate-200"
-                ></div>
-              </td>
-              <td v-if="isAdmin" class="px-5 py-5">
-                <div class="flex items-center gap-2">
-                  <div
-                    class="h-7 w-7 shrink-0 animate-pulse rounded-full bg-slate-200"
-                  ></div>
-                  <div
-                    class="h-4 w-24 animate-pulse rounded bg-slate-200"
-                  ></div>
-                </div>
-              </td>
-              <td class="px-5 py-5 text-center">
-                <div
-                  class="mx-auto h-6 w-20 animate-pulse rounded-full bg-slate-200"
-                ></div>
-              </td>
-              <td class="px-5 py-5 text-center">
-                <div
-                  class="mx-auto h-9 w-9 animate-pulse rounded-full bg-slate-200"
-                ></div>
-              </td>
-            </tr>
+            <CashAdvanceTableSkeleton
+              v-for="i in 5"
+              :key="`skeleton-${i}`"
+              :is-admin="isAdmin"
+            />
           </template>
           <template v-else-if="rows.length === 0">
             <tr>
@@ -187,7 +146,10 @@ function statusClass(status) {
               :key="row.id"
               class="group whitespace-nowrap transition-colors duration-200 ease-out hover:bg-slate-50/80"
             >
-              <td v-if="isAdmin" class="px-5 py-5 font-mono text-sm font-bold text-slate-900">
+              <td
+                v-if="isAdmin"
+                class="px-5 py-5 font-mono text-sm font-bold text-slate-900"
+              >
                 {{ row.id }}
               </td>
               <td

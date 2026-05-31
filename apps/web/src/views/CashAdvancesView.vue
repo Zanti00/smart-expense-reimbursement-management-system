@@ -43,7 +43,8 @@ function openDetails(row) {
       (row.status === "pending" || row.status === "rejected"
         ? "--"
         : "02/15/2025"),
-    documentFileName: row.fileDescription || `Cash_Advance_Request_${row.id}.pdf`,
+    documentFileName:
+      row.fileDescription || `Cash_Advance_Request_${row.id}.pdf`,
     adminNotes: row.adminNotes || "N/A",
     acknowledgedAt: row.acknowledgedAt,
     signatureImage: row.signatureImage,
@@ -185,7 +186,7 @@ const kpis = computed(() => {
 
       <button
         id="request-advance-btn"
-        class="inline-flex min-h-[44px] w-fit items-center justify-center gap-2 rounded-lg bg-accent px-6 py-3 font-heading text-sm font-bold text-white shadow-sm transition-all duration-200 ease-out hover:bg-accent-600 hover:shadow-card-hover hover:scale-[1.01] active:scale-[0.98]"
+        class="inline-flex min-h-[44px] w-fit items-center justify-center gap-2 rounded-lg bg-accent px-6 py-3 font-heading text-sm font-bold text-white shadow-sm transition-all duration-200 ease-out hover:bg-accent-600 hover:shadow-xl hover:scale-[1.01] active:scale-[0.98]"
         @click="$router.push('/cash-advances/new')"
       >
         <Plus class="h-4 w-4" />

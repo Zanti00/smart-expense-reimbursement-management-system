@@ -33,12 +33,7 @@ export const useReceiptStore = defineStore("receipts", () => {
   const visibleReceipts = computed(() => {
     let filtered = receipts.value.filter((r) => !r.isDeleted);
 
-    // Role-based visibility
-    if (!auth.isAdmin) {
-      filtered = filtered.filter(
-        (r) => r.uploader === auth.user?.username || r.uploader === "kyle.l",
-      ); // Mock logic, assume 'kyle.l' is current user
-    }
+    // Note: Role-based visibility is handled securely by the backend API.
 
     // Apply Active Filters
     if (filters.value.uploader) {
@@ -88,7 +83,7 @@ export const useReceiptStore = defineStore("receipts", () => {
     return {
       id: `RCPT-2026-${String(r.id).padStart(3, "0")}`,
       dbId: r.id,
-      uploader: r.uploader?.name || auth.user?.username || "kyle.l",
+      uploader: r.uploader?.name || auth.user?.name || "Unknown",
       fileName: (r.file_path || "").split("/").pop() || "N/A",
       fileType: r.file_type,
       fileSize: r.file_size_bytes,
@@ -98,7 +93,7 @@ export const useReceiptStore = defineStore("receipts", () => {
       categoryId: r.expense_category_id || null,
       status: r.ocr_flagged ? "Flagged" : "Processed",
       hash: r.file_hash,
-      thumbnail: null,
+      thumbnail: r.file_url || (r.file_path ? `https://vbabvrcfqcmvvjwmzuwx.supabase.co/storage/v1/object/public/cash_advances/${r.file_path}` : null),
       isDeleted: !!r.deleted_at,
       vendorName: r.vendor_name,
       vatAmount: Number(r.vat_amount) || 0,
@@ -108,6 +103,7 @@ export const useReceiptStore = defineStore("receipts", () => {
       ocrConfidenceScore: r.ocr_confidence_score,
       ocrFlagged: r.ocr_flagged,
       createdAt: r.created_at,
+      items: r.items || [],
     };
   }
 
@@ -197,6 +193,9 @@ export const useReceiptStore = defineStore("receipts", () => {
       formData.append("invoice_number", metadata.invoice_number);
     if (metadata.vat_classification)
       formData.append("vat_classification", metadata.vat_classification);
+    if (metadata.items && Array.isArray(metadata.items)) {
+      formData.append("items", JSON.stringify(metadata.items));
+    }
 
     try {
       const headers = { Accept: "application/json" };
@@ -250,7 +249,7 @@ export const useReceiptStore = defineStore("receipts", () => {
       // Optimistic Upload creation
       const newReceipt = {
         id: `RCPT-2026-00${receipts.value.length + 1}`,
-        uploader: auth.user?.username || "kyle.l",
+        uploader: auth.user?.name || "Unknown",
         fileName: fileMeta.name,
         fileType: fileMeta.type,
         fileSize: fileMeta.size,

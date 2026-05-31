@@ -15,7 +15,9 @@ export function useCashAdvanceList(store, auth) {
       fileDescription: item.document?.file_name || "Document Attached",
       documentUrl: item.documentUrl,
       requested: item.date ? new Date(item.date).toLocaleDateString() : "--",
-      dueDate: item.dueDate ? new Date(item.dueDate).toLocaleDateString() : "--",
+      dueDate: item.dueDate
+        ? new Date(item.dueDate).toLocaleDateString()
+        : "--",
       user: item.requestedBy || "Unknown User",
       initials: getInitials(item.requestedBy || "Unknown User"),
       outstanding: item.balance || 0,
@@ -58,7 +60,10 @@ export function useCashAdvanceList(store, auth) {
     const outstandingRows = items.filter((row) => Number(row.outstanding) > 0);
 
     return {
-      totalAmount: items.reduce((sum, row) => sum + (Number(row.amount) || 0), 0),
+      totalAmount: items.reduce(
+        (sum, row) => sum + (Number(row.amount) || 0),
+        0,
+      ),
       pending: items.filter((row) => row.status === "pending").length,
       approved: items.filter((row) => row.status === "approved").length,
       rejected: items.filter((row) => row.status === "rejected").length,

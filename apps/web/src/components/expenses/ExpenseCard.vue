@@ -1,5 +1,6 @@
 <script setup>
 import { FileText, Image as ImageIcon, Eye, Trash2 } from "lucide-vue-next";
+import { formatPeso as formatCurrency, formatDate } from "@/utils/formatters";
 
 const props = defineProps({
   expense: {
@@ -13,22 +14,15 @@ const props = defineProps({
 });
 
 defineEmits(["select", "view", "delete"]);
-
-function formatCurrency(amount) {
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-  }).format(amount);
-}
 </script>
 
 <template>
   <div
-    class="bg-white rounded-xl overflow-hidden flex flex-col group transition-all hover:shadow-card-hover relative cursor-pointer"
+    class="bg-white rounded-xl overflow-hidden flex flex-col group transition-all hover:shadow-xl relative cursor-pointer"
     :class="
       isSelected
         ? 'border-2 border-primary shadow-md'
-        : 'border border-slate-100 shadow-card'
+        : 'border border-slate-100 shadow-md'
     "
     @click="$emit('select', expense.id)"
   >
@@ -38,11 +32,7 @@ function formatCurrency(amount) {
         v-if="isSelected"
         class="absolute top-3 right-3 z-10 w-7 h-7 bg-primary rounded-full flex items-center justify-center shadow-md"
       >
-        <svg
-          class="w-4 h-4 text-white"
-          fill="currentColor"
-          viewBox="0 0 20 20"
-        >
+        <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
           <path
             fill-rule="evenodd"
             d="M16.707 5.293a1 1 0 00-1.414 0L8 12.586 4.707 9.293a1 1 0 00-1.414 1.414l4 4a1 1 0 001.414 0l8-8a1 1 0 000-1.414z"
@@ -60,7 +50,7 @@ function formatCurrency(amount) {
         v-if="expense.thumbnail"
         :src="expense.thumbnail"
         :alt="expense.fileName"
-        class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 opacity-75"
+        class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 opacity-100"
       />
       <div
         v-else
@@ -80,7 +70,7 @@ function formatCurrency(amount) {
         </div>
         <p
           class="text-[10px] text-slate-300 font-semibold uppercase tracking-widest"
-          style="font-family: 'Poppins', sans-serif"
+          style="font-family: &quot;Poppins&quot;, sans-serif"
         >
           No Preview
         </p>
@@ -93,15 +83,12 @@ function formatCurrency(amount) {
       <div class="mb-3">
         <h3
           class="font-bold text-slate-800 text-[13px] leading-snug truncate"
-          style="font-family: 'Poppins', sans-serif"
+          :style="{ fontFamily: '\'Poppins\', sans-serif' }"
         >
-          {{ expense.fileName.replace(/\.[^.]+$/, "").replace(/_/g, " ") }}
+          {{ expense.vendorName || "Unknown Vendor" }}
         </h3>
-        <p class="text-slate-400 text-[11px] mt-0.5 font-mono">
-          {{ expense.id }}
-        </p>
         <p class="text-slate-400 text-[11px] mt-0.5">
-          {{ expense.date }}
+          {{ formatDate(expense.date) }}
         </p>
       </div>
 
@@ -109,7 +96,7 @@ function formatCurrency(amount) {
       <div class="mt-auto flex items-center justify-between mb-3">
         <span
           class="px-2.5 py-1 bg-primary/5 text-primary-600 rounded-md text-[11px] font-semibold border border-primary/10 truncate max-w-[55%]"
-          style="font-family: 'Poppins', sans-serif"
+          style="font-family: &quot;Poppins&quot;, sans-serif"
         >
           {{ expense.category }}
         </span>

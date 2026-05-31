@@ -1,4 +1,6 @@
 <script setup>
+import BaseKpiCardSkeleton from "./BaseKpiCardSkeleton.vue";
+
 defineProps({
   kpis: {
     type: Array,
@@ -12,51 +14,50 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  skeletonCount: {
+    type: Number,
+    default: 3,
+  },
 });
 </script>
 
 <template>
   <div class="grid" :class="gridClasses">
-    <div v-for="kpi in kpis" :key="kpi.label" class="kpi-card group">
-      <!-- Colored accent top strip (overrides the default ::before with per-card gradient) -->
-      <div
-        :class="[
-          'absolute top-0 left-0 right-0 h-0.5 rounded-t-xl bg-gradient-to-r',
-          kpi.accent,
-        ]"
-      />
-
-      <div class="flex items-center justify-between mb-4">
-        <span
-          class="text-xs text-slate-400"
-          style="font-family: 'Open Sans', sans-serif"
-        >
-          {{ kpi.sub }}
-        </span>
-        <div
-          v-if="kpi.icon"
-          :class="[
-            'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
-            kpi.iconBg,
-          ]"
-        >
-          <component :is="kpi.icon" :class="['w-4 h-4', kpi.iconColor]" />
-        </div>
-      </div>
-      <template v-if="isLoading">
-        <div class="mb-1 h-8 w-24 animate-pulse rounded bg-slate-200"></div>
+    <template v-if="isLoading">
+      <template v-if="kpis && kpis.length > 0">
+        <BaseKpiCardSkeleton v-for="(kpi, i) in kpis" :key="`skeleton-${kpi.label || i}`" :kpi="kpi" />
       </template>
       <template v-else>
-        <p class="kpi-value">{{ kpi.value }}</p>
+        <BaseKpiCardSkeleton v-for="i in skeletonCount" :key="`skeleton-empty-${i}`" />
       </template>
-      <p class="kpi-label">{{ kpi.label }}</p>
-      <div
-        v-if="kpi.subtext"
-        class="kpi-label mt-1 normal-case tracking-normal text-[11px]"
-      >
-        <div v-if="isLoading" class="mt-1 h-3 w-40 animate-pulse rounded bg-slate-200"></div>
-        <span v-else>{{ kpi.subtext }}</span>
+    </template>
+    <template v-else>
+      <div v-for="kpi in kpis" :key="kpi.label" class="kpi-card group">
+        <!-- Colored accent top strip (overrides the default ::before with per-card gradient) -->
+        <div
+          :class="[
+            'absolute top-0 left-0 right-0 h-0.5 rounded-t-xl bg-gradient-to-r',
+            kpi.accent,
+          ]"
+        ></div>
+
+        <div class="flex items-center justify-between mb-4">
+          <span
+            class="text-xs text-slate-400"
+            style="font-family: 'Open Sans', sans-serif"
+          >
+            {{ kpi.sub }}
+          </span>
+        </div>
+        <p class="kpi-value">{{ kpi.value }}</p>
+        <p class="kpi-label">{{ kpi.label }}</p>
+        <div
+          v-if="kpi.subtext"
+          class="kpi-label mt-1 normal-case tracking-normal text-[11px]"
+        >
+          <span>{{ kpi.subtext }}</span>
+        </div>
       </div>
-    </div>
+    </template>
   </div>
 </template>

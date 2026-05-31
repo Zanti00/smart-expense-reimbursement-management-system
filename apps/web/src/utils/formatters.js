@@ -14,3 +14,10 @@ export function getInitials(name) {
     .substring(0, 2)
     .toUpperCase();
 }
+
+export function formatDate(dateStr, options = { year: "numeric", month: "short", day: "numeric" }) {
+  if (!dateStr) return "—";
+  const d = new Date(dateStr);
+  if (isNaN(d)) return dateStr;
+  return d.toLocaleDateString("en-US", options);
+}

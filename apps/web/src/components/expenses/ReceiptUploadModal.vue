@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from "vue";
+import { ref, computed, watch } from "vue";
 import { useReceiptStore } from "@/stores/receipts";
 import { useNotificationStore } from "@/stores/notification";
 import {
@@ -9,6 +9,8 @@ import {
   FileText,
   ChevronDown,
   Save,
+  Plus,
+  Trash2,
 } from "lucide-vue-next";
 
 const props = defineProps({
@@ -39,7 +41,51 @@ const uploadForm = ref({
   total_amount: "",
   vat_amount: "",
   vat_classification: "vat",
+  items: [],
 });
+
+const itemsSubtotal = computed(() => {
+  return uploadForm.value.items.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity) || 0), 0);
+});
+
+watch([itemsSubtotal, () => uploadForm.value.vat_amount], ([newSubtotal, newVat]) => {
+  if (uploadForm.value.items.length > 0) {
+    const calculatedTotal = (newSubtotal || 0) + (Number(newVat) || 0);
+    uploadForm.value.total_amount = calculatedTotal > 0 ? Number(calculatedTotal.toFixed(2)) : "";
+  }
+});
+
+const isFormValid = computed(() => {
+  if (!uploadFile.value) return false;
+  if (!uploadForm.value.invoice_number) return false;
+  if (!uploadForm.value.transaction_date) return false;
+  if (!uploadForm.value.tin) return false;
+  const tinDigits = uploadForm.value.tin.replace(/\D/g, "");
+  if (tinDigits.length < 9) return false;
+  if (!uploadForm.value.vendor_name) return false;
+  if (!uploadForm.value.expense_category_id) return false;
+  if (!uploadForm.value.vat_classification) return false;
+  if (uploadForm.value.total_amount === "" || uploadForm.value.total_amount == null) return false;
+  if (uploadForm.value.vat_classification === "vat" && (uploadForm.value.vat_amount === "" || uploadForm.value.vat_amount == null)) return false;
+  
+  for (const item of uploadForm.value.items) {
+    if (!item.name || !item.quantity || item.price === "" || item.price == null) return false;
+  }
+  
+  return true;
+});
+
+function addItem() {
+  uploadForm.value.items.push({
+    name: "",
+    quantity: 1,
+    price: "",
+  });
+}
+
+function removeItem(index) {
+  uploadForm.value.items.splice(index, 1);
+}
 
 function handleUploadFileSelect(event) {
   const file = event.target.files[0];
@@ -53,8 +99,8 @@ function handleUploadFileSelect(event) {
       event.target.value = "";
       return;
     }
-    if (file.size > 10 * 1024 * 1024) {
-      notif.error("File size exceeds 10MB.");
+    if (file.size > 2 * 1024 * 1024) {
+      notif.error("File size exceeds 2MB.");
       event.target.value = "";
       return;
     }
@@ -101,6 +147,7 @@ function resetUploadForm() {
     total_amount: "",
     vat_amount: "",
     vat_classification: "vat",
+    items: [],
   };
 }
 
@@ -110,8 +157,8 @@ function close() {
 }
 
 async function saveReceipt() {
-  if (!uploadForm.value.expense_category_id) {
-    notif.error("Please select a category.");
+  if (!isFormValid.value) {
+    notif.error("Please fill in all required fields.");
     return;
   }
   if (uploadForm.value.tin) {
@@ -132,6 +179,7 @@ async function saveReceipt() {
       tin: uploadForm.value.tin || null,
       invoice_number: uploadForm.value.invoice_number || null,
       vat_classification: uploadForm.value.vat_classification || null,
+      items: uploadForm.value.items.length > 0 ? uploadForm.value.items : undefined,
     });
     notif.success("Receipt uploaded and stored successfully.");
     close();
@@ -197,7 +245,7 @@ function formatCurrency(amount) {
                   {{ uploadFile ? uploadFile.name : "Click to select file" }}
                 </p>
                 <p v-if="!uploadFile" class="text-[10px] text-slate-300">
-                  JPEG, PNG, or PDF (max 10MB)
+                  JPEG, PNG, or PDF (max 2MB)
                 </p>
               </div>
               <div class="absolute inset-0 bg-primary/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
@@ -221,11 +269,11 @@ function formatCurrency(amount) {
             <!-- Form Grid -->
             <div class="grid grid-cols-2 gap-4">
               <div class="input-wrapper">
-                <label class="input-label">Invoice Number</label>
+                <label class="input-label">Invoice Number <span class="text-danger">*</span></label>
                 <input class="input" type="text" v-model="uploadForm.invoice_number" placeholder="INV-2026-00001" />
               </div>
               <div class="input-wrapper">
-                <label class="input-label">Date</label>
+                <label class="input-label">Date <span class="text-danger">*</span></label>
                 <div class="relative">
                   <input class="input" type="date" v-model="uploadForm.transaction_date" />
                 </div>
@@ -233,12 +281,12 @@ function formatCurrency(amount) {
             </div>
 
             <div class="input-wrapper">
-              <label class="input-label">TIN Number</label>
+              <label class="input-label">TIN Number <span class="text-danger">*</span></label>
               <input class="input" type="text" v-model="uploadForm.tin" @input="formatTIN" placeholder="000-000-000-000" maxlength="15" />
             </div>
 
             <div class="input-wrapper">
-              <label class="input-label">Vendor Name</label>
+              <label class="input-label">Vendor Name <span class="text-danger">*</span></label>
               <input class="input" type="text" v-model="uploadForm.vendor_name" placeholder="Enter vendor name" />
             </div>
 
@@ -262,7 +310,7 @@ function formatCurrency(amount) {
             </div>
 
             <div class="input-wrapper">
-              <label class="input-label">VAT Classification</label>
+              <label class="input-label">VAT Classification <span class="text-danger">*</span></label>
               <div class="relative">
                 <select
                   class="input appearance-none cursor-pointer"
@@ -276,29 +324,76 @@ function formatCurrency(amount) {
               </div>
             </div>
 
-            <!-- Totals Section -->
-            <div class="flex items-end justify-between gap-4 pt-4 border-t border-slate-100">
-              <div class="flex gap-4">
-                <div class="input-wrapper">
-                  <label class="input-label">Total Amount</label>
-                  <input class="input !w-36" type="number" step="0.01" min="0" v-model="uploadForm.total_amount" placeholder="0.00" />
+            <!-- Totals Inputs Section -->
+            <div class="grid grid-cols-2 gap-4">
+              <div class="input-wrapper">
+                <label class="input-label">Total Amount <span class="text-danger">*</span></label>
+                <input class="input" type="number" step="0.01" min="0" v-model="uploadForm.total_amount" placeholder="0.00" />
+              </div>
+              <div class="input-wrapper">
+                <label class="input-label" :class="{ 'opacity-50': uploadForm.vat_classification === 'non-vat' }">VAT Amount <span v-if="uploadForm.vat_classification === 'vat'" class="text-danger">*</span></label>
+                <input
+                  class="input disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-50"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  v-model="uploadForm.vat_amount"
+                  placeholder="0.00"
+                  :disabled="uploadForm.vat_classification === 'non-vat'"
+                />
+              </div>
+            </div>
+
+            <!-- Items Section -->
+            <div class="pt-4 border-t border-slate-100">
+              <div class="flex items-center justify-between mb-4">
+                <label class="input-label !mb-0">Expense Items</label>
+                <button type="button" @click="addItem" class="btn btn-secondary !py-1.5 !px-3 !text-xs flex items-center gap-1.5">
+                  <Plus class="w-3.5 h-3.5" />
+                  Add Item
+                </button>
+              </div>
+
+              <div class="space-y-3">
+                <div v-for="(item, index) in uploadForm.items" :key="index" class="flex gap-3 items-end bg-slate-50 p-3 rounded-lg border border-slate-100">
+                  <div class="flex-1 input-wrapper !mb-0">
+                    <label class="input-label !text-[10px]">Item Name <span class="text-danger">*</span></label>
+                    <input class="input !py-1.5 !text-sm" type="text" v-model="item.name" placeholder="e.g. Office Supplies" />
+                  </div>
+                  <div class="w-20 input-wrapper !mb-0">
+                    <label class="input-label !text-[10px]">Qty <span class="text-danger">*</span></label>
+                    <input class="input !py-1.5 !text-sm" type="number" min="1" v-model="item.quantity" />
+                  </div>
+                  <div class="w-28 input-wrapper !mb-0">
+                    <label class="input-label !text-[10px]">Price <span class="text-danger">*</span></label>
+                    <input class="input !py-1.5 !text-sm" type="number" step="0.01" min="0" v-model="item.price" placeholder="0.00" />
+                  </div>
+                  <button type="button" @click="removeItem(index)" class="p-2 text-slate-400 hover:text-danger hover:bg-danger/10 rounded-lg transition-colors mb-[2px]">
+                    <Trash2 class="w-4 h-4" />
+                  </button>
                 </div>
-                <div class="input-wrapper">
-                  <label class="input-label" :class="{ 'opacity-50': uploadForm.vat_classification === 'non-vat' }">VAT Amount</label>
-                  <input
-                    class="input !w-36 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-50"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    v-model="uploadForm.vat_amount"
-                    placeholder="0.00"
-                    :disabled="uploadForm.vat_classification === 'non-vat'"
-                  />
+                <div v-if="uploadForm.items.length === 0" class="text-center py-6 border border-dashed border-slate-200 rounded-lg text-slate-400 text-sm">
+                  No items added yet.
                 </div>
               </div>
-              <div v-if="uploadForm.total_amount" class="bg-emerald-50 px-6 py-3 rounded-xl border border-emerald-100 flex flex-col items-end shadow-sm">
-                <span class="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Total Amount</span>
-                <span class="text-xl font-black text-emerald-600 font-mono">{{ formatCurrency(Number(uploadForm.total_amount) || 0) }}</span>
+            </div>
+
+            <!-- Expense Breakdown / Summary -->
+            <div class="pt-4 border-t border-slate-100">
+              <label class="input-label mb-4">Expense Summary</label>
+              <div class="bg-slate-50 rounded-xl p-5 border border-slate-100 space-y-3">
+                <div class="flex justify-between text-sm">
+                  <span class="text-slate-500">Items Subtotal</span>
+                  <span class="font-mono font-medium text-slate-700">{{ formatCurrency(itemsSubtotal) }}</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                  <span class="text-slate-500">VAT Amount</span>
+                  <span class="font-mono font-medium text-slate-700">{{ formatCurrency(Number(uploadForm.vat_amount) || 0) }}</span>
+                </div>
+                <div class="pt-3 border-t border-slate-200 flex justify-between items-center">
+                  <span class="font-bold text-slate-700">Total Amount</span>
+                  <span class="text-2xl font-black text-emerald-600 font-mono">{{ formatCurrency(Number(uploadForm.total_amount) || 0) }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -309,7 +404,7 @@ function formatCurrency(amount) {
           <button @click="close" class="btn btn-secondary !px-8">
             Discard All
           </button>
-          <button @click="saveReceipt" class="btn btn-primary !px-8" :disabled="receiptsStore.isSaving">
+          <button @click="saveReceipt" class="btn btn-primary !px-8" :disabled="receiptsStore.isSaving || !isFormValid">
             <Save class="w-4 h-4" />
             {{ receiptsStore.isSaving ? "Saving..." : "Save Receipt" }}
           </button>

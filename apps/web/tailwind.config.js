@@ -74,8 +74,6 @@ export default {
       },
       boxShadow: {
         sm: '0 1px 2px 0 rgba(0,0,0,0.05)',
-        card: '0 18px 48px -36px rgba(37,37,120,0.35)',
-        'card-hover': '0 24px 64px -34px rgba(46,133,216,0.38)',
         'xl-soft': '0 24px 72px -48px rgba(37,37,120,0.5)',
       },
       borderRadius: {
