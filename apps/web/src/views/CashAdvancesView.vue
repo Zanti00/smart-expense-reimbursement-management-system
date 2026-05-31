@@ -195,7 +195,11 @@ const kpis = computed(() => {
     </section>
 
     <!-- Analytics Metrics -->
-    <BaseKpiGrid :kpis="kpis" :gridClasses="auth.isAdmin ? 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4' : 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4'" />
+    <BaseKpiGrid 
+      :kpis="kpis" 
+      :gridClasses="auth.isAdmin ? 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4' : 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4'" 
+      :isLoading="store.isLoading"
+    />
 
     <!-- Filter Status Tabs -->
     <section class="overflow-x-auto mb-2">
@@ -206,6 +210,7 @@ const kpis = computed(() => {
     <CashAdvanceTable
       :rows="filteredRows"
       :isAdmin="auth.isAdmin"
+      :isLoading="store.isLoading"
       @view="openDetails"
     />
 

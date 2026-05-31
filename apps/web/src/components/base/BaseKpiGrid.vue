@@ -8,6 +8,10 @@ defineProps({
     type: String,
     default: "grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4",
   },
+  isLoading: {
+    type: Boolean,
+    default: false,
+  },
 });
 </script>
 
@@ -39,14 +43,20 @@ defineProps({
           <component :is="kpi.icon" :class="['w-4 h-4', kpi.iconColor]" />
         </div>
       </div>
-      <p class="kpi-value">{{ kpi.value }}</p>
+      <template v-if="isLoading">
+        <div class="mb-1 h-8 w-24 animate-pulse rounded bg-slate-200"></div>
+      </template>
+      <template v-else>
+        <p class="kpi-value">{{ kpi.value }}</p>
+      </template>
       <p class="kpi-label">{{ kpi.label }}</p>
-      <p
+      <div
         v-if="kpi.subtext"
         class="kpi-label mt-1 normal-case tracking-normal text-[11px]"
       >
-        {{ kpi.subtext }}
-      </p>
+        <div v-if="isLoading" class="mt-1 h-3 w-40 animate-pulse rounded bg-slate-200"></div>
+        <span v-else>{{ kpi.subtext }}</span>
+      </div>
     </div>
   </div>
 </template>
