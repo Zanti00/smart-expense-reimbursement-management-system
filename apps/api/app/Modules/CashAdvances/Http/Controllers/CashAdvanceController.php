@@ -21,9 +21,9 @@ class CashAdvanceController extends Controller
         $user = $request->user();
 
         if ($user->role === 'employee') {
-            $advances = CashAdvance::with(['document', 'approvalActions'])->where('user_id', $user->id)->get();
+            $advances = CashAdvance::with(['approvalActions'])->where('user_id', $user->id)->get();
         } else {
-            $advances = CashAdvance::with(['requester', 'document', 'approvalActions'])->get();
+            $advances = CashAdvance::with(['requester', 'approvalActions'])->get();
         }
 
         return response()->json($advances);
@@ -88,13 +88,29 @@ class CashAdvanceController extends Controller
     public function show(Request $request, $id)
     {
         $user = $request->user();
-        $advance = CashAdvance::with(['requester', 'document', 'approvalActions', 'statusHistory', 'disbursement'])->findOrFail($id);
+        $advance = CashAdvance::with(['requester', 'approvalActions', 'statusHistory', 'disbursement'])->findOrFail($id);
 
         if ($user->role === 'employee' && $advance->user_id !== $user->id) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
         return response()->json($advance);
+    }
+
+    /**
+     * Get the document for a cash advance.
+     */
+    public function document(Request $request, $id)
+    {
+        $user = $request->user();
+        $advance = CashAdvance::findOrFail($id);
+
+        if ($user->role === 'employee' && $advance->user_id !== $user->id) {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        $document = $advance->document;
+        return response()->json($document);
     }
 
     /**

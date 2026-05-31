@@ -43,8 +43,7 @@ function openDetails(row) {
       (row.status === "pending" || row.status === "rejected"
         ? "--"
         : "02/15/2025"),
-    documentFileName:
-      row.fileDescription || `Cash_Advance_Request_${row.id}.pdf`,
+    documentFileName: row.fileDescription || `Cash_Advance_Request_${row.id}.pdf`,
     adminNotes: row.adminNotes || "N/A",
     acknowledgedAt: row.acknowledgedAt,
     signatureImage: row.signatureImage,
@@ -195,9 +194,13 @@ const kpis = computed(() => {
     </section>
 
     <!-- Analytics Metrics -->
-    <BaseKpiGrid 
-      :kpis="kpis" 
-      :gridClasses="auth.isAdmin ? 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4' : 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4'" 
+    <BaseKpiGrid
+      :kpis="kpis"
+      :gridClasses="
+        auth.isAdmin
+          ? 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4'
+          : 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4'
+      "
       :isLoading="store.isLoading"
     />
 

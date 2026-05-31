@@ -14,7 +14,7 @@ import {
   Info,
   ShieldCheck,
   RotateCcw,
-  FileText
+  FileText,
 } from "lucide-vue-next";
 
 const props = defineProps({
@@ -28,7 +28,12 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["close", "reject", "approve-advance", "approve-settlement"]);
+const emit = defineEmits([
+  "close",
+  "reject",
+  "approve-advance",
+  "approve-settlement",
+]);
 
 const auth = useAuthStore();
 const store = useCashAdvanceStore();
@@ -41,20 +46,37 @@ const adminReviewNotes = ref("");
 const confirmationAction = ref("");
 const showAcknowledgeModal = ref(false);
 
-watch(() => props.isOpen, (newVal) => {
-  if (newVal) {
-    adminReviewNotes.value = "";
-    confirmationAction.value = "";
-    showAcknowledgeModal.value = false;
-    clearSignature();
-  }
-});
+const documentData = ref(null);
+const isLoadingDocument = ref(false);
+
+watch(
+  () => props.isOpen,
+  async (newVal) => {
+    if (newVal) {
+      adminReviewNotes.value = "";
+      confirmationAction.value = "";
+      showAcknowledgeModal.value = false;
+      documentData.value = null;
+      clearSignature();
+
+      if (props.record?.id) {
+        isLoadingDocument.value = true;
+        try {
+          const doc = await store.fetchDocument(props.record.id);
+          documentData.value = doc;
+        } catch (error) {
+          console.error("Failed to load document", error);
+        } finally {
+          isLoadingDocument.value = false;
+        }
+      }
+    }
+  },
+);
 
 function closeDetails() {
   emit("close");
 }
-
-
 
 function statusPillClass(status) {
   const classes = {
@@ -89,8 +111,14 @@ function formatDateOnly(value) {
 
 function downloadDocument() {
   if (!props.record) return;
-  const fileName = props.record.documentFileName || "document.pdf";
-  const fileUrl = props.record.documentUrl || "/mock_receipt.png";
+  const fileName =
+    documentData.value?.file_name ||
+    props.record.documentFileName ||
+    "document.pdf";
+  const fileUrl =
+    documentData.value?.file_url ||
+    props.record.documentUrl ||
+    "/mock_receipt.png";
 
   const a = document.createElement("a");
   a.href = fileUrl;
@@ -129,7 +157,10 @@ async function confirmAdminDecision() {
       await store.rejectRequest(id, reason);
     }
 
-    addToast({ message: `Request successfully ${confirmationAction.value}d`, type: "success" });
+    addToast({
+      message: `Request successfully ${confirmationAction.value}d`,
+      type: "success",
+    });
     confirmationAction.value = "";
     closeDetails();
   } catch (error) {
@@ -216,7 +247,10 @@ async function confirmAcknowledge() {
 
   try {
     await store.acknowledgeRequest(props.record.id, signatureData);
-    addToast({ message: "Cash advance acknowledged successfully.", type: "success" });
+    addToast({
+      message: "Cash advance acknowledged successfully.",
+      type: "success",
+    });
     showAcknowledgeModal.value = false;
     closeDetails();
   } catch (error) {
@@ -251,9 +285,13 @@ async function confirmAcknowledge() {
         </header>
 
         <div class="flex-1 space-y-6 overflow-y-auto bg-slate-50/40 px-6 py-5">
-          <section class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <section
+            class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+          >
             <div class="flex items-center gap-4">
-              <div class="flex h-14 w-14 items-center justify-center rounded-full border-2 border-emerald-100 bg-primary/10 font-heading text-sm font-bold text-primary">
+              <div
+                class="flex h-14 w-14 items-center justify-center rounded-full border-2 border-emerald-100 bg-primary/10 font-heading text-sm font-bold text-primary"
+              >
                 {{
                   record.requestedBy
                     ?.split(" ")
@@ -279,23 +317,27 @@ async function confirmAcknowledge() {
                 ]"
               >
                 {{
-                  record.status === "pending"
-                    ? "Pending Review"
-                    : record.status
+                  record.status === "pending" ? "Pending Review" : record.status
                 }}
               </span>
             </div>
           </section>
 
-          <section class="rounded-lg border border-emerald-100 bg-primary/5 p-6 text-center">
+          <section
+            class="rounded-lg border border-emerald-100 bg-primary/5 p-6 text-center"
+          >
             <p class="section-label mb-2">Amount Requested</p>
-            <p class="font-heading text-[40px] font-extrabold leading-tight text-primary">
+            <p
+              class="font-heading text-[40px] font-extrabold leading-tight text-primary"
+            >
               {{ formatPeso(record.amount) }}
             </p>
           </section>
 
           <section class="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div class="rounded-lg border border-slate-200 bg-white p-4 md:col-span-2">
+            <div
+              class="rounded-lg border border-slate-200 bg-white p-4 md:col-span-2"
+            >
               <p class="section-label mb-1">Purpose</p>
               <p class="text-base leading-relaxed text-slate-800">
                 {{ record.purpose }}
@@ -315,19 +357,27 @@ async function confirmAcknowledge() {
             </div>
           </section>
 
-          <section class="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-100 px-4 py-3">
+          <section
+            class="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-100 px-4 py-3"
+          >
             <div class="flex items-center gap-3">
               <Wallet class="h-5 w-5 text-accent" />
-              <span class="text-sm font-semibold text-slate-700">Current Outstanding Balance</span>
+              <span class="text-sm font-semibold text-slate-700"
+                >Current Outstanding Balance</span
+              >
             </div>
             <span class="font-heading text-xl font-bold text-primary">{{
               formatPeso(outstandingBalance(record))
             }}</span>
           </section>
 
-          <section class="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white p-4">
+          <section
+            class="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white p-4"
+          >
             <div class="flex min-w-0 items-center gap-4">
-              <span class="inline-flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-md bg-red-50 text-danger">
+              <span
+                class="inline-flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-md bg-red-50 text-danger"
+              >
                 <FileDown class="h-6 w-6" />
               </span>
               <div class="min-w-0">
@@ -349,7 +399,9 @@ async function confirmAcknowledge() {
             </button>
           </section>
 
-          <section class="rounded-r-lg border-l-4 border-accent bg-accent/10 p-4">
+          <section
+            class="rounded-r-lg border-l-4 border-accent bg-accent/10 p-4"
+          >
             <div class="mb-2 flex items-center gap-2">
               <Info class="h-4 w-4 text-accent" />
               <h3 class="font-heading text-sm font-bold text-accent">
@@ -357,34 +409,54 @@ async function confirmAcknowledge() {
               </h3>
             </div>
             <ul class="list-inside list-disc space-y-1 text-sm text-slate-700">
-              <li>Advances over PHP 10,000 require Department Head digital countersign.</li>
-              <li>Liquidation must be submitted within 5 business days post-settlement.</li>
-              <li>Unliquidated advances will be deducted from next payroll cycle.</li>
+              <li>
+                Advances over PHP 10,000 require Department Head digital
+                countersign.
+              </li>
+              <li>
+                Liquidation must be submitted within 5 business days
+                post-settlement.
+              </li>
+              <li>
+                Unliquidated advances will be deducted from next payroll cycle.
+              </li>
             </ul>
           </section>
 
           <section class="space-y-2">
             <p class="section-label">Employee Signature Verification Pad</p>
-            <div class="relative flex h-32 w-full items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-slate-200 bg-white">
+            <div
+              class="relative flex h-32 w-full items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-slate-200 bg-white"
+            >
               <template v-if="record.signature">
-                <span class="font-heading text-3xl font-bold italic text-primary/75">{{ record.signature }}</span>
-                <div class="absolute bottom-2 right-3 flex items-center gap-1 text-success">
+                <span
+                  class="font-heading text-3xl font-bold italic text-primary/75"
+                  >{{ record.signature }}</span
+                >
+                <div
+                  class="absolute bottom-2 right-3 flex items-center gap-1 text-success"
+                >
                   <ShieldCheck class="h-4 w-4" />
-                  <span class="text-[10px] font-bold uppercase tracking-widest">Digitally Verified</span>
+                  <span class="text-[10px] font-bold uppercase tracking-widest"
+                    >Digitally Verified</span
+                  >
                 </div>
               </template>
             </div>
           </section>
 
           <section class="space-y-2 pb-2">
-            <label class="section-label" for="adminReviewNotes">Add Admin Notes / Instructions</label>
+            <label class="section-label" for="adminReviewNotes"
+              >Add Admin Notes / Instructions</label
+            >
             <div class="input-wrapper">
               <textarea
                 id="adminReviewNotes"
                 v-model="adminReviewNotes"
                 class="input min-h-[96px] resize-none !font-sans"
                 :class="
-                  adminReviewNotes.length > 0 && adminReviewNotes.trim().length < 10
+                  adminReviewNotes.length > 0 &&
+                  adminReviewNotes.trim().length < 10
                     ? 'border-danger focus:border-danger focus:ring-danger'
                     : ''
                 "
@@ -392,7 +464,11 @@ async function confirmAcknowledge() {
               />
               <div
                 class="text-[10px] font-bold uppercase tracking-widest flex gap-2 mt-1"
-                :class="adminReviewNotes.trim().length < 10 ? 'text-danger' : 'text-success'"
+                :class="
+                  adminReviewNotes.trim().length < 10
+                    ? 'text-danger'
+                    : 'text-success'
+                "
               >
                 <span>Requirement:</span>
                 <span>{{ adminReviewNotes.length }} / 10+</span>
@@ -401,8 +477,13 @@ async function confirmAcknowledge() {
           </section>
         </div>
 
-        <footer class="flex flex-col items-center justify-between gap-3 border-t border-slate-200 bg-white p-5 sm:flex-row">
-          <div class="text-sm font-semibold text-danger text-center sm:text-left" v-if="record.userId === auth.user?.id">
+        <footer
+          class="flex flex-col items-center justify-between gap-3 border-t border-slate-200 bg-white p-5 sm:flex-row"
+        >
+          <div
+            class="text-sm font-semibold text-danger text-center sm:text-left"
+            v-if="record.userId === auth.user?.id"
+          >
             You cannot approve or reject your own request.
           </div>
           <div v-else></div>
@@ -431,7 +512,9 @@ async function confirmAcknowledge() {
         v-else
         class="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl"
       >
-        <header class="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+        <header
+          class="flex items-center justify-between border-b border-slate-200 px-6 py-4"
+        >
           <h2 class="font-heading text-xl font-bold text-[#003527]">
             {{ auth.isAdmin ? "Admin Details Review" : "Cash Advance Details" }}
           </h2>
@@ -449,7 +532,9 @@ async function confirmAcknowledge() {
           <section class="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <div class="space-y-5">
               <div>
-                <p class="mb-1 text-[11px] font-bold uppercase tracking-widest text-slate-500">
+                <p
+                  class="mb-1 text-[11px] font-bold uppercase tracking-widest text-slate-500"
+                >
                   Request ID
                 </p>
                 <p class="font-heading text-xl font-bold text-[#003527]">
@@ -457,17 +542,23 @@ async function confirmAcknowledge() {
                 </p>
               </div>
               <div>
-                <p class="mb-1 text-[11px] font-bold uppercase tracking-widest text-slate-500">
+                <p
+                  class="mb-1 text-[11px] font-bold uppercase tracking-widest text-slate-500"
+                >
                   Amount Requested
                 </p>
-                <p class="font-heading text-3xl font-bold leading-tight text-[#006C49]">
+                <p
+                  class="font-heading text-3xl font-bold leading-tight text-[#006C49]"
+                >
                   {{ formatPeso(record.amount) }}
                 </p>
               </div>
             </div>
 
             <div class="flex flex-col items-start sm:items-end">
-              <p class="mb-2 text-[11px] font-bold uppercase tracking-widest text-slate-500">
+              <p
+                class="mb-2 text-[11px] font-bold uppercase tracking-widest text-slate-500"
+              >
                 Status
               </p>
               <span
@@ -481,9 +572,13 @@ async function confirmAcknowledge() {
             </div>
           </section>
 
-          <section class="space-y-5 rounded-lg border border-slate-200 bg-slate-50/60 p-5">
+          <section
+            class="space-y-5 rounded-lg border border-slate-200 bg-slate-50/60 p-5"
+          >
             <div>
-              <p class="mb-1 text-[11px] font-bold uppercase tracking-widest text-slate-500">
+              <p
+                class="mb-1 text-[11px] font-bold uppercase tracking-widest text-slate-500"
+              >
                 Purpose
               </p>
               <p class="text-sm font-medium leading-relaxed text-slate-800">
@@ -493,7 +588,9 @@ async function confirmAcknowledge() {
 
             <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
               <div>
-                <p class="mb-1 text-[11px] font-bold uppercase tracking-widest text-slate-500">
+                <p
+                  class="mb-1 text-[11px] font-bold uppercase tracking-widest text-slate-500"
+                >
                   Current Outstanding Balance
                 </p>
                 <p class="font-heading text-lg font-bold text-[#003527]">
@@ -501,7 +598,9 @@ async function confirmAcknowledge() {
                 </p>
               </div>
               <div>
-                <p class="mb-1 text-[11px] font-bold uppercase tracking-widest text-slate-500">
+                <p
+                  class="mb-1 text-[11px] font-bold uppercase tracking-widest text-slate-500"
+                >
                   Settlement Due Date
                 </p>
                 <p class="text-sm font-semibold text-slate-800">
@@ -511,16 +610,45 @@ async function confirmAcknowledge() {
             </div>
 
             <div>
-              <p class="mb-2 text-[11px] font-bold uppercase tracking-widest text-slate-500">
+              <p
+                class="mb-2 text-[11px] font-bold uppercase tracking-widest text-slate-500"
+              >
                 Request Document
               </p>
-              <div class="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-slate-100 px-4 py-3">
+
+              <!-- Skeleton Loader -->
+              <div
+                v-if="isLoadingDocument"
+                class="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 animate-pulse"
+              >
+                <div class="flex min-w-0 items-center gap-3 w-full">
+                  <div
+                    class="h-10 w-10 flex-shrink-0 rounded-md bg-slate-200"
+                  ></div>
+                  <div class="h-4 w-1/2 rounded bg-slate-200"></div>
+                </div>
+                <div
+                  class="h-9 w-9 flex-shrink-0 rounded-full bg-slate-200"
+                ></div>
+              </div>
+
+              <!-- Loaded Document -->
+              <div
+                v-else-if="documentData || record.documentFileName"
+                class="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-slate-100 px-4 py-3"
+              >
                 <div class="flex min-w-0 items-center gap-3">
-                  <span class="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md bg-red-50 text-danger">
+                  <span
+                    class="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md bg-red-50 text-danger"
+                  >
                     <FileDown class="h-5 w-5" />
                   </span>
                   <p class="truncate text-sm font-semibold text-slate-800">
-                    {{ record.documentFileName }}
+                    {{
+                      documentData
+                        ? documentData.file_name
+                        : record.documentFileName
+                    }}
                   </p>
                 </div>
                 <button
@@ -532,6 +660,14 @@ async function confirmAcknowledge() {
                   <Download class="h-5 w-5" />
                 </button>
               </div>
+
+              <!-- No Document Fallback -->
+              <div
+                v-else
+                class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500 italic"
+              >
+                No document attached
+              </div>
             </div>
           </section>
 
@@ -539,7 +675,9 @@ async function confirmAcknowledge() {
             <h3 class="mb-2 font-heading text-sm font-bold text-[#003527]">
               Admin Notes
             </h3>
-            <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+            <div
+              class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3"
+            >
               <p class="text-sm font-medium leading-relaxed text-slate-800">
                 {{ record.adminNotes }}
               </p>
@@ -551,10 +689,15 @@ async function confirmAcknowledge() {
             class="space-y-4 rounded-lg border border-[#006C49]/15 bg-[#F0FDF4] p-5"
           >
             <div class="flex items-start gap-3">
-              <ShieldCheck class="mt-0.5 h-5 w-5 flex-shrink-0 text-[#006C49]" />
+              <ShieldCheck
+                class="mt-0.5 h-5 w-5 flex-shrink-0 text-[#006C49]"
+              />
               <p class="text-sm leading-relaxed text-slate-800">
                 This certifies that I received the cash advance with amount of
-                <span class="font-bold text-[#006C49]">{{ formatPeso(record.amount) }}</span>.
+                <span class="font-bold text-[#006C49]">{{
+                  formatPeso(record.amount)
+                }}</span
+                >.
               </p>
             </div>
 
@@ -563,13 +706,24 @@ async function confirmAcknowledge() {
                 v-if="record.acknowledgedAt"
                 class="relative h-36 overflow-hidden rounded-lg border border-slate-300 bg-white flex items-center justify-center"
               >
-                <img :src="record.signatureImage" class="max-h-full max-w-full" alt="Signature" />
-                <div class="absolute bottom-2 right-3 flex items-center gap-1 text-success bg-white/80 px-2 py-1 rounded">
+                <img
+                  :src="record.signatureImage"
+                  class="max-h-full max-w-full"
+                  alt="Signature"
+                />
+                <div
+                  class="absolute bottom-2 right-3 flex items-center gap-1 text-success bg-white/80 px-2 py-1 rounded"
+                >
                   <ShieldCheck class="h-4 w-4" />
-                  <span class="text-[10px] font-bold uppercase tracking-widest">Digitally Verified</span>
+                  <span class="text-[10px] font-bold uppercase tracking-widest"
+                    >Digitally Verified</span
+                  >
                 </div>
               </div>
-              <div v-else class="relative h-36 overflow-hidden rounded-lg border border-slate-300 bg-white">
+              <div
+                v-else
+                class="relative h-36 overflow-hidden rounded-lg border border-slate-300 bg-white"
+              >
                 <canvas
                   ref="signatureCanvas"
                   class="h-full w-full touch-none"
@@ -586,7 +740,10 @@ async function confirmAcknowledge() {
                   Draw your signature here using your mouse
                 </span>
               </div>
-              <div v-if="!record.acknowledgedAt" class="mt-2 flex justify-end gap-3">
+              <div
+                v-if="!record.acknowledgedAt"
+                class="mt-2 flex justify-end gap-3"
+              >
                 <button
                   class="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-600 transition-colors hover:bg-slate-100"
                   type="button"
@@ -608,14 +765,24 @@ async function confirmAcknowledge() {
           </section>
         </div>
 
-        <footer class="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+        <footer
+          class="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between"
+        >
           <p>
-            <span class="font-bold uppercase tracking-widest">Requested Date</span>
-            <span class="ml-2 font-semibold text-slate-800">{{ formatDateOnly(record.date) }}</span>
+            <span class="font-bold uppercase tracking-widest"
+              >Requested Date</span
+            >
+            <span class="ml-2 font-semibold text-slate-800">{{
+              formatDateOnly(record.date)
+            }}</span>
           </p>
           <p>
-            <span class="font-bold uppercase tracking-widest">Last Updated</span>
-            <span class="ml-2 font-semibold text-slate-800">{{ formatDateOnly(record.updatedAt) }}</span>
+            <span class="font-bold uppercase tracking-widest"
+              >Last Updated</span
+            >
+            <span class="ml-2 font-semibold text-slate-800">{{
+              formatDateOnly(record.updatedAt)
+            }}</span>
           </p>
         </footer>
       </div>
@@ -628,7 +795,9 @@ async function confirmAcknowledge() {
       zIndexClass="z-[60]"
       contentClass="p-8 text-center"
     >
-      <div class="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-primary">
+      <div
+        class="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-primary"
+      >
         <ShieldCheck class="h-10 w-10" />
       </div>
 
@@ -636,7 +805,8 @@ async function confirmAcknowledge() {
         Acknowledge Cash Advance
       </h3>
       <p class="mt-2 text-sm leading-relaxed text-slate-500">
-        Are you sure you want to acknowledge the receipt of this cash advance? This action will finalize your receipt of the funds.
+        Are you sure you want to acknowledge the receipt of this cash advance?
+        This action will finalize your receipt of the funds.
       </p>
 
       <div class="mt-6 flex gap-3">
@@ -730,8 +900,12 @@ async function confirmAcknowledge() {
       v-if="false && record"
       class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
     >
-      <div class="card p-0 w-full max-w-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
-        <div class="bg-primary text-white px-6 py-4 flex items-center justify-between">
+      <div
+        class="card p-0 w-full max-w-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]"
+      >
+        <div
+          class="bg-primary text-white px-6 py-4 flex items-center justify-between"
+        >
           <div class="flex items-center gap-3">
             <FileText class="w-5 h-5" />
             <div>
@@ -743,7 +917,10 @@ async function confirmAcknowledge() {
               </p>
             </div>
           </div>
-          <button class="text-white/50 hover:text-white transition-none" @click="closeDetails">
+          <button
+            class="text-white/50 hover:text-white transition-none"
+            @click="closeDetails"
+          >
             <X class="w-5 h-5" />
           </button>
         </div>
@@ -751,24 +928,34 @@ async function confirmAcknowledge() {
         <div class="flex-1 overflow-y-auto p-6 flex flex-col md:flex-row gap-6">
           <div class="flex-1 space-y-4">
             <div>
-              <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+              <p
+                class="text-[9px] font-bold text-slate-400 uppercase tracking-widest"
+              >
                 PURPOSE / DESCRIPTION
               </p>
               <p class="text-sm font-bold text-slate-800 uppercase">
                 {{ record.purpose }}
               </p>
             </div>
-            <div class="grid grid-cols-2 gap-6 pt-2 border-t border-slate-100 mt-2">
+            <div
+              class="grid grid-cols-2 gap-6 pt-2 border-t border-slate-100 mt-2"
+            >
               <div>
-                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                <p
+                  class="text-[9px] font-bold text-slate-400 uppercase tracking-widest"
+                >
                   AMOUNT ISSUED
                 </p>
-                <p class="text-lg font-bold text-primary font-mono tracking-tighter">
+                <p
+                  class="text-lg font-bold text-primary font-mono tracking-tighter"
+                >
                   ₱{{ record.amount?.toLocaleString() }}
                 </p>
               </div>
               <div>
-                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                <p
+                  class="text-[9px] font-bold text-slate-400 uppercase tracking-widest"
+                >
                   CURRENT OUTSTANDING
                 </p>
                 <p
@@ -781,7 +968,9 @@ async function confirmAcknowledge() {
                 </p>
               </div>
               <div>
-                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                <p
+                  class="text-[9px] font-bold text-slate-400 uppercase tracking-widest"
+                >
                   REQUESTED BY
                 </p>
                 <p class="text-sm font-bold text-slate-700 uppercase">
@@ -789,7 +978,9 @@ async function confirmAcknowledge() {
                 </p>
               </div>
               <div>
-                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                <p
+                  class="text-[9px] font-bold text-slate-400 uppercase tracking-widest"
+                >
                   SETTLEMENT DUE DATE
                 </p>
                 <p class="text-sm font-bold text-slate-700 uppercase">
@@ -797,7 +988,9 @@ async function confirmAcknowledge() {
                 </p>
               </div>
               <div class="col-span-2 mt-4 flex flex-col items-start gap-1">
-                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                <p
+                  class="text-[9px] font-bold text-slate-400 uppercase tracking-widest"
+                >
                   VERDICT / STATUS
                 </p>
                 <StatusBadge :status="record.status" />
@@ -808,13 +1001,20 @@ async function confirmAcknowledge() {
             v-if="['pending', 'completed'].includes(record.status)"
             class="w-full md:w-80 border border-slate-200 bg-clinical flex flex-col h-[400px]"
           >
-            <div class="p-2 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+            <div
+              class="p-2 border-b border-slate-200 bg-slate-50 flex items-center justify-between"
+            >
               <div class="flex items-center gap-2">
                 <span class="w-1.5 h-1.5 bg-primary"></span>
-                <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">SCAN_TARGET: RECEIPT_01.PNG</span>
+                <span
+                  class="text-[9px] font-bold text-slate-500 uppercase tracking-widest"
+                  >SCAN_TARGET: RECEIPT_01.PNG</span
+                >
               </div>
             </div>
-            <div class="flex-1 p-2 flex items-center justify-center bg-slate-200/50 overflow-hidden relative group">
+            <div
+              class="flex-1 p-2 flex items-center justify-center bg-slate-200/50 overflow-hidden relative group"
+            >
               <img
                 src="/mock_receipt.png"
                 alt="Receipt Attachment"

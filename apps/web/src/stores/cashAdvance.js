@@ -1,87 +1,92 @@
-import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-import { useAuthStore } from './auth'
+import { defineStore } from "pinia";
+import { ref, computed } from "vue";
+import { useAuthStore } from "./auth";
 
-export const useCashAdvanceStore = defineStore('cashAdvance', () => {
-  const items = ref([])
-  const isLoading = ref(false)
+export const useCashAdvanceStore = defineStore("cashAdvance", () => {
+  const items = ref([]);
+  const isLoading = ref(false);
 
-  const pendingCount = computed(() => items.value.filter(i => i.status === 'pending').length)
-  const totalOutstanding = computed(() => items.value.reduce((s, i) => s + (i.amount || 0), 0)) // simplistic for now
+  const pendingCount = computed(
+    () => items.value.filter((i) => i.status === "pending").length,
+  );
+  const totalOutstanding = computed(() =>
+    items.value.reduce((s, i) => s + (i.amount || 0), 0),
+  ); // simplistic for now
 
   async function fetchAll() {
-    isLoading.value = true
+    isLoading.value = true;
     try {
-      const response = await fetch('/api/serms/cash-advances', {
-        headers: { 'Accept': 'application/json' },
-        credentials: 'include'
-      })
+      const response = await fetch("/api/serms/cash-advances", {
+        headers: { Accept: "application/json" },
+        credentials: "include",
+      });
       if (response.ok) {
-        const data = await response.json()
-        items.value = data.map(item => ({
+        const data = await response.json();
+        items.value = data.map((item) => ({
           ...item,
           // Map backend fields to frontend expected fields
           userId: item.user_id,
-          requestedBy: item.requester ? item.requester.name : 'Unknown',
+          requestedBy: item.requester ? item.requester.name : "Unknown",
           dueDate: item.expected_liquidation_date,
           date: item.submitted_at || item.created_at,
-          balance: item.status === 'liquidated' ? 0 : item.amount,
-          adminNotes: (item.approval_actions && item.approval_actions.length) 
-            ? item.approval_actions[item.approval_actions.length - 1].comment 
-            : null,
+          balance: item.status === "liquidated" ? 0 : item.amount,
+          adminNotes:
+            item.approval_actions && item.approval_actions.length
+              ? item.approval_actions[item.approval_actions.length - 1].comment
+              : null,
           acknowledgedAt: item.acknowledged_at,
           signatureImage: item.signature,
           documentUrl: item.document ? item.document.file_url : null,
-        }))
+        }));
       }
     } catch (err) {
-      console.error('Failed to fetch cash advances', err)
+      console.error("Failed to fetch cash advances", err);
     } finally {
-      isLoading.value = false
+      isLoading.value = false;
     }
   }
 
   async function request(formData) {
     try {
-      const response = await fetch('/api/serms/cash-advances', {
-        method: 'POST',
-        headers: { 'Accept': 'application/json' },
-        credentials: 'include',
-        body: formData // Send as FormData to handle files
-      })
+      const response = await fetch("/api/serms/cash-advances", {
+        method: "POST",
+        headers: { Accept: "application/json" },
+        credentials: "include",
+        body: formData, // Send as FormData to handle files
+      });
       if (response.ok) {
-        const result = await response.json()
-        await fetchAll()
-        return result.data
+        const result = await response.json();
+        await fetchAll();
+        return result.data;
       } else {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to create cash advance')
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to create cash advance");
       }
     } catch (err) {
-      console.error('Failed to create cash advance', err)
-      throw err
+      console.error("Failed to create cash advance", err);
+      throw err;
     }
   }
 
   async function approveRequest(id, comment) {
     try {
       const response = await fetch(`/api/serms/cash-advances/${id}/approve`, {
-        method: 'POST',
-        headers: { 
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
         },
-        credentials: 'include',
-        body: JSON.stringify({ comment })
-      })
+        credentials: "include",
+        body: JSON.stringify({ comment }),
+      });
       if (response.ok) {
-        await fetchAll()
+        await fetchAll();
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to approve cash advance');
+        throw new Error(errorData.message || "Failed to approve cash advance");
       }
     } catch (err) {
-      console.error('Failed to approve cash advance', err)
+      console.error("Failed to approve cash advance", err);
       throw err;
     }
   }
@@ -89,45 +94,50 @@ export const useCashAdvanceStore = defineStore('cashAdvance', () => {
   async function rejectRequest(id, comment) {
     try {
       const response = await fetch(`/api/serms/cash-advances/${id}/reject`, {
-        method: 'POST',
-        headers: { 
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
         },
-        credentials: 'include',
-        body: JSON.stringify({ comment })
-      })
+        credentials: "include",
+        body: JSON.stringify({ comment }),
+      });
       if (response.ok) {
-        await fetchAll()
+        await fetchAll();
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to reject cash advance');
+        throw new Error(errorData.message || "Failed to reject cash advance");
       }
     } catch (err) {
-      console.error('Failed to reject cash advance', err)
+      console.error("Failed to reject cash advance", err);
       throw err;
     }
   }
 
   async function acknowledgeRequest(id, signature) {
     try {
-      const response = await fetch(`/api/serms/cash-advances/${id}/acknowledge`, {
-        method: 'POST',
-        headers: { 
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
+      const response = await fetch(
+        `/api/serms/cash-advances/${id}/acknowledge`,
+        {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({ signature }),
         },
-        credentials: 'include',
-        body: JSON.stringify({ signature })
-      })
+      );
       if (response.ok) {
-        await fetchAll()
+        await fetchAll();
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to acknowledge cash advance');
+        throw new Error(
+          errorData.message || "Failed to acknowledge cash advance",
+        );
       }
     } catch (err) {
-      console.error('Failed to acknowledge cash advance', err)
+      console.error("Failed to acknowledge cash advance", err);
       throw err;
     }
   }
@@ -140,6 +150,51 @@ export const useCashAdvanceStore = defineStore('cashAdvance', () => {
     // Placeholder for liquidation rejection
   }
 
-  return { items, isLoading, pendingCount, totalOutstanding, fetchAll, request, approveRequest, rejectRequest, acknowledgeRequest, approveSettlement, rejectSettlement }
-})
+  async function fetchRequest(id) {
+    try {
+      const response = await fetch(`/api/serms/cash-advances/${id}`, {
+        headers: { Accept: "application/json" },
+        credentials: "include",
+      });
+      if (response.ok) {
+        return await response.json();
+      }
+      return null;
+    } catch (err) {
+      console.error("Failed to fetch cash advance details", err);
+      return null;
+    }
+  }
 
+  async function fetchDocument(id) {
+    try {
+      const response = await fetch(`/api/serms/cash-advances/${id}/document`, {
+        headers: { Accept: "application/json" },
+        credentials: "include",
+      });
+      if (response.ok) {
+        return await response.json();
+      }
+      return null;
+    } catch (err) {
+      console.error("Failed to fetch cash advance document", err);
+      return null;
+    }
+  }
+
+  return {
+    items,
+    isLoading,
+    pendingCount,
+    totalOutstanding,
+    fetchAll,
+    request,
+    fetchRequest,
+    fetchDocument,
+    approveRequest,
+    rejectRequest,
+    acknowledgeRequest,
+    approveSettlement,
+    rejectSettlement,
+  };
+});
