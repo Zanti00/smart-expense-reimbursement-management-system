@@ -78,7 +78,7 @@ function handleConfirm() {
         <div
           class="text-[10px] font-bold uppercase tracking-widest flex justify-between mt-1"
           :class="
-            rejectionComment.length < 10 ? 'text-danger' : 'text-success'
+            rejectionComment.length < 10 ? 'text-danger' : 'text-accent'
           "
         >
           <span>Requirement: >= 10 Chars</span>

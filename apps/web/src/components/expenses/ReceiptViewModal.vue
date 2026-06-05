@@ -10,6 +10,8 @@ import {
   Clock,
   Download,
   Trash2,
+  Pencil,
+  AlertTriangle,
 } from "lucide-vue-next";
 import { formatPeso as formatCurrency, formatDate as formatDateBase } from "@/utils/formatters";
 
@@ -24,10 +26,15 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["update:modelValue", "delete"]);
+const emit = defineEmits(["update:modelValue", "delete", "edit"]);
 
 function close() {
   emit("update:modelValue", false);
+}
+
+function editReceipt() {
+  emit("edit", props.receipt);
+  close();
 }
 
 // ── Receipt Detail Helpers ────────────────────────────────────────
@@ -56,7 +63,7 @@ function formatDate(dateStr) {
   <Transition name="modal">
     <div
       v-if="modelValue && receipt"
-      class="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4 lg:p-8 backdrop-blur-sm"
+      class="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4 lg:p-8 backdrop-blur-[1px]"
       @click="close"
     >
       <div
@@ -127,11 +134,28 @@ function formatDate(dateStr) {
 
           <!-- AI BADGE -->
           <div
-            class="flex items-center gap-2 px-4 py-2.5 bg-emerald-50 border border-emerald-100 rounded-xl"
+            v-if="receipt.status === 'automatic-rejected'"
+            class="rounded-xl border border-danger/20 bg-danger/5 p-4"
           >
-            <Sparkles class="w-4 h-4 text-emerald-600 fill-emerald-600" />
+            <div class="flex items-start gap-3">
+              <AlertTriangle class="mt-0.5 h-5 w-5 shrink-0 text-danger" />
+              <div>
+                <p class="font-heading text-sm font-bold text-danger">
+                  Automatic Rejected
+                </p>
+                <p class="mt-1 text-sm text-slate-600">
+                  {{ receipt.complianceReason || "System validation could not approve this receipt." }}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="flex items-center gap-2 px-4 py-2.5 bg-accent-50 border border-accent/20 rounded-xl"
+          >
+            <Sparkles class="w-4 h-4 text-accent fill-accent" />
             <span
-              class="text-xs font-semibold text-emerald-700"
+              class="text-xs font-semibold text-accent"
               style="font-family: &quot;Poppins&quot;, sans-serif"
               >AI Scanned — Details automatically extracted</span
             >
@@ -213,7 +237,7 @@ function formatDate(dateStr) {
               >
                 <div class="flex items-center gap-3">
                   <CheckCircle2
-                    class="w-4 h-4 text-emerald-500 fill-emerald-50"
+                    class="w-4 h-4 text-accent fill-accent-50"
                   />
                   <span class="text-sm text-slate-700">{{
                     item.name || "Unnamed Item"
@@ -272,6 +296,13 @@ function formatDate(dateStr) {
             class="flex flex-col md:flex-row items-center justify-between md:justify-end gap-4 pt-4 border-t border-slate-100"
           >
             <div class="flex gap-2">
+              <button
+                v-if="receipt.status === 'automatic-rejected'"
+                class="btn btn-primary !py-2 !text-xs"
+                @click="editReceipt"
+              >
+                <Pencil class="w-3.5 h-3.5" /> Edit Receipt
+              </button>
               <button class="btn btn-secondary !py-2 !text-xs">
                 <Download class="w-3.5 h-3.5" /> Download
               </button>
@@ -280,7 +311,7 @@ function formatDate(dateStr) {
                   emit('delete', receipt.id);
                   close();
                 "
-                class="flex items-center gap-2 px-5 py-2 rounded-lg bg-red-50 text-danger hover:bg-red-100 transition-all text-xs font-bold border border-red-100"
+                class="inline-flex h-9 w-fit items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3.5 text-xs font-bold text-danger transition-colors hover:bg-red-100"
               >
                 <Trash2 class="w-3.5 h-3.5" />
                 Delete Receipt

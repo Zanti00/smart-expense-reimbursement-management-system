@@ -22,6 +22,10 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  receiptToEdit: {
+    type: Object,
+    default: null,
+  },
 });
 
 const emit = defineEmits(["update:modelValue"]);
@@ -55,8 +59,31 @@ watch([itemsSubtotal, () => uploadForm.value.vat_amount], ([newSubtotal, newVat]
   }
 });
 
+watch(
+  () => props.modelValue,
+  (open) => {
+    if (!open || !props.receiptToEdit) return;
+
+    uploadFile.value = null;
+    uploadFilePreview.value = props.receiptToEdit.thumbnail || "";
+    uploadForm.value = {
+      invoice_number: props.receiptToEdit.invoiceNumber || "",
+      transaction_date: props.receiptToEdit.date || "",
+      tin: props.receiptToEdit.tin || "",
+      vendor_name: props.receiptToEdit.vendorName || "",
+      expense_category_id: props.receiptToEdit.categoryId || "",
+      total_amount: props.receiptToEdit.amount || "",
+      vat_amount: props.receiptToEdit.vatAmount || "",
+      vat_classification: props.receiptToEdit.vatClassification || "vat",
+      items: props.receiptToEdit.items?.length
+        ? props.receiptToEdit.items.map((item) => ({ ...item }))
+        : [],
+    };
+  },
+);
+
 const isFormValid = computed(() => {
-  if (!uploadFile.value) return false;
+  if (!uploadFile.value && !props.receiptToEdit) return false;
   if (!uploadForm.value.invoice_number) return false;
   if (!uploadForm.value.transaction_date) return false;
   if (!uploadForm.value.tin) return false;
@@ -169,8 +196,7 @@ async function saveReceipt() {
     }
   }
   try {
-    notif.info("Uploading receipt...");
-    await receiptsStore.uploadReceipt(uploadFile.value, {
+    const payload = {
       expense_category_id: uploadForm.value.expense_category_id,
       vendor_name: uploadForm.value.vendor_name || null,
       transaction_date: uploadForm.value.transaction_date || null,
@@ -180,8 +206,17 @@ async function saveReceipt() {
       invoice_number: uploadForm.value.invoice_number || null,
       vat_classification: uploadForm.value.vat_classification || null,
       items: uploadForm.value.items.length > 0 ? uploadForm.value.items : undefined,
-    });
-    notif.success("Receipt uploaded and stored successfully.");
+    };
+
+    if (props.receiptToEdit) {
+      notif.info("Submitting receipt for admin re-review...");
+      await receiptsStore.resubmitReceipt(props.receiptToEdit.id, payload, uploadFile.value);
+      notif.success("Receipt updated and submitted for admin re-review.");
+    } else {
+      notif.info("Uploading receipt...");
+      await receiptsStore.uploadReceipt(uploadFile.value, payload);
+      notif.success("Receipt uploaded and stored successfully.");
+    }
     close();
   } catch (e) {
     notif.error(e.message || "Failed to upload receipt.");
@@ -200,7 +235,7 @@ function formatCurrency(amount) {
   <Transition name="modal">
     <div
       v-if="modelValue"
-      class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4"
+      class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-[1px] flex items-center justify-center p-4"
       @click="close"
     >
       <div
@@ -211,10 +246,10 @@ function formatCurrency(amount) {
         <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
           <div class="flex items-center gap-3">
             <h2 class="text-xl font-bold text-primary" style="font-family: 'Poppins', sans-serif">
-              Receipt Scanned
+              {{ receiptToEdit ? "Edit Receipt" : "Receipt Scanned" }}
             </h2>
-            <span class="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-[11px] font-bold flex items-center gap-1.5 border border-emerald-100">
-              <Sparkles class="w-3.5 h-3.5 fill-emerald-600" />
+            <span class="bg-accent-50 text-accent px-3 py-1 rounded-full text-[11px] font-bold flex items-center gap-1.5 border border-accent/20">
+              <Sparkles class="w-3.5 h-3.5 fill-accent" />
               AI Read
             </span>
           </div>
@@ -242,7 +277,7 @@ function formatCurrency(amount) {
                   <FileText v-else class="w-7 h-7 text-primary/40" />
                 </div>
                 <p class="text-[10px] text-slate-300 font-semibold uppercase tracking-widest text-center px-4" style="font-family: 'Poppins', sans-serif">
-                  {{ uploadFile ? uploadFile.name : "Click to select file" }}
+                  {{ uploadFile ? uploadFile.name : receiptToEdit ? "Click to replace file" : "Click to select file" }}
                 </p>
                 <p v-if="!uploadFile" class="text-[10px] text-slate-300">
                   JPEG, PNG, or PDF (max 2MB)
@@ -302,8 +337,8 @@ function formatCurrency(amount) {
                   </select>
                   <ChevronDown class="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                 </div>
-                <span class="bg-emerald-50 text-emerald-600 border border-emerald-100 px-4 py-2 rounded-lg flex items-center gap-2 text-[11px] font-bold whitespace-nowrap shadow-sm">
-                  <Sparkles class="w-3.5 h-3.5 fill-emerald-600" />
+                <span class="bg-accent-50 text-accent border border-accent/20 px-4 py-2 rounded-lg flex items-center gap-2 text-[11px] font-bold whitespace-nowrap shadow-sm">
+                  <Sparkles class="w-3.5 h-3.5 fill-accent" />
                   [AI-Suggested]
                 </span>
               </div>
@@ -392,7 +427,7 @@ function formatCurrency(amount) {
                 </div>
                 <div class="pt-3 border-t border-slate-200 flex justify-between items-center">
                   <span class="font-bold text-slate-700">Total Amount</span>
-                  <span class="text-2xl font-black text-emerald-600 font-mono">{{ formatCurrency(Number(uploadForm.total_amount) || 0) }}</span>
+                  <span class="text-2xl font-black text-primary font-mono">{{ formatCurrency(Number(uploadForm.total_amount) || 0) }}</span>
                 </div>
               </div>
             </div>
@@ -406,7 +441,7 @@ function formatCurrency(amount) {
           </button>
           <button @click="saveReceipt" class="btn btn-primary !px-8" :disabled="receiptsStore.isSaving || !isFormValid">
             <Save class="w-4 h-4" />
-            {{ receiptsStore.isSaving ? "Saving..." : "Save Receipt" }}
+            {{ receiptsStore.isSaving ? "Saving..." : receiptToEdit ? "Submit for Re-review" : "Save Receipt" }}
           </button>
         </div>
       </div>

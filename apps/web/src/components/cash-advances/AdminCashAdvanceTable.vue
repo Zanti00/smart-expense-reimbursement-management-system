@@ -75,8 +75,9 @@ function statusClass(status) {
               <span :class="['inline-flex rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide', statusClass(row.status)]">{{ row.status }}</span>
             </td>
             <td class="px-5 py-5 text-center">
-              <button class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-accent/15 bg-accent/5 text-accent transition-all duration-200 ease-out hover:bg-accent/10 hover:scale-[1.04] focus:outline-none" title="View cash advance" @click="$emit('view', row)">
-                <span class="inline-flex h-6 w-6 items-center justify-center rounded-full border border-accent/30"><Eye class="h-3.5 w-3.5" /></span>
+              <button class="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-accent/15 bg-accent/5 px-3 text-xs font-bold text-accent transition-all duration-200 ease-out hover:bg-accent/10 hover:scale-[1.02] focus:outline-none" title="View cash advance" @click="$emit('view', row)">
+                <Eye class="h-3.5 w-3.5" />
+                <span>View</span>
               </button>
             </td>
           </tr>

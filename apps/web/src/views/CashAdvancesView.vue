@@ -6,8 +6,8 @@ import { useToast } from "@/composables/useToast";
 import { useCashAdvanceList } from "@/composables/useCashAdvanceList";
 import ToastNotification from "@/components/ToastNotification.vue";
 
-import BaseFilterTabs from "@/components/base/BaseFilterTabs.vue";
 import BaseKpiGrid from "@/components/base/BaseKpiGrid.vue";
+import BaseUtilityToolbar from "@/components/base/BaseUtilityToolbar.vue";
 import CashAdvanceTable from "@/components/cash-advances/CashAdvanceTable.vue";
 import RejectionModal from "@/components/cash-advances/RejectionModal.vue";
 import CashAdvanceDetailsModal from "@/components/cash-advances/CashAdvanceDetailsModal.vue";
@@ -20,6 +20,23 @@ const { addToast } = useToast();
 
 const { activeStatus, statusTabs, filteredRows, activeMetrics } =
   useCashAdvanceList(store, auth);
+const searchQuery = ref("");
+
+const searchedRows = computed(() => {
+  if (!searchQuery.value.trim()) return filteredRows.value;
+  const q = searchQuery.value.trim().toLowerCase();
+  return filteredRows.value.filter((row) =>
+    [
+      row.id,
+      row.purpose,
+      row.status,
+      row.user,
+      row.fileDescription,
+      row.requested,
+      row.dueDate,
+    ].some((value) => String(value || "").toLowerCase().includes(q)),
+  );
+});
 
 onMounted(() => store.fetchAll());
 
@@ -184,14 +201,6 @@ const kpis = computed(() => {
         </p>
       </div>
 
-      <button
-        id="request-advance-btn"
-        class="inline-flex min-h-[44px] w-fit items-center justify-center gap-2 rounded-lg bg-accent px-6 py-3 font-heading text-sm font-bold text-white shadow-sm transition-all duration-200 ease-out hover:bg-accent-600 hover:shadow-xl hover:scale-[1.01] active:scale-[0.98]"
-        @click="$router.push('/cash-advances/new')"
-      >
-        <Plus class="h-4 w-4" />
-        New Request
-      </button>
     </section>
 
     <!-- Analytics Metrics -->
@@ -205,14 +214,26 @@ const kpis = computed(() => {
       :isLoading="store.isLoading"
     />
 
-    <!-- Filter Status Tabs -->
-    <section class="overflow-x-auto mb-2">
-      <BaseFilterTabs v-model="activeStatus" :tabs="statusTabs" />
-    </section>
+    <BaseUtilityToolbar
+      v-model:search="searchQuery"
+      v-model:status-value="activeStatus"
+      :statuses="statusTabs"
+    >
+      <template v-if="!auth.isAdmin" #actions>
+        <button
+          id="request-advance-btn"
+          class="inline-flex min-h-[42px] w-full items-center justify-center gap-2 rounded-lg bg-accent px-5 font-heading text-sm font-bold text-white shadow-sm transition-all duration-200 ease-out hover:bg-accent-600 hover:shadow-xl hover:scale-[1.01] active:scale-[0.98] sm:w-fit"
+          @click="$router.push('/cash-advances/new')"
+        >
+          <Plus class="h-4 w-4" />
+          New Request
+        </button>
+      </template>
+    </BaseUtilityToolbar>
 
     <!-- Cash Advance Data Table -->
     <CashAdvanceTable
-      :rows="filteredRows"
+      :rows="searchedRows"
       :isAdmin="auth.isAdmin"
       :isLoading="store.isLoading"
       @view="openDetails"

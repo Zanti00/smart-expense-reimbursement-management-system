@@ -42,13 +42,29 @@ export const useReimbursementStore = defineStore('reimbursement', () => {
 
   async function approve(id, remarks = '') {
     const item = items.value.find(i => i.id === id)
-    if (item) item.status = 'approved'
+    if (item) {
+      item.status = 'approved'
+      item.reviewerNotes = remarks
+    }
   }
 
   async function reject(id, remarks = '') {
     const item = items.value.find(i => i.id === id)
-    if (item) item.status = 'rejected'
+    if (item) {
+      item.status = 'rejected'
+      item.reviewerNotes = remarks
+    }
   }
 
-  return { items, isLoading, total, pending, approved, fetchAll, submit, approve, reject }
+  async function setReceiptDecision(id, receiptId, review) {
+    const item = items.value.find(i => i.id === id)
+    if (!item) return
+
+    item.receiptReviews = {
+      ...(item.receiptReviews || {}),
+      [receiptId]: review,
+    }
+  }
+
+  return { items, isLoading, total, pending, approved, fetchAll, submit, approve, reject, setReceiptDecision }
 })

@@ -1,9 +1,10 @@
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { usePolicyStore } from '@/stores/policy'
 import { useAuthStore } from '@/stores/auth'
 import BaseButton from '@/components/base/BaseButton.vue'
-import { ShieldCheck, Plus, Edit2, Trash2, Save, Activity, X, Wallet, Clock } from 'lucide-vue-next'
+import SkeletonLoader from '@/components/base/SkeletonLoader.vue'
+import { ShieldCheck, Plus, Trash2, Save, X, Clock } from 'lucide-vue-next'
 
 const policyStore = usePolicyStore()
 const authStore = useAuthStore()
@@ -110,8 +111,19 @@ function formatDate(ds) {
       </button>
     </div>
 
-    <div v-if="policyStore.isLoading" class="p-12 flex justify-center">
-      <Activity class="w-6 h-6 animate-spin text-primary" />
+    <div v-if="policyStore.isLoading" class="space-y-4">
+      <div v-if="activeTab !== 'logs'" class="card p-6">
+        <div class="mb-5 flex items-center justify-between border-b border-slate-100 pb-4">
+          <div class="h-4 w-40 animate-pulse rounded bg-slate-200"></div>
+          <div class="h-8 w-28 animate-pulse rounded bg-slate-200"></div>
+        </div>
+        <SkeletonLoader :rows="6" height="h-9" />
+      </div>
+      <div v-else class="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <div v-for="i in 3" :key="`policy-log-skeleton-${i}`" class="card p-4">
+          <SkeletonLoader :rows="4" height="h-4" />
+        </div>
+      </div>
     </div>
 
     <template v-else>

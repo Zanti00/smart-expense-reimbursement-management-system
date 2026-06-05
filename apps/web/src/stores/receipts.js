@@ -79,7 +79,26 @@ export const useReceiptStore = defineStore("receipts", () => {
   /**
    * Map a raw receipt API object to the frontend shape.
    */
+  function getComplianceStatus(r) {
+    const score = Number(r.ocr_confidence_score);
+    const missingRequiredFields =
+      !r.vendor_name ||
+      !r.transaction_date ||
+      !r.total_amount ||
+      !r.invoice_number;
+
+    if (r.status === "pending-admin-re-review") return r.status;
+    if (r.status === "automatic-rejected") return r.status;
+    if (r.ocr_flagged || missingRequiredFields || (score > 0 && score < 0.75)) {
+      return "automatic-rejected";
+    }
+
+    return r.status || "Processed";
+  }
+
   function mapReceipt(r) {
+    const complianceStatus = getComplianceStatus(r);
+
     return {
       id: `RCPT-2026-${String(r.id).padStart(3, "0")}`,
       dbId: r.id,
@@ -91,7 +110,18 @@ export const useReceiptStore = defineStore("receipts", () => {
       amount: Number(r.total_amount) || 0,
       category: r.category?.name || "Uncategorized",
       categoryId: r.expense_category_id || null,
-      status: r.ocr_flagged ? "Flagged" : "Processed",
+      status: complianceStatus,
+      complianceStatus,
+      complianceReason:
+        complianceStatus === "automatic-rejected"
+          ? "System validation failed. Required data may be missing or OCR confidence was too low."
+          : r.compliance_reason || "",
+      systemRejectedAt:
+        complianceStatus === "automatic-rejected"
+          ? r.updated_at || r.created_at || new Date().toISOString()
+          : r.system_rejected_at || null,
+      modifiedAfterSystemRejection: !!r.modified_after_system_rejection,
+      adminNotes: r.admin_notes || "",
       hash: r.file_hash,
       thumbnail: r.file_url || (r.file_path ? `https://vbabvrcfqcmvvjwmzuwx.supabase.co/storage/v1/object/public/cash_advances/${r.file_path}` : null),
       isDeleted: !!r.deleted_at,
@@ -228,6 +258,82 @@ export const useReceiptStore = defineStore("receipts", () => {
     }
   }
 
+  async function resubmitReceipt(id, metadata, file = null) {
+    isSaving.value = true;
+    const rx = receipts.value.find((r) => r.id === id);
+    if (!rx) {
+      isSaving.value = false;
+      throw new Error("Receipt not found.");
+    }
+
+    const previousStatus = rx.status;
+    const payload = {
+      ...metadata,
+      status: "pending-admin-re-review",
+      complianceStatus: "pending-admin-re-review",
+      modifiedAfterSystemRejection: true,
+      previousStatus,
+      resubmittedAt: new Date().toISOString(),
+    };
+
+    try {
+      const headers = { Accept: "application/json" };
+      if (auth.token) headers["Authorization"] = `Bearer ${auth.token}`;
+
+      const formData = new FormData();
+      if (file) formData.append("file", file);
+      Object.entries(metadata).forEach(([key, value]) => {
+        if (value == null) return;
+        formData.append(key, Array.isArray(value) ? JSON.stringify(value) : value);
+      });
+      formData.append("status", "pending-admin-re-review");
+
+      if (rx.dbId) {
+        await fetch(`/api/serms/reimbursements/receipts/${rx.dbId}/resubmit`, {
+          method: "POST",
+          headers,
+          credentials: "include",
+          body: formData,
+        }).catch(() => null);
+      }
+
+      Object.assign(rx, {
+        vendorName: metadata.vendor_name || rx.vendorName,
+        date: metadata.transaction_date || rx.date,
+        amount: Number(metadata.total_amount) || rx.amount,
+        vatAmount: Number(metadata.vat_amount) || 0,
+        tin: metadata.tin || rx.tin,
+        invoiceNumber: metadata.invoice_number || rx.invoiceNumber,
+        vatClassification: metadata.vat_classification || rx.vatClassification,
+        categoryId: metadata.expense_category_id || rx.categoryId,
+        items: metadata.items || rx.items,
+        ...payload,
+      });
+
+      return rx;
+    } finally {
+      isSaving.value = false;
+    }
+  }
+
+  async function finalizeReReview(id, decision, adminNotes) {
+    const rx = receipts.value.find((r) => r.id === id);
+    if (!rx) throw new Error("Receipt not found.");
+    if (!adminNotes || adminNotes.trim().length < 10) {
+      throw new Error("Admin notes must be at least 10 characters.");
+    }
+
+    const finalStatus = decision === "approve" ? "Processed" : "final-rejected";
+    Object.assign(rx, {
+      status: finalStatus,
+      complianceStatus: finalStatus,
+      adminNotes,
+      finalDecision: decision,
+      finalDecisionAt: new Date().toISOString(),
+    });
+    return rx;
+  }
+
   // Legacy: keep simulateUpload for backward compatibility
   async function simulateUpload(fileMeta, mockHash) {
     return new Promise((resolve, reject) => {
@@ -340,6 +446,8 @@ export const useReceiptStore = defineStore("receipts", () => {
     fetchAll,
     fetchCategories,
     uploadReceipt,
+    resubmitReceipt,
+    finalizeReReview,
     simulateUpload,
     softDelete,
     hardDelete,
