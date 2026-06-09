@@ -8,6 +8,7 @@ import StatusBadge from "@/components/base/StatusBadge.vue";
 import { formatPeso } from "@/utils/formatters";
 import {
   X,
+  CheckCircle,
   Wallet,
   FileDown,
   Download,
@@ -262,7 +263,7 @@ async function confirmAcknowledge() {
 <template>
   <div v-if="isOpen && record">
     <div
-      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-sm"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-[1px]"
     >
       <div
         v-if="auth.isAdmin"
@@ -290,7 +291,7 @@ async function confirmAcknowledge() {
           >
             <div class="flex items-center gap-4">
               <div
-                class="flex h-14 w-14 items-center justify-center rounded-full border-2 border-emerald-100 bg-primary/10 font-heading text-sm font-bold text-primary"
+                class="flex h-14 w-14 items-center justify-center rounded-full border-2 border-accent/20 bg-primary/10 font-heading text-sm font-bold text-primary"
               >
                 {{
                   record.requestedBy
@@ -324,7 +325,7 @@ async function confirmAcknowledge() {
           </section>
 
           <section
-            class="rounded-lg border border-emerald-100 bg-primary/5 p-6 text-center"
+            class="rounded-lg border border-accent/20 bg-primary/5 p-6 text-center"
           >
             <p class="section-label mb-2">Amount Requested</p>
             <p
@@ -434,7 +435,7 @@ async function confirmAcknowledge() {
                   >{{ record.signature }}</span
                 >
                 <div
-                  class="absolute bottom-2 right-3 flex items-center gap-1 text-success"
+                  class="absolute bottom-2 right-3 flex items-center gap-1 text-accent"
                 >
                   <ShieldCheck class="h-4 w-4" />
                   <span class="text-[10px] font-bold uppercase tracking-widest"
@@ -467,7 +468,7 @@ async function confirmAcknowledge() {
                 :class="
                   adminReviewNotes.trim().length < 10
                     ? 'text-danger'
-                    : 'text-success'
+                    : 'text-accent'
                 "
               >
                 <span>Requirement:</span>
@@ -497,11 +498,12 @@ async function confirmAcknowledge() {
               Reject
             </button>
             <button
-              class="btn btn-primary w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+              class="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-bold text-white transition-colors hover:bg-accent/90 sm:w-auto disabled:cursor-not-allowed disabled:opacity-50"
               type="button"
               :disabled="record.userId === auth.user?.id"
               @click="requestConfirmation('approve')"
             >
+              <CheckCircle class="h-4 w-4" />
               Approve
             </button>
           </div>
@@ -515,7 +517,7 @@ async function confirmAcknowledge() {
         <header
           class="flex items-center justify-between border-b border-slate-200 px-6 py-4"
         >
-          <h2 class="font-heading text-xl font-bold text-[#003527]">
+          <h2 class="font-heading text-xl font-bold text-primary">
             {{ auth.isAdmin ? "Admin Details Review" : "Cash Advance Details" }}
           </h2>
           <button
@@ -537,7 +539,7 @@ async function confirmAcknowledge() {
                 >
                   Request ID
                 </p>
-                <p class="font-heading text-xl font-bold text-[#003527]">
+                <p class="font-heading text-xl font-bold text-primary">
                   {{ record.id }}
                 </p>
               </div>
@@ -548,7 +550,7 @@ async function confirmAcknowledge() {
                   Amount Requested
                 </p>
                 <p
-                  class="font-heading text-3xl font-bold leading-tight text-[#006C49]"
+                  class="font-heading text-3xl font-bold leading-tight text-primary"
                 >
                   {{ formatPeso(record.amount) }}
                 </p>
@@ -593,7 +595,7 @@ async function confirmAcknowledge() {
                 >
                   Current Outstanding Balance
                 </p>
-                <p class="font-heading text-lg font-bold text-[#003527]">
+                <p class="font-heading text-lg font-bold text-primary">
                   {{ formatPeso(outstandingBalance(record)) }}
                 </p>
               </div>
@@ -652,7 +654,7 @@ async function confirmAcknowledge() {
                   </p>
                 </div>
                 <button
-                  class="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-[#006C49] transition-colors hover:bg-[#006C49]/10"
+                  class="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-accent transition-colors hover:bg-accent-50"
                   type="button"
                   title="Download request document"
                   @click="downloadDocument"
@@ -672,7 +674,7 @@ async function confirmAcknowledge() {
           </section>
 
           <section>
-            <h3 class="mb-2 font-heading text-sm font-bold text-[#003527]">
+            <h3 class="mb-2 font-heading text-sm font-bold text-primary">
               Admin Notes
             </h3>
             <div
@@ -686,15 +688,15 @@ async function confirmAcknowledge() {
 
           <section
             v-if="['approved', 'disbursed'].includes(record.status)"
-            class="space-y-4 rounded-lg border border-[#006C49]/15 bg-[#F0FDF4] p-5"
+            class="space-y-4 rounded-lg border border-accent/20 bg-accent-50 p-5"
           >
             <div class="flex items-start gap-3">
               <ShieldCheck
-                class="mt-0.5 h-5 w-5 flex-shrink-0 text-[#006C49]"
+                class="mt-0.5 h-5 w-5 flex-shrink-0 text-accent"
               />
               <p class="text-sm leading-relaxed text-slate-800">
                 This certifies that I received the cash advance with amount of
-                <span class="font-bold text-[#006C49]">{{
+                <span class="font-bold text-primary">{{
                   formatPeso(record.amount)
                 }}</span
                 >.
@@ -712,7 +714,7 @@ async function confirmAcknowledge() {
                   alt="Signature"
                 />
                 <div
-                  class="absolute bottom-2 right-3 flex items-center gap-1 text-success bg-white/80 px-2 py-1 rounded"
+                  class="absolute bottom-2 right-3 flex items-center gap-1 text-accent bg-white/80 px-2 py-1 rounded"
                 >
                   <ShieldCheck class="h-4 w-4" />
                   <span class="text-[10px] font-bold uppercase tracking-widest"
@@ -838,7 +840,7 @@ async function confirmAcknowledge() {
         :class="[
           'mx-auto flex h-20 w-20 items-center justify-center rounded-full',
           confirmationAction === 'approve'
-            ? 'bg-success/10 text-success'
+            ? 'bg-accent-50 text-accent'
             : 'bg-danger/10 text-danger',
         ]"
       >
@@ -898,7 +900,7 @@ async function confirmAcknowledge() {
     <!-- Previous record details panel retained inactive for reference -->
     <div
       v-if="false && record"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-[1px] p-4"
     >
       <div
         class="card p-0 w-full max-w-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]"

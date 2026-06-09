@@ -41,7 +41,7 @@ onUnmounted(() => {
   <Transition name="modal">
     <div
       v-if="isOpen"
-      :class="['fixed inset-0 flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-sm transition-opacity', zIndexClass]"
+      :class="['fixed inset-0 flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-[1px] transition-opacity', zIndexClass]"
       @click.self="$emit('close')"
     >
       <div

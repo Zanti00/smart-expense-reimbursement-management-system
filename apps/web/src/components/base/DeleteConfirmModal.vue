@@ -44,7 +44,7 @@ function close() {
   <Transition name="modal">
     <div
       v-if="modelValue"
-      class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4"
+      class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-[1px] flex items-center justify-center p-4"
     >
       <div class="card w-full max-w-sm shadow-2xl overflow-hidden">
         <div

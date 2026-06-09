@@ -1,6 +1,7 @@
 <script setup>
-import { FileText, Image as ImageIcon, Eye, Trash2 } from "lucide-vue-next";
+import { AlertTriangle, FileText, Image as ImageIcon, Eye, Pencil, Trash2 } from "lucide-vue-next";
 import { formatPeso as formatCurrency, formatDate } from "@/utils/formatters";
+import StatusBadge from "@/components/base/StatusBadge.vue";
 
 const props = defineProps({
   expense: {
@@ -13,7 +14,7 @@ const props = defineProps({
   },
 });
 
-defineEmits(["select", "view", "delete"]);
+defineEmits(["select", "view", "delete", "edit"]);
 </script>
 
 <template>
@@ -79,6 +80,21 @@ defineEmits(["select", "view", "delete"]);
 
     <!-- Card Body -->
     <div class="p-4 flex flex-col flex-1">
+      <div
+        v-if="expense.status === 'automatic-rejected'"
+        class="mb-3 rounded-lg border border-danger/20 bg-danger/5 px-3 py-2"
+      >
+        <div class="flex items-start gap-2">
+          <AlertTriangle class="mt-0.5 h-4 w-4 shrink-0 text-danger" />
+          <div>
+            <p class="text-[11px] font-bold text-danger">Automatic Rejected</p>
+            <p class="mt-0.5 text-[10px] leading-snug text-slate-500">
+              Update the details or upload a clearer copy.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <!-- File / Merchant Info -->
       <div class="mb-3">
         <h3
@@ -105,8 +121,19 @@ defineEmits(["select", "view", "delete"]);
         </span>
       </div>
 
+      <div class="mb-3">
+        <StatusBadge :status="expense.status" />
+      </div>
+
       <!-- Action Buttons -->
       <div class="flex gap-2">
+        <button
+          v-if="expense.status === 'automatic-rejected'"
+          class="btn btn-secondary flex-1 !py-2 !text-xs"
+          @click.stop="$emit('edit', expense)"
+        >
+          <Pencil class="w-3.5 h-3.5" /> Edit Receipt
+        </button>
         <button
           class="btn btn-primary flex-1 !py-2 !text-xs"
           @click.stop="$emit('view', expense)"

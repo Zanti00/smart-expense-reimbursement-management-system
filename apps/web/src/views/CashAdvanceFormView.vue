@@ -5,12 +5,13 @@ import { useCashAdvanceStore } from "@/stores/cashAdvance";
 import { useToast } from "@/composables/useToast";
 import ToastNotification from "@/components/ToastNotification.vue";
 import {
-  X,
+  ArrowLeft,
   FileText,
   UploadCloud,
   Info,
   Send,
   Calendar,
+  X,
 } from "lucide-vue-next";
 
 const router = useRouter();
@@ -140,32 +141,35 @@ function goBack() {
 </script>
 
 <template>
-  <div class="flex flex-col bg-clinical min-h-full">
+  <div class="flex min-h-full flex-col bg-clinical">
     <ToastNotification />
-    <header
-      class="sticky top-0 z-10 flex flex-shrink-0 items-center gap-3 px-6 py-4 text-white shadow-sm"
-      style="background: linear-gradient(135deg, #252578 0%, #2f2f7e 100%)"
-    >
-      <button
-        class="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
-        type="button"
-        title="Back to Cash Advances"
-        @click="goBack"
-      >
-        <X class="h-4 w-4" />
-      </button>
-      <div>
-        <p class="text-[10px] font-semibold uppercase tracking-widest text-white/60">
-          Cash Advances
-        </p>
-        <h2 class="font-heading text-sm font-bold leading-tight text-white">
-          New Cash Advance Request
-        </h2>
-      </div>
-    </header>
-
     <main class="flex-1 overflow-y-auto">
       <div class="mx-auto flex w-full max-w-5xl flex-col gap-8 p-6">
+        <header class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div class="flex items-start gap-3">
+            <button
+              class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition-all hover:bg-slate-50 hover:text-primary"
+              type="button"
+              title="Back to Cash Advances"
+              @click="goBack"
+            >
+              <ArrowLeft class="h-4 w-4" />
+            </button>
+            <div class="min-w-0">
+              <div class="mb-2 flex items-center gap-2">
+                <FileText class="h-3.5 w-3.5 text-accent" />
+                <span class="section-label">Advance Request</span>
+              </div>
+              <h1 class="font-heading text-2xl font-bold leading-tight text-slate-800">
+                New Cash Advance Request
+              </h1>
+              <p class="mt-1 text-sm text-slate-400">
+                Submit a cash advance request for review and disbursement.
+              </p>
+            </div>
+          </div>
+        </header>
+
         <section class="card p-5 md:p-6">
           <form id="cashAdvanceForm" class="space-y-6" @submit.prevent="handleRequest">
             <div class="grid grid-cols-1 gap-6 md:grid-cols-2">

@@ -9,7 +9,7 @@ import { EXPENSE_CATEGORIES } from "@/utils/constants";
 
 import StatusBadge from "@/components/base/StatusBadge.vue";
 import BaseKpiGrid from "@/components/base/BaseKpiGrid.vue";
-import BaseFilterTabs from "@/components/base/BaseFilterTabs.vue";
+import BaseUtilityToolbar from "@/components/base/BaseUtilityToolbar.vue";
 import ReceiptViewModal from "@/components/expenses/ReceiptViewModal.vue";
 import ExpenseCard from "@/components/expenses/ExpenseCard.vue";
 import ExpenseCardSkeleton from "@/components/expenses/ExpenseCardSkeleton.vue";
@@ -17,6 +17,7 @@ import ReceiptUploadModal from "@/components/expenses/ReceiptUploadModal.vue";
 import DeleteConfirmModal from "@/components/base/DeleteConfirmModal.vue";
 import ReimbursementFormView from "@/views/ReimbursementFormView.vue";
 import {
+  AlertTriangle,
   Search,
   X,
   UploadCloud,
@@ -25,6 +26,7 @@ import {
   Wallet,
   CheckSquare,
   DatabaseZap,
+  ShieldCheck,
 } from "lucide-vue-next";
 
 const auth = useAuthStore();
@@ -59,11 +61,40 @@ const CATEGORIES = computed(() => {
   return ["All", ...EXPENSE_CATEGORIES.map((c) => c.name)];
 });
 const activeCategory = ref("All");
+const activeStatus = ref("All");
+const searchQuery = ref("");
+
+const STATUS_FILTERS = [
+  "All",
+  "Processed",
+  "Automatic Rejected",
+  "Pending Admin Re-review",
+  "Final Rejected",
+];
+
+function normalizeFilterLabel(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/\s+/g, "-");
+}
 
 const filteredReceipts = computed(() => {
-  const base = receiptsStore.visibleReceipts;
-  if (activeCategory.value === "All") return base;
-  return base.filter((r) => r.category === activeCategory.value);
+  let base = receiptsStore.visibleReceipts;
+  if (activeCategory.value !== "All") {
+    base = base.filter((r) => r.category === activeCategory.value);
+  }
+  if (activeStatus.value !== "All") {
+    const status = normalizeFilterLabel(activeStatus.value);
+    base = base.filter((r) => normalizeFilterLabel(r.status) === status);
+  }
+  if (searchQuery.value.trim()) {
+    const q = searchQuery.value.trim().toLowerCase();
+    base = base.filter((r) =>
+      [r.id, r.vendorName, r.fileName, r.category, r.status, r.invoiceNumber]
+        .some((value) => String(value || "").toLowerCase().includes(q)),
+    );
+  }
+  return base;
 });
 
 // ── Metrics ───────────────────────────────────────────────────────
@@ -107,6 +138,43 @@ function openViewModal(receipt) {
 
 // ── Upload Modal ──────────────────────────────────────────────────
 const uploadModalOpen = ref(false);
+const receiptBeingEdited = ref(null);
+const adminNotesByReceipt = ref({});
+
+const automaticRejectedReceipts = computed(() =>
+  receiptsStore.visibleReceipts.filter((r) => r.status === "automatic-rejected"),
+);
+
+const pendingReReviewReceipts = computed(() =>
+  receiptsStore.visibleReceipts.filter((r) => r.status === "pending-admin-re-review"),
+);
+
+function openEditReceipt(receipt) {
+  receiptBeingEdited.value = receipt;
+  uploadModalOpen.value = true;
+}
+
+function closeUploadModal(value) {
+  uploadModalOpen.value = value;
+  if (!value) receiptBeingEdited.value = null;
+}
+
+async function finalizeReceiptReview(receipt, decision) {
+  const notes = adminNotesByReceipt.value[receipt.id] || "";
+  if (notes.trim().length < 10) {
+    addToast({ message: "Admin notes must be at least 10 characters.", type: "error" });
+    return;
+  }
+
+  await receiptsStore.finalizeReReview(receipt.id, decision, notes);
+  addToast({
+    message:
+      decision === "approve"
+        ? "Receipt approved by override."
+        : "Final rejection confirmed.",
+    type: "success",
+  });
+}
 
 // ── Lifecycle ─────────────────────────────────────────────────────
 onMounted(async () => {
@@ -208,13 +276,98 @@ const kpis = computed(() => [
         gridClasses="grid-cols-1 sm:grid-cols-3 gap-4"
       />
 
-      <!-- ── Category Filter Tabs ── -->
-      <div class="mb-6 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:overflow-visible sm:pb-0">
-        <BaseFilterTabs
-          :tabs="CATEGORIES"
-          v-model="activeCategory"
-        />
+      <div
+        v-if="!auth.isAdmin && automaticRejectedReceipts.length > 0"
+        class="rounded-xl border border-danger/20 bg-danger/5 p-4"
+      >
+        <div class="flex items-start gap-3">
+          <AlertTriangle class="mt-0.5 h-5 w-5 shrink-0 text-danger" />
+          <div>
+            <p class="font-heading text-sm font-bold text-danger">
+              {{ automaticRejectedReceipts.length }} receipt{{ automaticRejectedReceipts.length === 1 ? "" : "s" }} need correction
+            </p>
+            <p class="mt-1 text-sm text-slate-600">
+              System validation automatically rejected these receipts. Edit and resubmit them for admin re-review.
+            </p>
+          </div>
+        </div>
       </div>
+
+      <section
+        v-if="auth.isAdmin && pendingReReviewReceipts.length > 0"
+        class="overflow-hidden rounded-xl border border-accent/20 bg-white shadow-sm"
+      >
+        <div class="flex items-center justify-between border-b border-slate-200 bg-accent-50 px-5 py-4">
+          <div>
+            <h2 class="font-heading text-base font-bold text-primary">
+              Pending Admin Re-review
+            </h2>
+            <p class="mt-0.5 text-xs text-slate-500">
+              Previously system rejected, then modified and resubmitted by employee.
+            </p>
+          </div>
+          <span class="kpi-label text-accent">{{ pendingReReviewReceipts.length }} queued</span>
+        </div>
+        <div class="divide-y divide-slate-100">
+          <div
+            v-for="receipt in pendingReReviewReceipts"
+            :key="receipt.id"
+            class="grid gap-4 p-5 lg:grid-cols-[1fr_320px]"
+          >
+            <div class="space-y-2">
+              <div class="flex flex-wrap items-center gap-2">
+                <StatusBadge status="pending-admin-re-review" />
+                <span class="rounded-full border border-danger/20 bg-danger/5 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-danger">
+                  Previously System Rejected
+                </span>
+              </div>
+              <h3 class="font-heading text-sm font-bold text-slate-900">
+                {{ receipt.vendorName || "Unknown Vendor" }}
+              </h3>
+              <p class="text-xs text-slate-500">
+                {{ receipt.id }} | {{ receipt.fileName }} | {{ formatPeso(receipt.amount || 0) }}
+              </p>
+              <p class="text-xs text-slate-400">
+                {{ receipt.complianceReason || "Modified by employee after automatic system rejection." }}
+              </p>
+            </div>
+            <div class="space-y-3">
+              <div class="input-wrapper">
+                <label class="input-label">Admin Notes <span class="text-danger">*</span></label>
+                <textarea
+                  v-model="adminNotesByReceipt[receipt.id]"
+                  class="input min-h-[88px] resize-none"
+                  placeholder="Explain the final decision..."
+                />
+              </div>
+              <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <button
+                  class="btn btn-primary !py-2"
+                  @click="finalizeReceiptReview(receipt, 'approve')"
+                >
+                  <ShieldCheck class="h-4 w-4" />
+                  Approve Override
+                </button>
+                <button
+                  class="btn btn-danger !py-2"
+                  @click="finalizeReceiptReview(receipt, 'reject')"
+                >
+                  Confirm Final Rejection
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Search / Popup Filters ── -->
+      <BaseUtilityToolbar
+        v-model:search="searchQuery"
+        v-model:status-value="activeStatus"
+        v-model:category-value="activeCategory"
+        :statuses="STATUS_FILTERS"
+        :categories="CATEGORIES"
+      />
 
       <!-- ── Receipt Card Grid ── -->
       <TransitionGroup
@@ -239,6 +392,7 @@ const kpis = computed(() => [
           :is-selected="selectedIds.has(receipt.id)"
           @select="toggleSelect"
           @view="openViewModal"
+          @edit="openEditReceipt"
           @delete="promptDelete"
         />
       </TransitionGroup>
@@ -272,8 +426,10 @@ const kpis = computed(() => [
 
     <!-- ── Upload / Receipt Scanned Modal ── -->
     <ReceiptUploadModal
-      v-model="uploadModalOpen"
+      :model-value="uploadModalOpen"
       :categories="EXPENSE_CATEGORIES"
+      :receipt-to-edit="receiptBeingEdited"
+      @update:model-value="closeUploadModal"
     />
 
     <!-- ── Delete Confirmation Modal ── -->
@@ -287,6 +443,7 @@ const kpis = computed(() => [
       v-model="viewModalOpen"
       :receipt="viewedReceipt"
       @delete="promptDelete"
+      @edit="openEditReceipt"
     />
 
     <!-- ── In-Page Reimbursement Form Overlay ── -->

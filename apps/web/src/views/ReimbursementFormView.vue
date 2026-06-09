@@ -1,5 +1,5 @@
 ﻿<script setup>
-import { ref, reactive, computed } from "vue";
+import { ref, computed, onBeforeUnmount } from "vue";
 import { useRouter } from "vue-router";
 import { useReimbursementStore } from "@/stores/reimbursement";
 import { usePolicyStore } from "@/stores/policy";
@@ -43,13 +43,16 @@ const router = useRouter();
 
 onMounted(() => {
   policyStore.fetchAll();
-});
-
-// â”€â”€ Local state per receipt (editable copies so form is mutable) â”€â”€
-const receipts = computed(() => {
-  if (props.forwardedReceipts.length > 0) return props.forwardedReceipts;
-  // Standalone page fallback â€” single empty receipt
-  return [];
+  const forwarded = sessionStorage.getItem("serms_forwarded_liquidation_receipts");
+  if (forwarded) {
+    try {
+      localReceipts.value = JSON.parse(forwarded);
+    } catch {
+      localReceipts.value = [];
+    } finally {
+      sessionStorage.removeItem(serms_forwarded_liquidation_receipts);
+    }
+  }
 });
 
 // â”€â”€ Form State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -59,6 +62,14 @@ const cutoffPeriod = ref("");
 const reportFile = ref(null);
 const reportDrag = ref(false);
 const reportInput = ref(null);
+const localReceipts = ref([]);
+const receiptDrag = ref(false);
+const receiptInput = ref(null);
+
+const receipts = computed(() => [
+  ...props.forwardedReceipts,
+  ...localReceipts.value,
+]);
 
 // â”€â”€ Financials (aggregate across all forwarded receipts) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const totalAmount = computed(() =>
@@ -87,7 +98,7 @@ function formatCurrency(v) {
   }).format(v);
 }
 function formatDate(d) {
-  if (!d) return "â€”";
+  if (!d) return "-";
   const dt = new Date(d);
   if (isNaN(dt)) return d;
   return dt.toLocaleDateString("en-US", {
@@ -100,14 +111,19 @@ function cleanName(fileName) {
   return (fileName || "").replace(/\.[^.]+$/, "").replace(/[_-]/g, " ");
 }
 
+function tinFor(receipt) {
+  const seed = String(receipt.id || receipt.fileName || "").replace(/\D/g, "").padEnd(9, "0");
+  return `${seed.slice(0, 3)}-${seed.slice(3, 6)}-${seed.slice(6, 9)}-000`;
+}
+
 // â”€â”€ Cutoff options â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const CUTOFF_OPTIONS = [
-  "Jan 01 â€“ Jan 15, 2025",
-  "Jan 16 â€“ Jan 31, 2025",
-  "Feb 01 â€“ Feb 15, 2025",
-  "Feb 16 â€“ Feb 28, 2025",
-  "Mar 01 â€“ Mar 15, 2025",
-  "Mar 16 â€“ Mar 31, 2025",
+  "Jan 01 - Jan 15, 2025",
+  "Jan 16 - Jan 31, 2025",
+  "Feb 01 - Feb 15, 2025",
+  "Feb 16 - Feb 28, 2025",
+  "Mar 01 - Mar 15, 2025",
+  "Mar 16 - Mar 31, 2025",
 ];
 
 // â”€â”€ Categories â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -123,14 +139,15 @@ const CATEGORIES = [
 
 // â”€â”€ Mock extracted items per category â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const MOCK_ITEMS = {
+  "Food & Dining": ["Chickenjoy 2pc Meal", "Yumburger w/ Cheese", "Iced Tea"],
   Lodging: [
-    "1 Night â€“ Deluxe Room",
+    "1 Night - Deluxe Room",
     "Breakfast Buffet (x2)",
     "Airport Transfer",
   ],
   Transportation: [
-    "GrabCar Ride â€“ Terminal to CBD",
-    "Toll Fee â€“ SLEX",
+    "GrabCar Ride - Terminal to CBD",
+    "Toll Fee - SLEX",
     "Parking Fee",
   ],
   Meals: ["Set Meal A (x2)", "Drinks & Dessert", "Service Charge"],
@@ -139,6 +156,10 @@ const MOCK_ITEMS = {
 };
 function getItems(cat) {
   return MOCK_ITEMS[cat] || MOCK_ITEMS.Uncategorized;
+}
+
+function mockReceiptAmount(index) {
+  return [439.04, 3200, 875.5, 1240][index % 4];
 }
 
 // â”€â”€ Validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -156,7 +177,7 @@ async function handleSubmit() {
       category: receipts.value[0]?.category || "General",
       amount: totalAmount.value,
       vat: totalVat.value,
-      tin: "â€”",
+      tin: "-",
       notes: "",
       receipts: receipts.value,
       status: "submitted",
@@ -180,16 +201,76 @@ function handleReportSelect(e) {
   if (file) reportFile.value = file;
 }
 
+function handleReceiptDrop(e) {
+  receiptDrag.value = false;
+  addReceiptFiles(e.dataTransfer.files);
+}
+
+function handleReceiptSelect(e) {
+  addReceiptFiles(e.target.files);
+  e.target.value = "";
+}
+
+function addReceiptFiles(fileList) {
+  const accepted = Array.from(fileList || []).filter((file) =>
+    ["image/jpeg", "image/png", "application/pdf"].includes(file.type),
+  );
+
+  accepted.forEach((file, index) => {
+    const receiptIndex =
+      props.forwardedReceipts.length + localReceipts.value.length + index;
+    localReceipts.value.push({
+      id: `RCPT-${Date.now()}-${index + 1}`,
+      fileName: file.name,
+      fileType: file.type,
+      thumbnail: file.type.startsWith("image/") ? URL.createObjectURL(file) : "",
+      amount: mockReceiptAmount(receiptIndex),
+      date: new Date().toISOString().slice(0, 10),
+      category: "Food & Dining",
+      sourceFile: file,
+    });
+  });
+}
+
+function removeReceipt(receipt) {
+  if (receipt.thumbnail?.startsWith("blob:")) {
+    URL.revokeObjectURL(receipt.thumbnail);
+  }
+  localReceipts.value = localReceipts.value.filter((item) => item.id !== receipt.id);
+}
+
+onBeforeUnmount(() => {
+  localReceipts.value.forEach((receipt) => {
+    if (receipt.thumbnail?.startsWith("blob:")) {
+      URL.revokeObjectURL(receipt.thumbnail);
+    }
+  });
+});
+
 // â”€â”€ Dismiss â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function dismiss() {
   emit("close");
   // If opened standalone (via route), go back
   if (!props.forwardedReceipts.length) router.back();
 }
+
+function viewMyClaims() {
+  emit("close");
+  router.push({ name: "Reimbursements" });
+}
 </script>
 
 <template>
   <div class="max-w-5xl mx-auto flex flex-col gap-6 pb-12 animate-fade-up">
+    <input
+      ref="receiptInput"
+      type="file"
+      class="hidden"
+      accept=".jpg,.jpeg,.png,.pdf"
+      multiple
+      @change="handleReceiptSelect"
+    />
+
     <!-- â”€â”€ Page Header (standalone route mode only) â”€â”€ -->
     <div v-if="!forwardedReceipts.length" class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
       <div class="flex items-start gap-3">
@@ -200,10 +281,6 @@ function dismiss() {
           <ArrowLeft class="w-4 h-4" />
         </button>
         <div class="min-w-0">
-          <div class="mb-2 flex items-center gap-2">
-            <FileText class="h-3.5 w-3.5 text-accent" />
-            <span class="section-label">Claim Submission</span>
-          </div>
           <h1 class="font-heading text-2xl font-bold leading-tight text-slate-800">
             New Reimbursement
           </h1>
@@ -220,9 +297,9 @@ function dismiss() {
       class="card p-16 flex flex-col items-center gap-5 text-center"
     >
       <div
-        class="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center"
+        class="w-16 h-16 rounded-2xl bg-accent-50 border border-accent/20 flex items-center justify-center"
       >
-        <PackageCheck class="w-8 h-8 text-emerald-500" />
+        <PackageCheck class="w-8 h-8 text-accent" />
       </div>
       <div>
         <h2
@@ -235,12 +312,20 @@ function dismiss() {
           Your request has been sent for review.
         </p>
       </div>
-      <div class="flex gap-3">
-        <button class="btn btn-primary" @click="router.push('/reimbursements')">
-          View My Claims
-        </button>
-        <button class="btn btn-secondary" @click="submitted = false">
+      <div class="mt-2 flex w-full max-w-sm flex-col-reverse gap-3 sm:flex-row sm:justify-center">
+        <button
+          class="inline-flex h-10 flex-1 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600 transition-colors hover:bg-slate-50"
+          type="button"
+          @click="submitted = false"
+        >
           Submit Another
+        </button>
+        <button
+          class="inline-flex h-10 flex-1 items-center justify-center rounded-lg bg-accent px-4 text-sm font-bold text-white shadow-sm transition-colors hover:bg-accent-600"
+          type="button"
+          @click="viewMyClaims"
+        >
+          View My Claims
         </button>
       </div>
     </div>
@@ -249,10 +334,10 @@ function dismiss() {
       <!-- â”€â”€ Alert Banner (forwarded mode) â”€â”€ -->
       <div
         v-if="forwardedReceipts.length"
-        class="flex items-center gap-3 px-4 py-3 bg-emerald-50 border border-emerald-100 rounded-xl"
+        class="flex items-center gap-3 px-4 py-3 bg-accent-50 border border-accent/15 rounded-xl"
       >
-        <Send class="w-4 h-4 text-emerald-600 flex-shrink-0" />
-        <p class="text-sm font-semibold text-emerald-700">
+        <Send class="w-4 h-4 text-accent flex-shrink-0" />
+        <p class="text-sm font-semibold text-accent">
           {{ forwardedReceipts.length }} receipt{{
             forwardedReceipts.length !== 1 ? "s" : ""
           }}
@@ -261,48 +346,65 @@ function dismiss() {
       </div>
 
       <!-- â”€â”€ Empty State (standalone + no upload yet) â”€â”€ -->
-      <div
+      <section
         v-if="receipts.length === 0"
-        class="card p-16 flex flex-col items-center gap-4 border-2 border-dashed border-slate-200 text-center"
+        class="card p-6"
       >
+        <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 class="font-heading text-lg font-bold text-primary">Upload Receipts</h2>
+          <div class="flex items-center gap-2 text-xs font-bold text-accent">
+            <Sparkles class="h-4 w-4" />
+            <span>Upload your receipt - AI reads everything automatically</span>
+          </div>
+        </div>
         <div
-          class="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center"
+          class="flex min-h-[320px] flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center transition-colors"
+          :class="receiptDrag ? 'border-accent bg-accent/5' : 'border-slate-200 bg-slate-50/50 hover:border-accent/50'"
+          @dragover.prevent="receiptDrag = true"
+          @dragleave.prevent="receiptDrag = false"
+          @drop.prevent="handleReceiptDrop"
+          @click="receiptInput?.click()"
         >
-          <UploadCloud class="w-7 h-7 text-accent" />
-        </div>
-        <div>
-          <p
-            class="text-sm font-semibold text-slate-700"
-            style="font-family: 'Poppins', sans-serif"
+          <span class="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-accent/10 text-accent">
+            <UploadCloud class="h-8 w-8" />
+          </span>
+          <h3 class="font-heading text-base font-bold text-slate-800">
+            Drag and drop receipt images here, or click to browse
+          </h3>
+          <p class="mt-1 text-sm text-slate-400">
+            Supports: JPG, PNG, PDF (Max 10MB per file)
+          </p>
+          <p class="mt-4 flex items-center gap-2 text-sm font-bold text-danger">
+            <AlertTriangle class="h-4 w-4" />
+            At least 2 receipts are required to proceed
+          </p>
+          <button
+            class="mt-6 inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-6 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-accent-600"
+            type="button"
+            @click.stop="receiptInput?.click()"
           >
-            Select receipts in My Expense first
-          </p>
-          <p class="text-xs text-slate-400 mt-1">
-            Go back to My Expense, click receipt cards to select them,<br />then
-            click "Forward to Reimbursement".
-          </p>
+            <UploadCloud class="h-4 w-4" />
+            Select Files
+          </button>
         </div>
-        <button class="btn btn-secondary mt-2" @click="dismiss">
-          <ArrowLeft class="w-4 h-4" /> Go Back
-        </button>
-      </div>
+      </section>
 
       <template v-else>
         <!-- â”€â”€ CARD 1: Upload Receipt Management â”€â”€ -->
         <section class="card p-6">
-          <div class="flex items-center justify-between mb-5">
+          <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div class="flex items-center gap-3">
               <h2
                 class="text-lg font-bold text-primary"
                 style="font-family: 'Poppins', sans-serif"
               >
-                Forwarded Receipts
+                Upload Receipts
               </h2>
               <span
                 class="badge text-[11px] font-bold"
                 :class="
                   receipts.length >= 2
-                    ? 'bg-emerald-50 border-emerald-100 text-emerald-700'
+                    ? 'bg-accent-50 border-accent/15 text-accent'
                     : 'bg-red-50 border-red-100 text-danger'
                 "
               >
@@ -311,32 +413,27 @@ function dismiss() {
                 }}
               </span>
             </div>
-            <div
-              class="flex items-center gap-1.5 text-emerald-600 text-xs font-semibold"
-            >
-              <Info class="w-3.5 h-3.5" />
-              <span>AI reads everything automatically</span>
-            </div>
-          </div>
-
-          <div class="flex items-center gap-4">
-            <button
-              class="btn !bg-emerald-500 !text-white hover:!bg-emerald-600 !rounded-full !px-6"
-            >
-              <PlusCircle class="w-4 h-4" /> Add More Receipts
-            </button>
-            <div
-              v-if="receipts.length < 2"
-              class="flex items-center gap-2 text-danger text-sm font-semibold"
-            >
-              <AlertTriangle class="w-4 h-4" />
-              You need at least 2 receipts to proceed
-            </div>
-            <div
-              v-else
-              class="flex items-center gap-2 text-emerald-600 text-sm font-semibold"
-            >
-              <CheckCircle2 class="w-4 h-4" /> Ready to submit
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <button
+                class="inline-flex h-9 w-fit shrink-0 items-center justify-center gap-2 rounded-lg bg-accent px-3.5 text-xs font-bold text-white transition-colors hover:bg-accent-600"
+                type="button"
+                @click="receiptInput?.click()"
+              >
+                <PlusCircle class="h-3.5 w-3.5" /> Add More Receipts
+              </button>
+              <div
+                v-if="receipts.length < 2"
+                class="flex items-center gap-2 text-danger text-sm font-semibold"
+              >
+                <AlertTriangle class="w-4 h-4" />
+                You need at least 2 receipts to proceed
+              </div>
+              <div
+                v-else
+                class="flex items-center gap-2 text-accent text-sm font-semibold"
+              >
+                <CheckCircle2 class="w-4 h-4" /> Ready to submit
+              </div>
             </div>
           </div>
         </section>
@@ -350,21 +447,23 @@ function dismiss() {
             >
               Scanned Receipts
             </h2>
-            <div class="flex items-center gap-4">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
               <span
                 class="text-xs font-bold"
                 :class="
-                  receipts.length < 2 ? 'text-danger' : 'text-emerald-600'
+                  receipts.length < 2 ? 'text-danger' : 'text-accent'
                 "
               >
                 {{ receipts.length }} uploaded{{
                   receipts.length < 2
-                    ? " â€” need at least 2 to proceed"
-                    : " â€” ready!"
+                    ? " - need at least 2 to proceed"
+                    : " - ready!"
                 }}
               </span>
               <button
-                class="btn btn-secondary !py-1.5 !text-xs !border-primary/30 !text-primary"
+                class="inline-flex h-8 w-fit shrink-0 items-center justify-center gap-1.5 rounded-lg border border-primary/20 bg-white px-3 text-xs font-bold text-primary transition-colors hover:bg-primary/5"
+                type="button"
+                @click="receiptInput?.click()"
               >
                 <PlusCircle class="w-3.5 h-3.5" /> Add More
               </button>
@@ -376,7 +475,7 @@ function dismiss() {
             <div
               v-for="(receipt, idx) in receipts"
               :key="receipt.id"
-              class="border border-emerald-100 rounded-xl p-6 bg-emerald-50/20"
+              class="border border-accent/15 rounded-xl p-6 bg-accent-50/20"
             >
               <!-- Receipt number badge -->
               <div class="flex items-center gap-2 mb-4">
@@ -426,9 +525,15 @@ function dismiss() {
                       </p>
                     </div>
                   </div>
-                  <button class="btn btn-danger w-full !justify-center">
-                    <Trash2 class="w-4 h-4" /> Delete Receipt
-                  </button>
+                  <div>
+                    <button
+                      class="inline-flex h-9 w-fit items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3.5 text-xs font-bold text-danger transition-colors hover:bg-red-100"
+                      type="button"
+                      @click="removeReceipt(receipt)"
+                    >
+                      <Trash2 class="w-3.5 h-3.5" /> Delete Receipt
+                    </button>
+                  </div>
                 </div>
 
                 <!-- Right: Extracted Fields -->
@@ -461,6 +566,23 @@ function dismiss() {
                   </div>
 
                   <!-- Merchant -->
+                  <div class="input-wrapper">
+                    <div class="flex items-center justify-between">
+                      <label class="input-label">TIN Number</label>
+                      <span
+                        class="inline-flex items-center gap-1 rounded-lg bg-accent px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white"
+                      >
+                        <Sparkles class="h-3 w-3 fill-white" /> AI Read
+                      </span>
+                    </div>
+                    <input
+                      class="input"
+                      type="text"
+                      :value="tinFor(receipt)"
+                      readonly
+                    />
+                  </div>
+
                   <div class="input-wrapper">
                     <label class="input-label">Merchant Name</label>
                     <input
@@ -512,7 +634,7 @@ function dismiss() {
                         />
                       </div>
                       <span
-                        class="bg-emerald-500 text-white px-3 py-2 rounded-lg text-[11px] font-bold flex items-center gap-1.5 flex-shrink-0"
+                        class="bg-accent text-white px-3 py-2 rounded-lg text-[11px] font-bold flex items-center gap-1.5 flex-shrink-0"
                       >
                         <Sparkles class="w-3 h-3 fill-white" /> AI Detected
                       </span>
@@ -532,7 +654,7 @@ function dismiss() {
                           class="bg-slate-50 text-[11px] text-slate-500 uppercase"
                         >
                           <tr>
-                            <th class="px-4 py-2.5 font-bold">Item</th>
+                            <th class="px-4 py-2.5 font-bold">Items</th>
                             <th class="px-4 py-2.5 font-bold text-center">
                               Qty
                             </th>
@@ -593,14 +715,14 @@ function dismiss() {
                       </div>
                     </div>
                     <div
-                      class="bg-emerald-50 px-6 py-3 rounded-xl border border-emerald-100 flex flex-col items-end shadow-sm"
+                      class="bg-accent-50 px-6 py-3 rounded-xl border border-accent/15 flex flex-col items-end shadow-sm"
                     >
                       <span
-                        class="text-[10px] font-bold text-emerald-600 uppercase tracking-wider"
+                        class="text-[10px] font-bold text-accent uppercase tracking-wider"
                         >Total</span
                       >
                       <span
-                        class="text-xl font-black text-emerald-600 font-mono"
+                        class="text-xl font-black text-accent font-mono"
                         >{{ formatCurrency(receipt.amount) }}</span
                       >
                     </div>
@@ -625,7 +747,8 @@ function dismiss() {
               <div class="relative">
                 <select
                   v-model="cutoffPeriod"
-                  class="input appearance-none cursor-pointer"
+                  class="input appearance-none cursor-pointer bg-white pr-10"
+                  :class="cutoffPeriod ? 'text-slate-700' : 'text-slate-400'"
                 >
                   <option value="" disabled>Select cutoff period</option>
                   <option v-for="opt in CUTOFF_OPTIONS" :key="opt" :value="opt">
@@ -699,7 +822,7 @@ function dismiss() {
 
         <!-- â”€â”€ Summary Panel â”€â”€ -->
         <section
-          class="bg-emerald-50 border border-emerald-100 rounded-xl p-6 space-y-4"
+          class="bg-accent-50 border border-accent/15 rounded-xl p-6 space-y-4"
         >
           <h3
             class="text-base font-bold text-primary"
@@ -713,11 +836,11 @@ function dismiss() {
               <span
                 class="font-bold"
                 :class="
-                  receipts.length < 2 ? 'text-danger' : 'text-emerald-600'
+                  receipts.length < 2 ? 'text-danger' : 'text-accent'
                 "
               >
                 {{ receipts.length
-                }}{{ receipts.length < 2 ? " (need at least 2)" : " âœ“" }}
+                }}{{ receipts.length < 2 ? " (need at least 2)" : " - ready" }}
               </span>
             </div>
             <div class="flex justify-between items-center text-sm">
@@ -727,7 +850,7 @@ function dismiss() {
               }}</span>
             </div>
             <div
-              class="flex justify-between items-center text-sm pb-4 border-b border-emerald-200"
+              class="flex justify-between items-center text-sm pb-4 border-b border-accent/20"
             >
               <span class="text-slate-500">Cutoff Period</span>
               <span
@@ -746,7 +869,7 @@ function dismiss() {
                 style="font-family: 'Poppins', sans-serif"
                 >Total Amount</span
               >
-              <span class="text-2xl font-black text-emerald-600 font-mono">{{
+              <span class="text-2xl font-black text-accent font-mono">{{
                 formatCurrency(totalAmount)
               }}</span>
             </div>

@@ -7,6 +7,7 @@ import { useCashAdvanceStore } from '@/stores/cashAdvance'
 import StatusBadge from '@/components/base/StatusBadge.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseKpiGrid from '@/components/base/BaseKpiGrid.vue'
+import SkeletonLoader from '@/components/base/SkeletonLoader.vue'
 import { Bar, Doughnut } from 'vue-chartjs'
 import {
   Chart as ChartJS, CategoryScale, LinearScale, BarElement,
@@ -70,6 +71,7 @@ const kpis = computed(() => [
 
 const cutoffDays = ref(5)
 const cutoffHours = ref(14)
+const isDashboardLoading = computed(() => rStore.isLoading || caStore.isLoading)
 
 // Bar chart
 const barData = {
@@ -229,7 +231,12 @@ function isAmberWarning(dateStr) {
     </div>
 
     <!-- ── KPI Cards ── -->
-    <BaseKpiGrid :kpis="kpis" gridClasses="grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4" />
+    <BaseKpiGrid
+      :kpis="kpis"
+      gridClasses="grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4"
+      :isLoading="isDashboardLoading"
+      :skeletonCount="4"
+    />
 
     <!-- ── Charts Row ── -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -247,7 +254,10 @@ function isAmberWarning(dateStr) {
             2024
           </span>
         </div>
-        <div class="h-56">
+        <div v-if="isDashboardLoading" class="h-56 rounded-lg bg-slate-50 p-4">
+          <SkeletonLoader :rows="6" height="h-6" />
+        </div>
+        <div v-else class="h-56">
           <Bar :data="barData" :options="barOptions" />
         </div>
       </div>
@@ -260,7 +270,10 @@ function isAmberWarning(dateStr) {
           </h3>
           <p class="text-xs text-slate-400 mt-0.5">Distribution breakdown</p>
         </div>
-        <div class="h-56">
+        <div v-if="isDashboardLoading" class="flex h-56 items-center justify-center rounded-lg bg-slate-50">
+          <div class="h-36 w-36 animate-pulse rounded-full bg-slate-200"></div>
+        </div>
+        <div v-else class="h-56">
           <Doughnut :data="doughnutData" :options="doughnutOptions" />
         </div>
       </div>
@@ -293,7 +306,14 @@ function isAmberWarning(dateStr) {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="item in recentItems" :key="item.id">
+            <template v-if="isDashboardLoading">
+              <tr v-for="i in 5" :key="`recent-skeleton-${i}`">
+                <td v-for="col in 6" :key="col" class="px-4 py-4">
+                  <div class="h-4 w-24 animate-pulse rounded bg-slate-200"></div>
+                </td>
+              </tr>
+            </template>
+            <tr v-for="item in recentItems" v-else :key="item.id">
               <td class="font-mono text-slate-400 text-xs">#{{ item.id }}</td>
               <td class="font-semibold text-slate-700">{{ item.description }}</td>
               <td>
@@ -339,7 +359,15 @@ function isAmberWarning(dateStr) {
             </tr>
           </thead>
           <tbody>
+            <template v-if="isDashboardLoading">
+              <tr v-for="i in 5" :key="`advance-skeleton-${i}`">
+                <td v-for="col in 5" :key="col" class="px-4 py-4">
+                  <div class="h-4 w-24 animate-pulse rounded bg-slate-200"></div>
+                </td>
+              </tr>
+            </template>
             <tr
+              v-else
               v-for="item in activeAdvances"
               :key="item.id"
               :class="[
