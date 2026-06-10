@@ -190,7 +190,7 @@ const kpis = computed(() => [
     icon: Receipt,
     iconBg: "bg-accent-100",
     iconColor: "text-accent-600",
-    accent: "from-accent-400 to-accent",
+    accent: "bg-accent",
   },
   {
     label: "Total Expenses",
@@ -199,7 +199,7 @@ const kpis = computed(() => [
     icon: Wallet,
     iconBg: "bg-emerald-100",
     iconColor: "text-emerald-600",
-    accent: "from-emerald-400 to-emerald-600",
+    accent: "bg-emerald-500",
   },
   {
     label: "Selected",
@@ -208,7 +208,7 @@ const kpis = computed(() => [
     icon: CheckSquare,
     iconBg: "bg-primary-100",
     iconColor: "text-primary-600",
-    accent: "from-primary-400 to-primary",
+    accent: "bg-primary",
   },
 ]);
 </script>
@@ -454,8 +454,7 @@ const kpis = computed(() => [
       >
         <!-- Sticky top bar with back button -->
         <div
-          class="flex-shrink-0 flex items-center gap-3 px-6 py-3 bg-white border-b border-slate-100 shadow-sm sticky top-0 z-10"
-          style="background: linear-gradient(135deg, #252578 0%, #2f2f7e 100%)"
+          class="flex-shrink-0 flex items-center gap-3 px-6 py-3 bg-primary border-b border-slate-100 shadow-sm sticky top-0 z-10"
         >
           <button
             @click="showReimbursementForm = false"

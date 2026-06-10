@@ -14,7 +14,7 @@ defineProps({
     <div
       v-if="kpi.accent"
       :class="[
-        'absolute top-0 left-0 right-0 h-0.5 rounded-t-xl bg-gradient-to-r',
+        'absolute top-0 left-0 right-0 h-0.5 rounded-t-xl',
         kpi.accent,
       ]"
     ></div>

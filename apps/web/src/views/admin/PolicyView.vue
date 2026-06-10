@@ -117,11 +117,11 @@ function formatDate(ds) {
           <div class="h-4 w-40 animate-pulse rounded bg-slate-200"></div>
           <div class="h-8 w-28 animate-pulse rounded bg-slate-200"></div>
         </div>
-        <SkeletonLoader :rows="6" height="h-9" />
+        <SkeletonLoader variant="table" :rows="6" :columns="6" />
       </div>
       <div v-else class="grid grid-cols-1 gap-3 md:grid-cols-3">
         <div v-for="i in 3" :key="`policy-log-skeleton-${i}`" class="card p-4">
-          <SkeletonLoader :rows="4" height="h-4" />
+          <SkeletonLoader variant="card" />
         </div>
       </div>
     </div>

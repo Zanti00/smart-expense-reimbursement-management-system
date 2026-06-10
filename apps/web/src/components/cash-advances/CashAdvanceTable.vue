@@ -1,7 +1,8 @@
 <script setup>
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { ChevronDown, ChevronUp, ChevronsUpDown, Eye } from "lucide-vue-next";
 import { formatPeso } from "@/utils/formatters";
+import BasePagination from "@/components/base/BasePagination.vue";
 import CashAdvanceTableSkeleton from "./CashAdvanceTableSkeleton.vue";
 
 const props = defineProps({
@@ -23,6 +24,8 @@ defineEmits(["view"]);
 
 const sortKey = ref("");
 const sortDirection = ref("asc");
+const pageSize = 10;
+const currentPage = ref(1);
 
 const columns = computed(() => [
   ...(props.isAdmin
@@ -54,6 +57,25 @@ const sortedRows = computed(() => {
   });
 });
 
+const totalPages = computed(() =>
+  Math.max(1, Math.ceil(sortedRows.value.length / pageSize)),
+);
+const paginatedRows = computed(() => {
+  const start = (currentPage.value - 1) * pageSize;
+  return sortedRows.value.slice(start, start + pageSize);
+});
+
+watch(
+  () => props.rows,
+  () => {
+    currentPage.value = 1;
+  },
+);
+
+watch(totalPages, (pages) => {
+  if (currentPage.value > pages) currentPage.value = pages;
+});
+
 function getSortValue(row, key) {
   const value = row[key];
   if (["amount", "outstanding"].includes(key)) return Number(value || 0);
@@ -68,10 +90,12 @@ function toggleSort(column) {
   const key = column.sortKey || column.key;
   if (sortKey.value === key) {
     sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc";
+    currentPage.value = 1;
     return;
   }
   sortKey.value = key;
   sortDirection.value = "asc";
+  currentPage.value = 1;
 }
 
 function isSorted(column) {
@@ -151,7 +175,7 @@ function statusClass(status) {
         <tbody class="divide-y divide-slate-100">
           <template v-if="isLoading">
             <CashAdvanceTableSkeleton
-              v-for="i in 5"
+              v-for="i in pageSize"
               :key="`skeleton-${i}`"
               :is-admin="isAdmin"
             />
@@ -168,7 +192,7 @@ function statusClass(status) {
           </template>
           <template v-else>
             <tr
-              v-for="row in sortedRows"
+              v-for="row in paginatedRows"
               :key="row.id"
               class="group whitespace-nowrap transition-colors duration-200 ease-out hover:bg-slate-50/80"
             >
@@ -236,5 +260,12 @@ function statusClass(status) {
         </tbody>
       </table>
     </div>
+    <BasePagination
+      v-if="!isLoading && sortedRows.length > pageSize"
+      v-model:page="currentPage"
+      :page-size="pageSize"
+      :total="sortedRows.length"
+      label="records"
+    />
   </section>
 </template>
