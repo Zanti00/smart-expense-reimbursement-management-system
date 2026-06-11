@@ -85,21 +85,24 @@ SERMS follows a **Modular Monolith** architectural pattern, ensuring high cohesi
 - Tesseract OCR (installed on the host system)
 
 ### Backend Setup (apps/api)
-1. Clone the repository and navigate to `apps/api`.
-2. Install dependencies:
-   ```bash
-   composer install
-   ```
-3. Initialize environment configuration:
-   ```bash
-   cp .env.example .env
-   php artisan key:generate
-   ```
-4. Configure your database and Supabase credentials in `.env`.
-5. Run migrations:
-   ```bash
-   php artisan migrate
-   ```
+When running via Docker (e.g., `docker compose up`), the backend setup is completely automated. The entrypoint script will:
+- Copy `.env.example` to `.env`
+- Run `composer install`
+- Generate the `APP_KEY`
+- Run database migrations
+
+You do not need to run these manually.
+
+### Supabase Configuration
+SERMS uses Supabase for receipt image storage. You will need to obtain API credentials from your Supabase dashboard and add them to your `.env` file (the entrypoint uses placeholder values by default):
+```ini
+SUPABASE_URL=your_project_url
+SUPABASE_REGION=your_project_region
+SUPABASE_BUCKET=cash_advances
+SUPABASE_ENDPOINT=your_project_endpoint
+SUPABASE_ACCESS_KEY_ID=your_access_key
+SUPABASE_SECRET_ACCESS_KEY=your_secret_key
+```
 
 ### Frontend Setup (apps/web)
 1. Navigate to `apps/web`.

@@ -33,7 +33,7 @@ onMounted(async () => {
 const kpis = computed(() => [
   {
     label: 'Total Reimbursed',
-    value: `₱${rStore.approved.reduce((s, i) => s + i.amount, 0).toLocaleString()}`,
+    value: `₱${rStore.items.filter(i => i.status === 'approved').reduce((s, i) => s + i.amount, 0).toLocaleString()}`,
     sub: 'This month',
     icon: TrendingUp,
     iconBg: 'bg-emerald-100',
@@ -42,7 +42,7 @@ const kpis = computed(() => [
   },
   {
     label: 'Awaiting Approval',
-    value: rStore.pending.length,
+    value: rStore.items.filter(i => i.status === 'pending').length,
     sub: 'Pending review',
     icon: Clock,
     iconBg: 'bg-amber-100',

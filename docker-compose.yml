@@ -23,6 +23,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./apps/api:/var/www
+      - ../capstone-auth-module/auth-service/storage/oauth-public.key:/var/www/storage/oauth-public.key:ro
     depends_on:
       - mysql
     networks:
@@ -33,6 +34,9 @@ services:
       - DB_DATABASE=serms
       - DB_USERNAME=root
       - DB_PASSWORD=secret
+      - REDIS_HOST=auth-redis
+      - CACHE_STORE=redis
+      - JWT_PUBLIC_KEY_PATH=/var/www/storage/oauth-public.key
 
   web:
     build:

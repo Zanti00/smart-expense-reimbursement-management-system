@@ -18,34 +18,43 @@ class AuthenticateWithExternalService
     public function handle(Request $request, Closure $next): Response
     {
         $authorizationHeader = $request->header('Authorization');
+        
+        $token = null;
+        if ($authorizationHeader && str_starts_with($authorizationHeader, 'Bearer ')) {
+            $token = str_replace('Bearer ', '', $authorizationHeader);
+        } elseif ($request->hasCookie('access_token')) {
+            $token = $request->cookie('access_token');
+        }
 
-        if (!$authorizationHeader || !str_starts_with($authorizationHeader, 'Bearer ')) {
+        if (!$token) {
+            \Illuminate\Support\Facades\Log::error("No token found. Header: " . ($authorizationHeader ?: 'null') . " Cookie: " . ($request->cookie('access_token') ?: 'null'));
             return response()->json([
-                'message' => 'Unauthorized. Bearer token missing.',
+                'message' => 'Unauthorized. Bearer token or cookie missing.',
             ], 401);
         }
 
-        $token = str_replace('Bearer ', '', $authorizationHeader);
         $token = urldecode($token);
 
-        // Since capstone-auth-module uses Laravel Sanctum (not stateless JWTs),
-        // we must call its internal verification endpoint.
-        $authUrl = env('AUTH_SERVICE_URL', 'http://auth-service:8000');
-        
-        try {
-            $response = Http::withHeaders([
-                'Accept' => 'application/json',
-            ])->post("{$authUrl}/api/internal/verify-token", [
-                'token' => $token
-            ]);
+        $keyPath = env('JWT_PUBLIC_KEY_PATH', storage_path('oauth-public.key'));
+        if (!file_exists($keyPath)) {
+            $keyPath = base_path($keyPath);
+        }
 
-            if (!$response->successful() || !$response->json('valid')) {
-                return response()->json(['message' => 'Unauthorized. Token verification failed.'], 401);
+        if (!file_exists($keyPath)) {
+            \Illuminate\Support\Facades\Log::error("Public key not found at: {$keyPath}");
+            return response()->json(['message' => 'Unauthorized. Public key configuration missing.'], 401);
+        }
+
+        try {
+            $publicKey = file_get_contents($keyPath);
+            $decoded = \Firebase\JWT\JWT::decode($token, new \Firebase\JWT\Key($publicKey, 'RS256'));
+
+            // Check if the JWT ID (jti) is blacklisted in Redis
+            if (\Illuminate\Support\Facades\Cache::has("jwt_blacklist:{$decoded->jti}")) {
+                return response()->json(['message' => 'Unauthorized. Token has been revoked.'], 401);
             }
 
-            $userData = $response->json('user');
-
-            $rawRole = strtolower($userData['role'] ?? '');
+            $rawRole = strtolower($decoded->role ?? '');
             $sermsRole = 'employee';
             if (in_array($rawRole, ['it admin', 'admin', 'super admin'])) {
                 $sermsRole = 'admin';
@@ -53,22 +62,50 @@ class AuthenticateWithExternalService
                 $sermsRole = 'approver';
             }
 
+            $email = $decoded->email ?? null;
+            if (!$email) {
+                \Illuminate\Support\Facades\Log::error("Token payload missing email. Payload: " . json_encode($decoded));
+                return response()->json(['message' => 'Unauthorized. Invalid token payload (missing email).'], 401);
+            }
+
+            $fullName = trim(($decoded->first_name ?? '') . ' ' . ($decoded->last_name ?? ''));
+            $department = $decoded->department ?? 'General';
+
             // Find or create the user in the local SERMS database to maintain foreign keys
             $user = User::firstOrCreate(
-                ['email' => $userData['email']],
+                ['email' => $email],
                 [
-                    'name' => trim(($userData['first_name'] ?? '') . ' ' . ($userData['last_name'] ?? '')),
+                    'name' => $fullName,
                     'role' => $sermsRole,
-                    'department' => $userData['department'] ?? 'General',
+                    'department' => $department,
                 ]
             );
 
             // Update user details if they changed
             $user->update([
-                'name' => trim(($userData['first_name'] ?? '') . ' ' . ($userData['last_name'] ?? '')),
+                'name' => $fullName,
                 'role' => $sermsRole,
-                'department' => $userData['department'] ?? 'General',
+                'department' => $department,
             ]);
+
+            // Fetch fine-grained permissions from shared Redis cache
+            $userId = $decoded->sub ?? null;
+            $permissions = [];
+            if ($userId) {
+                $permissions = \Illuminate\Support\Facades\Cache::get("user_permissions:{$userId}", []);
+            }
+
+            // Assign permissions to user object dynamically so it can be used throughout the app
+            $user->setAttribute('permissions', $permissions);
+
+            // Dynamically register gates for this request based on fetched permissions
+            if (is_array($permissions)) {
+                foreach ($permissions as $permission) {
+                    \Illuminate\Support\Facades\Gate::define($permission, function ($u) {
+                        return true;
+                    });
+                }
+            }
 
             // Set the authenticated user for the current request without starting a session
             Auth::setUser($user);
@@ -80,9 +117,11 @@ class AuthenticateWithExternalService
 
             return $next($request);
 
+        } catch (\Firebase\JWT\ExpiredException $e) {
+            return response()->json(['message' => 'Unauthorized. Token has expired.'], 401);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('External auth verification failed: ' . $e->getMessage());
-            return response()->json(['message' => 'Unauthorized. Authentication service unavailable.'], 401);
+            \Illuminate\Support\Facades\Log::error('Offline JWT verification failed: ' . $e->getMessage());
+            return response()->json(['message' => 'Unauthorized. Invalid token.'], 401);
         }
     }
 }

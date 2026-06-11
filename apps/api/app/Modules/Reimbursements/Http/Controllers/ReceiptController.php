@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Modules\Reimbursements\Models\Receipt;
 use App\Modules\Reimbursements\Models\Reimbursement;
 use App\Modules\AuditLogs\Services\AuditLogService;
+use App\Modules\Reimbursements\Jobs\ProcessReceiptOcr;
 use Illuminate\Support\Facades\Storage;
 
 class ReceiptController extends Controller
@@ -21,7 +22,7 @@ class ReceiptController extends Controller
 
         $query = Receipt::with('category', 'uploader', 'items');
 
-        if ($user->role === 'employee') {
+        if (!$request->user()->can('serms.reimbursements.manage')) {
             $query->where('uploaded_by', $user->id);
         }
 
@@ -46,13 +47,13 @@ class ReceiptController extends Controller
         $validated = $request->validate([
             'file' => 'required|file|mimes:jpeg,png,pdf|max:2048',
             'expense_category_id' => 'required|exists:expense_categories,id',
-            'vendor_name' => 'required|string|max:255',
-            'transaction_date' => 'required|date',
-            'total_amount' => 'required|numeric|min:0',
-            'vat_amount' => 'required_if:vat_classification,vat|nullable|numeric|min:0',
-            'tin' => 'required|string|max:255',
-            'invoice_number' => 'required|string|max:255',
-            'vat_classification' => 'required|in:vat,non-vat',
+            'vendor_name' => 'nullable|string|max:255',
+            'transaction_date' => 'nullable|date',
+            'total_amount' => 'nullable|numeric|min:0',
+            'vat_amount' => 'nullable|numeric|min:0',
+            'tin' => 'nullable|string|max:255',
+            'invoice_number' => 'nullable|string|max:255',
+            'vat_classification' => 'nullable|in:vat,non-vat',
             'items' => 'nullable|array',
             'items.*.name' => 'required_with:items|string|max:255',
             'items.*.quantity' => 'required_with:items|integer|min:1',
@@ -94,11 +95,14 @@ class ReceiptController extends Controller
             'vat_classification' => $validated['vat_classification'] ?? null,
             'ocr_flagged' => false,
             'is_archived' => false,
+            'status' => 'processing',
         ]);
 
         if (!empty($validated['items'])) {
             $receipt->items()->createMany($validated['items']);
         }
+
+        ProcessReceiptOcr::dispatch($receipt);
 
         // Load relations for the response
         $receipt->load('category', 'items', 'uploader');
@@ -118,7 +122,7 @@ class ReceiptController extends Controller
         $receipt = Receipt::findOrFail($id);
 
         // Check RBAC: Only uploader or admin can delete
-        if ($receipt->uploaded_by !== $user->id && $user->role !== 'admin') {
+        if ($receipt->uploaded_by !== $user->id && !$request->user()->can('serms.reimbursements.manage')) {
             return response()->json([
                 'message' => 'Unauthorized. You can only delete your own receipts.'
             ], 403);
@@ -149,5 +153,30 @@ class ReceiptController extends Controller
         return response()->json([
             'message' => 'Receipt deleted successfully.'
         ], 200);
+    }
+
+    /**
+     * Update receipt (admin notes, status).
+     */
+    public function update(Request $request, $id)
+    {
+        $user = $request->user();
+
+        if (!$request->user()->can('serms.reimbursements.manage')) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
+        $validated = $request->validate([
+            'admin_notes' => 'nullable|string',
+            'status' => 'nullable|string|in:pending,approved,rejected',
+        ]);
+
+        $receipt = Receipt::findOrFail($id);
+        $receipt->update($validated);
+
+        return response()->json([
+            'message' => 'Receipt updated successfully.',
+            'data' => $receipt,
+        ]);
     }
 }

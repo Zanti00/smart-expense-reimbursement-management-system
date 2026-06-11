@@ -6,35 +6,54 @@ use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
 {
+    protected static $mockPrivateKey;
+    protected static $mockPublicKeyPath;
+
+    public static function setUpBeforeClass(): void
+    {
+        parent::setUpBeforeClass();
+        
+        $res = openssl_pkey_new([
+            "private_key_bits" => 2048,
+            "private_key_type" => OPENSSL_KEYTYPE_RSA,
+        ]);
+        openssl_pkey_export($res, self::$mockPrivateKey);
+        $details = openssl_pkey_get_details($res);
+        
+        self::$mockPublicKeyPath = tempnam(sys_get_temp_dir(), 'jwt_public_key');
+        file_put_contents(self::$mockPublicKeyPath, $details["key"]);
+    }
+
+    public static function tearDownAfterClass(): void
+    {
+        if (file_exists(self::$mockPublicKeyPath)) {
+            unlink(self::$mockPublicKeyPath);
+        }
+        parent::tearDownAfterClass();
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
         
-        \Illuminate\Support\Facades\Http::fake([
-            '*/api/internal/verify-token' => function ($request) {
-                $token = $request['token'] ?? '';
-                if (str_starts_with($token, 'mock-')) {
-                    $payload = json_decode(base64_decode(substr($token, 5)), true);
-                    return \Illuminate\Support\Facades\Http::response([
-                        'valid' => true,
-                        'user' => $payload
-                    ], 200);
-                }
-                return \Illuminate\Support\Facades\Http::response(['valid' => false], 401);
-            }
-        ]);
+        putenv('JWT_PUBLIC_KEY_PATH=' . self::$mockPublicKeyPath);
+        $_ENV['JWT_PUBLIC_KEY_PATH'] = self::$mockPublicKeyPath;
+        $_SERVER['JWT_PUBLIC_KEY_PATH'] = self::$mockPublicKeyPath;
     }
 
     protected function generateMockToken(array $claims = [])
     {
         $payload = array_merge([
+            'jti' => uniqid('mock_'),
             'email' => 'employee@serms.com',
             'first_name' => 'John',
             'last_name' => 'Santos',
             'role' => 'employee',
             'department' => 'SALES',
+            'iat' => time(),
+            'exp' => time() + 3600,
         ], $claims);
 
-        return 'mock-' . base64_encode(json_encode($payload));
+        return \Firebase\JWT\JWT::encode($payload, self::$mockPrivateKey, 'RS256');
     }
 }

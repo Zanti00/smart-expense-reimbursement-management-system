@@ -1,70 +1,133 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-
-const MOCK_REIMBURSEMENTS = [
-  { id: 'RM-2024-001', description: 'Q1 Lab Supplies', amount: 12500, category: 'Lab Supplies', status: 'approved', date: '2024-03-15', submittedBy: 'John Santos', receipts: 3 },
-  { id: 'RM-2024-002', description: 'Client Entertainment – Makati', amount: 4800, category: 'Entertainment', status: 'submitted', date: '2024-04-01', submittedBy: 'Maria Cruz', receipts: 2 },
-  { id: 'RM-2024-003', description: 'Office Supplies Purchase', amount: 1250, category: 'Office Supplies', status: 'rejected', date: '2024-03-28', submittedBy: 'Alex Reyes', receipts: 1 },
-  { id: 'RM-2024-004', description: 'Field Service Transportation', amount: 3200, category: 'Transportation', status: 'paid', date: '2024-02-20', submittedBy: 'John Santos', receipts: 4 },
-  { id: 'RM-2024-005', description: 'Calibration Equipment', amount: 28750, category: 'Equipment', status: 'review', date: '2024-04-03', submittedBy: 'Maria Cruz', receipts: 1 },
-  { id: 'RM-2024-006', description: 'Training Materials', amount: 5500, category: 'Training', status: 'draft', date: '2024-04-04', submittedBy: 'John Santos', receipts: 0 },
-]
+import { apiFetch } from '../utils/apiFetch'
 
 export const useReimbursementStore = defineStore('reimbursement', () => {
-  const items = ref([...MOCK_REIMBURSEMENTS])
+  const items = ref([])
+  const currentItem = ref(null)
   const isLoading = ref(false)
 
-  const total = computed(() => items.value.reduce((s, i) => s + i.amount, 0))
-  const pending = computed(() => items.value.filter(i => i.status === 'submitted'))
-  const approved = computed(() => items.value.filter(i => i.status === 'approved'))
+  const totalAmount = computed(() => items.value.reduce((s, i) => s + parseFloat(i.amount), 0))
+  const totalPending = computed(() => items.value.filter(i => i.status === 'pending').length)
+  const totalSubmitted = computed(() => items.value.filter(i => i.status === 'submitted').length)
+  const totalApproved = computed(() => items.value.filter(i => i.status === 'approved').length)
+  const totalRejected = computed(() => items.value.filter(i => i.status === 'rejected').length)
+  const totalGranted = computed(() => items.value.filter(i => i.status === 'granted').length)
 
   async function fetchAll() {
     isLoading.value = true
-    await new Promise(r => setTimeout(r, 400))
-    items.value = [...MOCK_REIMBURSEMENTS]
-    isLoading.value = false
+    try {
+      const response = await apiFetch('/api/serms/reimbursements')
+      if (!response.ok) throw new Error('Failed to fetch reimbursements')
+      const data = await response.json()
+      items.value = data
+    } catch (e) {
+      console.error(e)
+    } finally {
+      isLoading.value = false
+    }
   }
 
-  async function submit(data) {
+  async function fetchOne(id) {
     isLoading.value = true
-    await new Promise(r => setTimeout(r, 600))
-    const newItem = {
-      id: `RM-2024-00${items.value.length + 1}`,
-      ...data,
-      status: 'submitted',
-      date: new Date().toISOString().split('T')[0],
-      receipts: data.receipts?.length || 0
-    }
-    items.value.unshift(newItem)
-    isLoading.value = false
-    return newItem
-  }
-
-  async function approve(id, remarks = '') {
-    const item = items.value.find(i => i.id === id)
-    if (item) {
-      item.status = 'approved'
-      item.reviewerNotes = remarks
+    try {
+      const response = await apiFetch(`/api/serms/reimbursements/${id}`)
+      if (!response.ok) throw new Error('Failed to fetch reimbursement')
+      const data = await response.json()
+      currentItem.value = data
+      return data
+    } catch (e) {
+      console.error(e)
+      throw e
+    } finally {
+      isLoading.value = false
     }
   }
 
-  async function reject(id, remarks = '') {
-    const item = items.value.find(i => i.id === id)
-    if (item) {
-      item.status = 'rejected'
-      item.reviewerNotes = remarks
+  async function submit(formData) {
+    isLoading.value = true
+    try {
+      const response = await apiFetch('/api/serms/reimbursements', {
+        method: 'POST',
+        body: formData
+      })
+      if (!response.ok) throw new Error('Failed to submit reimbursement')
+      const json = await response.json()
+      items.value.unshift(json.data)
+      return json.data
+    } catch (e) {
+      console.error(e)
+      throw e
+    } finally {
+      isLoading.value = false
     }
   }
 
-  async function setReceiptDecision(id, receiptId, review) {
-    const item = items.value.find(i => i.id === id)
-    if (!item) return
-
-    item.receiptReviews = {
-      ...(item.receiptReviews || {}),
-      [receiptId]: review,
+  async function approve(id) {
+    isLoading.value = true
+    try {
+      const response = await apiFetch(`/api/serms/reimbursements/${id}/approve`, {
+        method: 'POST'
+      })
+      if (!response.ok) throw new Error('Failed to approve')
+      const json = await response.json()
+      const index = items.value.findIndex(i => i.id == id)
+      if (index !== -1) items.value[index] = json.data
+      if (currentItem.value?.id == id) currentItem.value = json.data
+      return json.data
+    } catch (e) {
+      console.error(e)
+      throw e
+    } finally {
+      isLoading.value = false
     }
   }
 
-  return { items, isLoading, total, pending, approved, fetchAll, submit, approve, reject, setReceiptDecision }
+  async function reject(id, comment) {
+    isLoading.value = true
+    try {
+      const response = await apiFetch(`/api/serms/reimbursements/${id}/reject`, {
+        method: 'POST',
+        body: JSON.stringify({ comment })
+      })
+      if (!response.ok) throw new Error('Failed to reject')
+      const json = await response.json()
+      const index = items.value.findIndex(i => i.id == id)
+      if (index !== -1) items.value[index] = json.data
+      if (currentItem.value?.id == id) currentItem.value = json.data
+      return json.data
+    } catch (e) {
+      console.error(e)
+      throw e
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  async function updateNotes(id, notes) {
+    isLoading.value = true
+    try {
+      const response = await apiFetch(`/api/serms/reimbursements/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ admin_notes: notes })
+      })
+      if (!response.ok) throw new Error('Failed to update notes')
+      const json = await response.json()
+      const index = items.value.findIndex(i => i.id == id)
+      if (index !== -1) items.value[index] = json.data
+      if (currentItem.value?.id == id) currentItem.value = json.data
+      return json.data
+    } catch (e) {
+      console.error(e)
+      throw e
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  return {
+    items, currentItem, isLoading,
+    totalAmount, totalPending, totalSubmitted, totalApproved, totalRejected, totalGranted,
+    fetchAll, fetchOne, submit, approve, reject, updateNotes
+  }
 })

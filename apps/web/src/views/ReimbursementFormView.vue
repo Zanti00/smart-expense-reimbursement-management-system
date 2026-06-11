@@ -1,9 +1,10 @@
-﻿<script setup>
+<script setup>
 import { ref, computed, onBeforeUnmount } from "vue";
 import { useRouter } from "vue-router";
 import { useReimbursementStore } from "@/stores/reimbursement";
 import { usePolicyStore } from "@/stores/policy";
 import { useAuthStore } from "@/stores/auth";
+import { useToast } from "@/composables/useToast";
 import { onMounted } from "vue";
 import {
   ArrowLeft,
@@ -26,7 +27,6 @@ import {
   X,
 } from "lucide-vue-next";
 
-// â”€â”€ Props & Emits â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const props = defineProps({
   forwardedReceipts: {
     type: Array,
@@ -35,18 +35,36 @@ const props = defineProps({
 });
 const emit = defineEmits(["submitted", "close"]);
 
-// â”€â”€ Stores â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const store = useReimbursementStore();
 const policyStore = usePolicyStore();
 const authStore = useAuthStore();
 const router = useRouter();
+const { addToast } = useToast();
 
 onMounted(() => {
   policyStore.fetchAll();
-  const forwarded = sessionStorage.getItem("serms_forwarded_liquidation_receipts");
+  const forwarded = sessionStorage.getItem(
+    "serms_forwarded_liquidation_receipts",
+  );
   if (forwarded) {
     try {
-      localReceipts.value = JSON.parse(forwarded);
+      const parsed = JSON.parse(forwarded);
+      localReceipts.value = parsed.map((r) => ({
+        ...r,
+        invoiceNumber: r.invoiceNumber || r.id,
+        tin: r.tin || tinFor(r),
+        merchantName: r.merchantName || cleanName(r.fileName),
+        location: r.location || "Metro Manila, Philippines",
+        subtotal: r.subtotal || subtotalOf(r.amount || 0).toFixed(2),
+        tax: r.tax || vatOf(r.amount || 0).toFixed(2),
+        items:
+          r.items ||
+          getItems(r.category || "Food & Dining").map((name) => ({
+            name,
+            qty: 1,
+            price: 0,
+          })),
+      }));
     } catch {
       localReceipts.value = [];
     } finally {
@@ -112,7 +130,9 @@ function cleanName(fileName) {
 }
 
 function tinFor(receipt) {
-  const seed = String(receipt.id || receipt.fileName || "").replace(/\D/g, "").padEnd(9, "0");
+  const seed = String(receipt.id || receipt.fileName || "")
+    .replace(/\D/g, "")
+    .padEnd(9, "0");
   return `${seed.slice(0, 3)}-${seed.slice(3, 6)}-${seed.slice(6, 9)}-000`;
 }
 
@@ -126,7 +146,7 @@ const CUTOFF_OPTIONS = [
   "Mar 16 - Mar 31, 2025",
 ];
 
-// â”€â”€ Categories â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Categories ────────────────────────────────────────────────────────────
 const CATEGORIES = [
   "Food & Dining",
   "Transportation",
@@ -137,7 +157,7 @@ const CATEGORIES = [
   "Other",
 ];
 
-// â”€â”€ Mock extracted items per category â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Mock extracted items per category ─────────────────────────────────────
 const MOCK_ITEMS = {
   "Food & Dining": ["Chickenjoy 2pc Meal", "Yumburger w/ Cheese", "Iced Tea"],
   Lodging: [
@@ -162,27 +182,39 @@ function mockReceiptAmount(index) {
   return [439.04, 3200, 875.5, 1240][index % 4];
 }
 
-// â”€â”€ Validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Validation ──────────────────────────────────────────────────────────
 const canProceed = computed(
-  () => receipts.value.length >= 2 && cutoffPeriod.value,
+  () => receipts.value.length >= 1 && cutoffPeriod.value && reportFile.value,
 );
 
-// â”€â”€ Submit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Submit ──────────────────────────────────────────────────────────────
 async function handleSubmit() {
   if (!canProceed.value) return;
   submitting.value = true;
   try {
-    await store.submit({
-      description: receipts.value.map((r) => cleanName(r.fileName)).join(", "),
-      category: receipts.value[0]?.category || "General",
-      amount: totalAmount.value,
-      vat: totalVat.value,
-      tin: "-",
-      notes: "",
-      receipts: receipts.value,
-      status: "submitted",
-      submittedBy: authStore.user?.name || "Employee",
+    const formData = new FormData();
+    formData.append("description", receipts.value.map((r) => r.merchantName || cleanName(r.fileName)).join(", "));
+    formData.append("category", receipts.value[0]?.category || "General");
+    formData.append("amount", totalAmount.value);
+    formData.append("date", receipts.value[0]?.date || new Date().toISOString().slice(0, 10));
+    formData.append("cutoff_period", cutoffPeriod.value);
+    
+    if (reportFile.value) {
+      formData.append("report_file", reportFile.value);
+    }
+    
+    receipts.value.forEach((r, index) => {
+      formData.append(`receipt_ids[${index}]`, r.id);
+      formData.append(`receipts[${index}][id]`, r.id);
+      formData.append(`receipts[${index}][vendor_name]`, r.merchantName || '');
+      formData.append(`receipts[${index}][transaction_date]`, r.date || '');
+      formData.append(`receipts[${index}][total_amount]`, r.amount || 0);
+      formData.append(`receipts[${index}][tin]`, r.tin || '');
+      formData.append(`receipts[${index}][invoice_number]`, r.invoiceNumber || '');
     });
+
+    await store.submit(formData);
+    
     submitted.value = true;
     emit("submitted");
   } finally {
@@ -211,32 +243,124 @@ function handleReceiptSelect(e) {
   e.target.value = "";
 }
 
-function addReceiptFiles(fileList) {
+async function addReceiptFiles(fileList) {
   const accepted = Array.from(fileList || []).filter((file) =>
     ["image/jpeg", "image/png", "application/pdf"].includes(file.type),
   );
 
-  accepted.forEach((file, index) => {
-    const receiptIndex =
-      props.forwardedReceipts.length + localReceipts.value.length + index;
-    localReceipts.value.push({
-      id: `RCPT-${Date.now()}-${index + 1}`,
+  for (const file of accepted) {
+    if (file.size > 2 * 1024 * 1024) {
+      addToast({ message: `${file.name} exceeds 2MB limit`, type: "error" });
+      continue;
+    }
+
+    const tempId = `temp-${Date.now()}`;
+    const receiptObj = {
+      id: tempId,
+      invoiceNumber: tempId,
+      tin: tinFor({ id: tempId }),
+      merchantName: cleanName(file.name),
+      location: "Metro Manila, Philippines",
       fileName: file.name,
       fileType: file.type,
-      thumbnail: file.type.startsWith("image/") ? URL.createObjectURL(file) : "",
-      amount: mockReceiptAmount(receiptIndex),
+      thumbnail: file.type.startsWith("image/")
+        ? URL.createObjectURL(file)
+        : "",
+      amount: 0,
+      subtotal: 0,
+      tax: 0,
       date: new Date().toISOString().slice(0, 10),
       category: "Food & Dining",
+      items: getItems("Food & Dining").map((name) => ({
+        name,
+        qty: 1,
+        price: 0,
+      })),
+      isUploading: true,
       sourceFile: file,
-    });
-  });
+    };
+    localReceipts.value.push(receiptObj);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("expense_category_id", 1);
+
+      const headers = { Accept: "application/json" };
+      if (authStore.token)
+        headers["Authorization"] = `Bearer ${authStore.token}`;
+
+      const res = await fetch("/api/serms/reimbursements/receipts", {
+        method: "POST",
+        headers,
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+
+      const index = localReceipts.value.findIndex((r) => r.id === tempId);
+      if (index !== -1) {
+        const amount = data.data.total_amount || 0;
+        const subtotal = subtotalOf(amount).toFixed(2);
+        const tax = vatOf(amount).toFixed(2);
+
+        localReceipts.value[index] = {
+          ...localReceipts.value[index],
+          id: data.data.id,
+          invoiceNumber: data.data.id,
+          amount: amount,
+          subtotal: subtotal,
+          tax: tax,
+          date: data.data.transaction_date || receiptObj.date,
+          isUploading: false,
+        };
+        // Recalculate item prices based on total amount
+        const currentItems = localReceipts.value[index].items;
+        if (currentItems.length > 0) {
+          const splitPrice = (amount / currentItems.length).toFixed(2);
+          currentItems.forEach((item) => {
+            item.price = splitPrice;
+          });
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      addToast({ message: `Failed to upload ${file.name}`, type: "error" });
+      localReceipts.value = localReceipts.value.filter((r) => r.id !== tempId);
+    }
+  }
+}
+
+function recalculateFinancials(receipt) {
+  const amt = Number(receipt.amount) || 0;
+  receipt.tax = vatOf(amt).toFixed(2);
+  receipt.subtotal = subtotalOf(amt).toFixed(2);
+}
+
+function addReceiptItem(receipt) {
+  receipt.items.push({ name: "New Item", qty: 1, price: 0 });
+}
+
+function recalculateFromItems(receipt) {
+  const newTotal = receipt.items.reduce((sum, item) => {
+    return sum + (Number(item.qty) || 0) * (Number(item.price) || 0);
+  }, 0);
+  receipt.amount = newTotal;
+  recalculateFinancials(receipt);
+}
+
+function removeReceiptItem(receipt, index) {
+  receipt.items.splice(index, 1);
+  recalculateFromItems(receipt);
 }
 
 function removeReceipt(receipt) {
   if (receipt.thumbnail?.startsWith("blob:")) {
     URL.revokeObjectURL(receipt.thumbnail);
   }
-  localReceipts.value = localReceipts.value.filter((item) => item.id !== receipt.id);
+  localReceipts.value = localReceipts.value.filter(
+    (item) => item.id !== receipt.id,
+  );
 }
 
 onBeforeUnmount(() => {
@@ -272,7 +396,10 @@ function viewMyClaims() {
     />
 
     <!-- â”€â”€ Page Header (standalone route mode only) â”€â”€ -->
-    <div v-if="!forwardedReceipts.length" class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+    <div
+      v-if="!forwardedReceipts.length"
+      class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"
+    >
       <div class="flex items-start gap-3">
         <button
           @click="dismiss"
@@ -281,7 +408,9 @@ function viewMyClaims() {
           <ArrowLeft class="w-4 h-4" />
         </button>
         <div class="min-w-0">
-          <h1 class="font-heading text-2xl font-bold leading-tight text-slate-800">
+          <h1
+            class="font-heading text-2xl font-bold leading-tight text-slate-800"
+          >
             New Reimbursement
           </h1>
           <p class="mt-1 text-sm text-slate-400">
@@ -304,7 +433,7 @@ function viewMyClaims() {
       <div>
         <h2
           class="text-lg font-bold text-slate-800 mb-1"
-          style="font-family: 'Poppins', sans-serif"
+          style="font-family: &quot;Poppins&quot;, sans-serif"
         >
           Reimbursement Submitted!
         </h2>
@@ -312,7 +441,9 @@ function viewMyClaims() {
           Your request has been sent for review.
         </p>
       </div>
-      <div class="mt-2 flex w-full max-w-sm flex-col-reverse gap-3 sm:flex-row sm:justify-center">
+      <div
+        class="mt-2 flex w-full max-w-sm flex-col-reverse gap-3 sm:flex-row sm:justify-center"
+      >
         <button
           class="inline-flex h-10 flex-1 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600 transition-colors hover:bg-slate-50"
           type="button"
@@ -346,12 +477,13 @@ function viewMyClaims() {
       </div>
 
       <!-- â”€â”€ Empty State (standalone + no upload yet) â”€â”€ -->
-      <section
-        v-if="receipts.length === 0"
-        class="card p-6"
-      >
-        <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 class="font-heading text-lg font-bold text-primary">Upload Receipts</h2>
+      <section v-if="receipts.length === 0" class="card p-6">
+        <div
+          class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <h2 class="font-heading text-lg font-bold text-primary">
+            Upload Receipts
+          </h2>
           <div class="flex items-center gap-2 text-xs font-bold text-accent">
             <Sparkles class="h-4 w-4" />
             <span>Upload your receipt - AI reads everything automatically</span>
@@ -359,13 +491,19 @@ function viewMyClaims() {
         </div>
         <div
           class="flex min-h-[320px] flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center transition-colors"
-          :class="receiptDrag ? 'border-accent bg-accent/5' : 'border-slate-200 bg-slate-50/50 hover:border-accent/50'"
+          :class="
+            receiptDrag
+              ? 'border-accent bg-accent/5'
+              : 'border-slate-200 bg-slate-50/50 hover:border-accent/50'
+          "
           @dragover.prevent="receiptDrag = true"
           @dragleave.prevent="receiptDrag = false"
           @drop.prevent="handleReceiptDrop"
           @click="receiptInput?.click()"
         >
-          <span class="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-accent/10 text-accent">
+          <span
+            class="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-accent/10 text-accent"
+          >
             <UploadCloud class="h-8 w-8" />
           </span>
           <h3 class="font-heading text-base font-bold text-slate-800">
@@ -376,7 +514,7 @@ function viewMyClaims() {
           </p>
           <p class="mt-4 flex items-center gap-2 text-sm font-bold text-danger">
             <AlertTriangle class="h-4 w-4" />
-            At least 2 receipts are required to proceed
+            At least 1 receipt is required to proceed
           </p>
           <button
             class="mt-6 inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-6 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-accent-600"
@@ -392,18 +530,20 @@ function viewMyClaims() {
       <template v-else>
         <!-- â”€â”€ CARD 1: Upload Receipt Management â”€â”€ -->
         <section class="card p-6">
-          <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div
+            class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+          >
             <div class="flex items-center gap-3">
               <h2
                 class="text-lg font-bold text-primary"
-                style="font-family: 'Poppins', sans-serif"
+                style="font-family: &quot;Poppins&quot;, sans-serif"
               >
                 Upload Receipts
               </h2>
               <span
                 class="badge text-[11px] font-bold"
                 :class="
-                  receipts.length >= 2
+                  receipts.length >= 1
                     ? 'bg-accent-50 border-accent/15 text-accent'
                     : 'bg-red-50 border-red-100 text-danger'
                 "
@@ -414,6 +554,11 @@ function viewMyClaims() {
               </span>
             </div>
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div
+                class="flex items-center gap-2 text-accent text-sm font-semibold"
+              >
+                <CheckCircle2 class="w-4 h-4" /> Ready to submit
+              </div>
               <button
                 class="inline-flex h-9 w-fit shrink-0 items-center justify-center gap-2 rounded-lg bg-accent px-3.5 text-xs font-bold text-white transition-colors hover:bg-accent-600"
                 type="button"
@@ -421,19 +566,6 @@ function viewMyClaims() {
               >
                 <PlusCircle class="h-3.5 w-3.5" /> Add More Receipts
               </button>
-              <div
-                v-if="receipts.length < 2"
-                class="flex items-center gap-2 text-danger text-sm font-semibold"
-              >
-                <AlertTriangle class="w-4 h-4" />
-                You need at least 2 receipts to proceed
-              </div>
-              <div
-                v-else
-                class="flex items-center gap-2 text-accent text-sm font-semibold"
-              >
-                <CheckCircle2 class="w-4 h-4" /> Ready to submit
-              </div>
             </div>
           </div>
         </section>
@@ -443,31 +575,10 @@ function viewMyClaims() {
           <div class="flex items-center justify-between mb-5">
             <h2
               class="text-lg font-bold text-primary"
-              style="font-family: 'Poppins', sans-serif"
+              style="font-family: &quot;Poppins&quot;, sans-serif"
             >
               Scanned Receipts
             </h2>
-            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-              <span
-                class="text-xs font-bold"
-                :class="
-                  receipts.length < 2 ? 'text-danger' : 'text-accent'
-                "
-              >
-                {{ receipts.length }} uploaded{{
-                  receipts.length < 2
-                    ? " - need at least 2 to proceed"
-                    : " - ready!"
-                }}
-              </span>
-              <button
-                class="inline-flex h-8 w-fit shrink-0 items-center justify-center gap-1.5 rounded-lg border border-primary/20 bg-white px-3 text-xs font-bold text-primary transition-colors hover:bg-primary/5"
-                type="button"
-                @click="receiptInput?.click()"
-              >
-                <PlusCircle class="w-3.5 h-3.5" /> Add More
-              </button>
-            </div>
           </div>
 
           <!-- One block per receipt -->
@@ -485,12 +596,9 @@ function viewMyClaims() {
                 >
                 <span
                   class="text-xs font-bold text-primary"
-                  style="font-family: 'Poppins', sans-serif"
+                  style="font-family: &quot;Poppins&quot;, sans-serif"
                   >{{ cleanName(receipt.fileName) }}</span
                 >
-                <span class="ml-auto text-[10px] font-mono text-slate-400">{{
-                  receipt.id
-                }}</span>
               </div>
 
               <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -519,7 +627,7 @@ function viewMyClaims() {
                       <ImageIcon v-else class="w-12 h-12 opacity-40" />
                       <p
                         class="text-[10px] font-semibold uppercase tracking-widest"
-                        style="font-family: 'Poppins', sans-serif"
+                        style="font-family: &quot;Poppins&quot;, sans-serif"
                       >
                         No Preview
                       </p>
@@ -545,21 +653,16 @@ function viewMyClaims() {
                       <input
                         class="input"
                         type="text"
-                        :value="receipt.id"
-                        readonly
+                        v-model="receipt.invoiceNumber"
                       />
                     </div>
                     <div class="input-wrapper">
                       <label class="input-label">Date</label>
                       <div class="relative">
                         <input
-                          class="input pr-10"
-                          type="text"
-                          :value="receipt.date"
-                          readonly
-                        />
-                        <Calendar
-                          class="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                          class="input"
+                          type="date"
+                          v-model="receipt.date"
                         />
                       </div>
                     </div>
@@ -569,18 +672,8 @@ function viewMyClaims() {
                   <div class="input-wrapper">
                     <div class="flex items-center justify-between">
                       <label class="input-label">TIN Number</label>
-                      <span
-                        class="inline-flex items-center gap-1 rounded-lg bg-accent px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white"
-                      >
-                        <Sparkles class="h-3 w-3 fill-white" /> AI Read
-                      </span>
                     </div>
-                    <input
-                      class="input"
-                      type="text"
-                      :value="tinFor(receipt)"
-                      readonly
-                    />
+                    <input class="input" type="text" v-model="receipt.tin" />
                   </div>
 
                   <div class="input-wrapper">
@@ -588,8 +681,7 @@ function viewMyClaims() {
                     <input
                       class="input"
                       type="text"
-                      :value="cleanName(receipt.fileName)"
-                      readonly
+                      v-model="receipt.merchantName"
                     />
                   </div>
 
@@ -600,8 +692,7 @@ function viewMyClaims() {
                       <input
                         class="input pr-10"
                         type="text"
-                        value="Metro Manila, Philippines"
-                        readonly
+                        v-model="receipt.location"
                       />
                       <MapPin
                         class="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
@@ -616,15 +707,14 @@ function viewMyClaims() {
                     >
                     <div class="flex gap-2">
                       <div class="relative flex-1">
-                        <select class="input appearance-none cursor-pointer">
+                        <select
+                          class="input appearance-none cursor-pointer"
+                          v-model="receipt.category"
+                        >
                           <option
                             v-for="cat in CATEGORIES"
                             :key="cat"
-                            :selected="
-                              cat === receipt.category ||
-                              (receipt.category === 'Meals' &&
-                                cat === 'Food & Dining')
-                            "
+                            :value="cat"
                           >
                             {{ cat }}
                           </option>
@@ -665,28 +755,53 @@ function viewMyClaims() {
                         </thead>
                         <tbody class="text-sm divide-y divide-slate-50">
                           <tr
-                            v-for="item in getItems(receipt.category)"
-                            :key="item"
+                            v-for="(item, itemIdx) in receipt.items"
+                            :key="itemIdx"
                           >
-                            <td class="px-4 py-3 text-slate-700 font-medium">
-                              {{ item }}
+                            <td class="px-4 py-2">
+                              <input
+                                type="text"
+                                class="input !py-1 !text-sm"
+                                v-model="item.name"
+                              />
                             </td>
-                            <td class="px-4 py-3 text-center text-slate-500">
-                              1
+                            <td class="px-0 py-2 w-20">
+                              <input
+                                type="number"
+                                class="input !py-1 !text-sm text-center"
+                                v-model="item.qty"
+                                @input="recalculateFromItems(receipt)"
+                              />
                             </td>
-                            <td
-                              class="px-4 py-3 text-right text-primary font-bold font-mono"
-                            >
-                              {{
-                                formatCurrency(
-                                  receipt.amount /
-                                    getItems(receipt.category).length,
-                                )
-                              }}
+                            <td class="px-4 py-2 w-32">
+                              <input
+                                type="number"
+                                class="input !py-1 !text-sm text-right font-mono text-primary font-bold"
+                                v-model.number="item.price"
+                                @input="recalculateFromItems(receipt)"
+                              />
+                            </td>
+                            <td class="pr-4 py-2 w-10 text-right">
+                              <button
+                                class="text-slate-400 hover:text-danger transition-colors p-1"
+                                @click="removeReceiptItem(receipt, itemIdx)"
+                              >
+                                <X class="w-4 h-4" />
+                              </button>
                             </td>
                           </tr>
                         </tbody>
                       </table>
+                      <div
+                        class="px-4 py-2 bg-slate-50/50 border-t border-slate-50"
+                      >
+                        <button
+                          class="text-xs font-bold text-accent flex items-center gap-1 hover:text-accent-600 transition-colors"
+                          @click="addReceiptItem(receipt)"
+                        >
+                          <PlusCircle class="w-3.5 h-3.5" /> Add Item
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -698,33 +813,33 @@ function viewMyClaims() {
                       <div class="input-wrapper">
                         <label class="input-label">Subtotal</label>
                         <input
-                          class="input !w-36 !bg-slate-50"
-                          readonly
-                          type="text"
-                          :value="subtotalOf(receipt.amount).toFixed(2)"
+                          class="input !w-36 !bg-white"
+                          type="number"
+                          v-model="receipt.subtotal"
                         />
                       </div>
                       <div class="input-wrapper">
                         <label class="input-label">Tax (VAT 12%)</label>
                         <input
-                          class="input !w-36 !bg-slate-50"
-                          readonly
-                          type="text"
-                          :value="vatOf(receipt.amount).toFixed(2)"
+                          class="input !w-36 !bg-white"
+                          type="number"
+                          v-model="receipt.tax"
                         />
                       </div>
                     </div>
                     <div
                       class="bg-accent-50 px-6 py-3 rounded-xl border border-accent/15 flex flex-col items-end shadow-sm"
                     >
-                      <span
-                        class="text-[10px] font-bold text-accent uppercase tracking-wider"
-                        >Total</span
+                      <label
+                        class="text-[10px] font-bold text-accent uppercase tracking-wider mb-1"
+                        >Total</label
                       >
-                      <span
-                        class="text-xl font-black text-accent font-mono"
-                        >{{ formatCurrency(receipt.amount) }}</span
-                      >
+                      <input
+                        type="number"
+                        class="input !w-36 !bg-white font-mono text-xl font-black text-accent text-right"
+                        v-model="receipt.amount"
+                        @input="recalculateFinancials(receipt)"
+                      />
                     </div>
                   </div>
                 </div>
@@ -740,7 +855,7 @@ function viewMyClaims() {
             <div>
               <h3
                 class="text-base font-bold text-primary mb-1"
-                style="font-family: 'Poppins', sans-serif"
+                style="font-family: &quot;Poppins&quot;, sans-serif"
               >
                 Cutoff Period <span class="text-danger">*</span>
               </h3>
@@ -769,10 +884,10 @@ function viewMyClaims() {
           <section class="card p-6 flex flex-col gap-4">
             <h3
               class="text-base font-bold text-primary"
-              style="font-family: 'Poppins', sans-serif"
+              style="font-family: &quot;Poppins&quot;, sans-serif"
             >
               Report Attachment
-              <span class="text-slate-400 font-normal text-sm">(optional)</span>
+              <span class="text-danger">*</span>
             </h3>
             <div
               class="border-2 border-dashed rounded-xl p-5 flex items-center justify-between transition-all cursor-pointer"
@@ -794,7 +909,7 @@ function viewMyClaims() {
                 <div>
                   <p
                     class="text-sm font-semibold text-slate-700"
-                    style="font-family: 'Poppins', sans-serif"
+                    style="font-family: &quot;Poppins&quot;, sans-serif"
                   >
                     {{ reportFile ? reportFile.name : "No file selected" }}
                   </p>
@@ -826,21 +941,15 @@ function viewMyClaims() {
         >
           <h3
             class="text-base font-bold text-primary"
-            style="font-family: 'Poppins', sans-serif"
+            style="font-family: &quot;Poppins&quot;, sans-serif"
           >
             Summary
           </h3>
           <div class="space-y-3">
             <div class="flex justify-between items-center text-sm">
               <span class="text-slate-500">Uploaded Receipts</span>
-              <span
-                class="font-bold"
-                :class="
-                  receipts.length < 2 ? 'text-danger' : 'text-accent'
-                "
-              >
-                {{ receipts.length
-                }}{{ receipts.length < 2 ? " (need at least 2)" : " - ready" }}
+              <span class="font-bold text-accent">
+                {{ receipts.length }} - ready
               </span>
             </div>
             <div class="flex justify-between items-center text-sm">
@@ -866,7 +975,7 @@ function viewMyClaims() {
             <div class="flex justify-between items-center pt-2">
               <span
                 class="text-base font-bold text-primary"
-                style="font-family: 'Poppins', sans-serif"
+                style="font-family: &quot;Poppins&quot;, sans-serif"
                 >Total Amount</span
               >
               <span class="text-2xl font-black text-accent font-mono">{{

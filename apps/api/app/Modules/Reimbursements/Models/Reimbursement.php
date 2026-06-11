@@ -16,6 +16,10 @@ class Reimbursement extends Model
         'date',
         'status',
         'rejection_comment',
+        'cutoff_period',
+        'report_file_path',
+        'admin_notes',
+        'submitted_by_name',
     ];
 
     protected $casts = [
@@ -31,5 +35,10 @@ class Reimbursement extends Model
     public function receipt()
     {
         return $this->belongsTo(Receipt::class);
+    }
+
+    public function receipts()
+    {
+        return $this->belongsToMany(Receipt::class, 'reimbursement_receipts');
     }
 }

@@ -7,6 +7,16 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
+## SERMS API Setup
+
+This project is part of the SERMS application. When running via Docker Compose from the project root, this API is automatically scaffolded. The `docker-entrypoint.sh` will:
+- Copy `.env.example` to `.env`
+- Install dependencies (`composer install`)
+- Generate the `APP_KEY`
+- Run database migrations
+
+You do not need to perform manual setup steps when running in Docker.
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:

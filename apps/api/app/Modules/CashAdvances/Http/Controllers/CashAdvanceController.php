@@ -20,7 +20,7 @@ class CashAdvanceController extends Controller
     {
         $user = $request->user();
 
-        if ($user->role === 'employee') {
+        if (!$request->user()->can('serms.cash_advances.manage')) {
             $advances = CashAdvance::with(['approvalActions'])->where('user_id', $user->id)->get();
         } else {
             $advances = CashAdvance::with(['requester', 'approvalActions'])->get();
@@ -90,7 +90,7 @@ class CashAdvanceController extends Controller
         $user = $request->user();
         $advance = CashAdvance::with(['requester', 'approvalActions', 'statusHistory', 'disbursement'])->findOrFail($id);
 
-        if ($user->role === 'employee' && $advance->user_id !== $user->id) {
+        if (!$request->user()->can('serms.cash_advances.manage') && $advance->user_id !== $user->id) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
@@ -105,7 +105,7 @@ class CashAdvanceController extends Controller
         $user = $request->user();
         $advance = CashAdvance::findOrFail($id);
 
-        if ($user->role === 'employee' && $advance->user_id !== $user->id) {
+        if (!$request->user()->can('serms.cash_advances.manage') && $advance->user_id !== $user->id) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
@@ -120,7 +120,7 @@ class CashAdvanceController extends Controller
     {
         $user = $request->user();
 
-        if ($user->role !== 'admin') {
+        if (!$request->user()->can('serms.cash_advances.manage')) {
             return response()->json(['message' => 'Unauthorized. Only admins can approve cash advances.'], 403);
         }
 
@@ -169,7 +169,7 @@ class CashAdvanceController extends Controller
     {
         $user = $request->user();
 
-        if ($user->role !== 'admin') {
+        if (!$request->user()->can('serms.cash_advances.manage')) {
             return response()->json(['message' => 'Unauthorized. Only admins can reject cash advances.'], 403);
         }
 
@@ -218,7 +218,7 @@ class CashAdvanceController extends Controller
     {
         $user = $request->user();
 
-        if ($user->role !== 'admin') {
+        if (!$request->user()->can('serms.cash_advances.manage')) {
             return response()->json(['message' => 'Unauthorized. Only admins can disburse cash advances.'], 403);
         }
 

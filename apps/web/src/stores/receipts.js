@@ -2,6 +2,7 @@ import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { useAuthStore } from "./auth";
 import { useNotificationStore } from "./notification";
+import { apiFetch } from "../utils/apiFetch";
 
 export const useReceiptStore = defineStore("receipts", () => {
   const auth = useAuthStore();
@@ -142,11 +143,7 @@ export const useReceiptStore = defineStore("receipts", () => {
    */
   async function fetchCategories() {
     try {
-      const headers = { Accept: "application/json" };
-      if (auth.token) headers["Authorization"] = `Bearer ${auth.token}`;
-
-      const response = await fetch("/api/serms/reimbursements/categories", {
-        headers,
+      const response = await apiFetch("/api/serms/reimbursements/categories", {
         credentials: "include",
       });
       if (response.ok) {
@@ -175,11 +172,7 @@ export const useReceiptStore = defineStore("receipts", () => {
   async function fetchAll() {
     isLoading.value = true;
     try {
-      const headers = { Accept: "application/json" };
-      if (auth.token) headers["Authorization"] = `Bearer ${auth.token}`;
-
-      const response = await fetch("/api/serms/reimbursements/receipts", {
-        headers,
+      const response = await apiFetch("/api/serms/reimbursements/receipts", {
         credentials: "include",
       });
       if (response.ok) {
@@ -228,12 +221,8 @@ export const useReceiptStore = defineStore("receipts", () => {
     }
 
     try {
-      const headers = { Accept: "application/json" };
-      if (auth.token) headers["Authorization"] = `Bearer ${auth.token}`;
-
-      const response = await fetch("/api/serms/reimbursements/receipts", {
+      const response = await apiFetch("/api/serms/reimbursements/receipts", {
         method: "POST",
-        headers,
         credentials: "include",
         body: formData,
       });
@@ -277,8 +266,7 @@ export const useReceiptStore = defineStore("receipts", () => {
     };
 
     try {
-      const headers = { Accept: "application/json" };
-      if (auth.token) headers["Authorization"] = `Bearer ${auth.token}`;
+
 
       const formData = new FormData();
       if (file) formData.append("file", file);
@@ -289,9 +277,8 @@ export const useReceiptStore = defineStore("receipts", () => {
       formData.append("status", "pending-admin-re-review");
 
       if (rx.dbId) {
-        await fetch(`/api/serms/reimbursements/receipts/${rx.dbId}/resubmit`, {
+        await apiFetch(`/api/serms/reimbursements/receipts/${rx.dbId}/resubmit`, {
           method: "POST",
-          headers,
           credentials: "include",
           body: formData,
         }).catch(() => null);
@@ -390,14 +377,10 @@ export const useReceiptStore = defineStore("receipts", () => {
     if (!rx) return;
 
     try {
-      const headers = { Accept: "application/json" };
-      if (auth.token) headers["Authorization"] = `Bearer ${auth.token}`;
-
-      const response = await fetch(
+      const response = await apiFetch(
         `/api/serms/reimbursements/receipts/${rx.dbId}`,
         {
           method: "DELETE",
-          headers,
           credentials: "include",
         },
       );

@@ -19,7 +19,7 @@ class ExpenseController extends Controller
         $query = Receipt::query()->whereNull('deleted_at');
 
         // Standard employees can only view their own receipts
-        if ($user->role === 'employee') {
+        if (!$request->user()->can('serms.reimbursements.manage')) {
             $query->where('uploaded_by', $user->id);
         } else {
             $query->with('uploader');
@@ -121,7 +121,7 @@ class ExpenseController extends Controller
         $user = $request->user();
         $receipt = Receipt::with('uploader')->findOrFail($id);
 
-        if ($user->role === 'employee' && $receipt->uploaded_by !== $user->id) {
+        if (!$request->user()->can('serms.reimbursements.manage') && $receipt->uploaded_by !== $user->id) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
@@ -136,7 +136,7 @@ class ExpenseController extends Controller
         $user = $request->user();
         $receipt = Receipt::findOrFail($id);
 
-        if ($receipt->uploaded_by !== $user->id && $user->role === 'employee') {
+        if ($receipt->uploaded_by !== $user->id && !$request->user()->can('serms.reimbursements.manage')) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
@@ -167,7 +167,7 @@ class ExpenseController extends Controller
         $user = $request->user();
         $receipt = Receipt::findOrFail($id);
 
-        if ($user->role === 'employee' && $receipt->uploaded_by !== $user->id) {
+        if (!$request->user()->can('serms.reimbursements.manage') && $receipt->uploaded_by !== $user->id) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 

@@ -19,6 +19,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        \App\Modules\Reimbursements\Models\Receipt::observe(\App\Modules\Reimbursements\Observers\ReceiptStatusObserver::class);
     }
 }

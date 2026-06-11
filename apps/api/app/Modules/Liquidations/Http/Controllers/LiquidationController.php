@@ -16,7 +16,7 @@ class LiquidationController extends Controller
     {
         $user = $request->user();
 
-        if ($user->role === 'employee') {
+        if (!$request->user()->can('serms.liquidations.manage')) {
             $liquidations = Liquidation::where('user_id', $user->id)->get();
         } else {
             $liquidations = Liquidation::with(['user', 'cashAdvance'])->get();
@@ -92,7 +92,7 @@ class LiquidationController extends Controller
         $user = $request->user();
         $liquidation = Liquidation::with(['user', 'cashAdvance'])->findOrFail($id);
 
-        if ($user->role === 'employee' && $liquidation->user_id !== $user->id) {
+        if (!$request->user()->can('serms.liquidations.manage') && $liquidation->user_id !== $user->id) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
@@ -106,7 +106,7 @@ class LiquidationController extends Controller
     {
         $user = $request->user();
 
-        if ($user->role !== 'admin') {
+        if (!$request->user()->can('serms.liquidations.manage')) {
             return response()->json(['message' => 'Unauthorized. Only admins can audit liquidations.'], 403);
         }
 

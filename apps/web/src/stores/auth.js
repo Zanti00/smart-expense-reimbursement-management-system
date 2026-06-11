@@ -82,6 +82,7 @@ export const useAuthStore = defineStore("auth", () => {
     if (!response.ok) {
       // Token is invalid or expired — clear session
       clearSession();
+      redirectToLogin(window.location.pathname + window.location.search, "Session expired. Please log in again.");
       throw new Error(
         "Failed to fetch user profile. Session may have expired.",
       );

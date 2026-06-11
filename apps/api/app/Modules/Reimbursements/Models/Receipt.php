@@ -26,8 +26,11 @@ class Receipt extends Model
         'ocr_confidence_score',
         'ocr_flagged',
         'is_archived',
+        'category',
         'expense_category_id',
         'deletion_warning_sent',
+        'admin_notes',
+        'status',
     ];
 
     protected $appends = ['file_url'];
@@ -71,5 +74,10 @@ class Receipt extends Model
     public function items()
     {
         return $this->hasMany(ReceiptItem::class, 'receipt_id');
+    }
+
+    public function reimbursements()
+    {
+        return $this->belongsToMany(Reimbursement::class, 'reimbursement_receipts');
     }
 }

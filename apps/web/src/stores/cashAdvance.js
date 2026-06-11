@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { useAuthStore } from "./auth";
-
+import { apiFetch } from "../utils/apiFetch";
 export const useCashAdvanceStore = defineStore("cashAdvance", () => {
   const items = ref([]);
   const isLoading = ref(false);
@@ -16,8 +16,7 @@ export const useCashAdvanceStore = defineStore("cashAdvance", () => {
   async function fetchAll() {
     isLoading.value = true;
     try {
-      const response = await fetch("/api/serms/cash-advances", {
-        headers: { Accept: "application/json" },
+      const response = await apiFetch("/api/serms/cash-advances", {
         credentials: "include",
       });
       if (response.ok) {
@@ -48,9 +47,8 @@ export const useCashAdvanceStore = defineStore("cashAdvance", () => {
 
   async function request(formData) {
     try {
-      const response = await fetch("/api/serms/cash-advances", {
+      const response = await apiFetch("/api/serms/cash-advances", {
         method: "POST",
-        headers: { Accept: "application/json" },
         credentials: "include",
         body: formData, // Send as FormData to handle files
       });
@@ -70,12 +68,8 @@ export const useCashAdvanceStore = defineStore("cashAdvance", () => {
 
   async function approveRequest(id, comment) {
     try {
-      const response = await fetch(`/api/serms/cash-advances/${id}/approve`, {
+      const response = await apiFetch(`/api/serms/cash-advances/${id}/approve`, {
         method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
         credentials: "include",
         body: JSON.stringify({ comment }),
       });
@@ -93,12 +87,8 @@ export const useCashAdvanceStore = defineStore("cashAdvance", () => {
 
   async function rejectRequest(id, comment) {
     try {
-      const response = await fetch(`/api/serms/cash-advances/${id}/reject`, {
+      const response = await apiFetch(`/api/serms/cash-advances/${id}/reject`, {
         method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
         credentials: "include",
         body: JSON.stringify({ comment }),
       });
@@ -116,14 +106,10 @@ export const useCashAdvanceStore = defineStore("cashAdvance", () => {
 
   async function acknowledgeRequest(id, signature) {
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `/api/serms/cash-advances/${id}/acknowledge`,
         {
           method: "POST",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-          },
           credentials: "include",
           body: JSON.stringify({ signature }),
         },
@@ -152,8 +138,7 @@ export const useCashAdvanceStore = defineStore("cashAdvance", () => {
 
   async function fetchRequest(id) {
     try {
-      const response = await fetch(`/api/serms/cash-advances/${id}`, {
-        headers: { Accept: "application/json" },
+      const response = await apiFetch(`/api/serms/cash-advances/${id}`, {
         credentials: "include",
       });
       if (response.ok) {
@@ -168,8 +153,7 @@ export const useCashAdvanceStore = defineStore("cashAdvance", () => {
 
   async function fetchDocument(id) {
     try {
-      const response = await fetch(`/api/serms/cash-advances/${id}/document`, {
-        headers: { Accept: "application/json" },
+      const response = await apiFetch(`/api/serms/cash-advances/${id}/document`, {
         credentials: "include",
       });
       if (response.ok) {
