@@ -53,6 +53,10 @@ class ReimbursementController extends Controller
             'receipts.*.vat_classification' => 'nullable|string|in:vat,non-vat',
             'receipts.*.tin' => 'nullable|string|max:255',
             'receipts.*.invoice_number' => 'nullable|string|max:255',
+            'receipts.*.items' => 'nullable|array',
+            'receipts.*.items.*.name' => 'required_with:receipts.*.items|string|max:255',
+            'receipts.*.items.*.quantity' => 'required_with:receipts.*.items|integer|min:1',
+            'receipts.*.items.*.price' => 'required_with:receipts.*.items|numeric|gt:0',
         ]);
 
         if (!empty($validated['receipts'])) {
@@ -68,6 +72,11 @@ class ReimbursementController extends Controller
                         'tin' => $receiptData['tin'] ?? $receipt->tin,
                         'invoice_number' => $receiptData['invoice_number'] ?? $receipt->invoice_number,
                     ]);
+
+                    if (isset($receiptData['items'])) {
+                        $receipt->items()->delete();
+                        $receipt->items()->createMany($receiptData['items']);
+                    }
                 }
             }
         }

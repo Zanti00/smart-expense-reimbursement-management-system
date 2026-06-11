@@ -187,6 +187,27 @@ const canProceed = computed(
 // ── Submit ──────────────────────────────────────────────────────────────
 async function handleSubmit() {
   if (!canProceed.value) return;
+
+  for (let idx = 0; idx < receipts.value.length; idx++) {
+    const r = receipts.value[idx];
+    if (r.items && Array.isArray(r.items)) {
+      for (const item of r.items) {
+        if (!item.name || !item.name.trim()) {
+          addToast({ message: `Item name is required in receipt ${idx + 1}`, type: "error" });
+          return;
+        }
+        if (Number(item.qty) <= 0) {
+          addToast({ message: `Quantity for "${item.name}" must be greater than 0`, type: "error" });
+          return;
+        }
+        if (Number(item.price) <= 0) {
+          addToast({ message: `Price for "${item.name}" must be greater than 0`, type: "error" });
+          return;
+        }
+      }
+    }
+  }
+
   submitting.value = true;
   try {
     const formData = new FormData();
@@ -210,6 +231,14 @@ async function handleSubmit() {
       formData.append(`receipts[${index}][vat_classification]`, r.vatClassification || 'vat');
       formData.append(`receipts[${index}][tin]`, r.tin || '');
       formData.append(`receipts[${index}][invoice_number]`, r.invoiceNumber || '');
+
+      if (r.items && Array.isArray(r.items)) {
+        r.items.forEach((item, itemIdx) => {
+          formData.append(`receipts[${index}][items][${itemIdx}][name]`, item.name || '');
+          formData.append(`receipts[${index}][items][${itemIdx}][quantity]`, item.qty || 1);
+          formData.append(`receipts[${index}][items][${itemIdx}][price]`, item.price || 0);
+        });
+      }
     });
 
     await store.submit(formData);
@@ -755,7 +784,7 @@ function viewMyClaims() {
                   <!-- Order Items -->
                   <div class="input-wrapper">
                     <label class="input-label"
-                      >Order Items (AI Extracted)</label
+                      >Order Items</label
                     >
                     <div
                       class="border border-slate-100 rounded-lg overflow-hidden shadow-sm bg-white"
