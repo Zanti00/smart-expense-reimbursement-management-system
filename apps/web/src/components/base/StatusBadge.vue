@@ -4,7 +4,6 @@ defineProps({
 })
 
 const config = {
-  submitted:    { color: 'bg-amber-600',   label: 'Submitted' },
   'under-review': { color: 'bg-primary',   label: 'Under Review' },
   approved:     { color: 'bg-emerald-600', label: 'Approved' },
   reject:       { color: 'bg-red-600',     label: 'Reject' },

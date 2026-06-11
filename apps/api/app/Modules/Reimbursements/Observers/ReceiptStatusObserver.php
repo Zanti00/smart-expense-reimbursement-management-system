@@ -20,6 +20,7 @@ class ReceiptStatusObserver
                 if ($reimbursement->status !== 'rejected') {
                     $reimbursement->update([
                         'status' => 'rejected',
+                        'admin_notes' => 'Automatically rejected because a linked receipt was rejected.',
                         'rejection_comment' => 'Automatically rejected because a linked receipt was rejected.',
                     ]);
 

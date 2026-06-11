@@ -81,7 +81,7 @@ class ReimbursementController extends Controller
             'date' => $validated['date'],
             'cutoff_period' => $validated['cutoff_period'],
             'report_file_path' => $reportPath,
-            'status' => 'submitted',
+            'status' => 'pending',
             'submitted_by_name' => $user->name, // Assuming name exists
         ]);
 
@@ -198,6 +198,7 @@ class ReimbursementController extends Controller
         $beforeState = $reimbursement->toArray();
         $reimbursement->update([
             'status' => 'rejected',
+            'admin_notes' => $validated['comment'],
             'rejection_comment' => $validated['comment'],
         ]);
         $afterState = $reimbursement->toArray();
@@ -233,7 +234,7 @@ class ReimbursementController extends Controller
 
         $validated = $request->validate([
             'admin_notes' => 'nullable|string',
-            'status' => 'nullable|string|in:pending,submitted,approved,rejected,granted',
+            'status' => 'nullable|string|in:pending,approved,rejected,granted',
         ]);
 
         $reimbursement = Reimbursement::findOrFail($id);

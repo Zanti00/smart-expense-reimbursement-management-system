@@ -13,9 +13,6 @@ export const useReimbursementStore = defineStore("reimbursement", () => {
   const totalPending = computed(
     () => items.value.filter((i) => i.status === "pending").length,
   );
-  const totalSubmitted = computed(
-    () => items.value.filter((i) => i.status === "submitted").length,
-  );
   const totalApproved = computed(
     () => items.value.filter((i) => i.status === "approved").length,
   );
@@ -158,7 +155,6 @@ export const useReimbursementStore = defineStore("reimbursement", () => {
     isLoading,
     totalAmount,
     totalPending,
-    totalSubmitted,
     totalApproved,
     totalRejected,
     totalGranted,
