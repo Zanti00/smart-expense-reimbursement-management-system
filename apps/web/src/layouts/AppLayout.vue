@@ -6,6 +6,8 @@ import { useNotificationStore } from "@/stores/notification";
 import { useToast } from "@/composables/useToast";
 import NotificationPanel from "@/components/base/NotificationPanel.vue";
 import ToastNotification from "@/components/ToastNotification.vue";
+import sbsiLogo from "@/assets/sbsi_logo.png";
+import sbsiLogoShort from "@/assets/sbsi_logo_short.png";
 import {
   LayoutDashboard,
   Receipt,
@@ -20,7 +22,6 @@ import {
   ChevronRight,
   FileCheck,
   Search,
-  Sparkles,
 } from "lucide-vue-next";
 
 const auth = useAuthStore();
@@ -99,34 +100,26 @@ async function logout() {
     <aside
       :class="[
         'flex flex-col z-30 transition-all duration-300 ease-out flex-shrink-0',
-        'fixed lg:relative inset-y-0 left-0',
+        'fixed lg:relative inset-y-0 left-0 bg-primary',
         sidebarOpen ? 'w-[240px]' : 'w-16',
         mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
       ]"
-      style="
-        background:
-          radial-gradient(circle at top left, rgba(46, 133, 216, 0.32), transparent 34%),
-          linear-gradient(160deg, #252578 0%, #2f2f7e 58%, #000000 135%);
-      "
     >
       <!-- Branding Module -->
       <div
-        class="flex items-center gap-3 px-4 py-6 border-b border-white/10 min-h-[70px]"
+        :class="[
+          'flex items-center px-4 py-4 border-b border-white/10 min-h-[70px]',
+          sidebarOpen ? 'justify-start' : 'justify-center',
+        ]"
       >
-        <div
-          class="w-8 h-8 rounded-md border border-white/10 flex items-center justify-center bg-white/10 shadow-sm flex-shrink-0"
-        >
-          <Sparkles class="w-4 h-4 text-white" />
-        </div>
-        <Transition name="fade">
-          <div v-if="sidebarOpen" class="overflow-hidden whitespace-nowrap">
-            <p
-              class="text-white font-heading font-bold text-base leading-none"
-            >
-              SERMS
-            </p>
-          </div>
-        </Transition>
+        <img
+          :src="sidebarOpen ? sbsiLogo : sbsiLogoShort"
+          alt="SBSI"
+          :class="[
+            'object-contain transition-all duration-300 ease-out',
+            sidebarOpen ? 'h-10 w-auto max-w-[190px]' : 'h-8 w-8',
+          ]"
+        />
       </div>
 
       <!-- Navigation -->
@@ -256,7 +249,7 @@ async function logout() {
           <Bell class="w-4 h-4" />
           <span
             v-if="unreadCount > 0"
-            class="absolute -top-0.5 -right-0.5 w-4 h-4 bg-gradient-to-br from-danger to-red-600 text-white text-[9px] font-bold flex items-center justify-center rounded-full border-2 border-white shadow-sm"
+            class="absolute -top-0.5 -right-0.5 w-4 h-4 bg-danger text-white text-[9px] font-bold flex items-center justify-center rounded-full border-2 border-white shadow-sm"
           >
             {{ unreadCount }}
           </span>

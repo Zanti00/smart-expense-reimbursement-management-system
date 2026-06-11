@@ -72,8 +72,7 @@ function formatDate(dateStr) {
       >
         <!-- HEADER -->
         <header
-          class="px-6 py-4 flex items-center justify-between sticky top-0 z-20 text-white"
-          style="background: linear-gradient(135deg, #252578 0%, #2f2f7e 100%)"
+          class="px-6 py-4 flex items-center justify-between sticky top-0 z-20 bg-primary text-white"
         >
           <div class="flex items-center gap-4">
             <div

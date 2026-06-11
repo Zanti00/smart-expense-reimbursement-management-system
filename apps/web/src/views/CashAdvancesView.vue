@@ -124,7 +124,7 @@ const kpis = computed(() => {
       icon: Wallet,
       iconBg: "bg-blue-900/10",
       iconColor: "text-blue-900",
-      accent: "from-blue-900 to-blue-700",
+      accent: "bg-blue-900",
     });
   }
 
@@ -135,7 +135,7 @@ const kpis = computed(() => {
     icon: Activity,
     iconBg: "bg-amber-500/10",
     iconColor: "text-amber-500",
-    accent: "from-amber-400 to-amber-600",
+    accent: "bg-amber-500",
   });
 
   cards.push({
@@ -145,7 +145,7 @@ const kpis = computed(() => {
     icon: ShieldCheck,
     iconBg: "bg-emerald-500/10",
     iconColor: "text-emerald-500",
-    accent: "from-emerald-400 to-emerald-600",
+    accent: "bg-emerald-500",
   });
 
   cards.push({
@@ -155,7 +155,7 @@ const kpis = computed(() => {
     icon: X,
     iconBg: "bg-red-500/10",
     iconColor: "text-red-500",
-    accent: "from-red-400 to-red-600",
+    accent: "bg-red-500",
   });
 
   cards.push({
@@ -168,7 +168,7 @@ const kpis = computed(() => {
     icon: Wallet,
     iconBg: "bg-blue-900/10",
     iconColor: "text-blue-900",
-    accent: "from-blue-900 to-blue-700",
+    accent: "bg-blue-900",
   });
 
   return cards;

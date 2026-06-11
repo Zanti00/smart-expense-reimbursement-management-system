@@ -33,10 +33,10 @@ defineProps({
     </template>
     <template v-else>
       <div v-for="kpi in kpis" :key="kpi.label" class="kpi-card group">
-        <!-- Colored accent top strip (overrides the default ::before with per-card gradient) -->
+        <!-- Colored accent top strip -->
         <div
           :class="[
-            'absolute top-0 left-0 right-0 h-0.5 rounded-t-xl bg-gradient-to-r',
+            'absolute top-0 left-0 right-0 h-0.5 rounded-t-xl',
             kpi.accent,
           ]"
         ></div>

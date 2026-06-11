@@ -48,8 +48,7 @@ function close() {
     >
       <div class="card w-full max-w-sm shadow-2xl overflow-hidden">
         <div
-          class="px-6 py-4 flex items-center gap-3 border-b border-red-100"
-          style="background: linear-gradient(135deg, #fef2f2 0%, #fff5f5 100%);"
+          class="px-6 py-4 flex items-center gap-3 border-b border-red-100 bg-red-50"
         >
           <div class="w-9 h-9 rounded-xl bg-red-100 flex items-center justify-center">
             <Trash2 class="w-4 h-4 text-danger" />

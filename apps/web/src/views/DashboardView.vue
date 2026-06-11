@@ -38,7 +38,7 @@ const kpis = computed(() => [
     icon: TrendingUp,
     iconBg: 'bg-emerald-100',
     iconColor: 'text-emerald-600',
-    accent: 'from-emerald-400 to-emerald-600',
+    accent: 'bg-emerald-500',
   },
   {
     label: 'Awaiting Approval',
@@ -47,7 +47,7 @@ const kpis = computed(() => [
     icon: Clock,
     iconBg: 'bg-amber-100',
     iconColor: 'text-amber-600',
-    accent: 'from-amber-400 to-amber-600',
+    accent: 'bg-amber-500',
   },
   {
     label: 'Open Advances',
@@ -56,7 +56,7 @@ const kpis = computed(() => [
     icon: Wallet,
     iconBg: 'bg-accent-100',
     iconColor: 'text-accent-600',
-    accent: 'from-accent-400 to-accent',
+    accent: 'bg-accent',
   },
   {
     label: 'Issues Found',
@@ -65,7 +65,7 @@ const kpis = computed(() => [
     icon: AlertTriangle,
     iconBg: 'bg-red-100',
     iconColor: 'text-red-500',
-    accent: 'from-red-400 to-red-600',
+    accent: 'bg-red-500',
   }
 ])
 
@@ -195,8 +195,7 @@ function isAmberWarning(dateStr) {
     </div>
 
     <!-- ── Deadline Cutoff Widget ── -->
-    <div class="rounded-xl overflow-hidden shadow-sm"
-         style="background: linear-gradient(120deg, #252578 0%, #2F2F7E 60%, #2E85D8 100%);">
+    <div class="rounded-xl overflow-hidden bg-primary shadow-sm">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between p-5 gap-4">
         <div class="flex items-center gap-4">
           <div class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0">
@@ -254,8 +253,8 @@ function isAmberWarning(dateStr) {
             2024
           </span>
         </div>
-        <div v-if="isDashboardLoading" class="h-56 rounded-lg bg-slate-50 p-4">
-          <SkeletonLoader :rows="6" height="h-6" />
+        <div v-if="isDashboardLoading" class="h-56">
+          <SkeletonLoader variant="chart" />
         </div>
         <div v-else class="h-56">
           <Bar :data="barData" :options="barOptions" />
@@ -271,7 +270,14 @@ function isAmberWarning(dateStr) {
           <p class="text-xs text-slate-400 mt-0.5">Distribution breakdown</p>
         </div>
         <div v-if="isDashboardLoading" class="flex h-56 items-center justify-center rounded-lg bg-slate-50">
-          <div class="h-36 w-36 animate-pulse rounded-full bg-slate-200"></div>
+          <div class="relative h-36 w-36 animate-pulse rounded-full bg-slate-200">
+            <div class="absolute inset-8 rounded-full bg-slate-50"></div>
+          </div>
+          <div class="ml-6 hidden space-y-3 sm:block">
+            <div class="h-2.5 w-24 rounded bg-slate-200 animate-pulse"></div>
+            <div class="h-2.5 w-20 rounded bg-slate-200 animate-pulse"></div>
+            <div class="h-2.5 w-28 rounded bg-slate-200 animate-pulse"></div>
+          </div>
         </div>
         <div v-else class="h-56">
           <Doughnut :data="doughnutData" :options="doughnutOptions" />
@@ -309,7 +315,10 @@ function isAmberWarning(dateStr) {
             <template v-if="isDashboardLoading">
               <tr v-for="i in 5" :key="`recent-skeleton-${i}`">
                 <td v-for="col in 6" :key="col" class="px-4 py-4">
-                  <div class="h-4 w-24 animate-pulse rounded bg-slate-200"></div>
+                  <div
+                    class="h-3.5 animate-pulse rounded bg-slate-200"
+                    :class="col === 6 ? 'mx-auto h-5 w-20 rounded-full' : col === 2 ? 'w-36' : col === 4 ? 'ml-auto w-20' : 'w-24'"
+                  ></div>
                 </td>
               </tr>
             </template>
@@ -362,7 +371,10 @@ function isAmberWarning(dateStr) {
             <template v-if="isDashboardLoading">
               <tr v-for="i in 5" :key="`advance-skeleton-${i}`">
                 <td v-for="col in 5" :key="col" class="px-4 py-4">
-                  <div class="h-4 w-24 animate-pulse rounded bg-slate-200"></div>
+                  <div
+                    class="h-3.5 animate-pulse rounded bg-slate-200"
+                    :class="col === 5 ? 'h-5 w-20 rounded-full' : col === 2 ? 'w-36' : col === 3 ? 'ml-auto w-20' : 'w-24'"
+                  ></div>
                 </td>
               </tr>
             </template>

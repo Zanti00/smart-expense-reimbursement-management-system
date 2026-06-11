@@ -39,7 +39,7 @@ defineEmits(['remove'])
         <!-- Scanning Overlay Line -->
         <div v-if="receipt.ocrStatus === 'processing'" class="absolute inset-x-0 w-full z-10 pointer-events-none animate-scan-slow">
           <div class="h-1 bg-[#252578]/40 shadow-[0_0_8px_#252578]"></div>
-          <div class="h-24 bg-gradient-to-b from-[#252578]/20 to-transparent"></div>
+          <div class="h-24 bg-[#252578]/10"></div>
         </div>
       </div>
     </div>

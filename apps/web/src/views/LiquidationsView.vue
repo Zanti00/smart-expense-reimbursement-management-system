@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useCashAdvanceStore } from "@/stores/cashAdvance";
 import { useLiquidationStore } from "@/stores/liquidation";
@@ -8,6 +8,7 @@ import StatusBadge from "@/components/base/StatusBadge.vue";
 import FileUpload from "@/components/base/FileUpload.vue";
 import BaseButton from "@/components/base/BaseButton.vue";
 import BaseKpiGrid from "@/components/base/BaseKpiGrid.vue";
+import BasePagination from "@/components/base/BasePagination.vue";
 import BaseUtilityToolbar from "@/components/base/BaseUtilityToolbar.vue";
 import SkeletonLoader from "@/components/base/SkeletonLoader.vue";
 import { formatPeso } from "@/utils/formatters";
@@ -60,6 +61,8 @@ const selectedReceipt = ref(null);
 const pendingReceiptDecision = ref("");
 const searchQuery = ref("");
 const activeStatus = ref("All");
+const pageSize = 10;
+const currentPage = ref(1);
 const employeeSearchQuery = ref("");
 const employeeActiveStatus = ref("All");
 const employeeSortKey = ref("status");
@@ -304,6 +307,22 @@ const sortedRows = computed(() => {
   });
 });
 
+const totalPages = computed(() =>
+  Math.max(1, Math.ceil(sortedRows.value.length / pageSize)),
+);
+const paginatedRows = computed(() => {
+  const start = (currentPage.value - 1) * pageSize;
+  return sortedRows.value.slice(start, start + pageSize);
+});
+
+watch([searchQuery, activeStatus], () => {
+  currentPage.value = 1;
+});
+
+watch(totalPages, (pages) => {
+  if (currentPage.value > pages) currentPage.value = pages;
+});
+
 const activeDraft = computed(() =>
   reviewingCase.value ? reviewDrafts.value[reviewingCase.value.id] : null,
 );
@@ -340,7 +359,7 @@ const liquidationKpis = computed(() => {
       icon: FilePieChart,
       iconBg: "bg-accent/10",
       iconColor: "text-accent",
-      accent: "from-accent-400 to-accent",
+      accent: "bg-accent",
     },
     {
       label: "Incomplete",
@@ -349,7 +368,7 @@ const liquidationKpis = computed(() => {
       icon: AlertTriangle,
       iconBg: "bg-amber-500/10",
       iconColor: "text-amber-500",
-      accent: "from-amber-400 to-amber-600",
+      accent: "bg-amber-500",
     },
     {
       label: "Liquidated",
@@ -358,7 +377,7 @@ const liquidationKpis = computed(() => {
       icon: CheckCircle,
       iconBg: "bg-emerald-500/10",
       iconColor: "text-emerald-500",
-      accent: "from-emerald-400 to-emerald-600",
+      accent: "bg-emerald-500",
     },
     {
       label: "Outstanding Balance",
@@ -367,7 +386,7 @@ const liquidationKpis = computed(() => {
       icon: Wallet,
       iconBg: "bg-blue-900/10",
       iconColor: "text-blue-900",
-      accent: "from-blue-900 to-blue-700",
+      accent: "bg-blue-900",
     },
   ];
 });
@@ -388,7 +407,7 @@ const employeeLiquidationKpis = computed(() => {
       icon: Activity,
       iconBg: "bg-amber-500/10",
       iconColor: "text-amber-500",
-      accent: "from-amber-400 to-amber-600",
+      accent: "bg-amber-500",
     },
     {
       label: "Ready to Liquidate",
@@ -397,7 +416,7 @@ const employeeLiquidationKpis = computed(() => {
       icon: CheckCircle,
       iconBg: "bg-emerald-500/10",
       iconColor: "text-emerald-500",
-      accent: "from-emerald-400 to-emerald-600",
+      accent: "bg-emerald-500",
     },
     {
       label: "Overdue",
@@ -406,7 +425,7 @@ const employeeLiquidationKpis = computed(() => {
       icon: AlertTriangle,
       iconBg: "bg-red-500/10",
       iconColor: "text-red-500",
-      accent: "from-red-400 to-red-600",
+      accent: "bg-red-500",
     },
     {
       label: "Outstanding Balance",
@@ -415,7 +434,7 @@ const employeeLiquidationKpis = computed(() => {
       icon: Wallet,
       iconBg: "bg-blue-900/10",
       iconColor: "text-blue-900",
-      accent: "from-blue-900 to-blue-700",
+      accent: "bg-blue-900",
     },
   ];
 });
@@ -601,10 +620,12 @@ function formatDateOnly(value) {
 function toggleSort(column) {
   if (sortKey.value === column.key) {
     sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc";
+    currentPage.value = 1;
     return;
   }
   sortKey.value = column.key;
   sortDirection.value = "asc";
+  currentPage.value = 1;
 }
 
 function getSortValue(row, key) {
@@ -754,11 +775,25 @@ function finalizeLiquidation() {
           </thead>
           <tbody class="divide-y divide-slate-100">
             <template v-if="store.isLoading">
-              <tr v-for="i in 6" :key="`liquidation-skeleton-${i}`" class="whitespace-nowrap">
+              <tr v-for="i in pageSize" :key="`liquidation-skeleton-${i}`" class="whitespace-nowrap">
                 <td v-for="col in tableColumns.length" :key="col" class="px-5 py-5">
                   <div
-                    class="h-4 animate-pulse rounded bg-slate-200"
-                    :class="col === tableColumns.length ? 'mx-auto h-9 w-9 rounded-full' : col === 7 ? 'mx-auto w-24 rounded-full' : 'w-28'"
+                    v-if="col === tableColumns.length"
+                    class="mx-auto flex h-8 w-16 max-w-full animate-pulse items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-100 sm:h-9 sm:w-20 sm:gap-2"
+                  >
+                    <div class="h-3 w-3 shrink-0 rounded bg-slate-200 sm:h-3.5 sm:w-3.5"></div>
+                    <div class="h-2.5 w-5 rounded bg-slate-200 sm:w-7"></div>
+                  </div>
+                  <div
+                    v-else
+                    class="h-3.5 max-w-full animate-pulse rounded bg-slate-200"
+                    :class="[
+                      col === 7 ? 'mx-auto h-5 w-20 rounded-full sm:w-24' : '',
+                      col === 1 ? 'w-12 sm:w-16' : '',
+                      col === 2 ? 'w-24 sm:w-32' : '',
+                      [5, 6].includes(col) ? 'ml-auto w-20 sm:w-24' : '',
+                      ![1, 2, 5, 6, 7, tableColumns.length].includes(col) ? 'w-20 sm:w-28' : '',
+                    ]"
                   ></div>
                 </td>
               </tr>
@@ -770,7 +805,7 @@ function finalizeLiquidation() {
             </tr>
             <template v-else>
               <tr
-                v-for="row in sortedRows"
+                v-for="row in paginatedRows"
                 :key="row.id"
                 class="whitespace-nowrap transition-colors duration-200 ease-out hover:bg-slate-50/80"
               >
@@ -801,6 +836,13 @@ function finalizeLiquidation() {
           </tbody>
         </table>
       </div>
+      <BasePagination
+        v-if="!store.isLoading && sortedRows.length > pageSize"
+        v-model:page="currentPage"
+        :page-size="pageSize"
+        :total="sortedRows.length"
+        label="reports"
+      />
     </section>
 
     <div
@@ -1296,7 +1338,7 @@ function finalizeLiquidation() {
             :key="`employee-advance-skeleton-${i}`"
             class="card p-4"
           >
-            <SkeletonLoader :rows="4" height="h-4" />
+            <SkeletonLoader variant="card" />
           </div>
         </template>
 

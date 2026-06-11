@@ -101,7 +101,7 @@ function nextPage() { if (currentPage.value < totalPages.value) currentPage.valu
           <tbody :class="density === 'compact' ? '[&>tr>td]:!py-1.5 [&>tr>td]:!px-3' : ''">
             <tr v-if="loading">
               <td :colspan="columns.length" class="p-6 border-r-0 bg-slate-50">
-                <SkeletonLoader :rows="5" height="h-8" />
+                <SkeletonLoader variant="table" :rows="10" :columns="columns.length" />
               </td>
             </tr>
             <tr v-else-if="paginated.length === 0">
@@ -128,7 +128,10 @@ function nextPage() { if (currentPage.value < totalPages.value) currentPage.valu
     </div>
 
     <!-- Pagination / Footer -->
-    <div class="flex items-center justify-between border border-black/5 border-t-0 bg-white/90 px-3 py-2 rounded-b-card shadow-sm">
+    <div
+      v-if="filtered.length > pageSize"
+      class="flex items-center justify-between border border-black/5 border-t-0 bg-white/90 px-3 py-2 rounded-b-card shadow-sm"
+    >
       <div class="text-[10px] font-bold uppercase tracking-widest text-slate-500">
         Record {{ Math.min((currentPage - 1) * pageSize + 1, filtered.length) }}–{{ Math.min(currentPage * pageSize, filtered.length) }}
         / Total: {{ filtered.length }}
