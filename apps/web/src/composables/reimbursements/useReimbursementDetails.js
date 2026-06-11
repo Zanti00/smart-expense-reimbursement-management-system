@@ -1,0 +1,155 @@
+import { ref } from "vue";
+import { apiFetch } from "@/utils/apiFetch";
+
+export function useReimbursementDetails(store, addToast) {
+  const viewingRecord = ref(null);
+  const receiptDetailsOpen = ref(false);
+  const selectedReceipt = ref(null);
+  const reviewerNotes = ref("");
+  const pendingReceiptDecision = ref(null);
+  const isReceiptReviewSubmitting = ref(false);
+  const modalLoading = ref(false);
+
+  function closeDetails() {
+    viewingRecord.value = null;
+    receiptDetailsOpen.value = false;
+    selectedReceipt.value = null;
+    reviewerNotes.value = "";
+    pendingReceiptDecision.value = null;
+    isReceiptReviewSubmitting.value = false;
+  }
+
+  function viewReceiptDetails(receipt) {
+    selectedReceipt.value = receipt;
+    reviewerNotes.value = receipt.admin_notes || "";
+    pendingReceiptDecision.value = null;
+    receiptDetailsOpen.value = true;
+  }
+
+  async function openDetails(row) {
+    viewingRecord.value = { ...row, receipts: row.receipts || [] };
+    selectedReceipt.value = null;
+    reviewerNotes.value = "";
+    pendingReceiptDecision.value = null;
+    isReceiptReviewSubmitting.value = false;
+    receiptDetailsOpen.value = false;
+    modalLoading.value = true;
+
+    try {
+      const response = await apiFetch(`/api/serms/reimbursements/${row.id}`);
+      if (!response.ok) throw new Error("Failed to fetch reimbursement details");
+      const fullRecord = await response.json();
+      viewingRecord.value = fullRecord;
+      reviewerNotes.value = fullRecord.admin_notes || "";
+    } catch (error) {
+      addToast({
+        message: "Failed to load reimbursement details",
+        type: "error",
+      });
+      console.error("Failed to load reimbursement details:", error);
+      viewingRecord.value = null;
+    } finally {
+      modalLoading.value = false;
+    }
+  }
+
+  function requestReceiptDecision(receipt, action) {
+    pendingReceiptDecision.value = {
+      receiptId: receipt.id,
+      action,
+    };
+  }
+
+  function cancelReceiptDecision() {
+    pendingReceiptDecision.value = null;
+  }
+
+  function isReceiptDecisionPending(receipt) {
+    if (!receipt) return false;
+    return pendingReceiptDecision.value?.receiptId === receipt.id;
+  }
+
+  async function confirmReceiptDecision() {
+    if (!viewingRecord.value || !pendingReceiptDecision.value) return;
+
+    isReceiptReviewSubmitting.value = true;
+    const { receiptId, action } = pendingReceiptDecision.value;
+    const status = action === "Approve" ? "approved" : "rejected";
+
+    try {
+      const res = await apiFetch(
+        `/api/serms/reimbursements/receipts/${receiptId}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            status,
+            admin_notes: reviewerNotes.value,
+          }),
+        },
+      );
+
+      if (!res.ok) throw new Error("Failed to update receipt decision");
+      const json = await res.json();
+      const updatedReceipt = json.data;
+
+      // Update the receipt in viewingRecord
+      const rIndex = viewingRecord.value.receipts.findIndex(
+        (r) => r.id === receiptId,
+      );
+      if (rIndex > -1) {
+        viewingRecord.value.receipts[rIndex] = updatedReceipt;
+      }
+
+      // If the selected receipt is the one that got updated, update it too
+      if (selectedReceipt.value?.id === receiptId) {
+        selectedReceipt.value = {
+          ...selectedReceipt.value,
+          ...updatedReceipt,
+        };
+      }
+
+      // Refetch reimbursement to reflect automatic status updates
+      const refetchRes = await apiFetch(
+        `/api/serms/reimbursements/${viewingRecord.value.id}`,
+      );
+      if (refetchRes.ok) {
+        const fullRecord = await refetchRes.json();
+        viewingRecord.value = fullRecord;
+
+        // Update in store.items
+        const itemIndex = store.items.findIndex((i) => i.id === fullRecord.id);
+        if (itemIndex > -1) {
+          store.items[itemIndex] = fullRecord;
+        }
+      }
+
+      addToast({
+        message: `Receipt ${status === "approved" ? "approved" : "rejected"} successfully`,
+        type: "success",
+      });
+      pendingReceiptDecision.value = null;
+    } catch (error) {
+      addToast({ message: "Failed to update receipt decision", type: "error" });
+      console.error(error);
+    } finally {
+      isReceiptReviewSubmitting.value = false;
+    }
+  }
+
+  return {
+    viewingRecord,
+    receiptDetailsOpen,
+    selectedReceipt,
+    reviewerNotes,
+    pendingReceiptDecision,
+    isReceiptReviewSubmitting,
+    modalLoading,
+    closeDetails,
+    viewReceiptDetails,
+    openDetails,
+    requestReceiptDecision,
+    cancelReceiptDecision,
+    isReceiptDecisionPending,
+    confirmReceiptDecision,
+  };
+}

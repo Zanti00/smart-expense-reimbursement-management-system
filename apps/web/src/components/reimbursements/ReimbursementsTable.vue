@@ -1,0 +1,248 @@
+<script setup>
+import { computed } from "vue";
+import { formatPeso } from "@/utils/formatters";
+import BasePagination from "@/components/base/BasePagination.vue";
+import { ChevronUp, ChevronDown, ChevronsUpDown, Eye } from "lucide-vue-next";
+
+const props = defineProps({
+  isLoading: { type: Boolean, default: false },
+  rows: { type: Array, required: true },
+  totalRows: { type: Number, required: true },
+  columns: { type: Array, required: true },
+  sortKey: { type: String, default: "" },
+  sortDirection: { type: String, default: "asc" },
+  isAdmin: { type: Boolean, default: false },
+  currentPage: { type: Number, required: true },
+  pageSize: { type: Number, default: 10 },
+});
+
+const emit = defineEmits(["update:currentPage", "toggle-sort", "view-details"]);
+
+const columnCount = computed(() => props.columns.length);
+
+function isSorted(column) {
+  return props.sortKey === (column.sortKey || column.key);
+}
+
+function handleToggleSort(column) {
+  emit("toggle-sort", column);
+}
+
+function handleViewDetails(row) {
+  emit("view-details", row);
+}
+
+function normalizeStatus(status) {
+  const normalized = String(status || "").toLowerCase();
+  const statusMap = {
+    submitted: "pending",
+    review: "pending",
+    draft: "pending",
+    reject: "rejected",
+    rejected: "rejected",
+    paid: "granted",
+  };
+  return statusMap[normalized] || normalized;
+}
+
+function statusClass(status) {
+  const classes = {
+    approved: "bg-success text-white border border-success",
+    pending: "bg-yellow-100 text-yellow-800 border border-yellow-200",
+    rejected: "bg-[#FEF2F2] text-[#B91C1C] border border-red-200",
+    granted: "bg-[#F0FDFA] text-[#0D9488] border border-teal-100",
+  };
+  return (
+    classes[normalizeStatus(status)] ||
+    "bg-slate-100 text-slate-600 border border-slate-200"
+  );
+}
+
+const tableMinWidth = computed(() =>
+  props.isAdmin ? "min-w-[1040px]" : "min-w-[1320px]",
+);
+</script>
+
+<template>
+  <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+    <div class="flex flex-col gap-1 border-b border-slate-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h2 class="font-heading text-base font-bold leading-tight text-slate-800">
+          Reimbursement Requests
+        </h2>
+        <p class="mt-0.5 text-xs text-slate-400">
+          Your reimbursement report records
+        </p>
+      </div>
+      <span class="kpi-label text-slate-400">
+        <template v-if="isLoading">Loading...</template>
+        <template v-else>Showing {{ totalRows }} records</template>
+      </span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full border-collapse text-left" :class="tableMinWidth">
+        <thead>
+          <tr class="border-b border-slate-200 bg-slate-50">
+            <th
+              v-for="column in columns"
+              :key="column.key"
+              class="px-5 py-4 text-[11px] font-bold uppercase tracking-[0.08em]"
+              :class="[
+                column.align === 'right'
+                  ? 'text-right'
+                  : column.align === 'center'
+                    ? 'text-center'
+                    : 'text-left',
+                isSorted(column) ? 'text-accent' : 'text-slate-500',
+              ]"
+            >
+              <button
+                class="inline-flex items-center gap-1.5 transition-colors hover:text-accent"
+                :class="
+                  column.align === 'right'
+                    ? 'justify-end'
+                    : column.align === 'center'
+                      ? 'justify-center'
+                      : 'justify-start'
+                "
+                type="button"
+                @click="handleToggleSort(column)"
+              >
+                <span>{{ column.label }}</span>
+                <ChevronUp
+                  v-if="isSorted(column) && sortDirection === 'asc'"
+                  class="h-3.5 w-3.5"
+                />
+                <ChevronDown
+                  v-else-if="isSorted(column)"
+                  class="h-3.5 w-3.5"
+                />
+                <ChevronsUpDown v-else class="h-3.5 w-3.5 text-slate-300" />
+              </button>
+            </th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <template v-if="isLoading">
+            <tr
+              v-for="i in pageSize"
+              :key="`reimbursement-skeleton-${i}`"
+              class="whitespace-nowrap"
+            >
+              <td
+                v-for="col in columnCount"
+                :key="col"
+                class="px-5 py-5"
+              >
+                <div
+                  v-if="col === columnCount"
+                  class="mx-auto flex h-8 w-16 max-w-full animate-pulse items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-100 sm:h-9 sm:w-20 sm:gap-2"
+                >
+                  <div
+                    class="h-3 w-3 shrink-0 rounded bg-slate-200 sm:h-3.5 sm:w-3.5"
+                  ></div>
+                  <div class="h-2.5 w-5 rounded bg-slate-200 sm:w-7"></div>
+                </div>
+                <div
+                  v-else
+                  class="h-3.5 max-w-full animate-pulse rounded bg-slate-200"
+                  :class="[
+                    col === columnCount - 1
+                      ? 'mx-auto h-5 w-16 rounded-full sm:w-20'
+                      : '',
+                    col === 1 ? 'w-12 sm:w-14' : '',
+                    col === 2 ? 'w-28 sm:w-40' : '',
+                    col === 5 ? 'mx-auto w-8 sm:w-10' : '',
+                    col === 7 ? 'ml-auto w-20 sm:w-24' : '',
+                    ![
+                      1,
+                      2,
+                      5,
+                      7,
+                      columnCount - 1,
+                      columnCount,
+                    ].includes(col)
+                      ? 'w-20 sm:w-24'
+                      : '',
+                  ]"
+                />
+              </td>
+            </tr>
+          </template>
+          <template v-else-if="totalRows === 0">
+            <tr>
+              <td
+                :colspan="columnCount"
+                class="px-5 py-8 text-center text-sm text-slate-500"
+              >
+                No reimbursement records found.
+              </td>
+            </tr>
+          </template>
+          <template v-else>
+            <tr
+              v-for="row in rows"
+              :key="row.id"
+              class="group whitespace-nowrap transition-colors duration-200 ease-out hover:bg-slate-50/80"
+            >
+              <td class="px-5 py-5 font-mono text-sm font-bold text-slate-900">
+                {{ row.id }}
+              </td>
+              <td class="max-w-[240px] px-5 py-5 text-sm text-slate-600">
+                <span class="block truncate">{{ row.reportDescription }}</span>
+              </td>
+              <td class="px-5 py-5 text-sm text-slate-500">
+                {{ row.cutoffPeriod }}
+              </td>
+              <td class="px-5 py-5">
+                <span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                  {{ row.category }}
+                </span>
+              </td>
+              <template v-if="!isAdmin">
+                <td class="px-5 py-5 text-center text-sm font-semibold text-slate-600">
+                  {{ row.receiptQuantity }}
+                </td>
+                <td class="px-5 py-5 text-center text-sm font-semibold text-slate-600">
+                  {{ row.quantityReport }}
+                </td>
+                <td class="px-5 py-5 text-right text-sm font-bold text-primary">
+                  {{ formatPeso(row.amount) }}
+                </td>
+              </template>
+              <td class="px-5 py-5 text-sm text-slate-500">
+                {{ row.dateSubmitted }}
+              </td>
+              <td v-if="isAdmin" class="px-5 py-5 text-sm font-semibold text-slate-600">
+                {{ row.submittedBy }}
+              </td>
+              <td class="px-5 py-5 text-center">
+                <span :class="['inline-flex rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide', statusClass(row.displayStatus)]">
+                  {{ row.displayStatusLabel }}
+                </span>
+              </td>
+              <td class="px-5 py-5 text-center">
+                <button
+                  class="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-accent/15 bg-accent/5 px-3 text-xs font-bold text-accent transition-all duration-200 ease-out hover:bg-accent/10 hover:scale-[1.02] focus:outline-none"
+                  title="View reimbursement"
+                  @click="handleViewDetails(row)"
+                >
+                  <Eye class="h-3.5 w-3.5" />
+                  <span>View</span>
+                </button>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+    <BasePagination
+      v-if="!isLoading && totalRows > pageSize"
+      :page="currentPage"
+      @update:page="val => emit('update:currentPage', val)"
+      :page-size="pageSize"
+      :total="totalRows"
+      label="records"
+    />
+  </section>
+</template>
