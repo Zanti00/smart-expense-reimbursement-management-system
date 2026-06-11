@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from "vue";
-import { formatPeso } from "@/utils/formatters";
+import { formatPeso, formatDate } from "@/utils/formatters";
 import BasePagination from "@/components/base/BasePagination.vue";
 import { ChevronUp, ChevronDown, ChevronsUpDown, Eye } from "lucide-vue-next";
 
@@ -64,10 +64,16 @@ const tableMinWidth = computed(() =>
 </script>
 
 <template>
-  <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-    <div class="flex flex-col gap-1 border-b border-slate-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+  <section
+    class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+  >
+    <div
+      class="flex flex-col gap-1 border-b border-slate-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+    >
       <div>
-        <h2 class="font-heading text-base font-bold leading-tight text-slate-800">
+        <h2
+          class="font-heading text-base font-bold leading-tight text-slate-800"
+        >
           Reimbursement Requests
         </h2>
         <p class="mt-0.5 text-xs text-slate-400">
@@ -113,10 +119,7 @@ const tableMinWidth = computed(() =>
                   v-if="isSorted(column) && sortDirection === 'asc'"
                   class="h-3.5 w-3.5"
                 />
-                <ChevronDown
-                  v-else-if="isSorted(column)"
-                  class="h-3.5 w-3.5"
-                />
+                <ChevronDown v-else-if="isSorted(column)" class="h-3.5 w-3.5" />
                 <ChevronsUpDown v-else class="h-3.5 w-3.5 text-slate-300" />
               </button>
             </th>
@@ -129,11 +132,7 @@ const tableMinWidth = computed(() =>
               :key="`reimbursement-skeleton-${i}`"
               class="whitespace-nowrap"
             >
-              <td
-                v-for="col in columnCount"
-                :key="col"
-                class="px-5 py-5"
-              >
+              <td v-for="col in columnCount" :key="col" class="px-5 py-5">
                 <div
                   v-if="col === columnCount"
                   class="mx-auto flex h-8 w-16 max-w-full animate-pulse items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-100 sm:h-9 sm:w-20 sm:gap-2"
@@ -154,14 +153,7 @@ const tableMinWidth = computed(() =>
                     col === 2 ? 'w-28 sm:w-40' : '',
                     col === 5 ? 'mx-auto w-8 sm:w-10' : '',
                     col === 7 ? 'ml-auto w-20 sm:w-24' : '',
-                    ![
-                      1,
-                      2,
-                      5,
-                      7,
-                      columnCount - 1,
-                      columnCount,
-                    ].includes(col)
+                    ![1, 2, 5, 7, columnCount - 1, columnCount].includes(col)
                       ? 'w-20 sm:w-24'
                       : '',
                   ]"
@@ -195,15 +187,21 @@ const tableMinWidth = computed(() =>
                 {{ row.cutoffPeriod }}
               </td>
               <td class="px-5 py-5">
-                <span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                <span
+                  class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-500"
+                >
                   {{ row.category }}
                 </span>
               </td>
               <template v-if="!isAdmin">
-                <td class="px-5 py-5 text-center text-sm font-semibold text-slate-600">
+                <td
+                  class="px-5 py-5 text-center text-sm font-semibold text-slate-600"
+                >
                   {{ row.receiptQuantity }}
                 </td>
-                <td class="px-5 py-5 text-center text-sm font-semibold text-slate-600">
+                <td
+                  class="px-5 py-5 text-center text-sm font-semibold text-slate-600"
+                >
                   {{ row.quantityReport }}
                 </td>
                 <td class="px-5 py-5 text-right text-sm font-bold text-primary">
@@ -211,13 +209,21 @@ const tableMinWidth = computed(() =>
                 </td>
               </template>
               <td class="px-5 py-5 text-sm text-slate-500">
-                {{ row.dateSubmitted }}
+                {{ formatDate(row.dateSubmitted) }}
               </td>
-              <td v-if="isAdmin" class="px-5 py-5 text-sm font-semibold text-slate-600">
+              <td
+                v-if="isAdmin"
+                class="px-5 py-5 text-sm font-semibold text-slate-600"
+              >
                 {{ row.submittedBy }}
               </td>
               <td class="px-5 py-5 text-center">
-                <span :class="['inline-flex rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide', statusClass(row.displayStatus)]">
+                <span
+                  :class="[
+                    'inline-flex rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide',
+                    statusClass(row.displayStatus),
+                  ]"
+                >
                   {{ row.displayStatusLabel }}
                 </span>
               </td>
@@ -239,7 +245,7 @@ const tableMinWidth = computed(() =>
     <BasePagination
       v-if="!isLoading && totalRows > pageSize"
       :page="currentPage"
-      @update:page="val => emit('update:currentPage', val)"
+      @update:page="(val) => emit('update:currentPage', val)"
       :page-size="pageSize"
       :total="totalRows"
       label="records"

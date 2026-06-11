@@ -322,7 +322,7 @@ function statusClass(status) {
           v-if="
             auth.isAdmin &&
             viewingRecord &&
-            viewingRecord.status === 'submitted'
+            normalizeStatus(viewingRecord.status) === 'pending'
           "
           class="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-3"
         >

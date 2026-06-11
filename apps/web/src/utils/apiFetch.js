@@ -27,10 +27,13 @@ export async function apiFetch(url, options = {}) {
     }
   }
 
-  const response = await fetch(url, {
+  const fetchOptions = {
+    credentials: 'include',
     ...options,
     headers,
-  })
+  }
+
+  const response = await fetch(url, fetchOptions)
 
   if (response.status === 401) {
     authStore.clearSession()

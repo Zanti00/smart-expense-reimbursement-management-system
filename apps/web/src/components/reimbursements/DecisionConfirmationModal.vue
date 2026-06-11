@@ -144,8 +144,9 @@ function handleConfirm() {
 
       <div class="flex items-center justify-end gap-2 mt-2">
         <button
-          class="inline-flex min-h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50"
+          class="inline-flex min-h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           type="button"
+          :disabled="isSubmitting"
           @click="handleClose"
         >
           Cancel
