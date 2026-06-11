@@ -76,7 +76,6 @@ onMounted(() => {
 
 // â”€â”€ Form State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const submitting = ref(false);
-const submitted = ref(false);
 const cutoffPeriod = ref("");
 const reportFile = ref(null);
 const reportDrag = ref(false);
@@ -243,8 +242,9 @@ async function handleSubmit() {
 
     await store.submit(formData);
     
-    submitted.value = true;
+    addToast({ message: "Reimbursement submitted successfully!", type: "success" });
     emit("submitted");
+    viewMyClaims();
   } finally {
     submitting.value = false;
   }
@@ -471,48 +471,7 @@ function viewMyClaims() {
     </div>
 
     <!-- â”€â”€ Success State â”€â”€ -->
-    <div
-      v-if="submitted"
-      class="card p-16 flex flex-col items-center gap-5 text-center"
-    >
-      <div
-        class="w-16 h-16 rounded-2xl bg-accent-50 border border-accent/20 flex items-center justify-center"
-      >
-        <PackageCheck class="w-8 h-8 text-accent" />
-      </div>
-      <div>
-        <h2
-          class="text-lg font-bold text-slate-800 mb-1"
-          style="font-family: &quot;Poppins&quot;, sans-serif"
-        >
-          Reimbursement Submitted!
-        </h2>
-        <p class="text-sm text-slate-400">
-          Your request has been sent for review.
-        </p>
-      </div>
-      <div
-        class="mt-2 flex w-full max-w-sm flex-col-reverse gap-3 sm:flex-row sm:justify-center"
-      >
-        <button
-          class="inline-flex h-10 flex-1 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600 transition-colors hover:bg-slate-50"
-          type="button"
-          @click="submitted = false"
-        >
-          Submit Another
-        </button>
-        <button
-          class="inline-flex h-10 flex-1 items-center justify-center rounded-lg bg-accent px-4 text-sm font-bold text-white shadow-sm transition-colors hover:bg-accent-600"
-          type="button"
-          @click="viewMyClaims"
-        >
-          View My Claims
-        </button>
-      </div>
-    </div>
-
-    <template v-else>
-      <!-- â”€â”€ Alert Banner (forwarded mode) â”€â”€ -->
+    <!-- â”€â”€ Alert Banner (forwarded mode) â”€â”€ -->
       <div
         v-if="forwardedReceipts.length"
         class="flex items-center gap-3 px-4 py-3 bg-accent-50 border border-accent/15 rounded-xl"
@@ -1075,7 +1034,6 @@ function viewMyClaims() {
           </button>
         </div>
       </template>
-    </template>
   </div>
 </template>
 

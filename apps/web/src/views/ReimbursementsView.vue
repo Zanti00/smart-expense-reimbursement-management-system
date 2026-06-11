@@ -1,16 +1,11 @@
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useReimbursementStore } from "@/stores/reimbursement";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "@/composables/useToast";
-import { apiFetch } from "@/utils/apiFetch";
-import BaseTable from "@/components/base/BaseTable.vue";
-import StatusBadge from "@/components/base/StatusBadge.vue";
 import BaseButton from "@/components/base/BaseButton.vue";
-import BaseModal from "@/components/base/BaseModal.vue";
 import BaseKpiGrid from "@/components/base/BaseKpiGrid.vue";
-import BasePagination from "@/components/base/BasePagination.vue";
 import BaseUtilityToolbar from "@/components/base/BaseUtilityToolbar.vue";
 import ReimbursementDetailsModal from "@/components/reimbursements/ReimbursementDetailsModal.vue";
 import ReceiptDetailsModal from "@/components/reimbursements/ReceiptDetailsModal.vue";
@@ -22,26 +17,13 @@ import { useReimbursementDetails } from "@/composables/reimbursements/useReimbur
 import { useReimbursementDecisions } from "@/composables/reimbursements/useReimbursementDecisions";
 import {
   Plus,
-  FileText,
   Activity,
   ShieldCheck,
-  X,
-  CheckCircle,
   XCircle,
   Clock,
   Wallet,
   Send,
   CreditCard,
-  Eye,
-  EyeOff,
-  Download,
-  ArrowLeft,
-  CalendarDays,
-  Sparkles,
-  MapPin,
-  ChevronUp,
-  ChevronDown,
-  ChevronsUpDown,
 } from "lucide-vue-next";
 
 const store = useReimbursementStore();
