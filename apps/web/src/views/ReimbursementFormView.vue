@@ -57,6 +57,7 @@ onMounted(() => {
         location: r.location || "Metro Manila, Philippines",
         subtotal: r.subtotal || subtotalOf(r.amount || 0).toFixed(2),
         tax: r.tax || vatOf(r.amount || 0).toFixed(2),
+        vatClassification: r.vatClassification || 'vat',
         items:
           r.items ||
           getItems(r.category || "Food & Dining").map((name) => ({
@@ -94,11 +95,7 @@ const totalAmount = computed(() =>
   receipts.value.reduce((sum, r) => sum + (Number(r.amount) || 0), 0),
 );
 const totalVat = computed(() =>
-  receipts.value.reduce(
-    (sum, r) =>
-      sum + (Number(r.amount) > 0 ? (Number(r.amount) * 0.12) / 1.12 : 0),
-    0,
-  ),
+  receipts.value.reduce((sum, r) => sum + (Number(r.tax) || 0), 0),
 );
 const totalSubtotal = computed(() => totalAmount.value - totalVat.value);
 
@@ -208,7 +205,9 @@ async function handleSubmit() {
       formData.append(`receipts[${index}][id]`, r.id);
       formData.append(`receipts[${index}][vendor_name]`, r.merchantName || '');
       formData.append(`receipts[${index}][transaction_date]`, r.date || '');
-      formData.append(`receipts[${index}][total_amount]`, r.amount || 0);
+      formData.append(`receipts[${index}][total_amount]`, r.subtotal || 0);
+      formData.append(`receipts[${index}][vat_amount]`, r.tax || 0);
+      formData.append(`receipts[${index}][vat_classification]`, r.vatClassification || 'vat');
       formData.append(`receipts[${index}][tin]`, r.tin || '');
       formData.append(`receipts[${index}][invoice_number]`, r.invoiceNumber || '');
     });
@@ -269,6 +268,7 @@ async function addReceiptFiles(fileList) {
       amount: 0,
       subtotal: 0,
       tax: 0,
+      vatClassification: 'vat',
       date: new Date().toISOString().slice(0, 10),
       category: "Food & Dining",
       items: getItems("Food & Dining").map((name) => ({
@@ -311,6 +311,7 @@ async function addReceiptFiles(fileList) {
           amount: amount,
           subtotal: subtotal,
           tax: tax,
+          vatClassification: data.data.vat_classification || 'vat',
           date: data.data.transaction_date || receiptObj.date,
           isUploading: false,
         };
@@ -333,8 +334,28 @@ async function addReceiptFiles(fileList) {
 
 function recalculateFinancials(receipt) {
   const amt = Number(receipt.amount) || 0;
-  receipt.tax = vatOf(amt).toFixed(2);
-  receipt.subtotal = subtotalOf(amt).toFixed(2);
+  if (receipt.vatClassification === 'non-vat') {
+    receipt.tax = "0.00";
+    receipt.subtotal = amt.toFixed(2);
+  } else {
+    receipt.tax = vatOf(amt).toFixed(2);
+    receipt.subtotal = subtotalOf(amt).toFixed(2);
+  }
+}
+
+function recalculateFromSubtotal(receipt) {
+  const sub = Number(receipt.subtotal) || 0;
+  if (receipt.vatClassification === 'non-vat') {
+    receipt.tax = "0.00";
+    receipt.amount = sub.toFixed(2);
+  } else {
+    const tax = Number(receipt.tax) || 0;
+    receipt.amount = (sub + tax).toFixed(2);
+  }
+}
+
+function handleVatClassChange(receipt) {
+  recalculateFinancials(receipt);
 }
 
 function addReceiptItem(receipt) {
@@ -807,39 +828,58 @@ function viewMyClaims() {
 
                   <!-- Financials for this receipt -->
                   <div
-                    class="flex items-end justify-between gap-4 pt-2 border-t border-slate-100"
+                    class="flex flex-col gap-4 pt-2 border-t border-slate-100"
                   >
-                    <div class="flex gap-4">
-                      <div class="input-wrapper">
-                        <label class="input-label">Subtotal</label>
-                        <input
-                          class="input !w-36 !bg-white"
-                          type="number"
-                          v-model="receipt.subtotal"
-                        />
+                    <div class="flex items-end justify-between gap-4">
+                      <div class="flex gap-4 flex-wrap items-end">
+                        <div class="input-wrapper">
+                          <label class="input-label">VAT Classification</label>
+                          <div class="relative">
+                            <select
+                              class="input !w-32 !bg-white appearance-none cursor-pointer"
+                              v-model="receipt.vatClassification"
+                              @change="handleVatClassChange(receipt)"
+                            >
+                              <option value="vat">VAT</option>
+                              <option value="non-vat">NON-VAT</option>
+                            </select>
+                            <ChevronDown class="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                          </div>
+                        </div>
+                        <div class="input-wrapper">
+                          <label class="input-label">Subtotal</label>
+                          <input
+                            class="input !w-32 !bg-white"
+                            type="number"
+                            v-model="receipt.subtotal"
+                            @input="recalculateFromSubtotal(receipt)"
+                          />
+                        </div>
+                        <div class="input-wrapper">
+                          <label class="input-label">Tax (VAT 12%)</label>
+                          <input
+                            class="input !w-32 !bg-white"
+                            type="number"
+                            v-model="receipt.tax"
+                            :disabled="receipt.vatClassification === 'non-vat'"
+                            @input="recalculateFromSubtotal(receipt)"
+                          />
+                        </div>
                       </div>
-                      <div class="input-wrapper">
-                        <label class="input-label">Tax (VAT 12%)</label>
-                        <input
-                          class="input !w-36 !bg-white"
-                          type="number"
-                          v-model="receipt.tax"
-                        />
-                      </div>
-                    </div>
-                    <div
-                      class="bg-accent-50 px-6 py-3 rounded-xl border border-accent/15 flex flex-col items-end shadow-sm"
-                    >
-                      <label
-                        class="text-[10px] font-bold text-accent uppercase tracking-wider mb-1"
-                        >Total</label
+                      <div
+                        class="bg-accent-50 px-6 py-3 rounded-xl border border-accent/15 flex flex-col items-end shadow-sm"
                       >
-                      <input
-                        type="number"
-                        class="input !w-36 !bg-white font-mono text-xl font-black text-accent text-right"
-                        v-model="receipt.amount"
-                        @input="recalculateFinancials(receipt)"
-                      />
+                        <label
+                          class="text-[10px] font-bold text-accent uppercase tracking-wider mb-1"
+                          >Total</label
+                        >
+                        <input
+                          type="number"
+                          class="input !w-36 !bg-white font-mono text-xl font-black text-accent text-right"
+                          v-model="receipt.amount"
+                          @input="recalculateFinancials(receipt)"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>

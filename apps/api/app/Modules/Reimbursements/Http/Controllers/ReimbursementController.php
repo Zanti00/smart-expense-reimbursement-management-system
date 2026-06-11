@@ -49,6 +49,8 @@ class ReimbursementController extends Controller
             'receipts.*.vendor_name' => 'nullable|string|max:255',
             'receipts.*.transaction_date' => 'nullable|date',
             'receipts.*.total_amount' => 'nullable|numeric|min:0',
+            'receipts.*.vat_amount' => 'nullable|numeric|min:0',
+            'receipts.*.vat_classification' => 'nullable|string|in:vat,non-vat',
             'receipts.*.tin' => 'nullable|string|max:255',
             'receipts.*.invoice_number' => 'nullable|string|max:255',
         ]);
@@ -61,6 +63,8 @@ class ReimbursementController extends Controller
                         'vendor_name' => $receiptData['vendor_name'] ?? $receipt->vendor_name,
                         'transaction_date' => $receiptData['transaction_date'] ?? $receipt->transaction_date,
                         'total_amount' => $receiptData['total_amount'] ?? $receipt->total_amount,
+                        'vat_amount' => $receiptData['vat_amount'] ?? $receipt->vat_amount,
+                        'vat_classification' => $receiptData['vat_classification'] ?? $receipt->vat_classification,
                         'tin' => $receiptData['tin'] ?? $receipt->tin,
                         'invoice_number' => $receiptData['invoice_number'] ?? $receipt->invoice_number,
                     ]);

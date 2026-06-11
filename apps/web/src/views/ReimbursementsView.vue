@@ -1326,14 +1326,8 @@ async function confirmReject() {
                     <label class="space-y-1 md:col-span-2">
                       <span class="flex items-center justify-between gap-2">
                         <span class="input-label"
-                          >VAT Classification (AI Auto-Detected)</span
+                          >VAT Classification</span
                         >
-                        <span
-                          class="inline-flex items-center gap-1 rounded-full bg-accent-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent"
-                        >
-                          <Sparkles class="h-3 w-3" />
-                          AI Detected
-                        </span>
                       </span>
                       <input
                         class="input bg-slate-50"
@@ -1404,10 +1398,7 @@ async function confirmReject() {
                         readonly
                         :value="
                           selectedReceipt?.total_amount
-                            ? formatPeso(
-                                Number(selectedReceipt.total_amount) -
-                                  Number(selectedReceipt.vat_amount || 0),
-                              )
+                            ? formatPeso(selectedReceipt.total_amount)
                             : '--'
                         "
                       />
@@ -1418,9 +1409,9 @@ async function confirmReject() {
                         class="input font-semibold bg-slate-50"
                         readonly
                         :value="
-                          selectedReceipt?.vat_amount
+                          selectedReceipt?.vat_amount !== undefined && selectedReceipt?.vat_amount !== null
                             ? formatPeso(selectedReceipt.vat_amount)
-                            : '--'
+                            : formatPeso(0)
                         "
                       />
                     </label>
@@ -1433,7 +1424,7 @@ async function confirmReject() {
                       >
                         {{
                           selectedReceipt?.total_amount
-                            ? formatPeso(selectedReceipt.total_amount)
+                            ? formatPeso(Number(selectedReceipt.total_amount) + Number(selectedReceipt.vat_amount || 0))
                             : "--"
                         }}
                       </p>
