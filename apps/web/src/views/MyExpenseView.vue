@@ -111,11 +111,10 @@ function promptDelete(id) {
   deleteModalOpen.value = true;
 }
 
-function confirmDelete(password) {
-  // Use a simulated backend validation or fallback to a default mock password for UI testing
-  const validPassword = auth.user?.password || "password123";
+async function confirmDelete(password) {
+  const isValid = await auth.verifyPassword(password);
   
-  if (password === validPassword) {
+  if (isValid) {
     receiptsStore.softDelete(selectedReceiptId.value);
     const s = new Set(selectedIds.value);
     s.delete(selectedReceiptId.value);

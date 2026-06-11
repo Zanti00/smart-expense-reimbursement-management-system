@@ -7,7 +7,7 @@ DB_PORT=${DB_PORT:-3306}
 
 # Wait for database to be ready
 echo "Waiting for database at ${DB_HOST}:${DB_PORT}..."
-until nc -z "$DB_HOST" "$DB_PORT" > /dev/null 2>&1; do
+until mysqladmin ping -h "$DB_HOST" -P "$DB_PORT" --silent; do
   echo "Database (${DB_HOST}) is not available yet - sleeping"
   sleep 1
 done

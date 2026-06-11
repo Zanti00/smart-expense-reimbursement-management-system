@@ -101,8 +101,23 @@ class AuthenticateWithExternalService
             // Dynamically register gates for this request based on fetched permissions
             if (is_array($permissions)) {
                 foreach ($permissions as $permission) {
+                    \Illuminate\Support\Facades\Gate::define($permission, function ($u) use ($permission) {
+                        $userPermissions = $u->getAttribute('permissions') ?? [];
+                        return in_array($permission, $userPermissions);
+                    });
+                }
+            }
+
+            // Grant management permissions to admin and approver roles automatically
+            $defaultPermissions = [
+                'serms.reimbursements.manage',
+                'serms.cash_advances.manage',
+                'serms.liquidations.manage',
+            ];
+            foreach ($defaultPermissions as $permission) {
+                if (!\Illuminate\Support\Facades\Gate::has($permission)) {
                     \Illuminate\Support\Facades\Gate::define($permission, function ($u) {
-                        return true;
+                        return in_array($u->role, ['admin', 'approver']);
                     });
                 }
             }

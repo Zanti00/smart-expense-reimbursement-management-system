@@ -3,6 +3,8 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useReimbursementStore } from '@/stores/reimbursement'
 import { useAuthStore } from '@/stores/auth'
+import { useToast } from '@/composables/useToast'
+import { apiFetch } from '@/utils/apiFetch'
 import BaseTable from '@/components/base/BaseTable.vue'
 import StatusBadge from '@/components/base/StatusBadge.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
@@ -11,11 +13,12 @@ import BaseKpiGrid from '@/components/base/BaseKpiGrid.vue'
 import BasePagination from '@/components/base/BasePagination.vue'
 import BaseUtilityToolbar from '@/components/base/BaseUtilityToolbar.vue'
 import { formatPeso } from '@/utils/formatters'
-import { Plus, FileText, Activity, ShieldCheck, X, CheckCircle, XCircle, Clock, Wallet, Send, CreditCard, Eye, Download, ArrowLeft, CalendarDays, Sparkles, MapPin, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-vue-next'
+import { Plus, FileText, Activity, ShieldCheck, X, CheckCircle, XCircle, Clock, Wallet, Send, CreditCard, Eye, EyeOff, Download, ArrowLeft, CalendarDays, Sparkles, MapPin, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-vue-next'
 
 const store = useReimbursementStore()
 const auth = useAuthStore()
 const router = useRouter()
+const { addToast } = useToast()
 
 const rejectingId = ref(null)
 const rejectionComment = ref('')
@@ -26,6 +29,9 @@ const selectedReceipt = ref(null)
 const reviewerNotes = ref('')
 const pendingReceiptDecision = ref(null)
 const isReviewSubmitting = ref(false)
+const modalLoading = ref(false)
+const confirmPassword = ref('')
+const showConfirmPassword = ref(false)
 const searchQuery = ref('')
 const activeStatus = ref('All')
 const activeCategory = ref('All')
@@ -169,6 +175,7 @@ const tableRows = computed(() =>
     receiptQuantity: Array.isArray(item.receipts) ? item.receipts.length : (Number(item.receipts) || 0),
     quantityReport: 1,
     dateSubmitted: item.date,
+    submittedBy: item.user?.name || item.submitted_by_name || 'Employee',
     displayStatus: normalizeStatus(item.status),
     displayStatusLabel: statusLabel(item.status),
   }))
@@ -226,7 +233,7 @@ const receiptTemplates = [
   },
 ]
 
-const activeReceiptItems = computed(() => (viewingRecord.value ? getReceiptItems(viewingRecord.value) : []))
+const activeReceiptItems = computed(() => viewingRecord.value?.receipts || [])
 
 const filteredTableRows = computed(() => {
   let rows = tableRows.value
@@ -335,48 +342,33 @@ function closeDetails() {
 
 function viewReceiptDetails(receipt) {
   selectedReceipt.value = receipt
-  reviewerNotes.value = receipt.notes || ''
+  reviewerNotes.value = receipt.admin_notes || ''
   pendingReceiptDecision.value = null
   receiptDetailsOpen.value = true
 }
 
-function openDetails(row) {
-  viewingRecord.value = row
+async function openDetails(row) {
+  viewingRecord.value = { ...row, receipts: row.receipts || [] }
   selectedReceipt.value = null
-  reviewerNotes.value = row.reviewerNotes || ''
+  reviewerNotes.value = ''
   pendingReceiptDecision.value = null
   isReviewSubmitting.value = false
   receiptDetailsOpen.value = false
-}
+  modalLoading.value = true
 
-function getReceiptItems(record) {
-  const receiptCount = Array.isArray(record.receipts) ? record.receipts.length : Number(record.receipts)
-  const count = Number.isFinite(receiptCount) && receiptCount > 0 ? receiptCount : 1
-  const amount = Number(record.amount) || 0
-  const baseAmount = count > 0 ? amount / count : amount
-
-  return Array.from({ length: count }, (_, index) => {
-    const template = receiptTemplates[index % receiptTemplates.length]
-    const id = `${record.id}-RCPT-${String(index + 1).padStart(2, '0')}`
-    const review = record.receiptReviews?.[id] || {}
-    const receiptAmount = index === count - 1
-      ? amount - (Math.round(baseAmount * 100) / 100) * (count - 1)
-      : Math.round(baseAmount * 100) / 100
-
-    return {
-      id,
-      merchantName: template.merchantName,
-      location: template.location,
-      category: record.category || template.category,
-      invoiceNumber: `${template.invoicePrefix}-${new Date(record.date || Date.now()).getFullYear()}-${String(index + 2345).padStart(6, '0')}`,
-      transactionDate: template.transactionDate,
-      amount: receiptAmount,
-      items: template.items,
-      status: review.status || 'pending',
-      notes: review.notes || '',
-      reviewedAt: review.reviewedAt || '',
-    }
-  })
+  try {
+    const response = await apiFetch(`/api/serms/reimbursements/${row.id}`)
+    if (!response.ok) throw new Error('Failed to fetch reimbursement details')
+    const fullRecord = await response.json()
+    viewingRecord.value = fullRecord
+    reviewerNotes.value = fullRecord.admin_notes || ''
+  } catch (error) {
+    addToast({ message: 'Failed to load reimbursement details', type: 'error' })
+    console.error('Failed to load reimbursement details:', error)
+    viewingRecord.value = null
+  } finally {
+    modalLoading.value = false
+  }
 }
 
 function requestReceiptDecision(receipt, action) {
@@ -400,57 +392,122 @@ async function confirmReceiptDecision() {
   isReviewSubmitting.value = true
   const { receiptId, action } = pendingReceiptDecision.value
   const status = action === 'Approve' ? 'approved' : 'rejected'
-  const review = {
-    status,
-    notes: reviewerNotes.value,
-    reviewedAt: new Date().toISOString(),
-  }
-
-  await store.setReceiptDecision(viewingRecord.value.id, receiptId, review)
-  viewingRecord.value.receiptReviews = {
-    ...(viewingRecord.value.receiptReviews || {}),
-    [receiptId]: review,
-  }
-  if (selectedReceipt.value?.id === receiptId) {
-    selectedReceipt.value = {
-      ...selectedReceipt.value,
-      ...review,
+  
+  try {
+    const res = await apiFetch(`/api/serms/reimbursements/receipts/${receiptId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        status,
+        admin_notes: reviewerNotes.value,
+      })
+    })
+    
+    if (!res.ok) throw new Error('Failed to update receipt decision')
+    const json = await res.json()
+    const updatedReceipt = json.data
+    
+    // Update the receipt in viewingRecord
+    const rIndex = viewingRecord.value.receipts.findIndex(r => r.id === receiptId)
+    if (rIndex > -1) {
+      viewingRecord.value.receipts[rIndex] = updatedReceipt
     }
+    
+    // If the selected receipt is the one that got updated, update it too
+    if (selectedReceipt.value?.id === receiptId) {
+      selectedReceipt.value = {
+        ...selectedReceipt.value,
+        ...updatedReceipt
+      }
+    }
+    
+    // Refetch reimbursement to reflect automatic status updates
+    const refetchRes = await apiFetch(`/api/serms/reimbursements/${viewingRecord.value.id}`)
+    if (refetchRes.ok) {
+      const fullRecord = await refetchRes.json()
+      viewingRecord.value = fullRecord
+      
+      // Update in store.items
+      const itemIndex = store.items.findIndex(i => i.id === fullRecord.id)
+      if (itemIndex > -1) {
+        store.items[itemIndex] = fullRecord
+      }
+    }
+    
+    addToast({ message: `Receipt ${status === 'approved' ? 'approved' : 'rejected'} successfully`, type: 'success' })
+    pendingReceiptDecision.value = null
+  } catch (error) {
+    addToast({ message: 'Failed to update receipt decision', type: 'error' })
+    console.error(error)
+  } finally {
+    isReviewSubmitting.value = false
   }
-  pendingReceiptDecision.value = null
-  isReviewSubmitting.value = false
 }
 
 onMounted(() => store.fetchAll())
 
 function openApproveModal(id) {
   approvingId.value = id
+  confirmPassword.value = ''
+  showConfirmPassword.value = false
 }
 
 function cancelApprove() {
   approvingId.value = null
+  confirmPassword.value = ''
+  showConfirmPassword.value = false
 }
 
 async function confirmApprove() {
   if (!approvingId.value) return
-  await store.approve(approvingId.value)
-  cancelApprove()
+
+  isReviewSubmitting.value = true
+  try {
+    const updated = await store.approve(approvingId.value, confirmPassword.value)
+    if (viewingRecord.value?.id === approvingId.value) {
+      viewingRecord.value = updated
+    }
+    addToast({ message: 'Reimbursement approved!', type: 'success' })
+    cancelApprove()
+  } catch (e) {
+    addToast({ message: e.message || 'Error approving reimbursement', type: 'error' })
+  } finally {
+    isReviewSubmitting.value = false
+  }
 }
 
 function openRejectModal(id) {
   rejectingId.value = id
   rejectionComment.value = ''
+  confirmPassword.value = ''
+  showConfirmPassword.value = false
 }
 
 function cancelReject() {
   rejectingId.value = null
   rejectionComment.value = ''
+  confirmPassword.value = ''
+  showConfirmPassword.value = false
 }
 
 async function confirmReject() {
-  if (rejectionComment.value.length < 10) return
-  await store.reject(rejectingId.value)
-  cancelReject()
+  if (rejectionComment.value.length < 10) {
+    addToast({ message: 'Rejection comment must be at least 10 characters.', type: 'error' })
+    return
+  }
+
+  isReviewSubmitting.value = true
+  try {
+    const updated = await store.reject(rejectingId.value, rejectionComment.value, confirmPassword.value)
+    if (viewingRecord.value?.id === rejectingId.value) {
+      viewingRecord.value = updated
+    }
+    addToast({ message: 'Reimbursement rejected.', type: 'success' })
+    cancelReject()
+  } catch (e) {
+    addToast({ message: e.message || 'Error rejecting reimbursement', type: 'error' })
+  } finally {
+    isReviewSubmitting.value = false
+  }
 }
 </script>
 
@@ -635,7 +692,7 @@ async function confirmReject() {
                   <button
                     class="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-accent/15 bg-accent/5 px-3 text-xs font-bold text-accent transition-all duration-200 ease-out hover:bg-accent/10 hover:scale-[1.02] focus:outline-none"
                     title="View reimbursement"
-                    @click="router.push(`/reimbursements/${row.id}`)"
+                    @click="openDetails(row)"
                   >
                     <Eye class="h-3.5 w-3.5" />
                     <span>View</span>
@@ -655,5 +712,568 @@ async function confirmReject() {
       />
     </section>
 
+    <!-- ── Record Detail Panel (Modal) ── -->
+    <Transition name="modal">
+      <div
+        v-if="viewingRecord && !receiptDetailsOpen"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-[1px]"
+      >
+        <div class="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl">
+          <div class="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+            <div>
+              <h3 class="font-heading text-base font-bold text-slate-900">
+                Reimbursement Details
+              </h3>
+              <p class="text-xs text-slate-400 mt-0.5">Ref #{{ viewingRecord.id }}</p>
+            </div>
+            <button
+              class="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-danger"
+              title="Close details"
+              @click="closeDetails"
+            >
+              <X class="h-5 w-5" />
+            </button>
+          </div>
+
+          <div class="flex-1 overflow-y-auto p-6 scrollbar-thin">
+            <div v-if="modalLoading" class="flex flex-col items-center justify-center py-20">
+              <Activity class="w-8 h-8 animate-spin text-accent" />
+              <p class="text-xs text-slate-400 mt-2">Loading details...</p>
+            </div>
+            <div v-else>
+              <div class="mb-8 grid grid-cols-1 gap-x-5 gap-y-6 sm:grid-cols-2">
+                <div class="flex flex-col gap-1">
+                  <span class="kpi-label text-slate-400">Status</span>
+                  <div>
+                    <span
+                      :class="[
+                        'inline-flex rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide',
+                        statusClass(viewingRecord.status),
+                      ]"
+                    >
+                      {{ statusLabel(viewingRecord.status).toUpperCase() }}
+                    </span>
+                  </div>
+                </div>
+                <div class="flex flex-col gap-1">
+                  <span class="kpi-label text-slate-400">Submitted By</span>
+                  <span class="text-sm font-semibold text-slate-700">{{ viewingRecord.user?.name || viewingRecord.submitted_by_name || 'Employee' }}</span>
+                </div>
+                <div class="flex flex-col gap-1">
+                  <span class="kpi-label text-slate-400">Cutoff Period</span>
+                  <span class="text-sm font-semibold text-slate-700">{{ viewingRecord.cutoff_period || getCutoffPeriod(viewingRecord.date) }}</span>
+                </div>
+                <div class="flex flex-col gap-1">
+                  <span class="kpi-label text-slate-400">Total Amount</span>
+                  <span class="font-heading text-xl font-bold text-primary">{{ formatPeso(viewingRecord.amount || 0) }}</span>
+                </div>
+                <div class="flex flex-col gap-1 sm:col-span-2">
+                  <span class="kpi-label text-slate-400">Description</span>
+                  <span class="text-sm font-semibold text-slate-700 leading-relaxed">{{ viewingRecord.description }}</span>
+                </div>
+              </div>
+
+              <!-- Report File Attachment -->
+              <div v-if="viewingRecord.report_url || viewingRecord.report_file_path" class="mb-8">
+                <h4 class="mb-2 text-xs font-semibold text-slate-500">Report Attachment</h4>
+                <div class="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 transition-colors hover:border-slate-300">
+                  <div class="flex min-w-0 items-center gap-3">
+                    <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-red-50 text-red-600">
+                      <FileText class="h-5 w-5" />
+                    </span>
+                    <span class="truncate text-sm font-semibold text-slate-700">Reimbursement_Report.pdf</span>
+                  </div>
+                  <a
+                    :href="viewingRecord.report_url"
+                    target="_blank"
+                    class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-accent transition-colors hover:bg-accent-50"
+                    title="Download report"
+                  >
+                    <Download class="h-4 w-4" />
+                  </a>
+                </div>
+              </div>
+
+              <!-- Receipts Section -->
+              <div>
+                <div class="mb-4 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-2">
+                  <h4 class="font-heading text-base font-bold text-slate-900">Receipts ({{ activeReceiptItems.length }})</h4>
+                  <span class="text-xs font-medium text-slate-400">Each receipt is reviewed and decided individually</span>
+                </div>
+
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div
+                    v-for="receipt in activeReceiptItems"
+                    :key="receipt.id"
+                    class="overflow-hidden rounded-xl border border-slate-200 bg-white transition-shadow hover:shadow-md flex flex-col"
+                  >
+                    <div class="aspect-[4/3] overflow-hidden bg-slate-100 flex items-center justify-center relative group">
+                      <a v-if="receipt.file_url" :href="receipt.file_url" target="_blank" class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/50 text-white font-bold transition-all z-10 text-xs">View Full Size</a>
+                      <img
+                        v-if="receipt.file_url"
+                        :src="receipt.file_url"
+                        alt="Scanned receipt"
+                        class="h-full w-full object-cover object-top transition-transform duration-500 hover:scale-105"
+                      />
+                      <div v-else class="flex flex-col items-center justify-center text-slate-300 py-10">
+                        <FileText class="w-8 h-8" />
+                      </div>
+                    </div>
+                    <div class="flex flex-col gap-3 p-4 flex-1 justify-between">
+                      <div>
+                        <div class="flex items-start justify-between gap-3 mb-1">
+                          <h5 class="truncate font-heading text-sm font-bold text-slate-900">{{ receipt.vendor_name || 'Receipt' }}</h5>
+                          <span
+                            :class="[
+                              'shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide',
+                              statusClass(receipt.status),
+                            ]"
+                          >
+                            {{ statusLabel(receipt.status) }}
+                          </span>
+                        </div>
+                        <div class="flex items-center gap-1.5 text-xs text-slate-400 mb-2">
+                          <span>Invoice: {{ receipt.invoice_number || '--' }}</span>
+                        </div>
+                      </div>
+                      <div class="flex items-center justify-between gap-3 pt-2 border-t border-slate-50">
+                        <span class="inline-flex rounded-md bg-accent-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-accent">{{ receipt.category || 'Expense' }}</span>
+                        <span class="font-heading text-sm font-bold text-primary">{{ formatPeso(receipt.total_amount || 0) }}</span>
+                      </div>
+                      <button
+                        class="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-accent-50 px-3 py-2 text-xs font-bold text-accent transition-colors hover:bg-accent-100"
+                        @click="viewReceiptDetails(receipt)"
+                      >
+                        <Eye class="h-3.5 w-3.5" />
+                        Details
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Admin Final Actions Footer -->
+          <div
+            v-if="auth.isAdmin && viewingRecord && viewingRecord.status === 'submitted'"
+            class="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-3"
+          >
+            <button
+              class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 text-sm font-bold text-red-600 transition-colors hover:bg-red-100"
+              type="button"
+              @click="openRejectModal(viewingRecord.id)"
+            >
+              <XCircle class="w-4 h-4" /> Reject Claim
+            </button>
+            <button
+              class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-bold text-white transition-colors hover:bg-accent/90"
+              type="button"
+              @click="openApproveModal(viewingRecord.id)"
+            >
+              <CheckCircle class="w-4 h-4" /> Approve Claim
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- ── Single Receipt Details Modal ── -->
+    <Transition name="modal">
+      <div
+        v-if="viewingRecord && receiptDetailsOpen"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-[1px]"
+      >
+        <div class="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl">
+          <header class="flex items-center justify-between border-b border-primary/10 bg-primary px-5 py-4 text-white">
+            <div class="flex min-w-0 items-center gap-4">
+              <button
+                class="inline-flex items-center gap-2 rounded-md px-2 py-1 text-xs font-bold text-white/90 transition-colors hover:bg-white/10"
+                @click="receiptDetailsOpen = false"
+              >
+                <ArrowLeft class="h-4 w-4" />
+                Back
+              </button>
+              <div class="h-6 w-px bg-white/20" />
+              <div class="flex min-w-0 items-center gap-2">
+                <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10">
+                  <CalendarDays class="h-4 w-4" />
+                </span>
+                <div class="min-w-0">
+                  <h3 class="truncate font-heading text-lg font-bold text-white">
+                    Receipt Details
+                  </h3>
+                  <p class="truncate text-xs font-semibold text-white/65">
+                    AI-scanned reimbursement receipt extraction
+                  </p>
+                </div>
+              </div>
+            </div>
+            <button
+              class="inline-flex h-9 w-9 items-center justify-center rounded-full text-white/85 transition-colors hover:bg-white/10 hover:text-white"
+              title="Close receipt details"
+              @click="closeDetails"
+            >
+              <X class="h-5 w-5" />
+            </button>
+          </header>
+
+          <div class="flex-1 overflow-y-auto bg-slate-50 p-5 scrollbar-thin">
+            <div class="mb-4 flex flex-col gap-3 rounded-lg border border-accent/20 bg-accent-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div class="flex items-center gap-3">
+                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-accent shadow-sm">
+                  <Sparkles class="h-4 w-4" />
+                </span>
+                <div>
+                  <p class="text-xs font-bold uppercase tracking-[0.12em] text-accent">AI Scanned</p>
+                  <p class="text-sm font-semibold text-primary">Details automatically extracted from the uploaded receipt.</p>
+                </div>
+              </div>
+              <span class="inline-flex w-fit items-center gap-1 rounded-full bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-accent shadow-sm">
+                <CheckCircle class="h-3.5 w-3.5" />
+                Verified fields
+              </span>
+            </div>
+
+            <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+              <div class="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)]">
+                <aside class="border-b border-slate-200 bg-slate-100/70 p-5 lg:border-b-0 lg:border-r flex flex-col">
+                  <div class="mb-4 flex items-center justify-between gap-3">
+                    <div>
+                      <p class="kpi-label text-slate-400">Receipt Scanned Image</p>
+                      <h4 class="mt-1 font-heading text-base font-bold text-slate-900">{{ selectedReceipt?.vendor_name || 'Receipt' }}</h4>
+                    </div>
+                    <span class="inline-flex rounded-md bg-accent-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-accent">
+                      {{ selectedReceipt?.category || 'Expense' }}
+                    </span>
+                  </div>
+                  <div class="overflow-hidden rounded-lg border border-slate-200 shadow-sm flex items-center justify-center bg-slate-50 flex-1 aspect-square lg:aspect-auto">
+                    <img
+                      v-if="selectedReceipt?.file_url"
+                      :src="selectedReceipt.file_url"
+                      alt="Scanned receipt"
+                      class="h-full w-full object-contain max-h-[500px]"
+                    />
+                    <div v-else class="flex flex-col items-center justify-center p-8 text-slate-300">
+                      <FileText class="w-12 h-12 stroke-1" />
+                      <span class="text-xs mt-2">No image attached</span>
+                    </div>
+                  </div>
+                  <a
+                    v-if="selectedReceipt?.file_url"
+                    :href="selectedReceipt.file_url"
+                    target="_blank"
+                    class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-accent/20 bg-white px-3 py-2.5 text-xs font-bold text-accent transition-colors hover:bg-accent-50"
+                  >
+                    <Download class="h-4 w-4" />
+                    Download Receipt
+                  </a>
+                </aside>
+
+                <section class="space-y-5 p-5">
+                  <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <label class="space-y-1">
+                      <span class="input-label">Invoice Number</span>
+                      <input class="input bg-slate-50" readonly :value="selectedReceipt?.invoice_number || '--'" />
+                    </label>
+                    <label class="space-y-1">
+                      <span class="input-label">Transaction Date</span>
+                      <span class="relative block">
+                        <input class="input pr-10 bg-slate-50" readonly :value="selectedReceipt?.transaction_date ? new Date(selectedReceipt.transaction_date).toLocaleDateString() : '--'" />
+                        <CalendarDays class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                      </span>
+                    </label>
+                    <label class="space-y-1">
+                      <span class="flex items-center justify-between gap-2">
+                        <span class="input-label">TIN Number</span>
+                        <span class="inline-flex items-center gap-1 rounded-full bg-accent-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent">
+                          <Sparkles class="h-3 w-3" />
+                          AI Read
+                        </span>
+                      </span>
+                      <input class="input bg-slate-50" readonly :value="selectedReceipt?.tin || '--'" />
+                    </label>
+                    <label class="space-y-1">
+                      <span class="input-label">Merchant Name</span>
+                      <input class="input bg-slate-50" readonly :value="selectedReceipt?.vendor_name || '--'" />
+                    </label>
+                    <label class="space-y-1 md:col-span-2">
+                      <span class="flex items-center justify-between gap-2">
+                        <span class="input-label">VAT Classification (AI Auto-Detected)</span>
+                        <span class="inline-flex items-center gap-1 rounded-full bg-accent-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent">
+                          <Sparkles class="h-3 w-3" />
+                          AI Detected
+                        </span>
+                      </span>
+                      <input class="input bg-slate-50" readonly :value="selectedReceipt?.vat_classification ? selectedReceipt.vat_classification.toUpperCase() : 'N/A'" />
+                    </label>
+                  </div>
+
+                  <!-- Order Items table -->
+                  <div class="overflow-hidden rounded-lg border border-slate-200 bg-white" v-if="selectedReceipt?.items && selectedReceipt.items.length > 0">
+                    <div class="border-b border-slate-200 bg-slate-50 px-4 py-3">
+                      <h4 class="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">Order Items</h4>
+                    </div>
+                    <table class="w-full border-collapse text-left text-sm">
+                      <thead>
+                        <tr class="border-b border-slate-100 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-400">
+                          <th class="px-4 py-3">Items</th>
+                          <th class="px-4 py-3 text-center">Qty</th>
+                          <th class="px-4 py-3 text-right">Price</th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-slate-100">
+                        <tr v-for="item in selectedReceipt.items" :key="item.name || item.id">
+                          <td class="px-4 py-3 font-semibold text-slate-700">{{ item.name }}</td>
+                          <td class="px-4 py-3 text-center text-slate-500">{{ item.quantity }}</td>
+                          <td class="px-4 py-3 text-right font-semibold text-slate-700">{{ formatPeso(item.price) }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div class="grid grid-cols-1 gap-3 border-t border-slate-200 pt-4 sm:grid-cols-3">
+                    <label class="space-y-1">
+                      <span class="input-label">Subtotal</span>
+                      <input class="input font-semibold bg-slate-50" readonly :value="selectedReceipt?.total_amount ? formatPeso(Number(selectedReceipt.total_amount) - Number(selectedReceipt.vat_amount || 0)) : '--'" />
+                    </label>
+                    <label class="space-y-1">
+                      <span class="input-label">Tax (VAT)</span>
+                      <input class="input font-semibold bg-slate-50" readonly :value="selectedReceipt?.vat_amount ? formatPeso(selectedReceipt.vat_amount) : '--'" />
+                    </label>
+                    <div class="rounded-lg border border-accent/20 bg-accent-50 p-3">
+                      <p class="input-label text-accent">Orders Total</p>
+                      <p class="mt-1 font-heading text-xl font-bold text-primary">{{ selectedReceipt?.total_amount ? formatPeso(selectedReceipt.total_amount) : '--' }}</p>
+                    </div>
+                  </div>
+
+                  <footer class="flex items-center gap-2 text-xs font-semibold text-slate-400">
+                    <Clock class="h-4 w-4" />
+                    Uploaded receipt Ref #{{ selectedReceipt?.id }}
+                  </footer>
+                </section>
+              </div>
+            </div>
+          </div>
+
+          <!-- Admin Receipt Decision Actions -->
+          <div
+            v-if="auth.isAdmin && selectedReceipt && (selectedReceipt.status === 'processing' || selectedReceipt.status === 'pending' || selectedReceipt.status === 'submitted')"
+            class="border-t border-slate-200 bg-white px-5 py-4"
+          >
+            <div class="mb-4">
+              <label class="input-label mb-1.5 block">Reviewer Notes (Optional)</label>
+              <textarea
+                v-model="reviewerNotes"
+                class="input min-h-20 resize-none bg-slate-50"
+                placeholder="Add notes explaining the decision..."
+              />
+            </div>
+            <div
+              v-if="isReceiptDecisionPending(selectedReceipt)"
+              class="flex flex-col gap-3 rounded-lg border border-accent/20 bg-accent-50 p-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <p class="text-sm font-semibold text-primary">
+                Are you sure you want to {{ pendingReceiptDecision.action }} this receipt?
+              </p>
+              <div class="flex shrink-0 items-center gap-2">
+                <button
+                  class="inline-flex min-h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50"
+                  type="button"
+                  :disabled="isReviewSubmitting"
+                  @click="cancelReceiptDecision"
+                >
+                  Cancel
+                </button>
+                <button
+                  class="inline-flex min-h-9 items-center justify-center rounded-lg bg-accent px-4 text-xs font-bold text-white transition-colors hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-60"
+                  type="button"
+                  :disabled="isReviewSubmitting"
+                  @click="confirmReceiptDecision"
+                >
+                  Confirm
+                </button>
+              </div>
+            </div>
+            <div v-else class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <button
+                class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 text-sm font-bold text-red-700 transition-colors hover:bg-red-100"
+                type="button"
+                @click="requestReceiptDecision(selectedReceipt, 'Reject')"
+              >
+                <XCircle class="h-4 w-4" />
+                Reject
+              </button>
+              <button
+                class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-bold text-white transition-colors hover:bg-accent/90"
+                type="button"
+                @click="requestReceiptDecision(selectedReceipt, 'Approve')"
+              >
+                <CheckCircle class="h-4 w-4" />
+                Approve
+              </button>
+            </div>
+          </div>
+          <div v-else-if="selectedReceipt?.admin_notes" class="border-t border-slate-200 bg-slate-50 px-5 py-4">
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Reviewer Notes</p>
+            <p class="text-sm font-semibold text-slate-700 mt-1">{{ selectedReceipt.admin_notes }}</p>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Approve Confirmation Modal -->
+    <BaseModal
+      :isOpen="!!approvingId"
+      @close="cancelApprove"
+      contentClass="!p-0"
+    >
+      <div class="border-b border-slate-200 bg-slate-50/80 px-5 py-4 flex items-center gap-3">
+        <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+          <CheckCircle class="w-5 h-5" />
+        </div>
+        <h3 class="font-heading text-sm font-bold text-slate-800">
+          Approve Reimbursement Claim
+        </h3>
+      </div>
+      <div class="p-5 flex flex-col gap-4">
+        <p class="text-sm font-medium text-slate-600 leading-relaxed">
+          Are you sure you want to approve this reimbursement claim? This action will set the status to approved. Please verify your identity by entering your password.
+        </p>
+        <div class="input-wrapper">
+          <label class="input-label mb-1 block">Password <span class="text-danger">*</span></label>
+          <div class="relative">
+            <input
+              :type="showConfirmPassword ? 'text' : 'password'"
+              class="input w-full pr-10"
+              v-model="confirmPassword"
+              placeholder="Enter your current password"
+              @keyup.enter="confirmApprove"
+            />
+            <button
+              type="button"
+              @click="showConfirmPassword = !showConfirmPassword"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+              tabindex="-1"
+            >
+              <Eye v-if="!showConfirmPassword" class="w-4 h-4" />
+              <EyeOff v-else class="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+        <div class="flex items-center justify-end gap-2 mt-2">
+          <button
+            class="inline-flex min-h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50"
+            type="button"
+            @click="cancelApprove"
+          >
+            Cancel
+          </button>
+          <button
+            class="inline-flex min-h-9 items-center justify-center rounded-lg bg-emerald-600 px-4 text-xs font-bold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+            type="button"
+            :disabled="!confirmPassword || isReviewSubmitting"
+            @click="confirmApprove"
+          >
+            <Activity v-if="isReviewSubmitting" class="w-3.5 h-3.5 animate-spin mr-1.5" />
+            Confirm Approve
+          </button>
+        </div>
+      </div>
+    </BaseModal>
+
+    <!-- Reject Confirmation Modal -->
+    <BaseModal
+      :isOpen="!!rejectingId"
+      @close="cancelReject"
+      contentClass="!p-0"
+    >
+      <div class="border-b border-slate-200 bg-slate-50/80 px-5 py-4 flex items-center gap-3">
+        <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 text-red-600">
+          <XCircle class="w-5 h-5" />
+        </div>
+        <h3 class="font-heading text-sm font-bold text-slate-800">
+          Reject Reimbursement Claim
+        </h3>
+      </div>
+      <div class="p-5 flex flex-col gap-4">
+        <p class="text-sm font-medium text-slate-600 leading-relaxed">
+          Please provide a reason for rejecting this claim and enter your current password to authorize this action.
+        </p>
+        
+        <div class="input-wrapper">
+          <label class="input-label mb-1 block">Rejection Comment <span class="text-danger">*</span></label>
+          <textarea
+            v-model="rejectionComment"
+            rows="3"
+            class="input !font-sans resize-none"
+            placeholder="Explain the reason for rejecting this claim (minimum 10 characters)..."
+          />
+          <div
+            class="text-[10px] font-bold uppercase tracking-widest flex justify-between mt-1"
+            :class="rejectionComment.length < 10 ? 'text-danger' : 'text-accent'"
+          >
+            <span>Requirement: >= 10 Chars</span>
+            <span>{{ rejectionComment.length }} / 10+</span>
+          </div>
+        </div>
+
+        <div class="input-wrapper">
+          <label class="input-label mb-1 block">Password <span class="text-danger">*</span></label>
+          <div class="relative">
+            <input
+              :type="showConfirmPassword ? 'text' : 'password'"
+              class="input w-full pr-10"
+              v-model="confirmPassword"
+              placeholder="Enter your current password"
+              @keyup.enter="confirmReject"
+            />
+            <button
+              type="button"
+              @click="showConfirmPassword = !showConfirmPassword"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+              tabindex="-1"
+            >
+              <Eye v-if="!showConfirmPassword" class="w-4 h-4" />
+              <EyeOff v-else class="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 mt-2">
+          <button
+            class="inline-flex min-h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50"
+            type="button"
+            @click="cancelReject"
+          >
+            Cancel
+          </button>
+          <button
+            class="inline-flex min-h-9 items-center justify-center rounded-lg bg-red-600 px-4 text-xs font-bold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+            type="button"
+            :disabled="rejectionComment.length < 10 || !confirmPassword || isReviewSubmitting"
+            @click="confirmReject"
+          >
+            <Activity v-if="isReviewSubmitting" class="w-3.5 h-3.5 animate-spin mr-1.5" />
+            Confirm Reject
+          </button>
+        </div>
+      </div>
+    </BaseModal>
+
   </div>
 </template>
+
+<style scoped>
+.modal-enter-active { transition: opacity 0.2s ease-out; }
+.modal-leave-active { transition: opacity 0.15s ease-in; }
+.modal-enter-from, .modal-leave-to { opacity: 0; }
+
+.modal-enter-active > div {
+  animation: modal-pop 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes modal-pop {
+  from { transform: scale(0.95) translateY(8px); opacity: 0; }
+  to   { transform: scale(1) translateY(0); opacity: 1; }
+}
+</style>

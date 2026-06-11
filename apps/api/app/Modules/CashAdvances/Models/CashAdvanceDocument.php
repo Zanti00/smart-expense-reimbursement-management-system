@@ -17,7 +17,14 @@ class CashAdvanceDocument extends Model
 
     public function getFileUrlAttribute()
     {
-        return \Illuminate\Support\Facades\Storage::disk('supabase')->url($this->file_path);
+        if (!$this->file_path) {
+            return null;
+        }
+        $baseUrl = config('filesystems.disks.supabase.url');
+        if ($baseUrl) {
+            return rtrim($baseUrl, '/') . '/' . ltrim($this->file_path, '/');
+        }
+        return null;
     }
 
     public function cashAdvance()

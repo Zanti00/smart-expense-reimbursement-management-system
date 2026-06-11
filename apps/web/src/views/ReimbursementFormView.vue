@@ -184,7 +184,7 @@ function mockReceiptAmount(index) {
 
 // ── Validation ──────────────────────────────────────────────────────────
 const canProceed = computed(
-  () => receipts.value.length >= 1 && cutoffPeriod.value && reportFile.value,
+  () => receipts.value.length >= 1 && cutoffPeriod.value && reportFile.value && receipts.value.every(r => !r.isUploading),
 );
 
 // ── Submit ──────────────────────────────────────────────────────────────

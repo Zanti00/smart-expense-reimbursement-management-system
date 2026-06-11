@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Modules\Reimbursements\Models\Reimbursement;
 use App\Modules\Reimbursements\Models\Receipt;
+use App\Modules\AuditLogs\Services\AuditLogService;
+use App\Modules\Shared\Services\PasswordVerificationService;
 
 class ReimbursementController extends Controller
 {
@@ -97,7 +99,7 @@ class ReimbursementController extends Controller
     public function show(Request $request, $id)
     {
         $user = $request->user();
-        $reimbursement = Reimbursement::with(['receipts', 'user'])->findOrFail($id);
+        $reimbursement = Reimbursement::with(['receipts.items', 'user'])->findOrFail($id);
 
         if (!$request->user()->can('serms.reimbursements.manage') && $reimbursement->user_id !== $user->id) {
             return response()->json(['message' => 'Forbidden.'], 403);
@@ -117,6 +119,20 @@ class ReimbursementController extends Controller
             return response()->json(['message' => 'Unauthorized. Only admins or approvers can perform this action.'], 403);
         }
 
+        $validated = $request->validate([
+            'password' => 'required|string',
+        ]);
+
+        // Verify password against external auth service
+        if (!PasswordVerificationService::verify($request, $validated['password'])) {
+            return response()->json([
+                'message' => 'The given data was invalid.',
+                'errors' => [
+                    'password' => ['Invalid password. Please try again.']
+                ]
+            ], 422);
+        }
+
         $reimbursement = Reimbursement::findOrFail($id);
 
         // Self-approval check
@@ -124,7 +140,21 @@ class ReimbursementController extends Controller
             return response()->json(['message' => 'Conflict. Self-approval is strictly prohibited.'], 403);
         }
 
+        $beforeState = $reimbursement->toArray();
         $reimbursement->update(['status' => 'approved']);
+        $afterState = $reimbursement->toArray();
+
+        // Immutable Audit Log
+        AuditLogService::log(
+            actorId: $user->id,
+            actorRole: $user->role,
+            actionType: 'CLAIM_APPROVED',
+            entityType: 'reimbursement',
+            entityId: $reimbursement->id,
+            beforeState: $beforeState,
+            afterState: $afterState,
+            ipAddress: $request->ip()
+        );
 
         return response()->json([
             'message' => 'Reimbursement request approved.',
@@ -145,7 +175,18 @@ class ReimbursementController extends Controller
 
         $validated = $request->validate([
             'comment' => 'required|string|min:5',
+            'password' => 'required|string',
         ]);
+
+        // Verify password against external auth service
+        if (!PasswordVerificationService::verify($request, $validated['password'])) {
+            return response()->json([
+                'message' => 'The given data was invalid.',
+                'errors' => [
+                    'password' => ['Invalid password. Please try again.']
+                ]
+            ], 422);
+        }
 
         $reimbursement = Reimbursement::findOrFail($id);
 
@@ -154,10 +195,24 @@ class ReimbursementController extends Controller
             return response()->json(['message' => 'Conflict. Self-rejection/approval is prohibited.'], 403);
         }
 
+        $beforeState = $reimbursement->toArray();
         $reimbursement->update([
             'status' => 'rejected',
             'rejection_comment' => $validated['comment'],
         ]);
+        $afterState = $reimbursement->toArray();
+
+        // Immutable Audit Log
+        AuditLogService::log(
+            actorId: $user->id,
+            actorRole: $user->role,
+            actionType: 'CLAIM_REJECTED',
+            entityType: 'reimbursement',
+            entityId: $reimbursement->id,
+            beforeState: $beforeState,
+            afterState: $afterState,
+            ipAddress: $request->ip()
+        );
 
         return response()->json([
             'message' => 'Reimbursement request rejected.',

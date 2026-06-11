@@ -56,7 +56,12 @@ class ReceiptFilteringTest extends TestCase
             'avatar' => 'JS',
         ]);
 
-        // 4. Seed 5 test receipts with varying categories, dates, amounts, and uploaders
+        // 4. Create and seed expense categories
+        $mealsCategory = \App\Modules\Reimbursements\Models\ExpenseCategory::create(['name' => 'Meals']);
+        $travelCategory = \App\Modules\Reimbursements\Models\ExpenseCategory::create(['name' => 'Travel']);
+        $suppliesCategory = \App\Modules\Reimbursements\Models\ExpenseCategory::create(['name' => 'Office Supplies']);
+
+        // 5. Seed 5 test receipts with varying categories, dates, amounts, and uploaders
         // Receipt 1: Employee, Meals, 1500.00, 2026-05-10
         $this->receipt1 = Receipt::create([
             'uploaded_by' => $this->employee->id,
@@ -65,7 +70,7 @@ class ReceiptFilteringTest extends TestCase
             'file_type' => 'png',
             'file_size_bytes' => 100000,
             'vendor_name' => 'Restaurant A',
-            'category' => 'Meals',
+            'expense_category_id' => $mealsCategory->id,
             'total_amount' => 1500.00,
             'transaction_date' => '2026-05-10',
         ]);
@@ -78,7 +83,7 @@ class ReceiptFilteringTest extends TestCase
             'file_type' => 'png',
             'file_size_bytes' => 100000,
             'vendor_name' => 'Taxi B',
-            'category' => 'Travel',
+            'expense_category_id' => $travelCategory->id,
             'total_amount' => 500.00,
             'transaction_date' => '2026-05-15',
         ]);
@@ -91,7 +96,7 @@ class ReceiptFilteringTest extends TestCase
             'file_type' => 'png',
             'file_size_bytes' => 100000,
             'vendor_name' => 'Catering C',
-            'category' => 'Meals',
+            'expense_category_id' => $mealsCategory->id,
             'total_amount' => 2500.00,
             'transaction_date' => '2026-05-20',
         ]);
@@ -104,7 +109,7 @@ class ReceiptFilteringTest extends TestCase
             'file_type' => 'png',
             'file_size_bytes' => 100000,
             'vendor_name' => 'Snacks D',
-            'category' => 'Meals',
+            'expense_category_id' => $mealsCategory->id,
             'total_amount' => 800.00,
             'transaction_date' => '2026-05-12',
         ]);
@@ -117,7 +122,7 @@ class ReceiptFilteringTest extends TestCase
             'file_type' => 'png',
             'file_size_bytes' => 100000,
             'vendor_name' => 'Computers E',
-            'category' => 'Office Supplies',
+            'expense_category_id' => $suppliesCategory->id,
             'total_amount' => 12000.00,
             'transaction_date' => '2026-05-18',
         ]);

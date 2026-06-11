@@ -75,16 +75,21 @@ export const useReimbursementStore = defineStore("reimbursement", () => {
     }
   }
 
-  async function approve(id) {
+  async function approve(id, password) {
     isLoading.value = true;
     try {
       const response = await apiFetch(
         `/api/serms/reimbursements/${id}/approve`,
         {
           method: "POST",
+          body: JSON.stringify({ password }),
         },
       );
-      if (!response.ok) throw new Error("Failed to approve");
+      if (!response.ok) {
+        const errJson = await response.json().catch(() => ({}));
+        const errMsg = errJson.errors?.password?.[0] || errJson.message || "Failed to approve";
+        throw new Error(errMsg);
+      }
       const json = await response.json();
       const index = items.value.findIndex((i) => i.id == id);
       if (index !== -1) items.value[index] = json.data;
@@ -98,17 +103,21 @@ export const useReimbursementStore = defineStore("reimbursement", () => {
     }
   }
 
-  async function reject(id, comment) {
+  async function reject(id, comment, password) {
     isLoading.value = true;
     try {
       const response = await apiFetch(
         `/api/serms/reimbursements/${id}/reject`,
         {
           method: "POST",
-          body: JSON.stringify({ comment }),
+          body: JSON.stringify({ comment, password }),
         },
       );
-      if (!response.ok) throw new Error("Failed to reject");
+      if (!response.ok) {
+        const errJson = await response.json().catch(() => ({}));
+        const errMsg = errJson.errors?.password?.[0] || errJson.message || "Failed to reject";
+        throw new Error(errMsg);
+      }
       const json = await response.json();
       const index = items.value.findIndex((i) => i.id == id);
       if (index !== -1) items.value[index] = json.data;

@@ -16,7 +16,7 @@ class ExpenseController extends Controller
     {
         $user = $request->user();
 
-        $query = Receipt::query()->whereNull('deleted_at');
+        $query = Receipt::with('category')->whereNull('deleted_at');
 
         // Standard employees can only view their own receipts
         if (!$request->user()->can('serms.reimbursements.manage')) {
@@ -31,7 +31,14 @@ class ExpenseController extends Controller
         }
 
         if ($request->filled('category')) {
-            $query->where('category', $request->query('category'));
+            $category = $request->query('category');
+            if (is_numeric($category)) {
+                $query->where('expense_category_id', $category);
+            } else {
+                $query->whereHas('category', function ($q) use ($category) {
+                    $q->where('name', $category);
+                });
+            }
         }
 
         if ($request->filled('min_amount')) {
@@ -75,6 +82,7 @@ class ExpenseController extends Controller
             'invoice_number' => 'nullable|string|max:100',
             'vat_classification' => 'nullable|in:vat,non-vat',
             'ocr_confidence_score' => 'nullable|numeric|min:0|max:100',
+            'expense_category_id' => 'nullable|exists:expense_categories,id',
             'category' => 'nullable|string|max:100',
         ]);
 
@@ -87,6 +95,14 @@ class ExpenseController extends Controller
             return response()->json([
                 'message' => 'Duplicate detected. A receipt with this file hash already exists.',
             ], 409);
+        }
+
+        $expenseCategoryId = $validated['expense_category_id'] ?? null;
+        if (isset($validated['category'])) {
+            if (!$expenseCategoryId) {
+                $category = \App\Modules\Reimbursements\Models\ExpenseCategory::firstOrCreate(['name' => $validated['category']]);
+                $expenseCategoryId = $category->id;
+            }
         }
 
         $receipt = Receipt::create([
@@ -104,8 +120,10 @@ class ExpenseController extends Controller
             'vat_classification' => $validated['vat_classification'] ?? null,
             'ocr_confidence_score' => $validated['ocr_confidence_score'] ?? null,
             'ocr_flagged' => ($validated['ocr_confidence_score'] ?? 100) < 80,
-            'category' => $validated['category'] ?? null,
+            'expense_category_id' => $expenseCategoryId,
         ]);
+
+        $receipt->load('category');
 
         return response()->json([
             'message' => 'Receipt stored successfully.',
@@ -119,7 +137,7 @@ class ExpenseController extends Controller
     public function show(Request $request, $id)
     {
         $user = $request->user();
-        $receipt = Receipt::with('uploader')->findOrFail($id);
+        $receipt = Receipt::with(['uploader', 'category'])->findOrFail($id);
 
         if (!$request->user()->can('serms.reimbursements.manage') && $receipt->uploaded_by !== $user->id) {
             return response()->json(['message' => 'Forbidden.'], 403);
@@ -148,8 +166,21 @@ class ExpenseController extends Controller
             'tin' => 'nullable|string|max:20',
             'invoice_number' => 'nullable|string|max:100',
             'vat_classification' => 'nullable|in:vat,non-vat',
+            'expense_category_id' => 'nullable|exists:expense_categories,id',
             'category' => 'nullable|string|max:100',
         ]);
+
+        $expenseCategoryId = $validated['expense_category_id'] ?? null;
+        if (isset($validated['category'])) {
+            if (!$expenseCategoryId) {
+                $category = \App\Modules\Reimbursements\Models\ExpenseCategory::firstOrCreate(['name' => $validated['category']]);
+                $expenseCategoryId = $category->id;
+            }
+            unset($validated['category']);
+        }
+        if ($expenseCategoryId) {
+            $validated['expense_category_id'] = $expenseCategoryId;
+        }
 
         $receipt->update($validated);
 

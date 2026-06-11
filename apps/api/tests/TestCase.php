@@ -8,16 +8,23 @@ abstract class TestCase extends BaseTestCase
 {
     protected static $mockPrivateKey;
     protected static $mockPublicKeyPath;
+    protected static $mockCnfPath;
 
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
         
+        self::$mockCnfPath = tempnam(sys_get_temp_dir(), 'openssl_cnf');
+        file_put_contents(self::$mockCnfPath, "[ req ]\ndistinguished_name = req_distinguished_name\n[ req_distinguished_name ]\n");
+
         $res = openssl_pkey_new([
             "private_key_bits" => 2048,
             "private_key_type" => OPENSSL_KEYTYPE_RSA,
+            "config" => self::$mockCnfPath,
         ]);
-        openssl_pkey_export($res, self::$mockPrivateKey);
+        openssl_pkey_export($res, self::$mockPrivateKey, null, [
+            "config" => self::$mockCnfPath,
+        ]);
         $details = openssl_pkey_get_details($res);
         
         self::$mockPublicKeyPath = tempnam(sys_get_temp_dir(), 'jwt_public_key');
@@ -28,6 +35,9 @@ abstract class TestCase extends BaseTestCase
     {
         if (file_exists(self::$mockPublicKeyPath)) {
             unlink(self::$mockPublicKeyPath);
+        }
+        if (file_exists(self::$mockCnfPath)) {
+            unlink(self::$mockCnfPath);
         }
         parent::tearDownAfterClass();
     }

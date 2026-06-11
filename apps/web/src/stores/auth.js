@@ -117,6 +117,40 @@ export const useAuthStore = defineStore("auth", () => {
     localStorage.removeItem("serms_token");
   }
 
+  /**
+   * Verify the user's password against the auth module.
+   *
+   * @param {string} password - The password to verify
+   * @returns {Promise<boolean>} - True if verified, false otherwise
+   */
+  async function verifyPassword(password) {
+    if (!token.value) {
+      return false;
+    }
+
+    try {
+      const response = await fetch(`${AUTH_MODULE_URL}/api/verify-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token.value}`,
+          "Accept": "application/json",
+        },
+        body: JSON.stringify({ password }),
+      });
+
+      if (!response.ok) {
+        return false;
+      }
+
+      const data = await response.json();
+      return data.valid === true;
+    } catch (error) {
+      console.error("Password verification failed:", error);
+      return false;
+    }
+  }
+
   return {
     user,
     isAuthenticated,
@@ -129,5 +163,6 @@ export const useAuthStore = defineStore("auth", () => {
     fetchProfile,
     logout,
     clearSession,
+    verifyPassword,
   };
 });

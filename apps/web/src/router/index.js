@@ -35,12 +35,7 @@ const routes = [
         component: () => import("@/views/ReimbursementFormView.vue"),
         meta: { title: "New Reimbursement" },
       },
-      {
-        path: "reimbursements/:id",
-        name: "ReimbursementDetail",
-        component: () => import("@/views/ReimbursementDetailView.vue"),
-        meta: { title: "Reimbursement Details" },
-      },
+
       {
         path: "cash-advances",
         name: "CashAdvances",
