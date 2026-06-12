@@ -4,60 +4,28 @@ namespace App\Modules\Expenses\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Modules\Reimbursements\Models\Receipt;
+use App\Modules\Expenses\Services\ExpenseService;
+use App\Modules\Expenses\Http\Requests\StoreReceiptRequest;
+use App\Modules\Expenses\Http\Requests\UpdateReceiptRequest;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Auth\Access\AuthorizationException;
 
 class ExpenseController extends Controller
 {
+    protected ExpenseService $service;
+
+    public function __construct(ExpenseService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * List all receipts for the authenticated user (role-scoped).
      * Expenses are receipts not yet linked to a reimbursement.
      */
     public function index(Request $request)
     {
-        $user = $request->user();
-
-        $query = Receipt::with('category')->whereNull('deleted_at');
-
-        // Standard employees can only view their own receipts
-        if (!$request->user()->can('serms.reimbursements.manage')) {
-            $query->where('uploaded_by', $user->id);
-        } else {
-            $query->with('uploader');
-        }
-
-        // Apply active filter query parameters
-        if ($request->filled('uploader_id')) {
-            $query->where('uploaded_by', $request->query('uploader_id'));
-        }
-
-        if ($request->filled('category')) {
-            $category = $request->query('category');
-            if (is_numeric($category)) {
-                $query->where('expense_category_id', $category);
-            } else {
-                $query->whereHas('category', function ($q) use ($category) {
-                    $q->where('name', $category);
-                });
-            }
-        }
-
-        if ($request->filled('min_amount')) {
-            $query->where('total_amount', '>=', $request->query('min_amount'));
-        }
-
-        if ($request->filled('max_amount')) {
-            $query->where('total_amount', '<=', $request->query('max_amount'));
-        }
-
-        if ($request->filled('start_date')) {
-            $query->whereDate('transaction_date', '>=', $request->query('start_date'));
-        }
-
-        if ($request->filled('end_date')) {
-            $query->whereDate('transaction_date', '<=', $request->query('end_date'));
-        }
-
-        $receipts = $query->orderBy('created_at', 'desc')->get();
+        $receipts = $this->service->listReceipts($request->user(), $request->query());
 
         return response()->json($receipts);
     }
@@ -65,70 +33,20 @@ class ExpenseController extends Controller
     /**
      * Store a new receipt record from the expense management form.
      */
-    public function store(Request $request)
+    public function store(StoreReceiptRequest $request)
     {
-        $user = $request->user();
+        try {
+            $receipt = $this->service->storeReceipt($request->user(), $request->validated());
 
-        $validated = $request->validate([
-            'file_path' => 'required|string|max:500',
-            'file_hash' => 'required|string|size:64',
-            'file_type' => 'required|in:jpeg,png,pdf',
-            'file_size_bytes' => 'required|integer|min:1',
-            'vendor_name' => 'nullable|string|max:255',
-            'transaction_date' => 'nullable|date',
-            'total_amount' => 'nullable|numeric|min:0',
-            'vat_amount' => 'nullable|numeric|min:0',
-            'tin' => 'nullable|string|max:20',
-            'invoice_number' => 'nullable|string|max:100',
-            'vat_classification' => 'nullable|in:vat,non-vat',
-            'ocr_confidence_score' => 'nullable|numeric|min:0|max:100',
-            'expense_category_id' => 'nullable|exists:expense_categories,id',
-            'category' => 'nullable|string|max:100',
-        ]);
-
-        // Duplicate hash check
-        $existingHash = Receipt::where('file_hash', $validated['file_hash'])
-            ->whereNull('deleted_at')
-            ->exists();
-
-        if ($existingHash) {
             return response()->json([
-                'message' => 'Duplicate detected. A receipt with this file hash already exists.',
+                'message' => 'Receipt stored successfully.',
+                'data' => $receipt,
+            ], 201);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => $e->validator->errors()->first('file_hash') ?: $e->getMessage(),
             ], 409);
         }
-
-        $expenseCategoryId = $validated['expense_category_id'] ?? null;
-        if (isset($validated['category'])) {
-            if (!$expenseCategoryId) {
-                $category = \App\Modules\Reimbursements\Models\ExpenseCategory::firstOrCreate(['name' => $validated['category']]);
-                $expenseCategoryId = $category->id;
-            }
-        }
-
-        $receipt = Receipt::create([
-            'uploaded_by' => $user->id,
-            'file_path' => $validated['file_path'],
-            'file_hash' => $validated['file_hash'],
-            'file_type' => $validated['file_type'],
-            'file_size_bytes' => $validated['file_size_bytes'],
-            'vendor_name' => $validated['vendor_name'] ?? null,
-            'transaction_date' => $validated['transaction_date'] ?? null,
-            'total_amount' => $validated['total_amount'] ?? null,
-            'vat_amount' => $validated['vat_amount'] ?? null,
-            'tin' => $validated['tin'] ?? null,
-            'invoice_number' => $validated['invoice_number'] ?? null,
-            'vat_classification' => $validated['vat_classification'] ?? null,
-            'ocr_confidence_score' => $validated['ocr_confidence_score'] ?? null,
-            'ocr_flagged' => ($validated['ocr_confidence_score'] ?? 100) < 80,
-            'expense_category_id' => $expenseCategoryId,
-        ]);
-
-        $receipt->load('category');
-
-        return response()->json([
-            'message' => 'Receipt stored successfully.',
-            'data' => $receipt,
-        ], 201);
     }
 
     /**
@@ -136,58 +54,32 @@ class ExpenseController extends Controller
      */
     public function show(Request $request, $id)
     {
-        $user = $request->user();
-        $receipt = Receipt::with(['uploader', 'category'])->findOrFail($id);
+        try {
+            $canManage = $request->user()->can('serms.reimbursements.manage');
+            $receipt = $this->service->showReceipt($request->user(), (int)$id, $canManage);
 
-        if (!$request->user()->can('serms.reimbursements.manage') && $receipt->uploaded_by !== $user->id) {
-            return response()->json(['message' => 'Forbidden.'], 403);
+            return response()->json($receipt);
+        } catch (AuthorizationException $e) {
+            return response()->json(['message' => $e->getMessage()], 403);
         }
-
-        return response()->json($receipt);
     }
 
     /**
      * Update receipt metadata (OCR-extracted fields editable by owner).
      */
-    public function update(Request $request, $id)
+    public function update(UpdateReceiptRequest $request, $id)
     {
-        $user = $request->user();
-        $receipt = Receipt::findOrFail($id);
+        try {
+            $canManage = $request->user()->can('serms.reimbursements.manage');
+            $receipt = $this->service->updateReceipt($request->user(), (int)$id, $request->validated(), $canManage);
 
-        if ($receipt->uploaded_by !== $user->id && !$request->user()->can('serms.reimbursements.manage')) {
-            return response()->json(['message' => 'Forbidden.'], 403);
+            return response()->json([
+                'message' => 'Receipt updated successfully.',
+                'data' => $receipt,
+            ]);
+        } catch (AuthorizationException $e) {
+            return response()->json(['message' => $e->getMessage()], 403);
         }
-
-        $validated = $request->validate([
-            'vendor_name' => 'nullable|string|max:255',
-            'transaction_date' => 'nullable|date',
-            'total_amount' => 'nullable|numeric|min:0',
-            'vat_amount' => 'nullable|numeric|min:0',
-            'tin' => 'nullable|string|max:20',
-            'invoice_number' => 'nullable|string|max:100',
-            'vat_classification' => 'nullable|in:vat,non-vat',
-            'expense_category_id' => 'nullable|exists:expense_categories,id',
-            'category' => 'nullable|string|max:100',
-        ]);
-
-        $expenseCategoryId = $validated['expense_category_id'] ?? null;
-        if (isset($validated['category'])) {
-            if (!$expenseCategoryId) {
-                $category = \App\Modules\Reimbursements\Models\ExpenseCategory::firstOrCreate(['name' => $validated['category']]);
-                $expenseCategoryId = $category->id;
-            }
-            unset($validated['category']);
-        }
-        if ($expenseCategoryId) {
-            $validated['expense_category_id'] = $expenseCategoryId;
-        }
-
-        $receipt->update($validated);
-
-        return response()->json([
-            'message' => 'Receipt updated successfully.',
-            'data' => $receipt->fresh(),
-        ]);
     }
 
     /**
@@ -195,17 +87,15 @@ class ExpenseController extends Controller
      */
     public function destroy(Request $request, $id)
     {
-        $user = $request->user();
-        $receipt = Receipt::findOrFail($id);
+        try {
+            $canManage = $request->user()->can('serms.reimbursements.manage');
+            $this->service->deleteReceipt($request->user(), (int)$id, $canManage);
 
-        if (!$request->user()->can('serms.reimbursements.manage') && $receipt->uploaded_by !== $user->id) {
-            return response()->json(['message' => 'Forbidden.'], 403);
+            return response()->json([
+                'message' => 'Receipt deleted successfully.',
+            ]);
+        } catch (AuthorizationException $e) {
+            return response()->json(['message' => $e->getMessage()], 403);
         }
-
-        $receipt->delete();
-
-        return response()->json([
-            'message' => 'Receipt deleted successfully.',
-        ]);
     }
 }

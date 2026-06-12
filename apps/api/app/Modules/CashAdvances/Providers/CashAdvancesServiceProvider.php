@@ -4,6 +4,9 @@ namespace App\Modules\CashAdvances\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Gate;
+use App\Modules\CashAdvances\Models\CashAdvance;
+use App\Modules\CashAdvances\Policies\CashAdvancePolicy;
 
 class CashAdvancesServiceProvider extends ServiceProvider
 {
@@ -20,6 +23,9 @@ class CashAdvancesServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Register Policy
+        Gate::policy(CashAdvance::class, CashAdvancePolicy::class);
+
         // Load Migrations
         $migrationPath = __DIR__ . '/../Database/Migrations';
         if (is_dir($migrationPath)) {

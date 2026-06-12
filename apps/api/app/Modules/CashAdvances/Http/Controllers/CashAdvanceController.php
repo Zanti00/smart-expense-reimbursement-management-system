@@ -4,23 +4,34 @@ namespace App\Modules\CashAdvances\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use App\Modules\CashAdvances\Models\CashAdvance;
-use App\Modules\CashAdvances\Models\CashAdvanceDocument;
-use App\Modules\CashAdvances\Models\CashAdvanceApprovalAction;
-use App\Modules\CashAdvances\Models\CashAdvanceDisbursement;
-use App\Modules\CashAdvances\Models\CashAdvanceStatusHistory;
+use App\Modules\CashAdvances\Services\CashAdvanceService;
+use App\Modules\CashAdvances\Http\Requests\StoreCashAdvanceRequest;
+use App\Modules\CashAdvances\Http\Requests\ApproveCashAdvanceRequest;
+use App\Modules\CashAdvances\Http\Requests\RejectCashAdvanceRequest;
+use App\Modules\CashAdvances\Http\Requests\DisburseCashAdvanceRequest;
+use App\Modules\CashAdvances\Http\Requests\AcknowledgeCashAdvanceRequest;
 
 class CashAdvanceController extends Controller
 {
+    protected CashAdvanceService $service;
+
+    public function __construct(CashAdvanceService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * List all cash advances.
      */
     public function index(Request $request)
     {
+        Gate::authorize('viewAny', CashAdvance::class);
+
         $user = $request->user();
 
-        if (!$request->user()->can('serms.cash_advances.manage')) {
+        if (!$user->can('serms.cash_advances.manage')) {
             $advances = CashAdvance::with(['approvalActions'])->where('user_id', $user->id)->get();
         } else {
             $advances = CashAdvance::with(['requester', 'approvalActions'])->get();
@@ -32,54 +43,20 @@ class CashAdvanceController extends Controller
     /**
      * Request a new cash advance.
      */
-    public function store(Request $request)
+    public function store(StoreCashAdvanceRequest $request)
     {
-        $user = $request->user();
+        Gate::authorize('create', CashAdvance::class);
 
-        $validated = $request->validate([
-            'purpose' => 'required|string|max:255',
-            'amount' => 'required|numeric|min:0.01',
-            'expected_disbursement_date' => 'required|date|after_or_equal:today',
-            'expected_liquidation_date' => 'required|date|after:expected_disbursement_date',
-            'documents' => 'required|array|max:5',
-            'documents.*' => 'file|max:2048|mimes:pdf,doc,docx,xlsx,jpeg,png,jpg',
-        ]);
+        $advance = $this->service->createAdvance(
+            $request->user(),
+            $request->validated(),
+            $request->file('documents', [])
+        );
 
-        return DB::transaction(function () use ($validated, $user, $request) {
-            $advance = CashAdvance::create([
-                'user_id' => $user->id,
-                'purpose' => $validated['purpose'],
-                'amount' => $validated['amount'],
-                'expected_disbursement_date' => $validated['expected_disbursement_date'],
-                'expected_liquidation_date' => $validated['expected_liquidation_date'],
-                'status' => 'pending',
-            ]);
-
-            CashAdvanceStatusHistory::create([
-                'cash_advance_id' => $advance->id,
-                'from_status' => null,
-                'to_status' => 'pending',
-                'changed_by' => $user->id,
-            ]);
-
-            if ($request->hasFile('documents')) {
-                foreach ($request->file('documents') as $file) {
-                    $path = $file->store('cash_advances/documents', 'supabase');
-
-                    CashAdvanceDocument::create([
-                        'cash_advance_id' => $advance->id,
-                        'file_path' => $path,
-                        'file_type' => $file->getClientMimeType(),
-                        'file_name' => $file->getClientOriginalName(),
-                    ]);
-                }
-            }
-
-            return response()->json([
-                'message' => 'Cash advance request created successfully.',
-                'data' => $advance->load('document'),
-            ], 201);
-        });
+        return response()->json([
+            'message' => 'Cash advance request created successfully.',
+            'data' => $advance->load('document'),
+        ], 201);
     }
 
     /**
@@ -87,12 +64,9 @@ class CashAdvanceController extends Controller
      */
     public function show(Request $request, $id)
     {
-        $user = $request->user();
         $advance = CashAdvance::with(['requester', 'approvalActions', 'statusHistory', 'disbursement'])->findOrFail($id);
 
-        if (!$request->user()->can('serms.cash_advances.manage') && $advance->user_id !== $user->id) {
-            return response()->json(['message' => 'Forbidden.'], 403);
-        }
+        Gate::authorize('view', $advance);
 
         return response()->json($advance);
     }
@@ -102,177 +76,96 @@ class CashAdvanceController extends Controller
      */
     public function document(Request $request, $id)
     {
-        $user = $request->user();
         $advance = CashAdvance::findOrFail($id);
 
-        if (!$request->user()->can('serms.cash_advances.manage') && $advance->user_id !== $user->id) {
-            return response()->json(['message' => 'Forbidden.'], 403);
-        }
+        Gate::authorize('view', $advance);
 
-        $document = $advance->document;
-        return response()->json($document);
+        return response()->json($advance->document);
     }
 
     /**
      * Approve a cash advance.
      */
-    public function approve(Request $request, $id)
+    public function approve(ApproveCashAdvanceRequest $request, $id)
     {
-        $user = $request->user();
-
-        if (!$request->user()->can('serms.cash_advances.manage')) {
-            return response()->json(['message' => 'Unauthorized. Only admins can approve cash advances.'], 403);
-        }
-
         $advance = CashAdvance::findOrFail($id);
 
-        if ($advance->user_id === $user->id) {
-            return response()->json(['message' => 'Unauthorized. You cannot approve your own cash advance.'], 403);
-        }
+        Gate::authorize('approve', $advance);
 
         if ($advance->status !== 'pending') {
             return response()->json(['message' => 'Conflict. Cash advance is not pending.'], 409);
         }
 
-        $validated = $request->validate([
-            'comment' => 'nullable|string',
+        $advance = $this->service->approveAdvance(
+            $advance,
+            $request->user(),
+            $request->validated('comment')
+        );
+
+        return response()->json([
+            'message' => 'Cash advance approved successfully.',
+            'data' => $advance,
         ]);
-
-        return DB::transaction(function () use ($advance, $user, $validated) {
-            $advance->update(['status' => 'approved']);
-
-            CashAdvanceApprovalAction::create([
-                'cash_advance_id' => $advance->id,
-                'approver_id' => $user->id,
-                'action' => 'approved',
-                'comment' => $validated['comment'] ?? null,
-            ]);
-
-            CashAdvanceStatusHistory::create([
-                'cash_advance_id' => $advance->id,
-                'from_status' => 'pending',
-                'to_status' => 'approved',
-                'changed_by' => $user->id,
-            ]);
-
-            return response()->json([
-                'message' => 'Cash advance approved successfully.',
-                'data' => $advance,
-            ]);
-        });
     }
 
     /**
      * Reject a cash advance.
      */
-    public function reject(Request $request, $id)
+    public function reject(RejectCashAdvanceRequest $request, $id)
     {
-        $user = $request->user();
-
-        if (!$request->user()->can('serms.cash_advances.manage')) {
-            return response()->json(['message' => 'Unauthorized. Only admins can reject cash advances.'], 403);
-        }
-
-        $validated = $request->validate([
-            'comment' => 'required|string|min:5',
-        ]);
-
         $advance = CashAdvance::findOrFail($id);
 
-        if ($advance->user_id === $user->id) {
-            return response()->json(['message' => 'Unauthorized. You cannot reject your own cash advance.'], 403);
-        }
+        Gate::authorize('reject', $advance);
 
         if ($advance->status !== 'pending') {
             return response()->json(['message' => 'Conflict. Cash advance is not pending.'], 409);
         }
 
-        return DB::transaction(function () use ($advance, $user, $validated) {
-            $advance->update(['status' => 'rejected']);
+        $advance = $this->service->rejectAdvance(
+            $advance,
+            $request->user(),
+            $request->validated('comment')
+        );
 
-            CashAdvanceApprovalAction::create([
-                'cash_advance_id' => $advance->id,
-                'approver_id' => $user->id,
-                'action' => 'rejected',
-                'comment' => $validated['comment'],
-            ]);
-
-            CashAdvanceStatusHistory::create([
-                'cash_advance_id' => $advance->id,
-                'from_status' => 'pending',
-                'to_status' => 'rejected',
-                'changed_by' => $user->id,
-            ]);
-
-            return response()->json([
-                'message' => 'Cash advance rejected successfully.',
-                'data' => $advance,
-            ]);
-        });
+        return response()->json([
+            'message' => 'Cash advance rejected successfully.',
+            'data' => $advance,
+        ]);
     }
 
     /**
      * Disburse an approved cash advance.
      */
-    public function disburse(Request $request, $id)
+    public function disburse(DisburseCashAdvanceRequest $request, $id)
     {
-        $user = $request->user();
-
-        if (!$request->user()->can('serms.cash_advances.manage')) {
-            return response()->json(['message' => 'Unauthorized. Only admins can disburse cash advances.'], 403);
-        }
-
-        $validated = $request->validate([
-            'channel' => 'required|string|max:100',
-            'reference' => 'required|string|max:100',
-        ]);
-
         $advance = CashAdvance::findOrFail($id);
 
-        if ($advance->user_id === $user->id) {
-            return response()->json(['message' => 'Unauthorized. You cannot disburse your own cash advance.'], 403);
-        }
+        Gate::authorize('disburse', $advance);
 
         if ($advance->status !== 'approved') {
             return response()->json(['message' => 'Conflict. Cash advance is not in an approved state.'], 409);
         }
 
-        return DB::transaction(function () use ($advance, $user, $validated) {
-            $advance->update(['status' => 'disbursed']);
+        $advance = $this->service->disburseAdvance(
+            $advance,
+            $request->user(),
+            $request->validated()
+        );
 
-            CashAdvanceDisbursement::create([
-                'cash_advance_id' => $advance->id,
-                'disbursed_by_id' => $user->id,
-                'disbursement_date' => now()->toDateString(),
-                'channel' => $validated['channel'],
-                'reference_number' => $validated['reference'],
-            ]);
-
-            CashAdvanceStatusHistory::create([
-                'cash_advance_id' => $advance->id,
-                'from_status' => 'approved',
-                'to_status' => 'disbursed',
-                'changed_by' => $user->id,
-            ]);
-
-            return response()->json([
-                'message' => 'Cash advance disbursed successfully.',
-                'data' => $advance,
-            ]);
-        });
+        return response()->json([
+            'message' => 'Cash advance disbursed successfully.',
+            'data' => $advance,
+        ]);
     }
 
     /**
      * Acknowledge cash advance receipt.
      */
-    public function acknowledge(Request $request, $id)
+    public function acknowledge(AcknowledgeCashAdvanceRequest $request, $id)
     {
-        $user = $request->user();
         $advance = CashAdvance::findOrFail($id);
 
-        if ($advance->user_id !== $user->id) {
-            return response()->json(['message' => 'Unauthorized. You can only acknowledge your own cash advance.'], 403);
-        }
+        Gate::authorize('acknowledge', $advance);
 
         if (!in_array($advance->status, ['approved', 'disbursed'])) {
             return response()->json(['message' => 'Conflict. Cash advance is not in a valid state for acknowledgement.'], 409);
@@ -282,20 +175,14 @@ class CashAdvanceController extends Controller
             return response()->json(['message' => 'Conflict. Cash advance has already been acknowledged.'], 409);
         }
 
-        $validated = $request->validate([
-            'signature' => 'required|string',
+        $advance = $this->service->acknowledgeAdvance(
+            $advance,
+            $request->validated()
+        );
+
+        return response()->json([
+            'message' => 'Cash advance acknowledged successfully.',
+            'data' => $advance,
         ]);
-
-        return DB::transaction(function () use ($advance, $validated) {
-            $advance->update([
-                'signature' => $validated['signature'],
-                'acknowledged_at' => now(),
-            ]);
-
-            return response()->json([
-                'message' => 'Cash advance acknowledged successfully.',
-                'data' => $advance,
-            ]);
-        });
     }
 }
