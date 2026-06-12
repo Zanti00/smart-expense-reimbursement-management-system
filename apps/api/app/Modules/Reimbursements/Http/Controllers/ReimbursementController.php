@@ -4,26 +4,30 @@ namespace App\Modules\Reimbursements\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Modules\Reimbursements\Models\Reimbursement;
-use App\Modules\Reimbursements\Models\Receipt;
-use App\Modules\AuditLogs\Services\AuditLogService;
-use App\Modules\Shared\Services\PasswordVerificationService;
+use App\Modules\Reimbursements\Services\ReimbursementService;
+use App\Modules\Reimbursements\Http\Requests\StoreReimbursementRequest;
+use App\Modules\Reimbursements\Http\Requests\ApproveReimbursementRequest;
+use App\Modules\Reimbursements\Http\Requests\RejectReimbursementRequest;
+use App\Modules\Reimbursements\Http\Requests\UpdateReimbursementRequest;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Auth\Access\AuthorizationException;
 
 class ReimbursementController extends Controller
 {
+    protected ReimbursementService $service;
+
+    public function __construct(ReimbursementService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * List all reimbursements.
      */
     public function index(Request $request)
     {
-        $user = $request->user();
-
-        // Standard employees can only view their own claims; approvers and admins can view all.
-        if (!$request->user()->can('serms.reimbursements.manage')) {
-            $claims = Reimbursement::with(['receipts', 'user'])->where('user_id', $user->id)->get();
-        } else {
-            $claims = Reimbursement::with(['receipts', 'user'])->get();
-        }
+        $canManage = $request->user()->can('serms.reimbursements.manage');
+        $claims = $this->service->listReimbursements($request->user(), $canManage);
 
         return response()->json($claims);
     }
@@ -31,78 +35,17 @@ class ReimbursementController extends Controller
     /**
      * Submit a new reimbursement request.
      */
-    public function store(Request $request)
+    public function store(StoreReimbursementRequest $request)
     {
-        $user = $request->user();
-
-        $validated = $request->validate([
-            'description' => 'required|string|max:255',
-            'category' => 'required|string|max:100',
-            'amount' => 'required|numeric|min:0.01',
-            'date' => 'required|date',
-            'cutoff_period' => 'required|string|max:255',
-            'report_file' => 'required|file|mimes:jpeg,png,pdf|max:2048',
-            'receipt_ids' => 'required|array|min:1',
-            'receipt_ids.*' => 'exists:receipts,id',
-            'receipts' => 'nullable|array',
-            'receipts.*.id' => 'required_with:receipts|exists:receipts,id',
-            'receipts.*.vendor_name' => 'nullable|string|max:255',
-            'receipts.*.transaction_date' => 'nullable|date',
-            'receipts.*.total_amount' => 'nullable|numeric|min:0',
-            'receipts.*.vat_amount' => 'nullable|numeric|min:0',
-            'receipts.*.vat_classification' => 'nullable|string|in:vat,non-vat',
-            'receipts.*.tin' => 'nullable|string|max:255',
-            'receipts.*.invoice_number' => 'nullable|string|max:255',
-            'receipts.*.items' => 'nullable|array',
-            'receipts.*.items.*.name' => 'required_with:receipts.*.items|string|max:255',
-            'receipts.*.items.*.quantity' => 'required_with:receipts.*.items|integer|min:1',
-            'receipts.*.items.*.price' => 'required_with:receipts.*.items|numeric|gt:0',
-        ]);
-
-        if (!empty($validated['receipts'])) {
-            foreach ($validated['receipts'] as $receiptData) {
-                $receipt = Receipt::find($receiptData['id']);
-                if ($receipt && $receipt->uploaded_by === $user->id) {
-                    $receipt->update([
-                        'vendor_name' => $receiptData['vendor_name'] ?? $receipt->vendor_name,
-                        'transaction_date' => $receiptData['transaction_date'] ?? $receipt->transaction_date,
-                        'total_amount' => $receiptData['total_amount'] ?? $receipt->total_amount,
-                        'vat_amount' => $receiptData['vat_amount'] ?? $receipt->vat_amount,
-                        'vat_classification' => $receiptData['vat_classification'] ?? $receipt->vat_classification,
-                        'tin' => $receiptData['tin'] ?? $receipt->tin,
-                        'invoice_number' => $receiptData['invoice_number'] ?? $receipt->invoice_number,
-                    ]);
-
-                    if (isset($receiptData['items'])) {
-                        $receipt->items()->delete();
-                        $receipt->items()->createMany($receiptData['items']);
-                    }
-                }
-            }
-        }
-
-        $reportPath = null;
-        if ($request->hasFile('report_file')) {
-            $reportPath = $request->file('report_file')->store('reports', 'supabase');
-        }
-
-        $reimbursement = Reimbursement::create([
-            'user_id' => $user->id,
-            'description' => $validated['description'],
-            'category' => $validated['category'],
-            'amount' => $validated['amount'],
-            'date' => $validated['date'],
-            'cutoff_period' => $validated['cutoff_period'],
-            'report_file_path' => $reportPath,
-            'status' => 'pending',
-            'submitted_by_name' => $user->name, // Assuming name exists
-        ]);
-
-        $reimbursement->receipts()->attach($validated['receipt_ids']);
+        $reimbursement = $this->service->storeReimbursement(
+            $request->user(),
+            $request->validated(),
+            $request->file('report_file')
+        );
 
         return response()->json([
             'message' => 'Reimbursement request submitted successfully.',
-            'data' => $reimbursement->load('receipts'),
+            'data' => $reimbursement,
         ], 201);
     }
 
@@ -111,152 +54,94 @@ class ReimbursementController extends Controller
      */
     public function show(Request $request, $id)
     {
-        $user = $request->user();
-        $reimbursement = Reimbursement::with(['receipts.items', 'user'])->findOrFail($id);
+        try {
+            $canManage = $request->user()->can('serms.reimbursements.manage');
+            $reimbursement = $this->service->showReimbursement($request->user(), (int)$id, $canManage);
 
-        if (!$request->user()->can('serms.reimbursements.manage') && $reimbursement->user_id !== $user->id) {
-            return response()->json(['message' => 'Forbidden.'], 403);
+            return response()->json($reimbursement);
+        } catch (AuthorizationException $e) {
+            return response()->json(['message' => $e->getMessage()], 403);
         }
-
-        return response()->json($reimbursement);
     }
 
     /**
      * Approve claim.
      */
-    public function approve(Request $request, $id)
+    public function approve(ApproveReimbursementRequest $request, $id)
     {
-        $user = $request->user();
+        try {
+            $reimbursement = $this->service->approveReimbursement(
+                $request->user(),
+                (int)$id,
+                $request->validated('password'),
+                $request->ip(),
+                $request
+            );
 
-        if (!$request->user()->can('serms.reimbursements.manage')) {
-            return response()->json(['message' => 'Unauthorized. Only admins or approvers can perform this action.'], 403);
-        }
-
-        $validated = $request->validate([
-            'password' => 'required|string',
-        ]);
-
-        // Verify password against external auth service
-        if (!PasswordVerificationService::verify($request, $validated['password'])) {
+            return response()->json([
+                'message' => 'Reimbursement request approved.',
+                'data' => $reimbursement,
+            ]);
+        } catch (AuthorizationException $e) {
+            return response()->json(['message' => $e->getMessage()], 403);
+        } catch (ValidationException $e) {
             return response()->json([
                 'message' => 'The given data was invalid.',
-                'errors' => [
-                    'password' => ['Invalid password. Please try again.']
-                ]
+                'errors' => $e->errors(),
             ], 422);
         }
-
-        $reimbursement = Reimbursement::findOrFail($id);
-
-        // Self-approval check
-        if ($reimbursement->user_id === $user->id) {
-            return response()->json(['message' => 'Conflict. Self-approval is strictly prohibited.'], 403);
-        }
-
-        $beforeState = $reimbursement->toArray();
-        $reimbursement->update(['status' => 'approved']);
-        $afterState = $reimbursement->toArray();
-
-        // Immutable Audit Log
-        AuditLogService::log(
-            actorId: $user->id,
-            actorRole: $user->role,
-            actionType: 'CLAIM_APPROVED',
-            entityType: 'reimbursement',
-            entityId: $reimbursement->id,
-            beforeState: $beforeState,
-            afterState: $afterState,
-            ipAddress: $request->ip()
-        );
-
-        return response()->json([
-            'message' => 'Reimbursement request approved.',
-            'data' => $reimbursement,
-        ]);
     }
 
     /**
      * Reject claim.
      */
-    public function reject(Request $request, $id)
+    public function reject(RejectReimbursementRequest $request, $id)
     {
-        $user = $request->user();
+        try {
+            $reimbursement = $this->service->rejectReimbursement(
+                $request->user(),
+                (int)$id,
+                $request->validated('comment'),
+                $request->validated('password'),
+                $request->ip(),
+                $request
+            );
 
-        if (!$request->user()->can('serms.reimbursements.manage')) {
-            return response()->json(['message' => 'Unauthorized. Only admins or approvers can perform this action.'], 403);
-        }
-
-        $validated = $request->validate([
-            'comment' => 'required|string|min:5',
-            'password' => 'required|string',
-        ]);
-
-        // Verify password against external auth service
-        if (!PasswordVerificationService::verify($request, $validated['password'])) {
+            return response()->json([
+                'message' => 'Reimbursement request rejected.',
+                'data' => $reimbursement,
+            ]);
+        } catch (AuthorizationException $e) {
+            return response()->json(['message' => $e->getMessage()], 403);
+        } catch (ValidationException $e) {
             return response()->json([
                 'message' => 'The given data was invalid.',
-                'errors' => [
-                    'password' => ['Invalid password. Please try again.']
-                ]
+                'errors' => $e->errors(),
             ], 422);
         }
-
-        $reimbursement = Reimbursement::findOrFail($id);
-
-        // Self-approval check
-        if ($reimbursement->user_id === $user->id) {
-            return response()->json(['message' => 'Conflict. Self-rejection/approval is prohibited.'], 403);
-        }
-
-        $beforeState = $reimbursement->toArray();
-        $reimbursement->update([
-            'status' => 'rejected',
-            'admin_notes' => $validated['comment'],
-            'rejection_comment' => $validated['comment'],
-        ]);
-        $afterState = $reimbursement->toArray();
-
-        // Immutable Audit Log
-        AuditLogService::log(
-            actorId: $user->id,
-            actorRole: $user->role,
-            actionType: 'CLAIM_REJECTED',
-            entityType: 'reimbursement',
-            entityId: $reimbursement->id,
-            beforeState: $beforeState,
-            afterState: $afterState,
-            ipAddress: $request->ip()
-        );
-
-        return response()->json([
-            'message' => 'Reimbursement request rejected.',
-            'data' => $reimbursement,
-        ]);
     }
 
     /**
      * Update reimbursement details (admin notes, status).
      */
-    public function update(Request $request, $id)
+    public function update(UpdateReimbursementRequest $request, $id)
     {
-        $user = $request->user();
+        try {
+            $canManage = $request->user()->can('serms.reimbursements.manage');
+            
+            $reimbursement = $this->service->updateReimbursement(
+                $request->user(),
+                (int)$id,
+                $request->validated(),
+                $canManage
+            );
 
-        if (!$request->user()->can('serms.reimbursements.manage')) {
-            return response()->json(['message' => 'Unauthorized.'], 403);
+            return response()->json([
+                'message' => 'Reimbursement updated successfully.',
+                'data' => $reimbursement,
+            ]);
+        } catch (AuthorizationException $e) {
+            return response()->json(['message' => $e->getMessage()], 403);
         }
-
-        $validated = $request->validate([
-            'admin_notes' => 'nullable|string',
-            'status' => 'nullable|string|in:pending,approved,rejected,granted',
-        ]);
-
-        $reimbursement = Reimbursement::findOrFail($id);
-        
-        $reimbursement->update($validated);
-
-        return response()->json([
-            'message' => 'Reimbursement updated successfully.',
-            'data' => $reimbursement,
-        ]);
     }
 }
