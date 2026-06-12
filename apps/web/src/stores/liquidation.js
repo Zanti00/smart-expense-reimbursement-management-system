@@ -1,38 +1,30 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-
-const MOCK_SETTLEMENTS = [
-  { 
-    id: 'LIQ-001', 
-    advanceId: 'CA-2024-001', 
-    items: [
-      { id: 1, category: 'Meals', description: 'Client Lunch', amount: 4500 },
-      { id: 2, category: 'Travel', description: 'Grab to Site', amount: 1500 }
-    ],
-    receipts: [{ name: 'receipt_01.jpg' }],
-    totalExpenses: 6000,
-    variance: 2000, // Total Advanced 8000 - 6000 = 2000 Overpayment
-    status: 'pending',
-    submittedAt: '2026-04-05T10:00:00Z'
-  },
-  { 
-    id: 'LIQ-002', 
-    advanceId: 'CA-2024-002', 
-    items: [
-      { id: 3, category: 'Materials', description: 'Cable Spools', amount: 12000 },
-      { id: 4, category: 'Travel', description: 'Truck Rental', amount: 4500 }
-    ],
-    receipts: [{ name: 'receipt_02.pdf' }],
-    totalExpenses: 16500,
-    variance: -1500, // Total Advanced 15000 - 16500 = -1500 Abono
-    status: 'pending',
-    submittedAt: '2026-04-06T09:12:44Z'
-  }
-]
+import { ref } from 'vue'
+import { apiFetch } from '../utils/apiFetch'
 
 export const useLiquidationStore = defineStore('liquidation', () => {
-  const settlements = ref([...MOCK_SETTLEMENTS])
+  const settlements = ref([])
+  const isLoading = ref(false)
   const DAILY_PENALTY_PHP = 55 // approximately $1.00
+
+  /**
+   * Fetch all liquidations from the backend.
+   */
+  async function fetchSettlements() {
+    isLoading.value = true
+    try {
+      const response = await apiFetch('/api/serms/liquidations', {
+        credentials: 'include',
+      })
+      if (response.ok) {
+        settlements.value = await response.json()
+      }
+    } catch (err) {
+      console.error('Failed to fetch liquidations', err)
+    } finally {
+      isLoading.value = false
+    }
+  }
 
   /**
    * Calculates the aging and penalty for a cash advance.
@@ -47,9 +39,9 @@ export const useLiquidationStore = defineStore('liquidation', () => {
     let penalty = 0
     let isOverdue = false
     
-    const isAuditing = advance.status === 'pending' || advance.status === 'under-review'
+    const isAuditing = advance.status === 'pending' || advance.status === 'under-review' || advance.status === 'approved'
     
-    if (diffDays > 7 && advance.status !== 'liquidated' && !isAuditing) {
+    if (diffDays > 7 && advance.status !== 'liquidated' && advance.status !== 'settled' && !isAuditing) {
       isOverdue = true
       penalty = (diffDays - 7) * DAILY_PENALTY_PHP
     }
@@ -62,21 +54,75 @@ export const useLiquidationStore = defineStore('liquidation', () => {
     }
   }
 
-  async function submitSettlement(advanceId, { items, receipts, totalExpenses, variance }) {
-    const newSettlement = {
-      id: `LIQ-${Date.now()}`,
-      advanceId,
-      items,
-      receipts,
-      totalExpenses,
-      variance,
-      status: 'pending', // Waiting for admin review
-      submittedAt: new Date().toISOString()
+  /**
+   * Submit settlement to backend
+   */
+  async function submitSettlement(advanceId, payload) {
+    try {
+      const formData = new FormData();
+      formData.append('cash_advance_id', advanceId);
+      formData.append('total_expense_amount', payload.totalExpenses);
+      if (payload.shortfall_explanation) {
+        formData.append('shortfall_explanation', payload.shortfall_explanation);
+      }
+      
+      if (payload.reportAttachment) {
+        formData.append('report_attachment', payload.reportAttachment);
+      }
+
+      const formattedReceipts = payload.receipts.map(r => ({
+        id: r.ocrData?.id || r.id, // backend DB ID
+        vendor_name: r.ocrData?.vendor || r.merchantName,
+        transaction_date: r.ocrData?.date || r.transactionDate,
+        total_amount: r.ocrData?.amount || r.amount,
+        vat_amount: r.ocrData?.vat || r.vat,
+        tin: r.ocrData?.tin || r.tinNumber,
+        invoice_number: r.ocrData?.invoiceNumber || r.invoiceNumber,
+      }));
+      formData.append('receipts', JSON.stringify(formattedReceipts));
+
+      const response = await apiFetch('/api/serms/liquidations', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Failed to submit liquidation')
+      }
+
+      await fetchSettlements()
+      return await response.json()
+    } catch (err) {
+      console.error('Failed to submit liquidation', err)
+      throw err;
     }
-    
-    settlements.value.unshift(newSettlement)
-    return newSettlement
   }
 
-  return { settlements, calculateAging, submitSettlement }
+  /**
+   * Audit settlement (approve or reject)
+   */
+  async function auditSettlement(id, payload) {
+    try {
+      const response = await apiFetch(`/api/serms/liquidations/${id}/audit`, {
+        method: 'POST',
+        credentials: 'include',
+        body: JSON.stringify(payload), // contains status, password, admin_note
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Failed to audit liquidation')
+      }
+
+      await fetchSettlements()
+      return await response.json()
+    } catch (err) {
+      console.error('Failed to audit liquidation', err)
+      throw err;
+    }
+  }
+
+  return { settlements, isLoading, calculateAging, fetchSettlements, submitSettlement, auditSettlement }
 })

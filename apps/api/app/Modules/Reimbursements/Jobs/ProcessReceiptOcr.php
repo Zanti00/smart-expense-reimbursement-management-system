@@ -29,7 +29,7 @@ class ProcessReceiptOcr implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(): void
+    public function handle(\App\Modules\Ai\Contracts\OcrEngineInterface $ocrEngine): void
     {
         Log::info("Processing OCR for receipt ID: " . $this->receipt->id);
 
@@ -43,10 +43,7 @@ class ProcessReceiptOcr implements ShouldQueue
             $tempPath = tempnam(sys_get_temp_dir(), 'ocr_') . '.' . pathinfo($this->receipt->file_path, PATHINFO_EXTENSION);
             file_put_contents($tempPath, $fileContent);
 
-            $ocr = new TesseractOCR($tempPath);
-            $text = $ocr->run();
-
-            $extractedData = $this->extractDataFromText($text);
+            $extractedData = $ocrEngine->extractReceiptData($tempPath);
 
             $this->receipt->update([
                 'vendor_name' => $extractedData['vendor_name'] ?? $this->receipt->vendor_name,
@@ -55,8 +52,8 @@ class ProcessReceiptOcr implements ShouldQueue
                 'vat_amount' => $extractedData['vat_amount'] ?? $this->receipt->vat_amount,
                 'tin' => $extractedData['tin'] ?? $this->receipt->tin,
                 'invoice_number' => $extractedData['invoice_number'] ?? $this->receipt->invoice_number,
-                'ocr_confidence_score' => $extractedData['confidence'],
-                'ocr_flagged' => $extractedData['confidence'] < 0.80,
+                'ocr_confidence_score' => $extractedData['ocr_confidence_score'],
+                'ocr_flagged' => $extractedData['ocr_confidence_score'] < 0.80,
             ]);
 
             Log::info("OCR processed for receipt ID: " . $this->receipt->id);
@@ -65,44 +62,5 @@ class ProcessReceiptOcr implements ShouldQueue
         } catch (\Exception $e) {
             Log::error("OCR processing failed for receipt ID: " . $this->receipt->id . " Error: " . $e->getMessage());
         }
-    }
-
-    protected function extractDataFromText(string $text): array
-    {
-        $data = [
-            'vendor_name' => null,
-            'transaction_date' => null,
-            'total_amount' => null,
-            'vat_amount' => null,
-            'tin' => null,
-            'invoice_number' => null,
-            'confidence' => 0.85, 
-        ];
-
-        if (preg_match('/TIN[\s:]*([0-9\-]+)/i', $text, $matches)) {
-            $data['tin'] = $matches[1];
-        }
-
-        if (preg_match('/(?:TOTAL|AMOUNT)[\s:]*([0-9,\.]+)/i', $text, $matches)) {
-            $val = str_replace(',', '', $matches[1]);
-            if (is_numeric($val)) {
-                $data['total_amount'] = (float)$val;
-            }
-        }
-
-        $lines = explode("\n", trim($text));
-        if (count($lines) > 0 && !empty(trim($lines[0]))) {
-            $data['vendor_name'] = substr(trim($lines[0]), 0, 255);
-        }
-
-        if (preg_match('/(\d{2,4}[\/\-]\d{1,2}[\/\-]\d{1,2})/', $text, $matches)) {
-            try {
-                $data['transaction_date'] = \Carbon\Carbon::parse($matches[1])->format('Y-m-d');
-            } catch (\Exception $e) {
-                // ignore
-            }
-        }
-
-        return $data;
     }
 }

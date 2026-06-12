@@ -10,6 +10,7 @@ import {
   UploadCloud,
   X,
 } from 'lucide-vue-next'
+import { apiFetch } from '../../utils/apiFetch'
 
 const props = defineProps({
   modelValue: { type: Array, default: () => [] },
@@ -55,34 +56,77 @@ function addFiles(fileList) {
       size: file.size,
       preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
       ocrStatus: 'idle',
-      ocrData: null,
+      ocrData: {
+        id: null,
+        amount: '0.00',
+        vat: '0.00',
+        tin: '123-456-789-000',
+        vendor: file.name.split('.')[0] || 'Unknown Vendor',
+        invoiceNumber: `INV-${Date.now().toString().slice(-6)}`,
+        date: new Date().toISOString().split('T')[0],
+        confidence: 0,
+      },
     }
 
     files.value.push(entry)
-    simulateOCR(entry)
+    simulateOCR(files.value[files.value.length - 1])
   }
 
   emit('update:modelValue', files.value)
 }
 
-function simulateOCR(entry) {
+async function simulateOCR(entry) {
   if (!entry.file.type.startsWith('image/') && entry.file.type !== 'application/pdf') return
 
   entry.ocrStatus = 'processing'
-  setTimeout(() => {
-    const confidence = 85 + Math.random() * 15
+  try {
+    const formData = new FormData()
+    formData.append('file', entry.file)
+
+    const response = await apiFetch('/api/serms/liquidations/scan', {
+      method: 'POST',
+      body: formData,
+    })
+
+    if (!response.ok) {
+      throw new Error('OCR Scan failed')
+    }
+
+    const result = await response.json()
+    const ocrData = result.data
+
     entry.ocrStatus = 'done'
     entry.ocrData = {
-      amount: '1250.00',
-      vat: '150.00',
-      tin: '000-123-456-000',
-      vendor: 'Supermarket Corp.',
-      date: new Date().toISOString().split('T')[0],
-      confidence: Math.round(confidence),
+      id: ocrData.id,
+      amount: ocrData.total_amount || '0.00',
+      vat: ocrData.vat_amount || '0.00',
+      tin: ocrData.tin || '',
+      vendor: ocrData.vendor_name || '',
+      invoiceNumber: ocrData.invoice_number || '',
+      date: ocrData.transaction_date || new Date().toISOString().split('T')[0],
+      confidence: Math.round(ocrData.ocr_confidence_score || 85),
+      file_path: ocrData.file_path,
+      file_hash: ocrData.file_hash,
+      file_type: ocrData.file_type,
+      file_size_bytes: ocrData.file_size_bytes,
     }
     emit('ocr-result', entry.ocrData)
     emit('update:modelValue', files.value)
-  }, 200)
+  } catch (error) {
+    console.error('OCR processing failed:', error)
+    entry.ocrStatus = 'failed'
+    entry.ocrData = {
+      id: null,
+      amount: '0.00',
+      vat: '0.00',
+      tin: '',
+      vendor: '',
+      invoiceNumber: '',
+      date: new Date().toISOString().split('T')[0],
+      confidence: 0,
+    }
+    emit('update:modelValue', files.value)
+  }
 }
 
 function removeFile(index) {

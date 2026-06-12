@@ -6,6 +6,7 @@ import { useToast } from "@/composables/useToast";
 import BaseModal from "@/components/base/BaseModal.vue";
 import StatusBadge from "@/components/base/StatusBadge.vue";
 import { formatPeso } from "@/utils/formatters";
+import DecisionConfirmationModal from "@/components/reimbursements/DecisionConfirmationModal.vue";
 import {
   X,
   CheckCircle,
@@ -46,6 +47,7 @@ const signatureStarted = ref(false);
 const adminReviewNotes = ref("");
 const confirmationAction = ref("");
 const showAcknowledgeModal = ref(false);
+const adminPassword = ref("");
 
 const documentData = ref(null);
 const isLoadingDocument = ref(false);
@@ -58,6 +60,7 @@ watch(
       confirmationAction.value = "";
       showAcknowledgeModal.value = false;
       documentData.value = null;
+      adminPassword.value = "";
       clearSignature();
 
       if (props.record?.id) {
@@ -131,7 +134,7 @@ function downloadDocument() {
 }
 
 function requestConfirmation(action) {
-  if (adminReviewNotes.value.trim().length < 10) {
+  if (action !== "disburse" && adminReviewNotes.value.trim().length < 10) {
     addToast({
       message: "Please enter at least 10 characters in the admin notes.",
       type: "error",
@@ -153,9 +156,14 @@ async function confirmAdminDecision() {
   try {
     if (confirmationAction.value === "approve") {
       await store.approveRequest(id, adminReviewNotes.value);
-    } else {
+    } else if (confirmationAction.value === "reject") {
       const reason = adminReviewNotes.value || "Rejected by admin";
       await store.rejectRequest(id, reason);
+    } else if (confirmationAction.value === "disburse") {
+      await store.disburseRequest(id, {
+        channel: "System Disbursement",
+        reference: `REF-${id}-${Date.now()}`
+      });
     }
 
     addToast({
@@ -446,7 +454,7 @@ async function confirmAcknowledge() {
             </div>
           </section>
 
-          <section class="space-y-2 pb-2">
+          <section class="space-y-2 pb-2" v-if="record.status === 'pending'">
             <label class="section-label" for="adminReviewNotes"
               >Add Admin Notes / Instructions</label
             >
@@ -480,32 +488,46 @@ async function confirmAcknowledge() {
 
         <footer
           class="flex flex-col items-center justify-between gap-3 border-t border-slate-200 bg-white p-5 sm:flex-row"
+          v-if="['pending', 'approved'].includes(record.status)"
         >
           <div
             class="text-sm font-semibold text-danger text-center sm:text-left"
             v-if="record.userId === auth.user?.id"
           >
-            You cannot approve or reject your own request.
+            You cannot process your own request.
           </div>
           <div v-else></div>
           <div class="flex flex-col w-full sm:w-auto sm:flex-row gap-3">
-            <button
-              class="btn btn-secondary w-full !border-danger/30 !text-danger hover:!bg-danger/5 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
-              type="button"
-              :disabled="record.userId === auth.user?.id"
-              @click="requestConfirmation('reject')"
-            >
-              Reject
-            </button>
-            <button
-              class="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-bold text-white transition-colors hover:bg-accent/90 sm:w-auto disabled:cursor-not-allowed disabled:opacity-50"
-              type="button"
-              :disabled="record.userId === auth.user?.id"
-              @click="requestConfirmation('approve')"
-            >
-              <CheckCircle class="h-4 w-4" />
-              Approve
-            </button>
+            <template v-if="record.status === 'pending'">
+              <button
+                class="btn btn-secondary w-full !border-danger/30 !text-danger hover:!bg-danger/5 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                type="button"
+                :disabled="record.userId === auth.user?.id"
+                @click="requestConfirmation('reject')"
+              >
+                Reject
+              </button>
+              <button
+                class="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-bold text-white transition-colors hover:bg-accent/90 sm:w-auto disabled:cursor-not-allowed disabled:opacity-50"
+                type="button"
+                :disabled="record.userId === auth.user?.id"
+                @click="requestConfirmation('approve')"
+              >
+                <CheckCircle class="h-4 w-4" />
+                Approve
+              </button>
+            </template>
+            <template v-if="record.status === 'approved'">
+              <button
+                class="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-bold text-white transition-colors hover:bg-accent/90 sm:w-auto disabled:cursor-not-allowed disabled:opacity-50"
+                type="button"
+                :disabled="record.userId === auth.user?.id"
+                @click="requestConfirmation('disburse')"
+              >
+                <Wallet class="h-4 w-4" />
+                Disburse
+              </button>
+            </template>
           </div>
         </footer>
       </div>
@@ -830,72 +852,14 @@ async function confirmAcknowledge() {
     </BaseModal>
 
     <!-- Admin Decision Confirmation -->
-    <BaseModal
-      :isOpen="!!confirmationAction"
+    <DecisionConfirmationModal
+      :is-open="!!confirmationAction"
+      :mode="confirmationAction || 'approve'"
+      v-model:password="adminPassword"
+      v-model:comment="adminReviewNotes"
       @close="cancelConfirmation"
-      zIndexClass="z-[60]"
-      contentClass="p-8 text-center"
-    >
-      <div
-        :class="[
-          'mx-auto flex h-20 w-20 items-center justify-center rounded-full',
-          confirmationAction === 'approve'
-            ? 'bg-accent-50 text-accent'
-            : 'bg-danger/10 text-danger',
-        ]"
-      >
-        <ShieldCheck
-          v-if="confirmationAction === 'approve'"
-          class="h-10 w-10"
-        />
-        <X v-else class="h-10 w-10" />
-      </div>
-
-      <h3 class="mt-6 font-heading text-xl font-bold text-slate-900">
-        {{
-          confirmationAction === "approve"
-            ? "Approve Advance Request?"
-            : "Reject Advance Request?"
-        }}
-      </h3>
-      <p class="mt-2 text-sm leading-relaxed text-slate-500">
-        Confirming this action will finalize the request status for
-        {{ record?.id }}.
-      </p>
-
-      <div class="mt-6 rounded-lg bg-slate-50 p-4 text-left">
-        <p class="section-label mb-1">Final Admin Notes</p>
-        <p class="text-sm font-medium italic text-primary">
-          {{ adminReviewNotes || "No notes provided." }}
-        </p>
-      </div>
-
-      <div class="mt-6 flex gap-3">
-        <button
-          class="btn btn-secondary flex-1"
-          type="button"
-          @click="cancelConfirmation"
-        >
-          Go Back
-        </button>
-        <button
-          :class="[
-            'btn flex-1 text-white',
-            confirmationAction === 'approve'
-              ? 'btn-primary'
-              : '!bg-danger !border-danger hover:!bg-red-700',
-          ]"
-          type="button"
-          @click="confirmAdminDecision"
-        >
-          {{
-            confirmationAction === "approve"
-              ? "Confirm Approval"
-              : "Confirm Rejection"
-          }}
-        </button>
-      </div>
-    </BaseModal>
+      @confirm="confirmAdminDecision"
+    />
 
     <!-- Previous record details panel retained inactive for reference -->
     <div

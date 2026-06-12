@@ -104,6 +104,25 @@ export const useCashAdvanceStore = defineStore("cashAdvance", () => {
     }
   }
 
+  async function disburseRequest(id, payload) {
+    try {
+      const response = await apiFetch(`/api/serms/cash-advances/${id}/disburse`, {
+        method: "POST",
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+      if (response.ok) {
+        await fetchAll();
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to disburse cash advance");
+      }
+    } catch (err) {
+      console.error("Failed to disburse cash advance", err);
+      throw err;
+    }
+  }
+
   async function acknowledgeRequest(id, signature) {
     try {
       const response = await apiFetch(
@@ -177,6 +196,7 @@ export const useCashAdvanceStore = defineStore("cashAdvance", () => {
     fetchDocument,
     approveRequest,
     rejectRequest,
+    disburseRequest,
     acknowledgeRequest,
     approveSettlement,
     rejectSettlement,

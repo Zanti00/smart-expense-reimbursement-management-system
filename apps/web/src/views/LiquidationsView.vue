@@ -4,6 +4,7 @@ import { useRouter } from "vue-router";
 import { useCashAdvanceStore } from "@/stores/cashAdvance";
 import { useLiquidationStore } from "@/stores/liquidation";
 import { useAuthStore } from "@/stores/auth";
+import { useToast } from "@/composables/useToast";
 import StatusBadge from "@/components/base/StatusBadge.vue";
 import FileUpload from "@/components/base/FileUpload.vue";
 import BaseButton from "@/components/base/BaseButton.vue";
@@ -11,6 +12,7 @@ import BaseKpiGrid from "@/components/base/BaseKpiGrid.vue";
 import BasePagination from "@/components/base/BasePagination.vue";
 import BaseUtilityToolbar from "@/components/base/BaseUtilityToolbar.vue";
 import SkeletonLoader from "@/components/base/SkeletonLoader.vue";
+import DecisionConfirmationModal from "@/components/reimbursements/DecisionConfirmationModal.vue";
 import { formatPeso } from "@/utils/formatters";
 import {
   Activity,
@@ -41,8 +43,12 @@ const store = useCashAdvanceStore();
 const liqStore = useLiquidationStore();
 const auth = useAuthStore();
 const router = useRouter();
+const { addToast } = useToast();
 
-onMounted(() => store.fetchAll());
+onMounted(() => {
+  store.fetchAll();
+  liqStore.fetchSettlements();
+});
 
 const selectedAdvance = ref(null);
 const receipts = ref([]);
@@ -50,6 +56,14 @@ const reportAttachment = ref(null);
 const reportAttachmentInput = ref(null);
 const submitting = ref(false);
 const submitted = ref(false);
+const shortfallExplanation = ref("");
+
+// Audit state variables
+const approvingId = ref(null);
+const rejectingId = ref(null);
+const confirmPassword = ref("");
+const rejectionComment = ref("");
+const isReviewSubmitting = ref(false);
 
 const sortKey = ref("id");
 const sortDirection = ref("asc");
@@ -103,7 +117,7 @@ const needsReportAttachmentReminder = computed(() =>
 );
 
 const employeeOutstandingAdvances = computed(() =>
-  store.items.filter((item) => item.status !== "liquidated"),
+  store.items.filter((item) => ["disbursed", "overdue"].includes(item.status)),
 );
 
 const employeeFilteredAdvances = computed(() => {
@@ -239,20 +253,65 @@ const fallbackCases = [
   }),
 ];
 
+const getFileUrl = (filePath) => {
+  if (!filePath) return "/mock_receipt.png";
+  if (filePath.startsWith("http://") || filePath.startsWith("https://")) return filePath;
+  return `https://vbabvrcfqcmvvjwmzuwx.supabase.co/storage/v1/object/public/cash_advances/${filePath}`;
+};
+
+const mapBackendStatusToDisplayStatus = (backendStatus, row, acceptedTotal) => {
+  if (backendStatus === 'liquidated') return 'Liquidated';
+  if (backendStatus === 'rejected') return 'Rejected';
+  return calculateLiquidationStatus(row, acceptedTotal);
+};
+
 const sourceCases = computed(() => {
-  const rows = store.items
-    .filter((item) => ["approved", "disbursed", "pending", "overdue", "liquidated"].includes(item.status))
-    .map((item, index) =>
-      makeCase({
-        id: `LIQ-${String(index + 1).padStart(3, "0")}`,
-        advanceId: item.id,
-        requestorName: item.requestedBy || item.requester?.name || "Employee",
-        dateOfAdvances: item.date || item.submitted_at || item.created_at,
-        dueDate: item.dueDate || item.expected_liquidation_date,
-        cashAdvanceAmount: Number(item.amount || 0),
-        receiptAmounts: seededReceiptAmounts(Number(item.amount || 0), index),
-      }),
-    );
+  const rows = liqStore.settlements.map((item) => {
+    const mappedReceipts = (item.receipts || []).map((r, rIdx) => {
+      const subtotal = Math.max(Number(r.total_amount || 0) - Number(r.vat_amount || 0), 0);
+      return {
+        id: r.id,
+        fileName: r.file_path ? r.file_path.split('/').pop() : `receipt_${rIdx + 1}.jpg`,
+        merchantName: r.vendor_name || 'Unknown Vendor',
+        location: r.location || 'N/A',
+        category: r.category || 'Expense',
+        invoiceNumber: r.invoice_number || 'N/A',
+        transactionDate: r.transaction_date || r.created_at,
+        tinNumber: r.tin || 'N/A',
+        items: r.items || [],
+        amount: Number(r.total_amount || 0),
+        subtotal,
+        vat: Number(r.vat_amount || 0),
+        decision: r.status === 'rejected' ? 'rejected' : 'accepted',
+        notes: r.admin_notes || '',
+        filePath: r.file_path,
+      };
+    });
+
+    const mockRow = {
+      cashAdvanceAmount: Number(item.cash_advance?.amount || 0),
+      dueDate: item.cash_advance?.expected_liquidation_date || item.cash_advance?.dueDate,
+    };
+
+    const displayStatus = mapBackendStatusToDisplayStatus(item.status, mockRow, Number(item.total_expense_amount || 0));
+
+    return {
+      id: `LIQ-${String(item.id).padStart(3, "0")}`,
+      databaseId: item.id,
+      advanceId: `CA-${String(item.cash_advance_id).padStart(3, "0")}`,
+      cashAdvanceId: item.cash_advance_id,
+      requestorName: item.user?.name || "Employee",
+      dateOfAdvances: item.cash_advance?.date || item.created_at,
+      dueDate: item.cash_advance?.expected_liquidation_date || item.cash_advance?.dueDate,
+      cashAdvanceAmount: Number(item.cash_advance?.amount || 0),
+      receipts: mappedReceipts,
+      submittedReceiptTotal: Number(item.total_expense_amount || 0),
+      shortfallExplanation: item.shortfall_explanation || '',
+      adminNote: item.admin_note || '',
+      reportFilePath: item.report_file_path || null,
+      status: displayStatus,
+    };
+  });
 
   return rows.length ? rows : fallbackCases;
 });
@@ -262,7 +321,11 @@ const liquidationRows = computed(() =>
     const draft = reviewDrafts.value[row.id];
     const acceptedTotal = draft ? acceptedReceiptTotal(row, draft.receipts) : row.submittedReceiptTotal;
     const outstandingBalance = Math.max(row.cashAdvanceAmount - acceptedTotal, 0);
-    const status = draft?.finalizedStatus || calculateLiquidationStatus(row, acceptedTotal);
+    
+    let status = row.status;
+    if (status !== 'Liquidated' && status !== 'Rejected') {
+      status = draft?.finalizedStatus || calculateLiquidationStatus(row, acceptedTotal);
+    }
 
     return {
       ...row,
@@ -473,18 +536,125 @@ async function submitLiquidation() {
     reportAttachment: reportAttachment.value,
     totalExpenses: totalExpenseAmount.value,
     variance: variance.value,
+    shortfall_explanation: shortfallExplanation.value,
   };
 
-  await liqStore.submitSettlement(selectedAdvance.value.id, payload);
+  try {
+    await liqStore.submitSettlement(selectedAdvance.value.id, payload);
 
-  const item = store.items.find((i) => i.id === selectedAdvance.value.id);
-  if (item) {
-    item.status = "pending";
-    item.balance = 0;
+    const item = store.items.find((i) => i.id === selectedAdvance.value.id);
+    if (item) {
+      item.status = "approved"; // matches backend lock transition
+      item.balance = 0;
+    }
+
+    submitting.value = false;
+    submitted.value = true;
+
+    await store.fetchAll();
+    await liqStore.fetchSettlements();
+  } catch (err) {
+    addToast({
+      title: "Submission Failed",
+      message: err.message || "Failed to submit liquidation settlement.",
+      type: "danger",
+    });
+    submitting.value = false;
   }
+}
 
-  submitting.value = false;
-  submitted.value = true;
+function openApproveModal() {
+  confirmPassword.value = "";
+  rejectionComment.value = "";
+  approvingId.value = reviewingCase.value.databaseId;
+  rejectingId.value = null;
+}
+
+function openRejectModal() {
+  confirmPassword.value = "";
+  rejectionComment.value = "";
+  rejectingId.value = reviewingCase.value.databaseId;
+  approvingId.value = null;
+}
+
+function cancelApprove() {
+  approvingId.value = null;
+  confirmPassword.value = "";
+}
+
+function cancelReject() {
+  rejectingId.value = null;
+  confirmPassword.value = "";
+  rejectionComment.value = "";
+}
+
+async function confirmApprove() {
+  if (!approvingId.value || !confirmPassword.value) return;
+  isReviewSubmitting.value = true;
+  try {
+    await liqStore.auditSettlement(approvingId.value, {
+      status: 'approved',
+      password: confirmPassword.value,
+    });
+    addToast({
+      title: "Settlement Approved",
+      message: "The liquidation settlement was successfully approved.",
+      type: "success",
+    });
+    
+    await store.fetchAll();
+    await liqStore.fetchSettlements();
+    
+    closeReview();
+    cancelApprove();
+  } catch (err) {
+    addToast({
+      title: "Audit Failed",
+      message: err.message || "Failed to approve liquidation settlement.",
+      type: "danger",
+    });
+  } finally {
+    isReviewSubmitting.value = false;
+  }
+}
+
+async function confirmReject() {
+  if (!rejectingId.value || !confirmPassword.value) return;
+  if (rejectionComment.value.length < 5) {
+    addToast({
+      title: "Validation Error",
+      message: "Rejection comment must be at least 5 characters.",
+      type: "danger",
+    });
+    return;
+  }
+  isReviewSubmitting.value = true;
+  try {
+    await liqStore.auditSettlement(rejectingId.value, {
+      status: 'rejected',
+      password: confirmPassword.value,
+      admin_note: rejectionComment.value,
+    });
+    addToast({
+      title: "Settlement Rejected",
+      message: "The liquidation settlement was successfully rejected.",
+      type: "success",
+    });
+    
+    await store.fetchAll();
+    await liqStore.fetchSettlements();
+    
+    closeReview();
+    cancelReject();
+  } catch (err) {
+    addToast({
+      title: "Audit Failed",
+      message: err.message || "Failed to reject liquidation settlement.",
+      type: "danger",
+    });
+  } finally {
+    isReviewSubmitting.value = false;
+  }
 }
 
 function selectAdvance(adv) {
@@ -602,6 +772,7 @@ function statusBadgeClass(status) {
     Overpayment: "bg-blue-50 text-blue-700 border-blue-200",
     Liquidated: "bg-emerald-600 text-white border-emerald-600",
     Overdue: "bg-red-50 text-red-700 border-red-200",
+    Rejected: "bg-rose-50 text-rose-700 border-rose-200",
   };
   return classes[status] || "bg-slate-100 text-slate-600 border-slate-200";
 }
@@ -931,7 +1102,7 @@ function finalizeLiquidation() {
               >
                 <div class="aspect-[4/5] overflow-hidden bg-slate-100">
                   <img
-                    src="/mock_receipt.png"
+                    :src="getFileUrl(receipt.filePath)"
                     alt="Scanned receipt"
                     class="h-full w-full object-cover object-top transition-transform duration-500 hover:scale-105"
                   />
@@ -971,46 +1142,68 @@ function finalizeLiquidation() {
               </article>
             </div>
           </section>
+
+          <section v-if="reviewingCase.reportFilePath" class="rounded-xl border border-slate-200 bg-white p-5 space-y-4">
+            <div class="flex items-center gap-3">
+              <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent">
+                <FileText class="h-5 w-5" />
+              </span>
+              <div>
+                <h3 class="font-heading text-base font-bold text-slate-800">Report Letter Attachment</h3>
+                <p class="text-xs text-slate-400">Supporting documentation for this liquidation.</p>
+              </div>
+            </div>
+            <a
+              :href="getFileUrl(reviewingCase.reportFilePath)"
+              target="_blank"
+              class="inline-flex w-fit items-center justify-center gap-2 rounded-lg bg-slate-100 px-4 py-2.5 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-200"
+            >
+              <Download class="h-4 w-4" />
+              View / Download Report Letter
+            </a>
+          </section>
         </div>
 
         <footer class="relative border-t border-slate-200 bg-white px-6 py-4">
-          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div
+            v-if="reviewingCase.status !== 'Liquidated' && reviewingCase.status !== 'Rejected'"
+            class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+          >
             <div class="text-sm font-semibold text-slate-500">
               Accepted receipts total:
               <span class="font-bold text-primary">{{ formatPeso(acceptedReviewTotal) }}</span>
             </div>
-            <button
-              class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-emerald-800 px-5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-emerald-900"
-              type="button"
-              @click="confirmFinalizeOpen = true"
-            >
-              <ShieldCheck class="h-4 w-4" />
-              Accept as Liquidation
-            </button>
+            <div class="flex gap-2">
+              <button
+                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-5 text-sm font-bold text-red-700 transition-colors hover:bg-red-100"
+                type="button"
+                @click="openRejectModal"
+              >
+                <XCircle class="h-4 w-4" />
+                Reject Settlement
+              </button>
+              <button
+                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-emerald-800 px-5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-emerald-900"
+                type="button"
+                @click="openApproveModal"
+              >
+                <ShieldCheck class="h-4 w-4" />
+                Accept as Liquidation
+              </button>
+            </div>
           </div>
-
           <div
-            v-if="confirmFinalizeOpen"
-            class="absolute bottom-[76px] right-6 z-10 w-[min(420px,calc(100vw-3rem))] rounded-xl border border-slate-200 bg-white p-4 text-left shadow-2xl"
+            v-else
+            class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
           >
-            <p class="text-sm font-bold text-slate-900">
-              Are you sure you want to finalize this liquidation report audit with the designated notes and balances?
-            </p>
-            <div class="mt-4 flex justify-end gap-2">
-              <button
-                class="inline-flex min-h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50"
-                type="button"
-                @click="confirmFinalizeOpen = false"
-              >
-                Cancel
-              </button>
-              <button
-                class="inline-flex min-h-9 items-center justify-center rounded-lg bg-accent px-4 text-xs font-bold text-white transition-colors hover:bg-accent/90"
-                type="button"
-                @click="finalizeLiquidation"
-              >
-                Confirm
-              </button>
+            <div class="text-sm font-semibold text-slate-500">
+              Liquidation status:
+              <span :class="['inline-flex rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide', statusBadgeClass(reviewingCase.status)]">
+                {{ reviewingCase.status }}
+              </span>
+            </div>
+            <div v-if="reviewingCase.adminNote" class="text-xs text-slate-500 max-w-md italic">
+              Note: "{{ reviewingCase.adminNote }}"
             </div>
           </div>
         </footer>
@@ -1088,7 +1281,7 @@ function finalizeLiquidation() {
                 </div>
                 <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
                   <img
-                    src="/mock_receipt.png"
+                    :src="getFileUrl(selectedReceipt.filePath)"
                     alt="Scanned receipt"
                     class="h-full max-h-[520px] w-full object-cover object-top"
                   />
@@ -1525,39 +1718,37 @@ function finalizeLiquidation() {
                   <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
                     <label class="space-y-1">
                       <span class="input-label">Merchant Name</span>
-                      <input class="input" readonly :value="receipt.ocrData?.vendor || '--'" />
+                      <input class="input bg-white" v-model="receipt.ocrData.vendor" />
                     </label>
                     <label class="space-y-1">
                       <span class="input-label">Date</span>
                       <span class="relative block">
-                        <input class="input pr-10" readonly :value="receipt.ocrData?.date || '--'" />
+                        <input type="date" class="input pr-10 bg-white" v-model="receipt.ocrData.date" />
                         <CalendarDays class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                       </span>
                     </label>
                     <label class="space-y-1">
                       <span class="input-label">TIN Number</span>
-                      <input class="input" readonly :value="receipt.ocrData?.tin || '--'" />
+                      <input class="input bg-white" v-model="receipt.ocrData.tin" />
                     </label>
                     <label class="space-y-1">
-                      <span class="input-label">OCR Accuracy</span>
-                      <input class="input" readonly :value="receipt.ocrData?.confidence ? `${receipt.ocrData.confidence}%` : '--'" />
+                      <span class="input-label">Invoice Number</span>
+                      <input class="input bg-white" v-model="receipt.ocrData.invoiceNumber" />
                     </label>
                   </div>
 
                   <div class="grid grid-cols-1 gap-3 border-t border-slate-200 pt-4 sm:grid-cols-3">
                     <label class="space-y-1">
-                      <span class="input-label">Subtotal</span>
-                      <input class="input font-semibold" readonly :value="formatPeso(Math.max(Number(receipt.ocrData?.amount || 0) - Number(receipt.ocrData?.vat || 0), 0))" />
+                      <span class="input-label">Subtotal (Auto-Calc)</span>
+                      <input class="input font-semibold bg-slate-50" readonly :value="formatPeso(Math.max(Number(receipt.ocrData?.amount || 0) - Number(receipt.ocrData?.vat || 0), 0))" />
                     </label>
                     <label class="space-y-1">
                       <span class="input-label">Tax (VAT)</span>
-                      <input class="input font-semibold" readonly :value="formatPeso(Number(receipt.ocrData?.vat || 0))" />
+                      <input type="number" step="0.01" class="input font-semibold bg-white" v-model.number="receipt.ocrData.vat" />
                     </label>
                     <div class="rounded-lg border border-accent/20 bg-accent-50 p-3">
                       <p class="input-label text-accent">Receipt Total</p>
-                      <p class="mt-1 font-heading text-xl font-bold text-primary">
-                        {{ formatPeso(Number(receipt.ocrData?.amount || 0)) }}
-                      </p>
+                      <input type="number" step="0.01" class="input font-semibold !bg-white !text-primary font-heading text-lg" v-model.number="receipt.ocrData.amount" />
                     </div>
                   </div>
                 </div>
@@ -1614,6 +1805,22 @@ function finalizeLiquidation() {
                 Don't forget to attach your report for overpayment.
               </p>
             </div>
+          </section>
+
+          <!-- Shortfall Explanation -->
+          <section
+            v-if="variance > 0"
+            class="rounded-xl border border-amber-200 bg-amber-50/50 p-4 space-y-2"
+          >
+            <label class="block space-y-1">
+              <span class="input-label text-amber-800 font-bold">Shortfall Explanation <span class="text-danger">*</span></span>
+              <textarea
+                v-model="shortfallExplanation"
+                rows="3"
+                class="input bg-white resize-none"
+                placeholder="Explain why the total expense is less than the advanced amount (required)..."
+              />
+            </label>
           </section>
 
           <div class="mt-2 border border-slate-200 bg-clinical/20 p-5">
@@ -1700,7 +1907,7 @@ function finalizeLiquidation() {
               id="submit-liquidation-btn"
               variant="primary"
               class="w-fit px-4 py-2.5"
-              :disabled="receipts.length === 0 || totalExpenseAmount === 0 || submitting"
+              :disabled="receipts.length === 0 || receipts.some(r => r.ocrStatus === 'processing') || totalExpenseAmount === 0 || submitting || (variance > 0 && !shortfallExplanation.trim())"
               @click="submitLiquidation"
             >
               <div v-if="submitting" class="flex items-center gap-2">
@@ -1716,6 +1923,20 @@ function finalizeLiquidation() {
         </div>
       </div>
     </div>
+
+    <!-- Audit Confirmation Modal -->
+    <DecisionConfirmationModal
+      :is-open="!!approvingId || !!rejectingId"
+      :mode="approvingId ? 'approve' : 'reject'"
+      :is-submitting="isReviewSubmitting"
+      :min-comment-length="10"
+      title="Liquidation Settlement Audit"
+      :description="approvingId ? 'Are you sure you want to approve this liquidation settlement? This will mark the cash advance as settled. Please enter your password to confirm.' : 'Please enter your password and a comment to authorize rejecting this liquidation settlement.'"
+      v-model:password="confirmPassword"
+      v-model:comment="rejectionComment"
+      @close="approvingId ? cancelApprove() : cancelReject()"
+      @confirm="approvingId ? confirmApprove() : confirmReject()"
+    />
   </div>
 </template>
 

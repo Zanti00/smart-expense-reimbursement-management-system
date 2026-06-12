@@ -11,7 +11,10 @@ class AiServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Bindings for OcrEngineInterface will be registered here.
+        $this->app->singleton(
+            \App\Modules\Ai\Contracts\OcrEngineInterface::class,
+            \App\Modules\Ai\Services\TesseractOcrEngine::class
+        );
     }
 
     /**

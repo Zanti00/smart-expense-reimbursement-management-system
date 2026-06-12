@@ -16,6 +16,7 @@ class Liquidation extends Model
         'total_expense_amount',
         'variance_amount',
         'shortfall_explanation',
+        'report_file_path',
     ];
 
     protected $casts = [

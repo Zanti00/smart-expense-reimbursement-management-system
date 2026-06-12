@@ -9,7 +9,7 @@ const props = defineProps({
     default: false,
   },
   mode: {
-    type: String, // 'approve' | 'reject'
+    type: String, // 'approve' | 'reject' | 'disburse'
     required: true,
   },
   isSubmitting: {
@@ -23,6 +23,18 @@ const props = defineProps({
   comment: {
     type: String,
     default: "",
+  },
+  title: {
+    type: String,
+    default: "",
+  },
+  description: {
+    type: String,
+    default: "",
+  },
+  minCommentLength: {
+    type: Number,
+    default: 10,
   },
 });
 
@@ -43,25 +55,36 @@ const localComment = computed({
 const isApprove = computed(() => props.mode === "approve");
 
 const config = computed(() => {
-  if (isApprove.value) {
+  if (props.mode === "approve") {
     return {
       icon: CheckCircle,
       iconWrapperClass: "bg-emerald-50 text-emerald-600",
-      title: "Approve Reimbursement Claim",
-      description: "Are you sure you want to approve this reimbursement claim? This action will set the status to approved. Please verify your identity by entering your password.",
+      title: props.title || "Approve Request",
+      description: props.description || "Are you sure you want to approve this request? Please verify your identity by entering your password.",
       btnClass: "bg-emerald-600 hover:bg-emerald-700",
       btnText: "Confirm Approve",
+      isConfirmDisabled: !props.password || props.isSubmitting,
+    };
+  }
+  if (props.mode === "disburse") {
+    return {
+      icon: Activity, // You can change this to Wallet if imported, or just Activity
+      iconWrapperClass: "bg-accent/10 text-accent",
+      title: props.title || "Disburse Request",
+      description: props.description || "Are you sure you want to disburse this request? Please verify your identity by entering your password.",
+      btnClass: "bg-accent hover:bg-accent/90",
+      btnText: "Confirm Disbursement",
       isConfirmDisabled: !props.password || props.isSubmitting,
     };
   }
   return {
     icon: XCircle,
     iconWrapperClass: "bg-red-50 text-red-600",
-    title: "Reject Reimbursement Claim",
-    description: "Please provide a reason for rejecting this claim and enter your current password to authorize this action.",
+    title: props.title || "Reject Request",
+    description: props.description || "Please provide a reason for rejecting this request and enter your current password to authorize this action.",
     btnClass: "bg-red-600 hover:bg-red-700",
     btnText: "Confirm Reject",
-    isConfirmDisabled: props.comment.length < 10 || !props.password || props.isSubmitting,
+    isConfirmDisabled: props.comment.length < props.minCommentLength || !props.password || props.isSubmitting,
   };
 });
 
@@ -97,7 +120,7 @@ function handleConfirm() {
         {{ config.description }}
       </p>
 
-      <div v-if="!isApprove" class="input-wrapper">
+      <div v-if="mode === 'reject'" class="input-wrapper">
         <label class="input-label mb-1 block"
           >Rejection Comment <span class="text-danger">*</span></label
         >
@@ -105,16 +128,16 @@ function handleConfirm() {
           v-model="localComment"
           rows="3"
           class="input !font-sans resize-none"
-          placeholder="Explain the reason for rejecting this claim (minimum 10 characters)..."
+          placeholder="Explain the reason for rejecting..."
         />
         <div
           class="text-[10px] font-bold uppercase tracking-widest flex justify-between mt-1"
           :class="
-            localComment.length < 10 ? 'text-danger' : 'text-accent'
+            localComment.length < minCommentLength ? 'text-danger' : 'text-accent'
           "
         >
-          <span>Requirement: >= 10 Chars</span>
-          <span>{{ localComment.length }} / 10+</span>
+          <span>Requirement: >= {{ minCommentLength }} Chars</span>
+          <span>{{ localComment.length }} / {{ minCommentLength }}+</span>
         </div>
       </div>
 
