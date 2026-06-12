@@ -544,7 +544,7 @@ async function submitLiquidation() {
 
     const item = store.items.find((i) => i.id === selectedAdvance.value.id);
     if (item) {
-      item.status = "approved"; // matches backend lock transition
+      item.status = "liquidated"; // matches backend lock transition
       item.balance = 0;
     }
 

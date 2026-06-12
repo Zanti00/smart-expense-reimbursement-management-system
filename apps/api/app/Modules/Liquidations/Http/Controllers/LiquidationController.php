@@ -195,14 +195,14 @@ class LiquidationController extends Controller
                 'report_file_path' => $reportFilePath,
             ]);
 
-            // Temporarily change advance status to approved (approvals lock state during review)
-            $advance->update(['status' => 'approved']);
+            // Temporarily change advance status to liquidated (approvals lock state during review)
+            $advance->update(['status' => 'liquidated']);
 
             // Create status history log for cash advance
             \App\Modules\CashAdvances\Models\CashAdvanceStatusHistory::create([
                 'cash_advance_id' => $advance->id,
                 'from_status' => 'disbursed',
-                'to_status' => 'approved',
+                'to_status' => 'liquidated',
                 'changed_by' => $user->id,
             ]);
 
@@ -306,7 +306,7 @@ class LiquidationController extends Controller
             // Record status history for cash advance
             \App\Modules\CashAdvances\Models\CashAdvanceStatusHistory::create([
                 'cash_advance_id' => $advance->id,
-                'from_status' => 'approved',
+                'from_status' => 'liquidated',
                 'to_status' => $advance->status,
                 'changed_by' => $user->id,
             ]);

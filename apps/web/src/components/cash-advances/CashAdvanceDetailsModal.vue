@@ -432,25 +432,24 @@ async function confirmAcknowledge() {
             </ul>
           </section>
 
-          <section class="space-y-2">
+          <section class="space-y-2" v-if="record.signatureImage">
             <p class="section-label">Employee Signature Verification Pad</p>
             <div
               class="relative flex h-32 w-full items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-slate-200 bg-white"
             >
-              <template v-if="record.signature">
-                <span
-                  class="font-heading text-3xl font-bold italic text-primary/75"
-                  >{{ record.signature }}</span
+              <img
+                :src="record.signatureImage"
+                class="max-h-full max-w-full"
+                alt="Signature"
+              />
+              <div
+                class="absolute bottom-2 right-3 flex items-center gap-1 text-accent bg-white/80 px-2 py-1 rounded"
+              >
+                <ShieldCheck class="h-4 w-4" />
+                <span class="text-[10px] font-bold uppercase tracking-widest"
+                  >Digitally Verified</span
                 >
-                <div
-                  class="absolute bottom-2 right-3 flex items-center gap-1 text-accent"
-                >
-                  <ShieldCheck class="h-4 w-4" />
-                  <span class="text-[10px] font-bold uppercase tracking-widest"
-                    >Digitally Verified</span
-                  >
-                </div>
-              </template>
+              </div>
             </div>
           </section>
 
@@ -709,7 +708,7 @@ async function confirmAcknowledge() {
           </section>
 
           <section
-            v-if="['approved', 'disbursed'].includes(record.status)"
+            v-if="record.status === 'disbursed'"
             class="space-y-4 rounded-lg border border-accent/20 bg-accent-50 p-5"
           >
             <div class="flex items-start gap-3">

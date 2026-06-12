@@ -52,7 +52,7 @@ function openDetails(row) {
         : 0),
     status: row.status,
     date: row.requested,
-    updatedAt: row.status === "pending" ? row.requested : "11/01/2025",
+    updatedAt: row.updated_at || row.requested,
     requestedBy: row.user || auth.user?.name || "Employee",
     userId: row.userId,
     dueDate:
