@@ -28,7 +28,11 @@ export const useCashAdvanceStore = defineStore("cashAdvance", () => {
           requestedBy: item.requester ? item.requester.name : "Unknown",
           dueDate: item.expected_liquidation_date,
           date: item.submitted_at || item.created_at,
-          balance: item.status === "liquidated" ? 0 : item.amount,
+          // outstanding_balance is now persisted in the DB and returned by the API.
+          // Fall back to full amount for advances not yet disbursed (null balance).
+          balance: item.outstanding_balance !== null && item.outstanding_balance !== undefined
+            ? Number(item.outstanding_balance)
+            : Number(item.amount ?? 0),
           adminNotes:
             item.approval_actions && item.approval_actions.length
               ? item.approval_actions[item.approval_actions.length - 1].comment

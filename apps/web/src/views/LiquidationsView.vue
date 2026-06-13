@@ -45,10 +45,12 @@ const auth = useAuthStore();
 const router = useRouter();
 const { addToast } = useToast();
 
-onMounted(() => {
-  store.fetchAll();
-  liqStore.fetchSettlements();
-});
+/** Refresh both stores in parallel — balance is now authoritative in the DB */
+async function refreshAll() {
+  await Promise.all([liqStore.fetchSettlements(), store.fetchAll()]);
+}
+
+onMounted(() => refreshAll());
 
 const selectedAdvance = ref(null);
 const receipts = ref([]);
@@ -82,8 +84,24 @@ const employeeActiveStatus = ref("All");
 const employeeSortKey = ref("status");
 const employeeSortDirection = ref("asc");
 
-const statusFilters = ["All", "Pending", "Incomplete", "Overpayment", "Liquidated", "Overdue"];
-const employeeStatusFilters = ["All", "Pending", "Approved", "Disbursed", "Signed", "Under Review", "Overdue"];
+const statusFilters = [
+  "All",
+  "Pending",
+  "Incomplete",
+  "Overpayment",
+  "Liquidated",
+  "Overdue",
+];
+const employeeStatusFilters = [
+  "All",
+  "Pending",
+  "Approved",
+  "Disbursed",
+  "Signed",
+  "Incomplete",
+  "Under Review",
+  "Overdue",
+];
 const employeeSortOptions = [
   { value: "status", label: "Status" },
   { value: "date", label: "Date" },
@@ -91,7 +109,10 @@ const employeeSortOptions = [
 ];
 
 const totalExpenseAmount = computed(() =>
-  receipts.value.reduce((sum, receipt) => sum + (Number(receipt.ocrData?.amount) || 0), 0),
+  receipts.value.reduce(
+    (sum, receipt) => sum + (Number(receipt.ocrData?.amount) || 0),
+    0,
+  ),
 );
 
 const agingInfo = computed(() => {
@@ -101,24 +122,39 @@ const agingInfo = computed(() => {
 
 const variance = computed(() => {
   if (!selectedAdvance.value) return 0;
-  return selectedAdvance.value.amount - totalExpenseAmount.value;
+  const currentBalance = Number(selectedAdvance.value.balance ?? selectedAdvance.value.amount ?? 0);
+  return currentBalance - totalExpenseAmount.value;
 });
 
-const liquidationOutstandingBalance = computed(() => Math.max(variance.value, 0));
+const liquidationOutstandingBalance = computed(() =>
+  Math.max(variance.value, 0),
+);
 const liquidationStatus = computed(() => {
   if (!selectedAdvance.value) return "Incomplete";
   if (variance.value < 0) return "Overpayment";
   if (variance.value > 0) return "Incomplete";
   return "Liquidated";
 });
-const overpaymentAmount = computed(() => Math.max(totalExpenseAmount.value - (selectedAdvance.value?.amount || 0), 0));
-const needsReportAttachmentReminder = computed(() =>
-  selectedAdvance.value &&
-  (liquidationStatus.value === "Incomplete" || (overpaymentAmount.value > 0 && !reportAttachment.value)),
+const calculatedOutstandingBalance = computed(() => {
+  const currentBalance = Number(selectedAdvance.value?.balance ?? 0);
+  return Math.max(totalExpenseAmount.value - currentBalance, 0);
+});
+const overpaymentAmount = computed(() =>
+  Math.max(totalExpenseAmount.value - (Number(selectedAdvance.value?.balance ?? 0)), 0),
+);
+const needsReportAttachmentReminder = computed(
+  () =>
+    selectedAdvance.value &&
+    (liquidationStatus.value === "Incomplete" ||
+      (overpaymentAmount.value > 0 && !reportAttachment.value)),
 );
 
 const employeeOutstandingAdvances = computed(() =>
-  store.items.filter((item) => ["signed", "overdue"].includes(item.status) && item.acknowledgedAt),
+  store.items.filter(
+    (item) =>
+      ["signed", "overdue", "incomplete"].includes(item.status) &&
+      item.acknowledgedAt,
+  ),
 );
 
 const employeeFilteredAdvances = computed(() => {
@@ -127,7 +163,8 @@ const employeeFilteredAdvances = computed(() => {
   const rows = employeeOutstandingAdvances.value.filter((advance) => {
     const status = employeeAdvanceStatus(advance);
     const matchesStatus =
-      employeeActiveStatus.value === "All" || status === employeeActiveStatus.value;
+      employeeActiveStatus.value === "All" ||
+      status === employeeActiveStatus.value;
     const matchesSearch =
       !query ||
       [
@@ -136,7 +173,11 @@ const employeeFilteredAdvances = computed(() => {
         advance.status,
         status,
         formatPeso(advance.amount || 0),
-      ].some((value) => String(value || "").toLowerCase().includes(query));
+      ].some((value) =>
+        String(value || "")
+          .toLowerCase()
+          .includes(query),
+      );
 
     return matchesStatus && matchesSearch;
   });
@@ -150,10 +191,12 @@ const employeeFilteredAdvances = computed(() => {
       return (aValue - bValue) * direction;
     }
 
-    return String(aValue).localeCompare(String(bValue), undefined, {
-      numeric: true,
-      sensitivity: "base",
-    }) * direction;
+    return (
+      String(aValue).localeCompare(String(bValue), undefined, {
+        numeric: true,
+        sensitivity: "base",
+      }) * direction
+    );
   });
 });
 
@@ -256,46 +299,59 @@ const fallbackCases = [
 
 const getFileUrl = (filePath) => {
   if (!filePath) return "/mock_receipt.png";
-  if (filePath.startsWith("http://") || filePath.startsWith("https://")) return filePath;
+  if (filePath.startsWith("http://") || filePath.startsWith("https://"))
+    return filePath;
   return `https://vbabvrcfqcmvvjwmzuwx.supabase.co/storage/v1/object/public/cash_advances/${filePath}`;
 };
 
 const mapBackendStatusToDisplayStatus = (backendStatus, row, acceptedTotal) => {
-  if (backendStatus === 'pending') return 'Pending';
-  if (backendStatus === 'liquidated') return 'Liquidated';
-  if (backendStatus === 'rejected') return 'Rejected';
+  if (backendStatus === "pending") return "Pending";
+  if (backendStatus === "liquidated") return "Liquidated";
+  if (backendStatus === "rejected") return "Rejected";
+  if (backendStatus === "incomplete") return "Incomplete";
   return calculateLiquidationStatus(row, acceptedTotal);
 };
 
 const sourceCases = computed(() => {
   const rows = liqStore.settlements.map((item) => {
     const mappedReceipts = (item.receipts || []).map((r, rIdx) => {
-      const subtotal = Math.max(Number(r.total_amount || 0) - Number(r.vat_amount || 0), 0);
+      const subtotal = Math.max(
+        Number(r.total_amount || 0) - Number(r.vat_amount || 0),
+        0,
+      );
       return {
         id: r.id,
-        fileName: r.file_path ? r.file_path.split('/').pop() : `receipt_${rIdx + 1}.jpg`,
-        merchantName: r.vendor_name || 'Unknown Vendor',
-        location: r.location || 'N/A',
-        category: r.category || 'Expense',
-        invoiceNumber: r.invoice_number || 'N/A',
+        fileName: r.file_path
+          ? r.file_path.split("/").pop()
+          : `receipt_${rIdx + 1}.jpg`,
+        merchantName: r.vendor_name || "Unknown Vendor",
+        location: r.location || "N/A",
+        category: r.category || "Expense",
+        invoiceNumber: r.invoice_number || "N/A",
         transactionDate: r.transaction_date || r.created_at,
-        tinNumber: r.tin || 'N/A',
+        tinNumber: r.tin || "N/A",
         items: r.items || [],
         amount: Number(r.total_amount || 0),
         subtotal,
         vat: Number(r.vat_amount || 0),
-        decision: r.status === 'rejected' ? 'rejected' : 'accepted',
-        notes: r.admin_notes || '',
+        decision: r.status === "rejected" ? "rejected" : "accepted",
+        notes: r.admin_notes || "",
         filePath: r.file_path,
       };
     });
 
     const mockRow = {
       cashAdvanceAmount: Number(item.cash_advance?.amount || 0),
-      dueDate: item.cash_advance?.expected_liquidation_date || item.cash_advance?.dueDate,
+      dueDate:
+        item.cash_advance?.expected_liquidation_date ||
+        item.cash_advance?.dueDate,
     };
 
-    const displayStatus = mapBackendStatusToDisplayStatus(item.status, mockRow, Number(item.total_expense_amount || 0));
+    const displayStatus = mapBackendStatusToDisplayStatus(
+      item.status,
+      mockRow,
+      Number(item.total_expense_amount || 0),
+    );
 
     return {
       id: `LIQ-${String(item.id).padStart(3, "0")}`,
@@ -304,12 +360,15 @@ const sourceCases = computed(() => {
       cashAdvanceId: item.cash_advance_id,
       requestorName: item.user?.name || "Employee",
       dateOfAdvances: item.cash_advance?.date || item.created_at,
-      dueDate: item.cash_advance?.expected_liquidation_date || item.cash_advance?.dueDate,
+      dueDate:
+        item.cash_advance?.expected_liquidation_date ||
+        item.cash_advance?.dueDate,
       cashAdvanceAmount: Number(item.cash_advance?.amount || 0),
+      outstandingBalance: Number(item.outstanding_balance ?? (item.cash_advance?.amount || 0)),
       receipts: mappedReceipts,
       submittedReceiptTotal: Number(item.total_expense_amount || 0),
-      shortfallExplanation: item.shortfall_explanation || '',
-      adminNote: item.admin_note || '',
+      shortfallExplanation: item.shortfall_explanation || "",
+      adminNote: item.admin_note || "",
       reportFilePath: item.report_file_path || null,
       status: displayStatus,
     };
@@ -321,13 +380,24 @@ const sourceCases = computed(() => {
 const liquidationRows = computed(() =>
   sourceCases.value.map((row) => {
     const draft = reviewDrafts.value[row.id];
-    const acceptedTotal = draft ? acceptedReceiptTotal(row, draft.receipts) : row.submittedReceiptTotal;
-    const outstandingBalance = Math.max(row.cashAdvanceAmount - acceptedTotal, 0);
-    
+    const acceptedTotal = draft
+      ? acceptedReceiptTotal(row, draft.receipts)
+      : row.submittedReceiptTotal;
+
     let status = row.status;
-    if (status !== 'Liquidated' && status !== 'Rejected' && status !== 'Pending') {
-      status = draft?.finalizedStatus || calculateLiquidationStatus(row, acceptedTotal);
+    if (
+      status !== "Liquidated" &&
+      status !== "Rejected" &&
+      status !== "Pending"
+    ) {
+      status =
+        draft?.finalizedStatus ||
+        calculateLiquidationStatus(row, acceptedTotal);
     }
+
+    // Outstanding balance reflects the snapshot balance of the cash advance
+    // at the time the liquidation was submitted.
+    const outstandingBalance = row.outstandingBalance;
 
     return {
       ...row,
@@ -341,7 +411,8 @@ const liquidationRows = computed(() =>
 const filteredRows = computed(() => {
   const query = searchQuery.value.trim().toLowerCase();
   return liquidationRows.value.filter((row) => {
-    const matchesStatus = activeStatus.value === "All" || row.status === activeStatus.value;
+    const matchesStatus =
+      activeStatus.value === "All" || row.status === activeStatus.value;
     const matchesSearch =
       !query ||
       [
@@ -355,7 +426,11 @@ const filteredRows = computed(() => {
         formatDateOnly(row.dueDate),
         formatPeso(row.cashAdvanceAmount),
         formatPeso(row.outstandingBalance),
-      ].some((value) => String(value || "").toLowerCase().includes(query));
+      ].some((value) =>
+        String(value || "")
+          .toLowerCase()
+          .includes(query),
+      );
 
     return matchesStatus && matchesSearch;
   });
@@ -395,12 +470,17 @@ const activeDraft = computed(() =>
 const reviewReceipts = computed(() => activeDraft.value?.receipts || []);
 
 const acceptedReviewTotal = computed(() =>
-  reviewingCase.value ? acceptedReceiptTotal(reviewingCase.value, reviewReceipts.value) : 0,
+  reviewingCase.value
+    ? acceptedReceiptTotal(reviewingCase.value, reviewReceipts.value)
+    : 0,
 );
 
 const reviewOutstandingBalance = computed(() =>
   reviewingCase.value
-    ? Math.max(reviewingCase.value.cashAdvanceAmount - acceptedReviewTotal.value, 0)
+    ? Math.max(
+        reviewingCase.value.outstandingBalance - acceptedReviewTotal.value,
+        0,
+      )
     : 0,
 );
 
@@ -414,7 +494,10 @@ const liquidationKpis = computed(() => {
   const rows = liquidationRows.value;
   const incomplete = rows.filter((item) => item.status === "Incomplete").length;
   const liquidated = rows.filter((item) => item.status === "Liquidated").length;
-  const outstanding = rows.reduce((sum, item) => sum + item.outstandingBalance, 0);
+  const outstanding = rows.reduce(
+    (sum, item) => sum + item.outstandingBalance,
+    0,
+  );
 
   return [
     {
@@ -458,14 +541,19 @@ const liquidationKpis = computed(() => {
 
 const employeeLiquidationKpis = computed(() => {
   const rows = employeeOutstandingAdvances.value;
-  const overdue = rows.filter((item) => employeeAdvanceStatus(item) === "Overdue").length;
+  const overdue = rows.filter(
+    (item) => employeeAdvanceStatus(item) === "Overdue",
+  ).length;
   const readyForLiquidation = rows.filter((item) =>
     ["Approved", "Signed"].includes(employeeAdvanceStatus(item)),
   ).length;
-  const outstanding = rows.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  
-  const activeAdvances = store.items.filter((item) => 
-    ["pending", "approved", "disbursed", "signed"].includes(item.status)
+  const outstanding = rows.reduce(
+    (sum, item) => sum + Number(item.balance || 0),
+    0,
+  );
+
+  const activeAdvances = store.items.filter((item) =>
+    ["pending", "approved", "disbursed", "signed"].includes(item.status),
   ).length;
 
   return [
@@ -514,6 +602,7 @@ function employeeAdvanceStatus(advance) {
   if (status === "approved") return "Approved";
   if (status === "disbursed") return "Disbursed";
   if (status === "signed") return "Signed";
+  if (status === "incomplete") return "Incomplete";
   if (status === "pending") return "Pending";
   if (status === "under-review") return "Under Review";
   return status.charAt(0).toUpperCase() + status.slice(1);
@@ -523,7 +612,11 @@ function employeeSortValue(advance, key) {
   if (key === "amount") return Number(advance.amount) || 0;
   if (key === "date") {
     const timestamp = new Date(
-      advance.date || advance.submitted_at || advance.created_at || advance.dueDate || 0,
+      advance.date ||
+        advance.submitted_at ||
+        advance.created_at ||
+        advance.dueDate ||
+        0,
     ).getTime();
     return Number.isFinite(timestamp) ? timestamp : 0;
   }
@@ -552,15 +645,14 @@ async function submitLiquidation() {
 
     const item = store.items.find((i) => i.id === selectedAdvance.value.id);
     if (item) {
-      item.status = 'under-review'; // matches backend lock transition
+      item.status = "under-review"; // matches backend lock transition
       item.balance = Math.max(variance.value, 0);
     }
 
     submitting.value = false;
     submitted.value = true;
 
-    await store.fetchAll();
-    await liqStore.fetchSettlements();
+    await refreshAll();
   } catch (err) {
     addToast({
       title: "Submission Failed",
@@ -601,7 +693,7 @@ async function confirmApprove() {
   isReviewSubmitting.value = true;
   try {
     await liqStore.auditSettlement(approvingId.value, {
-      status: 'approved',
+      status: "approved",
       password: confirmPassword.value,
     });
     addToast({
@@ -609,10 +701,9 @@ async function confirmApprove() {
       message: "The liquidation settlement was successfully approved.",
       type: "success",
     });
-    
-    await store.fetchAll();
-    await liqStore.fetchSettlements();
-    
+
+    await refreshAll();
+
     closeReview();
     cancelApprove();
   } catch (err) {
@@ -639,7 +730,7 @@ async function confirmReject() {
   isReviewSubmitting.value = true;
   try {
     await liqStore.auditSettlement(rejectingId.value, {
-      status: 'rejected',
+      status: "rejected",
       password: confirmPassword.value,
       admin_note: rejectionComment.value,
     });
@@ -648,10 +739,9 @@ async function confirmReject() {
       message: "The liquidation settlement was successfully rejected.",
       type: "success",
     });
-    
-    await store.fetchAll();
-    await liqStore.fetchSettlements();
-    
+
+    await refreshAll();
+
     closeReview();
     cancelReject();
   } catch (err) {
@@ -687,7 +777,8 @@ function forwardOverpaymentToReimbursement() {
 
   const forwardedReceipts = receipts.value.map((receipt, index) => ({
     id: `LIQ-${selectedAdvance.value.id}-${index + 1}`,
-    fileName: receipt.name || receipt.file?.name || `Liquidation Receipt ${index + 1}`,
+    fileName:
+      receipt.name || receipt.file?.name || `Liquidation Receipt ${index + 1}`,
     fileType: receipt.file?.type || "application/pdf",
     thumbnail: receipt.preview || "",
     amount: Number(receipt.ocrData?.amount ?? receipt.amount ?? 0),
@@ -715,12 +806,25 @@ function forwardOverpaymentToReimbursement() {
     });
   }
 
-  sessionStorage.setItem("serms_forwarded_liquidation_receipts", JSON.stringify(forwardedReceipts));
+  sessionStorage.setItem(
+    "serms_forwarded_liquidation_receipts",
+    JSON.stringify(forwardedReceipts),
+  );
   router.push("/reimbursements/new");
 }
 
-function makeCase({ id, advanceId, requestorName, dateOfAdvances, dueDate, cashAdvanceAmount, receiptAmounts }) {
-  const receipts = receiptAmounts.map((amount, index) => makeReceipt(id, amount, index));
+function makeCase({
+  id,
+  advanceId,
+  requestorName,
+  dateOfAdvances,
+  dueDate,
+  cashAdvanceAmount,
+  receiptAmounts,
+}) {
+  const receipts = receiptAmounts.map((amount, index) =>
+    makeReceipt(id, amount, index),
+  );
   return {
     id,
     advanceId: advanceId || id.replace("LIQ", "CA"),
@@ -729,7 +833,10 @@ function makeCase({ id, advanceId, requestorName, dateOfAdvances, dueDate, cashA
     dueDate,
     cashAdvanceAmount,
     receipts,
-    submittedReceiptTotal: receiptAmounts.reduce((sum, amount) => sum + amount, 0),
+    submittedReceiptTotal: receiptAmounts.reduce(
+      (sum, amount) => sum + amount,
+      0,
+    ),
   };
 }
 
@@ -762,7 +869,9 @@ function seededReceiptAmounts(amount, index) {
     [0.4, 0.34, 0.26],
     [0.35, 0.2],
   ];
-  return patterns[index % patterns.length].map((ratio) => Math.round(amount * ratio));
+  return patterns[index % patterns.length].map((ratio) =>
+    Math.round(amount * ratio),
+  );
 }
 
 function acceptedReceiptTotal(row, receipts) {
@@ -825,8 +934,10 @@ function toggleSort(column) {
 }
 
 function getSortValue(row, key) {
-  if (["cashAdvanceAmount", "outstandingBalance"].includes(key)) return Number(row[key] || 0);
-  if (["dateOfAdvances", "dueDate"].includes(key)) return new Date(row[key] || 0).getTime();
+  if (["cashAdvanceAmount", "outstandingBalance"].includes(key))
+    return Number(row[key] || 0);
+  if (["dateOfAdvances", "dueDate"].includes(key))
+    return new Date(row[key] || 0).getTime();
   if (key === "actions") return row.id;
   return String(row[key] || "").toLowerCase();
 }
@@ -899,14 +1010,21 @@ function finalizeLiquidation() {
 </script>
 
 <template>
-  <div v-if="auth.isAdmin" class="mx-auto flex w-full max-w-7xl flex-col gap-6 font-sans">
-    <section class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+  <div
+    v-if="auth.isAdmin"
+    class="mx-auto flex w-full max-w-7xl flex-col gap-6 font-sans"
+  >
+    <section
+      class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"
+    >
       <div class="min-w-0">
         <div class="mb-2 flex items-center gap-2">
           <ArchiveRestore class="h-3.5 w-3.5 text-accent" />
           <span class="section-label">Settlement Operations</span>
         </div>
-        <h1 class="font-heading text-2xl font-bold leading-tight text-slate-800">
+        <h1
+          class="font-heading text-2xl font-bold leading-tight text-slate-800"
+        >
           Liquidation Console
         </h1>
         <p class="mt-1 text-sm text-slate-400">
@@ -929,10 +1047,16 @@ function finalizeLiquidation() {
       searchPlaceholder="Search liquidation ID, employee, status, or amount..."
     />
 
-    <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-      <div class="flex flex-col gap-1 border-b border-slate-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+    <section
+      class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+    >
+      <div
+        class="flex flex-col gap-1 border-b border-slate-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+      >
         <div>
-          <h2 class="font-heading text-base font-bold leading-tight text-slate-800">
+          <h2
+            class="font-heading text-base font-bold leading-tight text-slate-800"
+          >
             Liquidation Management
           </h2>
           <p class="mt-0.5 text-xs text-slate-400">
@@ -953,17 +1077,35 @@ function finalizeLiquidation() {
                 v-for="column in tableColumns"
                 :key="column.key"
                 class="px-5 py-4 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500"
-                :class="column.align === 'right' ? 'text-right' : column.align === 'center' ? 'text-center' : 'text-left'"
+                :class="
+                  column.align === 'right'
+                    ? 'text-right'
+                    : column.align === 'center'
+                      ? 'text-center'
+                      : 'text-left'
+                "
               >
                 <button
                   class="inline-flex w-full items-center gap-2 transition-colors hover:text-accent"
-                  :class="column.align === 'right' ? 'justify-end' : column.align === 'center' ? 'justify-center' : 'justify-start'"
+                  :class="
+                    column.align === 'right'
+                      ? 'justify-end'
+                      : column.align === 'center'
+                        ? 'justify-center'
+                        : 'justify-start'
+                  "
                   type="button"
                   @click="toggleSort(column)"
                 >
                   <span>{{ column.label }}</span>
-                  <ChevronUp v-if="sortKey === column.key && sortDirection === 'asc'" class="h-3.5 w-3.5 text-accent" />
-                  <ChevronDown v-else-if="sortKey === column.key" class="h-3.5 w-3.5 text-accent" />
+                  <ChevronUp
+                    v-if="sortKey === column.key && sortDirection === 'asc'"
+                    class="h-3.5 w-3.5 text-accent"
+                  />
+                  <ChevronDown
+                    v-else-if="sortKey === column.key"
+                    class="h-3.5 w-3.5 text-accent"
+                  />
                   <ChevronsUpDown v-else class="h-3.5 w-3.5 text-slate-300" />
                 </button>
               </th>
@@ -971,13 +1113,23 @@ function finalizeLiquidation() {
           </thead>
           <tbody class="divide-y divide-slate-100">
             <template v-if="store.isLoading">
-              <tr v-for="i in pageSize" :key="`liquidation-skeleton-${i}`" class="whitespace-nowrap">
-                <td v-for="col in tableColumns.length" :key="col" class="px-5 py-5">
+              <tr
+                v-for="i in pageSize"
+                :key="`liquidation-skeleton-${i}`"
+                class="whitespace-nowrap"
+              >
+                <td
+                  v-for="col in tableColumns.length"
+                  :key="col"
+                  class="px-5 py-5"
+                >
                   <div
                     v-if="col === tableColumns.length"
                     class="mx-auto flex h-8 w-16 max-w-full animate-pulse items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-100 sm:h-9 sm:w-20 sm:gap-2"
                   >
-                    <div class="h-3 w-3 shrink-0 rounded bg-slate-200 sm:h-3.5 sm:w-3.5"></div>
+                    <div
+                      class="h-3 w-3 shrink-0 rounded bg-slate-200 sm:h-3.5 sm:w-3.5"
+                    ></div>
                     <div class="h-2.5 w-5 rounded bg-slate-200 sm:w-7"></div>
                   </div>
                   <div
@@ -988,14 +1140,19 @@ function finalizeLiquidation() {
                       col === 1 ? 'w-12 sm:w-16' : '',
                       col === 2 ? 'w-24 sm:w-32' : '',
                       [5, 6].includes(col) ? 'ml-auto w-20 sm:w-24' : '',
-                      ![1, 2, 5, 6, 7, tableColumns.length].includes(col) ? 'w-20 sm:w-28' : '',
+                      ![1, 2, 5, 6, 7, tableColumns.length].includes(col)
+                        ? 'w-20 sm:w-28'
+                        : '',
                     ]"
                   ></div>
                 </td>
               </tr>
             </template>
             <tr v-else-if="sortedRows.length === 0">
-              <td :colspan="tableColumns.length" class="px-5 py-10 text-center text-sm font-semibold text-slate-400">
+              <td
+                :colspan="tableColumns.length"
+                class="px-5 py-10 text-center text-sm font-semibold text-slate-400"
+              >
                 No liquidation reports found.
               </td>
             </tr>
@@ -1005,14 +1162,35 @@ function finalizeLiquidation() {
                 :key="row.id"
                 class="whitespace-nowrap transition-colors duration-200 ease-out hover:bg-slate-50/80"
               >
-                <td class="px-5 py-5 font-mono text-sm font-bold text-slate-900">{{ row.id }}</td>
-                <td class="px-5 py-5 text-sm font-semibold text-slate-700">{{ row.requestorName }}</td>
-                <td class="px-5 py-5 text-sm text-slate-500">{{ formatDateOnly(row.dateOfAdvances) }}</td>
-                <td class="px-5 py-5 text-sm text-slate-500">{{ formatDateOnly(row.dueDate) }}</td>
-                <td class="px-5 py-5 text-right text-sm font-bold text-primary">{{ formatPeso(row.cashAdvanceAmount) }}</td>
-                <td class="px-5 py-5 text-right text-sm font-semibold text-slate-700">{{ formatPeso(row.outstandingBalance) }}</td>
+                <td
+                  class="px-5 py-5 font-mono text-sm font-bold text-slate-900"
+                >
+                  {{ row.id }}
+                </td>
+                <td class="px-5 py-5 text-sm font-semibold text-slate-700">
+                  {{ row.requestorName }}
+                </td>
+                <td class="px-5 py-5 text-sm text-slate-500">
+                  {{ formatDateOnly(row.dateOfAdvances) }}
+                </td>
+                <td class="px-5 py-5 text-sm text-slate-500">
+                  {{ formatDateOnly(row.dueDate) }}
+                </td>
+                <td class="px-5 py-5 text-right text-sm font-bold text-primary">
+                  {{ formatPeso(row.cashAdvanceAmount) }}
+                </td>
+                <td
+                  class="px-5 py-5 text-right text-sm font-semibold text-slate-700"
+                >
+                  {{ formatPeso(row.outstandingBalance) }}
+                </td>
                 <td class="px-5 py-5 text-center">
-                  <span :class="['inline-flex rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-wide', statusBadgeClass(row.status)]">
+                  <span
+                    :class="[
+                      'inline-flex rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-wide',
+                      statusBadgeClass(row.status),
+                    ]"
+                  >
                     {{ row.status }}
                   </span>
                 </td>
@@ -1045,8 +1223,12 @@ function finalizeLiquidation() {
       v-if="reviewingCase"
       class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-[1px]"
     >
-      <div class="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl">
-        <header class="flex items-center justify-between border-b border-slate-200 bg-slate-50/80 px-6 py-4">
+      <div
+        class="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl"
+      >
+        <header
+          class="flex items-center justify-between border-b border-slate-200 bg-slate-50/80 px-6 py-4"
+        >
           <div class="min-w-0">
             <div class="mb-1 flex items-center gap-2">
               <FileText class="h-4 w-4 text-accent" />
@@ -1067,22 +1249,32 @@ function finalizeLiquidation() {
         </header>
 
         <div class="flex-1 space-y-5 overflow-y-auto bg-slate-50/40 px-6 py-5">
-          <section class="grid grid-cols-1 gap-4 rounded-lg border border-slate-200 bg-white p-4 md:grid-cols-4">
+          <section
+            class="grid grid-cols-1 gap-4 rounded-lg border border-slate-200 bg-white p-4 md:grid-cols-4"
+          >
             <div>
               <p class="section-label mb-1">ID Code</p>
-              <p class="font-mono text-sm font-bold text-slate-900">{{ reviewingCase.id }}</p>
+              <p class="font-mono text-sm font-bold text-slate-900">
+                {{ reviewingCase.id }}
+              </p>
             </div>
             <div>
               <p class="section-label mb-1">Date</p>
-              <p class="text-sm font-bold text-slate-800">{{ formatDateOnly(reviewingCase.dateOfAdvances) }}</p>
+              <p class="text-sm font-bold text-slate-800">
+                {{ formatDateOnly(reviewingCase.dateOfAdvances) }}
+              </p>
             </div>
             <div>
               <p class="section-label mb-1">Name of Employee</p>
-              <p class="text-sm font-bold text-slate-800">{{ reviewingCase.requestorName }}</p>
+              <p class="text-sm font-bold text-slate-800">
+                {{ reviewingCase.requestorName }}
+              </p>
             </div>
             <div>
               <p class="section-label mb-1">Settlement Due Date</p>
-              <p class="text-sm font-bold text-slate-800">{{ formatDateOnly(reviewingCase.dueDate) }}</p>
+              <p class="text-sm font-bold text-slate-800">
+                {{ formatDateOnly(reviewingCase.dueDate) }}
+              </p>
             </div>
           </section>
 
@@ -1095,8 +1287,13 @@ function finalizeLiquidation() {
             </div>
             <div class="rounded-lg border border-slate-200 bg-white p-5">
               <div class="flex items-center justify-between gap-3">
-                <p class="section-label">Current Outstanding Balance</p>
-                <span :class="['rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-wide', statusBadgeClass(reviewStatus)]">
+                <p class="section-label">Ending Balance</p>
+                <span
+                  :class="[
+                    'rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-wide',
+                    statusBadgeClass(reviewStatus),
+                  ]"
+                >
                   {{ reviewStatus }}
                 </span>
               </div>
@@ -1113,10 +1310,13 @@ function finalizeLiquidation() {
                   Submitted Receipt Audit
                 </h3>
                 <p class="text-xs text-slate-400">
-                  Accept or reject each receipt before finalizing the liquidation balance.
+                  Accept or reject each receipt before finalizing the
+                  liquidation balance.
                 </p>
               </div>
-              <span class="kpi-label text-slate-400">{{ reviewReceipts.length }} receipts</span>
+              <span class="kpi-label text-slate-400"
+                >{{ reviewReceipts.length }} receipts</span
+              >
             </div>
 
             <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -1135,8 +1335,14 @@ function finalizeLiquidation() {
                 <div class="flex flex-col gap-3 p-5">
                   <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0">
-                      <h4 class="truncate font-heading text-sm font-bold text-slate-900">{{ receipt.merchantName }}</h4>
-                      <p class="truncate text-xs text-slate-400">{{ receipt.location }}</p>
+                      <h4
+                        class="truncate font-heading text-sm font-bold text-slate-900"
+                      >
+                        {{ receipt.merchantName }}
+                      </h4>
+                      <p class="truncate text-xs text-slate-400">
+                        {{ receipt.location }}
+                      </p>
                     </div>
                     <span
                       :class="[
@@ -1152,8 +1358,13 @@ function finalizeLiquidation() {
                     </span>
                   </div>
                   <div class="flex items-center justify-between gap-3">
-                    <span class="inline-flex rounded-md bg-accent-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-accent">{{ receipt.category }}</span>
-                    <span class="font-heading text-sm font-bold text-primary">{{ formatPeso(receipt.amount || 0) }}</span>
+                    <span
+                      class="inline-flex rounded-md bg-accent-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-accent"
+                      >{{ receipt.category }}</span
+                    >
+                    <span class="font-heading text-sm font-bold text-primary">{{
+                      formatPeso(receipt.amount || 0)
+                    }}</span>
                   </div>
                   <button
                     class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-accent-50 px-3 py-2.5 text-xs font-bold text-accent transition-colors hover:bg-accent-100"
@@ -1168,14 +1379,23 @@ function finalizeLiquidation() {
             </div>
           </section>
 
-          <section v-if="reviewingCase.reportFilePath" class="rounded-xl border border-slate-200 bg-white p-5 space-y-4">
+          <section
+            v-if="reviewingCase.reportFilePath"
+            class="rounded-xl border border-slate-200 bg-white p-5 space-y-4"
+          >
             <div class="flex items-center gap-3">
-              <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent">
+              <span
+                class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent"
+              >
                 <FileText class="h-5 w-5" />
               </span>
               <div>
-                <h3 class="font-heading text-base font-bold text-slate-800">Report Letter Attachment</h3>
-                <p class="text-xs text-slate-400">Supporting documentation for this liquidation.</p>
+                <h3 class="font-heading text-base font-bold text-slate-800">
+                  Report Letter Attachment
+                </h3>
+                <p class="text-xs text-slate-400">
+                  Supporting documentation for this liquidation.
+                </p>
               </div>
             </div>
             <a
@@ -1191,12 +1411,17 @@ function finalizeLiquidation() {
 
         <footer class="relative border-t border-slate-200 bg-white px-6 py-4">
           <div
-            v-if="reviewingCase.status !== 'Liquidated' && reviewingCase.status !== 'Rejected'"
+            v-if="
+              reviewingCase.status !== 'Liquidated' &&
+              reviewingCase.status !== 'Rejected'
+            "
             class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
           >
             <div class="text-sm font-semibold text-slate-500">
               Accepted receipts total:
-              <span class="font-bold text-primary">{{ formatPeso(acceptedReviewTotal) }}</span>
+              <span class="font-bold text-primary">{{
+                formatPeso(acceptedReviewTotal)
+              }}</span>
             </div>
             <div class="flex gap-2">
               <button
@@ -1223,11 +1448,19 @@ function finalizeLiquidation() {
           >
             <div class="text-sm font-semibold text-slate-500">
               Liquidation status:
-              <span :class="['inline-flex rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide', statusBadgeClass(reviewingCase.status)]">
+              <span
+                :class="[
+                  'inline-flex rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide',
+                  statusBadgeClass(reviewingCase.status),
+                ]"
+              >
                 {{ reviewingCase.status }}
               </span>
             </div>
-            <div v-if="reviewingCase.adminNote" class="text-xs text-slate-500 max-w-md italic">
+            <div
+              v-if="reviewingCase.adminNote"
+              class="text-xs text-slate-500 max-w-md italic"
+            >
               Note: "{{ reviewingCase.adminNote }}"
             </div>
           </div>
@@ -1239,8 +1472,12 @@ function finalizeLiquidation() {
       v-if="reviewingCase && receiptDetailsOpen && selectedReceipt"
       class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-[1px]"
     >
-      <div class="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl">
-        <header class="flex items-center justify-between border-b border-primary/10 bg-primary px-5 py-4 text-white">
+      <div
+        class="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl"
+      >
+        <header
+          class="flex items-center justify-between border-b border-primary/10 bg-primary px-5 py-4 text-white"
+        >
           <div class="flex min-w-0 items-center gap-4">
             <button
               class="inline-flex items-center gap-2 rounded-md px-2 py-1 text-xs font-bold text-white/90 transition-colors hover:bg-white/10"
@@ -1252,7 +1489,9 @@ function finalizeLiquidation() {
             </button>
             <div class="h-6 w-px bg-white/20" />
             <div class="flex min-w-0 items-center gap-2">
-              <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10">
+              <span
+                class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10"
+              >
                 <CalendarDays class="h-4 w-4" />
               </span>
               <div class="min-w-0">
@@ -1276,35 +1515,60 @@ function finalizeLiquidation() {
         </header>
 
         <div class="flex-1 overflow-y-auto bg-slate-50 p-5 scrollbar-thin">
-          <div class="mb-4 flex flex-col gap-3 rounded-lg border border-accent/20 bg-accent-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div
+            class="mb-4 flex flex-col gap-3 rounded-lg border border-accent/20 bg-accent-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+          >
             <div class="flex items-center gap-3">
-              <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-accent shadow-sm">
+              <span
+                class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-accent shadow-sm"
+              >
                 <Sparkles class="h-4 w-4" />
               </span>
               <div>
-                <p class="text-xs font-bold uppercase tracking-[0.12em] text-accent">AI Scanned</p>
-                <p class="text-sm font-semibold text-primary">Details automatically extracted from the submitted liquidation receipt.</p>
+                <p
+                  class="text-xs font-bold uppercase tracking-[0.12em] text-accent"
+                >
+                  AI Scanned
+                </p>
+                <p class="text-sm font-semibold text-primary">
+                  Details automatically extracted from the submitted liquidation
+                  receipt.
+                </p>
               </div>
             </div>
-            <span class="inline-flex w-fit items-center gap-1 rounded-full bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-accent shadow-sm">
+            <span
+              class="inline-flex w-fit items-center gap-1 rounded-full bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-accent shadow-sm"
+            >
               <CheckCircle class="h-3.5 w-3.5" />
               Verified fields
             </span>
           </div>
 
-          <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div
+            class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+          >
             <div class="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)]">
-              <aside class="border-b border-slate-200 bg-slate-100/70 p-5 lg:border-b-0 lg:border-r">
+              <aside
+                class="border-b border-slate-200 bg-slate-100/70 p-5 lg:border-b-0 lg:border-r"
+              >
                 <div class="mb-4 flex items-center justify-between gap-3">
                   <div class="min-w-0">
                     <p class="kpi-label text-slate-400">Receipt Preview</p>
-                    <h4 class="mt-1 truncate font-heading text-base font-bold text-slate-900">{{ selectedReceipt.merchantName }}</h4>
+                    <h4
+                      class="mt-1 truncate font-heading text-base font-bold text-slate-900"
+                    >
+                      {{ selectedReceipt.merchantName }}
+                    </h4>
                   </div>
-                  <span class="inline-flex rounded-md bg-accent-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-accent">
+                  <span
+                    class="inline-flex rounded-md bg-accent-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-accent"
+                  >
                     {{ selectedReceipt.category }}
                   </span>
                 </div>
-                <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+                <div
+                  class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm"
+                >
                   <img
                     :src="getFileUrl(selectedReceipt.filePath)"
                     alt="Scanned receipt"
@@ -1324,40 +1588,70 @@ function finalizeLiquidation() {
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <label class="space-y-1">
                     <span class="input-label">Invoice Number</span>
-                    <input class="input" readonly :value="selectedReceipt.invoiceNumber" />
+                    <input
+                      class="input"
+                      readonly
+                      :value="selectedReceipt.invoiceNumber"
+                    />
                   </label>
                   <label class="space-y-1">
                     <span class="input-label">Transaction Date</span>
                     <span class="relative block">
-                      <input class="input pr-10" readonly :value="selectedReceipt.transactionDate" />
-                      <CalendarDays class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                      <input
+                        class="input pr-10"
+                        readonly
+                        :value="selectedReceipt.transactionDate"
+                      />
+                      <CalendarDays
+                        class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                      />
                     </span>
                   </label>
                   <label class="space-y-1">
                     <span class="flex items-center justify-between gap-2">
                       <span class="input-label">TIN Number</span>
-                      <span class="inline-flex items-center gap-1 rounded-full bg-accent-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent">
+                      <span
+                        class="inline-flex items-center gap-1 rounded-full bg-accent-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent"
+                      >
                         <Sparkles class="h-3 w-3" />
                         AI Read
                       </span>
                     </span>
-                    <input class="input" readonly :value="selectedReceipt.tinNumber" />
+                    <input
+                      class="input"
+                      readonly
+                      :value="selectedReceipt.tinNumber"
+                    />
                   </label>
                   <label class="space-y-1">
                     <span class="input-label">Merchant Name</span>
-                    <input class="input" readonly :value="selectedReceipt.merchantName" />
+                    <input
+                      class="input"
+                      readonly
+                      :value="selectedReceipt.merchantName"
+                    />
                   </label>
                   <label class="space-y-1 md:col-span-2">
                     <span class="input-label">Location</span>
                     <span class="relative block">
-                      <input class="input pl-9" readonly :value="selectedReceipt.location" />
-                      <MapPin class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-accent" />
+                      <input
+                        class="input pl-9"
+                        readonly
+                        :value="selectedReceipt.location"
+                      />
+                      <MapPin
+                        class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-accent"
+                      />
                     </span>
                   </label>
                   <label class="space-y-1 md:col-span-2">
                     <span class="flex items-center justify-between gap-2">
-                      <span class="input-label">Category (AI Auto-Detected)</span>
-                      <span class="inline-flex items-center gap-1 rounded-full bg-accent-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent">
+                      <span class="input-label"
+                        >Category (AI Auto-Detected)</span
+                      >
+                      <span
+                        class="inline-flex items-center gap-1 rounded-full bg-accent-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent"
+                      >
                         <Sparkles class="h-3 w-3" />
                         AI Detected
                       </span>
@@ -1368,51 +1662,90 @@ function finalizeLiquidation() {
                   </label>
                 </div>
 
-                <div class="overflow-hidden rounded-lg border border-slate-200 bg-white">
+                <div
+                  class="overflow-hidden rounded-lg border border-slate-200 bg-white"
+                >
                   <div class="border-b border-slate-200 bg-slate-50 px-4 py-3">
-                    <h4 class="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">Order Items</h4>
+                    <h4
+                      class="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500"
+                    >
+                      Order Items
+                    </h4>
                   </div>
                   <table class="w-full border-collapse text-left text-sm">
                     <thead>
-                      <tr class="border-b border-slate-100 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-400">
+                      <tr
+                        class="border-b border-slate-100 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-400"
+                      >
                         <th class="px-4 py-3">Items</th>
                         <th class="px-4 py-3 text-center">Qty</th>
                         <th class="px-4 py-3 text-right">Price</th>
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
-                      <tr v-for="item in selectedReceipt.items" :key="item.name">
-                        <td class="px-4 py-3 font-semibold text-slate-700">{{ item.name }}</td>
-                        <td class="px-4 py-3 text-center text-slate-500">{{ item.quantity }}</td>
-                        <td class="px-4 py-3 text-right font-semibold text-slate-700">{{ formatPeso(item.price) }}</td>
+                      <tr
+                        v-for="item in selectedReceipt.items"
+                        :key="item.name"
+                      >
+                        <td class="px-4 py-3 font-semibold text-slate-700">
+                          {{ item.name }}
+                        </td>
+                        <td class="px-4 py-3 text-center text-slate-500">
+                          {{ item.quantity }}
+                        </td>
+                        <td
+                          class="px-4 py-3 text-right font-semibold text-slate-700"
+                        >
+                          {{ formatPeso(item.price) }}
+                        </td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
 
-                <div class="grid grid-cols-1 gap-3 border-t border-slate-200 pt-4 sm:grid-cols-3">
+                <div
+                  class="grid grid-cols-1 gap-3 border-t border-slate-200 pt-4 sm:grid-cols-3"
+                >
                   <label class="space-y-1">
                     <span class="input-label">Subtotal</span>
-                    <input class="input font-semibold" readonly :value="formatPeso(selectedReceipt.subtotal)" />
+                    <input
+                      class="input font-semibold"
+                      readonly
+                      :value="formatPeso(selectedReceipt.subtotal)"
+                    />
                   </label>
                   <label class="space-y-1">
                     <span class="input-label">Tax (VAT)</span>
-                    <input class="input font-semibold" readonly :value="formatPeso(selectedReceipt.vat)" />
+                    <input
+                      class="input font-semibold"
+                      readonly
+                      :value="formatPeso(selectedReceipt.vat)"
+                    />
                   </label>
-                  <div class="rounded-lg border border-accent/20 bg-accent-50 p-3">
+                  <div
+                    class="rounded-lg border border-accent/20 bg-accent-50 p-3"
+                  >
                     <p class="input-label text-accent">Orders Total</p>
-                    <p class="mt-1 font-heading text-xl font-bold text-primary">{{ formatPeso(selectedReceipt.amount || 0) }}</p>
+                    <p class="mt-1 font-heading text-xl font-bold text-primary">
+                      {{ formatPeso(selectedReceipt.amount || 0) }}
+                    </p>
                   </div>
                 </div>
 
-                <footer class="flex items-center gap-2 text-xs font-semibold text-slate-400">
+                <footer
+                  class="flex items-center gap-2 text-xs font-semibold text-slate-400"
+                >
                   <FileText class="h-4 w-4" />
                   Uploaded with receipt {{ selectedReceipt.id }}
                 </footer>
 
-                <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                <div
+                  class="rounded-xl border border-slate-200 bg-slate-50/70 p-4"
+                >
                   <label class="space-y-2">
-                    <span class="input-label">Admin Notes for this Receipt</span>
+                    <span class="input-label"
+                      >Admin Notes for this Receipt</span
+                    >
                     <textarea
                       v-model="selectedReceipt.notes"
                       class="input min-h-24 resize-none bg-white"
@@ -1431,7 +1764,8 @@ function finalizeLiquidation() {
             class="flex flex-col gap-3 rounded-lg border border-accent/20 bg-accent-50 p-4 sm:flex-row sm:items-center sm:justify-between"
           >
             <p class="text-sm font-semibold text-primary">
-              Are you sure you want to {{ pendingReceiptDecision }} this receipt?
+              Are you sure you want to {{ pendingReceiptDecision }} this
+              receipt?
             </p>
             <div class="flex shrink-0 items-center gap-2">
               <button
@@ -1471,16 +1805,38 @@ function finalizeLiquidation() {
         </div>
       </div>
     </div>
+
+    <!-- Audit Confirmation Modal -->
+    <DecisionConfirmationModal
+      :is-open="!!approvingId || !!rejectingId"
+      :mode="approvingId ? 'approve' : 'reject'"
+      :is-submitting="isReviewSubmitting"
+      :min-comment-length="10"
+      title="Liquidation Settlement Audit"
+      :description="
+        approvingId
+          ? 'Are you sure you want to approve this liquidation settlement? This will mark the cash advance as settled. Please enter your password to confirm.'
+          : 'Please enter your password and a comment to authorize rejecting this liquidation settlement.'
+      "
+      v-model:password="confirmPassword"
+      v-model:comment="rejectionComment"
+      @close="approvingId ? cancelApprove() : cancelReject()"
+      @confirm="approvingId ? confirmApprove() : confirmReject()"
+    />
   </div>
 
   <div v-else class="flex flex-col gap-6 font-sans">
-    <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+    <div
+      class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"
+    >
       <div class="min-w-0">
         <div class="mb-2 flex items-center gap-2">
           <ArchiveRestore class="h-3.5 w-3.5 text-accent" />
           <span class="section-label">Settlement Operations</span>
         </div>
-        <h1 class="font-heading text-2xl font-bold leading-tight text-slate-800">
+        <h1
+          class="font-heading text-2xl font-bold leading-tight text-slate-800"
+        >
           Liquidation Console
         </h1>
         <p class="mt-1 text-sm text-slate-400">
@@ -1505,31 +1861,48 @@ function finalizeLiquidation() {
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-5">
       <div class="flex flex-col gap-4 lg:col-span-2">
-        <h3 class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+        <h3
+          class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400"
+        >
           <ClipboardList class="h-3.5 w-3.5" />
           OUTSTANDING_ADVANCES
         </h3>
 
-        <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div class="grid grid-cols-[minmax(0,1fr)_6.5rem_6rem] border-b border-slate-200 bg-slate-50">
+        <div
+          class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+        >
+          <div
+            class="grid grid-cols-[minmax(0,1fr)_6.5rem_6rem] border-b border-slate-200 bg-slate-50"
+          >
             <button
               v-for="option in employeeSortOptions"
               :key="option.value"
               class="flex min-h-11 items-center gap-1.5 px-4 text-[10px] font-bold uppercase tracking-[0.08em] transition-colors hover:text-accent"
               :class="[
-                employeeSortKey === option.value ? 'text-accent' : 'text-slate-500',
-                option.value === 'amount' ? 'justify-end text-right' : option.value === 'status' ? 'justify-center text-center' : 'justify-start text-left',
+                employeeSortKey === option.value
+                  ? 'text-accent'
+                  : 'text-slate-500',
+                option.value === 'amount'
+                  ? 'justify-end text-right'
+                  : option.value === 'status'
+                    ? 'justify-center text-center'
+                    : 'justify-start text-left',
               ]"
               type="button"
               @click="
                 employeeSortKey === option.value
-                  ? (employeeSortDirection = employeeSortDirection === 'asc' ? 'desc' : 'asc')
-                  : ((employeeSortKey = option.value), (employeeSortDirection = 'asc'))
+                  ? (employeeSortDirection =
+                      employeeSortDirection === 'asc' ? 'desc' : 'asc')
+                  : ((employeeSortKey = option.value),
+                    (employeeSortDirection = 'asc'))
               "
             >
               <span>{{ option.label }}</span>
               <ChevronUp
-                v-if="employeeSortKey === option.value && employeeSortDirection === 'asc'"
+                v-if="
+                  employeeSortKey === option.value &&
+                  employeeSortDirection === 'asc'
+                "
                 class="h-3.5 w-3.5"
               />
               <ChevronDown
@@ -1545,7 +1918,9 @@ function finalizeLiquidation() {
           v-if="!store.isLoading && employeeFilteredAdvances.length === 0"
           class="card flex min-h-32 items-center justify-center border-dashed p-6 text-center"
         >
-          <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
+          <p
+            class="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400"
+          >
             No advances match the current search or filter.
           </p>
         </div>
@@ -1574,34 +1949,52 @@ function finalizeLiquidation() {
           >
             <div class="flex items-start justify-between">
               <div class="min-w-0 flex-1">
-                <p class="mb-0.5 text-[9px] font-bold uppercase tracking-tighter text-slate-700">
+                <p
+                  class="mb-0.5 text-[9px] font-bold uppercase tracking-tighter text-slate-700"
+                >
                   REF: {{ adv.id }}
                 </p>
-                <p class="truncate text-xs font-bold uppercase tracking-tight text-slate-900">
+                <p
+                  class="truncate text-xs font-bold uppercase tracking-tight text-slate-900"
+                >
                   {{ adv.purpose }}
                 </p>
               </div>
-              <StatusBadge :status="liqStore.calculateAging(adv).isOverdue ? 'overdue' : adv.status" />
+              <StatusBadge
+                :status="
+                  liqStore.calculateAging(adv).isOverdue
+                    ? 'overdue'
+                    : adv.status
+                "
+              />
             </div>
 
             <div class="mt-4 flex items-end justify-between">
               <div>
-                <p class="mb-1 text-[9px] font-bold uppercase tracking-widest text-slate-400">
-                  TOTAL_ISSUED
+                <p
+                  class="mb-1 text-[9px] font-bold uppercase tracking-widest text-slate-400"
+                >
+                  OUTSTANDING BALANCE
                 </p>
-                <p class="font-mono text-lg font-bold tracking-tighter text-primary">
-                  {{ formatPeso(adv.amount || 0) }}
+                <p
+                  class="font-mono text-lg font-bold tracking-tighter text-primary"
+                >
+                  {{ formatPeso(adv.balance || 0) }}
                 </p>
               </div>
               <div class="text-right">
-                <p class="mb-1 text-[9px] font-bold uppercase tracking-widest text-slate-400">
-                  AGE_STATUS
+                <p
+                  class="mb-1 text-[9px] font-bold uppercase tracking-widest text-slate-400"
+                >
+                  AGE STATUS
                 </p>
                 <div class="flex flex-col items-end">
                   <span
                     :class="[
                       'text-[10px] font-bold uppercase',
-                      liqStore.calculateAging(adv).isOverdue ? 'text-danger' : 'text-slate-500',
+                      liqStore.calculateAging(adv).isOverdue
+                        ? 'text-danger'
+                        : 'text-slate-500',
                     ]"
                   >
                     Day {{ liqStore.calculateAging(adv).daysSinceIssue }} of 7
@@ -1610,7 +2003,8 @@ function finalizeLiquidation() {
                     v-if="liqStore.calculateAging(adv).isOverdue"
                     class="font-mono text-[9px] font-bold text-danger"
                   >
-                    PENALTY: {{ formatPeso(liqStore.calculateAging(adv).penalty) }}
+                    PENALTY:
+                    {{ formatPeso(liqStore.calculateAging(adv).penalty) }}
                   </span>
                 </div>
               </div>
@@ -1625,7 +2019,9 @@ function finalizeLiquidation() {
           class="card flex h-full flex-col items-center justify-center gap-4 border-2 border-dashed bg-clinical/20 p-16 text-center"
         >
           <FilePieChart class="h-10 w-10 text-slate-200" />
-          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+          <p
+            class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400"
+          >
             Select an active advance to clear debt
           </p>
         </div>
@@ -1638,39 +2034,65 @@ function finalizeLiquidation() {
           <h3 class="text-xs font-bold uppercase tracking-[0.2em] text-primary">
             Submission Received
           </h3>
-          <p class="text-[11px] font-bold uppercase tracking-widest text-slate-500">
+          <p
+            class="text-[11px] font-bold uppercase tracking-widest text-slate-500"
+          >
             Technician report for {{ selectedAdvance.id }} sent to audit.
           </p>
-          <BaseButton variant="secondary" @click="selectedAdvance = null; submitted = false">
+          <BaseButton
+            variant="secondary"
+            @click="
+              selectedAdvance = null;
+              submitted = false;
+            "
+          >
             RELOAD CONSOLE
           </BaseButton>
         </div>
 
-        <div v-else class="card flex flex-col gap-6 border-t-2 border-t-primary p-6 shadow-sm">
-          <div class="flex items-start justify-between border-b border-slate-100 pb-4">
+        <div
+          v-else
+          class="card flex flex-col gap-6 border-t-2 border-t-primary p-6 shadow-sm"
+        >
+          <div
+            class="flex items-start justify-between border-b border-slate-100 pb-4"
+          >
             <div>
-              <p class="mb-1 text-[9px] font-bold uppercase tracking-tighter text-slate-700">
+              <p
+                class="mb-1 text-[9px] font-bold uppercase tracking-tighter text-slate-700"
+              >
                 RECONCILING REF: {{ selectedAdvance.id }}
               </p>
-              <h3 class="text-xs font-bold uppercase tracking-widest text-primary">
+              <h3
+                class="text-xs font-bold uppercase tracking-widest text-primary"
+              >
                 {{ selectedAdvance.purpose }}
               </h3>
             </div>
             <div class="text-right">
-              <p class="mb-1 text-[9px] font-bold uppercase tracking-widest text-slate-400">
-                CASH_ADVANCE
+              <p
+                class="mb-1 text-[9px] font-bold uppercase tracking-widest text-slate-400"
+              >
+                OUTSTANDING BALANCE
               </p>
-              <p class="font-mono text-2xl font-bold tracking-tighter text-primary">
-                {{ formatPeso(selectedAdvance.amount || 0) }}
+              <p
+                class="font-mono text-2xl font-bold tracking-tighter text-primary"
+              >
+                {{ formatPeso(selectedAdvance.balance || 0) }}
               </p>
             </div>
           </div>
 
-
           <div class="input-wrapper border-t border-slate-100 pt-4">
-            <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <label class="input-label !mb-0">DIGITAL RECEIPT ATTACHMENTS *</label>
-              <span class="inline-flex w-fit items-center gap-1 rounded-full bg-accent-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-accent">
+            <div
+              class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <label class="input-label !mb-0"
+                >DIGITAL RECEIPT ATTACHMENTS *</label
+              >
+              <span
+                class="inline-flex w-fit items-center gap-1 rounded-full bg-accent-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-accent"
+              >
                 <Sparkles class="h-3.5 w-3.5" />
                 OCR assisted verification
               </span>
@@ -1686,17 +2108,17 @@ function finalizeLiquidation() {
             v-if="receipts.length > 0"
             class="space-y-4 rounded-xl border border-slate-200 bg-white p-4"
           >
-            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div
+              class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+            >
               <div>
-                <p class="font-heading text-base font-bold text-primary">Receipt Scanning & Extraction</p>
+                <p class="font-heading text-base font-bold text-primary">
+                  Receipt Scanning & Extraction
+                </p>
                 <p class="mt-0.5 text-xs font-semibold text-slate-400">
                   Verify the scanned receipt text and figures before submitting.
                 </p>
               </div>
-              <span class="inline-flex w-fit items-center gap-1 rounded-full bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-accent shadow-sm">
-                <CheckCircle class="h-3.5 w-3.5" />
-                Verified fields
-              </span>
             </div>
 
             <article
@@ -1705,9 +2127,13 @@ function finalizeLiquidation() {
               class="overflow-hidden rounded-xl border border-slate-200 bg-slate-50"
             >
               <div class="grid grid-cols-1 lg:grid-cols-[180px_minmax(0,1fr)]">
-                <aside class="border-b border-slate-200 bg-slate-100/70 p-4 lg:border-b-0 lg:border-r">
+                <aside
+                  class="border-b border-slate-200 bg-slate-100/70 p-4 lg:border-b-0 lg:border-r"
+                >
                   <p class="kpi-label text-slate-400">Receipt Preview</p>
-                  <div class="mt-2 flex h-44 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+                  <div
+                    class="mt-2 flex h-44 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm"
+                  >
                     <img
                       v-if="receipt.preview"
                       :src="receipt.preview"
@@ -1719,12 +2145,18 @@ function finalizeLiquidation() {
                 </aside>
 
                 <div class="space-y-4 bg-white p-4">
-                  <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div
+                    class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"
+                  >
                     <div class="min-w-0">
-                      <p class="truncate font-heading text-sm font-bold text-slate-900">
+                      <p
+                        class="truncate font-heading text-sm font-bold text-slate-900"
+                      >
                         {{ receipt.ocrData?.vendor || receipt.name }}
                       </p>
-                      <p class="mt-0.5 truncate text-xs font-semibold text-slate-400">
+                      <p
+                        class="mt-0.5 truncate text-xs font-semibold text-slate-400"
+                      >
                         {{ receipt.name }}
                       </p>
                     </div>
@@ -1736,44 +2168,87 @@ function finalizeLiquidation() {
                           : 'border-amber-200 bg-amber-50 text-amber-700',
                       ]"
                     >
-                      {{ receipt.ocrStatus === "done" ? "AI Scanned" : "Scanning" }}
+                      {{
+                        receipt.ocrStatus === "done" ? "AI Scanned" : "Scanning"
+                      }}
                     </span>
                   </div>
 
                   <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
                     <label class="space-y-1">
                       <span class="input-label">Merchant Name</span>
-                      <input class="input bg-white" v-model="receipt.ocrData.vendor" />
+                      <input
+                        class="input bg-white"
+                        v-model="receipt.ocrData.vendor"
+                      />
                     </label>
                     <label class="space-y-1">
                       <span class="input-label">Date</span>
                       <span class="relative block">
-                        <input type="date" class="input pr-10 bg-white" v-model="receipt.ocrData.date" />
-                        <CalendarDays class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                        <input
+                          type="date"
+                          class="input pr-10 bg-white"
+                          v-model="receipt.ocrData.date"
+                        />
+                        <CalendarDays
+                          class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                        />
                       </span>
                     </label>
                     <label class="space-y-1">
                       <span class="input-label">TIN Number</span>
-                      <input class="input bg-white" v-model="receipt.ocrData.tin" />
+                      <input
+                        class="input bg-white"
+                        v-model="receipt.ocrData.tin"
+                      />
                     </label>
                     <label class="space-y-1">
                       <span class="input-label">Invoice Number</span>
-                      <input class="input bg-white" v-model="receipt.ocrData.invoiceNumber" />
+                      <input
+                        class="input bg-white"
+                        v-model="receipt.ocrData.invoiceNumber"
+                      />
                     </label>
                   </div>
 
-                  <div class="grid grid-cols-1 gap-3 border-t border-slate-200 pt-4 sm:grid-cols-3">
+                  <div
+                    class="grid grid-cols-1 gap-3 border-t border-slate-200 pt-4 sm:grid-cols-3"
+                  >
                     <label class="space-y-1">
                       <span class="input-label">Subtotal (Auto-Calc)</span>
-                      <input class="input font-semibold bg-slate-50" readonly :value="formatPeso(Math.max(Number(receipt.ocrData?.amount || 0) - Number(receipt.ocrData?.vat || 0), 0))" />
+                      <input
+                        class="input font-semibold bg-slate-50"
+                        readonly
+                        :value="
+                          formatPeso(
+                            Math.max(
+                              Number(receipt.ocrData?.amount || 0) -
+                                Number(receipt.ocrData?.vat || 0),
+                              0,
+                            ),
+                          )
+                        "
+                      />
                     </label>
                     <label class="space-y-1">
                       <span class="input-label">Tax (VAT)</span>
-                      <input type="number" step="0.01" class="input font-semibold bg-white" v-model.number="receipt.ocrData.vat" />
+                      <input
+                        type="number"
+                        step="0.01"
+                        class="input font-semibold bg-white"
+                        v-model.number="receipt.ocrData.vat"
+                      />
                     </label>
-                    <div class="rounded-lg border border-accent/20 bg-accent-50 p-3">
+                    <div
+                      class="rounded-lg border border-accent/20 bg-accent-50 p-3"
+                    >
                       <p class="input-label text-accent">Receipt Total</p>
-                      <input type="number" step="0.01" class="input font-semibold !bg-white !text-primary font-heading text-lg" v-model.number="receipt.ocrData.amount" />
+                      <input
+                        type="number"
+                        step="0.01"
+                        class="input font-semibold !bg-white !text-primary font-heading text-lg"
+                        v-model.number="receipt.ocrData.amount"
+                      />
                     </div>
                   </div>
                 </div>
@@ -1789,13 +2264,20 @@ function finalizeLiquidation() {
               class="hidden"
               @change="selectReportAttachment"
             />
-            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div
+              class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+            >
               <div class="min-w-0">
-                <p class="font-heading text-base font-bold text-primary">Cash Advance Report Letter</p>
+                <p class="font-heading text-base font-bold text-primary">
+                  Cash Advance Report Letter
+                </p>
                 <p class="mt-1 text-sm text-slate-500">
                   Attach your report letter for liquidation documentation.
                 </p>
-                <p v-if="reportAttachment" class="mt-2 truncate text-xs font-bold text-accent">
+                <p
+                  v-if="reportAttachment"
+                  class="mt-2 truncate text-xs font-bold text-accent"
+                >
                   Attached: {{ reportAttachment.name }}
                 </p>
               </div>
@@ -1838,7 +2320,9 @@ function finalizeLiquidation() {
             class="rounded-xl border border-amber-200 bg-amber-50/50 p-4 space-y-2"
           >
             <label class="block space-y-1">
-              <span class="input-label text-amber-800 font-bold">Shortfall Explanation <span class="text-danger">*</span></span>
+              <span class="input-label text-amber-800 font-bold"
+                >Shortfall Explanation <span class="text-danger">*</span></span
+              >
               <textarea
                 v-model="shortfallExplanation"
                 rows="3"
@@ -1851,54 +2335,50 @@ function finalizeLiquidation() {
           <div class="mt-2 border border-slate-200 bg-clinical/20 p-5">
             <div class="mb-4 flex items-center gap-2">
               <Calculator class="h-4 w-4 text-primary opacity-50" />
-              <h4 class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+              <h4
+                class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400"
+              >
                 The Reconciliation (Settlement)
               </h4>
             </div>
 
-            <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <div class="space-y-4">
+            <div class="flex">
+              <div class="space-y-4 w-full">
                 <div class="flex items-center justify-between text-[11px]">
-                  <span class="font-bold uppercase tracking-tight text-slate-400">Total Balance:</span>
-                  <span class="font-mono font-bold text-primary">{{ formatPeso(selectedAdvance.amount || 0) }}</span>
+                  <span
+                    class="font-bold uppercase tracking-tight text-slate-400"
+                    >Total Balance:</span
+                  >
+                  <span class="font-mono font-bold text-primary">{{
+                    formatPeso(selectedAdvance.balance ?? selectedAdvance.amount ?? 0)
+                  }}</span>
                 </div>
                 <div class="flex items-center justify-between text-[11px]">
-                  <span class="font-bold uppercase tracking-tight text-danger">Total Expenses:</span>
-                  <span class="font-mono font-bold text-danger">-{{ formatPeso(totalExpenseAmount) }}</span>
+                  <span class="font-bold uppercase tracking-tight text-danger"
+                    >Total Expenses:</span
+                  >
+                  <span class="font-mono font-bold text-danger"
+                    >-{{ formatPeso(totalExpenseAmount) }}</span
+                  >
                 </div>
-                <div class="flex items-center justify-between border-t border-slate-200 pt-2">
-                  <span class="text-[10px] font-black uppercase tracking-widest text-slate-600">Outstanding Balance:</span>
+                <div
+                  class="flex items-center justify-between border-t border-slate-200 pt-2"
+                >
+                  <span
+                    class="text-[10px] font-black uppercase tracking-widest text-slate-600"
+                    >Outstanding Balance:</span
+                  >
                   <span
                     :class="[
                       'font-mono text-lg font-black tracking-tighter',
-                      liquidationStatus === 'Liquidated' ? 'text-emerald-600' : 'text-primary',
+                      liquidationStatus === 'Liquidated'
+                        ? 'text-emerald-600'
+                        : 'text-primary',
                     ]"
                   >
                     {{ formatPeso(liquidationOutstandingBalance) }}
                   </span>
                 </div>
-              </div>
-
-              <div
-                :class="[
-                  'flex flex-col justify-center gap-2 border p-4 text-center',
-                  liquidationStatus === 'Liquidated'
-                    ? 'border-emerald-200 bg-emerald-50'
-                    : 'border-amber-200 bg-amber-50',
-                ]"
-              >
-                <template v-if="liquidationStatus === 'Liquidated'">
-                  <p class="text-[10px] font-black uppercase tracking-[0.1em] text-emerald-700">Status: Liquidated</p>
-                  <p class="text-[9px] font-bold uppercase leading-relaxed text-emerald-600">
-                    CASH ADVANCE BALANCE FULLY MET/CLEARED.
-                  </p>
-                </template>
-                <template v-else>
-                  <p class="text-[10px] font-black uppercase tracking-[0.1em] text-amber-700">Status: Incomplete</p>
-                  <p class="text-[9px] font-bold uppercase leading-relaxed text-amber-600">
-                    CONTINUE ATTACHING RECEIPTS UNTIL THE CASH ADVANCE IS FULLY ACCOUNTED FOR.
-                  </p>
-                </template>
               </div>
             </div>
           </div>
@@ -1907,13 +2387,20 @@ function finalizeLiquidation() {
             v-if="overpaymentAmount > 0"
             class="rounded-xl border border-accent/20 bg-accent-50 p-4"
           >
-            <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div
+              class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
+            >
               <div>
-                <p class="font-heading text-base font-bold text-primary">Overpayment Can Be Reimbursed</p>
+                <p class="font-heading text-base font-bold text-primary">
+                  Overpayment Can Be Reimbursed
+                </p>
                 <p class="mt-1 text-sm leading-relaxed text-slate-600">
-                  Any excess amount spent beyond the cash advance can be filed as a reimbursement.
-                  Current excess amount:
-                  <span class="font-bold text-primary">{{ formatPeso(overpaymentAmount) }}</span>.
+                  Any excess amount spent beyond the cash advance can be filed
+                  as a reimbursement. Current excess amount:
+                  <span class="font-bold text-primary">{{
+                    formatPeso(overpaymentAmount)
+                  }}</span
+                  >.
                 </p>
               </div>
               <button
@@ -1932,7 +2419,13 @@ function finalizeLiquidation() {
               id="submit-liquidation-btn"
               variant="primary"
               class="w-fit px-4 py-2.5"
-              :disabled="receipts.length === 0 || receipts.some(r => r.ocrStatus === 'processing') || totalExpenseAmount === 0 || submitting || (variance > 0 && !shortfallExplanation.trim())"
+              :disabled="
+                receipts.length === 0 ||
+                receipts.some((r) => r.ocrStatus === 'processing') ||
+                totalExpenseAmount === 0 ||
+                submitting ||
+                (variance > 0 && !shortfallExplanation.trim())
+              "
               @click="submitLiquidation"
             >
               <div v-if="submitting" class="flex items-center gap-2">
@@ -1949,20 +2442,6 @@ function finalizeLiquidation() {
       </div>
     </div>
   </div>
-
-    <!-- Audit Confirmation Modal -->
-    <DecisionConfirmationModal
-      :is-open="!!approvingId || !!rejectingId"
-      :mode="approvingId ? 'approve' : 'reject'"
-      :is-submitting="isReviewSubmitting"
-      :min-comment-length="10"
-      title="Liquidation Settlement Audit"
-      :description="approvingId ? 'Are you sure you want to approve this liquidation settlement? This will mark the cash advance as settled. Please enter your password to confirm.' : 'Please enter your password and a comment to authorize rejecting this liquidation settlement.'"
-      v-model:password="confirmPassword"
-      v-model:comment="rejectionComment"
-      @close="approvingId ? cancelApprove() : cancelReject()"
-      @confirm="approvingId ? confirmApprove() : confirmReject()"
-    />
 </template>
 
 <style scoped>

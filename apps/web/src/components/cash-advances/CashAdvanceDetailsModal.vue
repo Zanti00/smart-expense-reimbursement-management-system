@@ -98,8 +98,9 @@ function statusPillClass(status) {
 
 function outstandingBalance(record) {
   if (!record) return 0;
-  if (typeof record.balance === "number") return record.balance;
-  return ["approved", "disbursed", "signed", "under-review", "overdue"].includes(record.status) ? record.amount : 0;
+  // balance is mapped from outstanding_balance (DB-authoritative).
+  // Falls back to full amount for pre-disbursement advances where balance is null.
+  return Number(record.balance ?? record.amount ?? 0);
 }
 
 function formatDateOnly(value) {

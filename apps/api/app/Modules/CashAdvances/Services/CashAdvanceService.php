@@ -95,7 +95,10 @@ class CashAdvanceService
     public function disburseAdvance(CashAdvance $advance, User $user, array $data)
     {
         return DB::transaction(function () use ($advance, $user, $data) {
-            $advance->update(['status' => 'disbursed']);
+            $advance->update([
+                'status'              => 'disbursed',
+                'outstanding_balance' => $advance->amount, // Debt begins at full amount
+            ]);
 
             CashAdvanceDisbursement::create([
                 'cash_advance_id' => $advance->id,

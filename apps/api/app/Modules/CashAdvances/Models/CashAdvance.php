@@ -11,6 +11,7 @@ class CashAdvance extends Model
         'user_id',
         'purpose',
         'amount',
+        'outstanding_balance',
         'expected_disbursement_date',
         'expected_liquidation_date',
         'status',
@@ -19,10 +20,11 @@ class CashAdvance extends Model
     ];
 
     protected $casts = [
-        'amount' => 'decimal:2',
+        'amount'              => 'decimal:2',
+        'outstanding_balance' => 'decimal:2',
         'expected_disbursement_date' => 'date',
-        'expected_liquidation_date' => 'date',
-        'acknowledged_at' => 'datetime',
+        'expected_liquidation_date'  => 'date',
+        'acknowledged_at'    => 'datetime',
     ];
 
     public function requester()

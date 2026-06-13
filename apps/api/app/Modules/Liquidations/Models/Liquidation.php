@@ -14,7 +14,7 @@ class Liquidation extends Model
         'status',
         'reimbursement_ids',
         'total_expense_amount',
-        'variance_amount',
+        'outstanding_balance',
         'shortfall_explanation',
         'report_file_path',
     ];
@@ -22,7 +22,7 @@ class Liquidation extends Model
     protected $casts = [
         'reimbursement_ids' => 'json',
         'total_expense_amount' => 'decimal:2',
-        'variance_amount' => 'decimal:2',
+        'outstanding_balance' => 'decimal:2',
     ];
 
     public function user()

@@ -125,14 +125,17 @@ class LiquidationController extends Controller
         return DB::transaction(function () use ($user, $request) {
             $validated = $request->validate([
                 'cash_advance_id' => 'required|exists:cash_advances,id',
-                'receipts' => 'required|string', // JSON string for multipart
+                'receipts' => 'required', // JSON string for multipart or array for json request
                 'report_attachment' => 'nullable|file|mimes:jpeg,png,pdf,doc,docx|max:5120',
                 'total_expense_amount' => 'required|numeric|min:0.00',
                 'shortfall_explanation' => 'nullable|string',
             ]);
 
-            // Decode receipts JSON string
-            $receiptsData = json_decode($validated['receipts'], true);
+            // Decode receipts JSON string if it is not already an array
+            $receiptsData = is_string($validated['receipts'])
+                ? json_decode($validated['receipts'], true)
+                : $validated['receipts'];
+
             if (!is_array($receiptsData)) {
                 return response()->json(['message' => 'Invalid receipts data format.'], 422);
             }
@@ -143,7 +146,7 @@ class LiquidationController extends Controller
                 return response()->json(['message' => 'Forbidden. You do not own this cash advance.'], 403);
             }
 
-            if ($advance->status !== 'disbursed' && $advance->status !== 'overdue') {
+            if (!in_array($advance->status, ['disbursed', 'signed', 'overdue', 'incomplete'])) {
                 return response()->json(['message' => 'Conflict. Cash advance is not in a reconcilable state.'], 409);
             }
 
@@ -164,8 +167,11 @@ class LiquidationController extends Controller
                 $receiptIds[] = $receipt->id;
             }
 
-            // Calculate variance (Cash Advance Amount - Total Expense)
-            $variance = $advance->amount - $validated['total_expense_amount'];
+            // Snapshot the cash advance's current outstanding balance
+            $currentOutstandingBalance = $advance->outstanding_balance ?? $advance->amount;
+
+            // Calculate variance based on the current balance, not original amount
+            $variance = $currentOutstandingBalance - $validated['total_expense_amount'];
 
             // Enforce: shortfalls require an explanation
             if ($variance > 0 && empty($validated['shortfall_explanation'])) {
@@ -190,7 +196,7 @@ class LiquidationController extends Controller
                 'status' => 'pending',
                 'reimbursement_ids' => $receiptIds,
                 'total_expense_amount' => $validated['total_expense_amount'],
-                'variance_amount' => $variance,
+                'outstanding_balance' => $currentOutstandingBalance,
                 'shortfall_explanation' => $validated['shortfall_explanation'] ?? null,
                 'report_file_path' => $reportFilePath,
             ]);
@@ -201,7 +207,7 @@ class LiquidationController extends Controller
             // Create status history log for cash advance
             \App\Modules\CashAdvances\Models\CashAdvanceStatusHistory::create([
                 'cash_advance_id' => $advance->id,
-                'from_status' => 'disbursed',
+                'from_status' => $advance->status,
                 'to_status' => 'under-review',
                 'changed_by' => $user->id,
             ]);
@@ -286,20 +292,35 @@ class LiquidationController extends Controller
             $beforeState = $liquidation->toArray();
 
             if ($validated['status'] === 'approved') {
-                $liquidation->update([
-                    'status' => 'liquidated',
-                    'admin_note' => $validated['admin_note'] ?? null,
-                ]);
-                $advance->update(['status' => 'liquidated']); // Debt liquidated!
+                $currentBalance  = (float) ($advance->outstanding_balance ?? $advance->amount);
+                $approvedExpense = (float) $liquidation->total_expense_amount;
+                $newBalance      = max($currentBalance - $approvedExpense, 0);
                 
+                $variance = (float) $liquidation->outstanding_balance - $approvedExpense;
+                $newAdvanceStatus = ($variance > 0) ? 'incomplete' : 'liquidated';
+
+                $liquidation->update([
+                    'status'              => 'liquidated',
+                    'admin_note'          => $validated['admin_note'] ?? null,
+                    'outstanding_balance' => $newBalance,
+                ]);
+
+                $advance->update([
+                    'status'              => $newAdvanceStatus,
+                    'outstanding_balance' => $newBalance,
+                ]);
+
                 $actionType = 'LIQUIDATION_APPROVED';
             } else {
                 $liquidation->update([
-                    'status' => 'rejected',
+                    'status'     => 'rejected',
                     'admin_note' => $validated['admin_note'],
                 ]);
-                $advance->update(['status' => 'disbursed']); // Return to active debt
-                
+
+                // Balance unchanged on rejection — no payment was accepted.
+                // The cash advance returns to incomplete state.
+                $advance->update(['status' => 'incomplete']);
+
                 $actionType = 'LIQUIDATION_REJECTED';
             }
 

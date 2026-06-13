@@ -41,7 +41,7 @@ export const useLiquidationStore = defineStore('liquidation', () => {
     
     const isAuditing = advance.status === 'pending' || advance.status === 'under-review' || advance.status === 'approved'
     
-    if (diffDays > 7 && advance.status !== 'liquidated' && advance.status !== 'settled' && !isAuditing) {
+    if (diffDays > 7 && !['liquidated', 'settled', 'incomplete'].includes(advance.status) && !isAuditing) {
       isOverdue = true
       penalty = (diffDays - 7) * DAILY_PENALTY_PHP
     }

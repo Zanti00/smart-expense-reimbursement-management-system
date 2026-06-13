@@ -92,9 +92,9 @@ class LiquidationLogicTest extends TestCase
 
         $response->assertStatus(210);
 
-        // Verify cash advance is locked/approved
+        // Verify cash advance is locked/under-review
         $this->cashAdvance->refresh();
-        $this->assertEquals('approved', $this->cashAdvance->status);
+        $this->assertEquals('under-review', $this->cashAdvance->status);
 
         // Verify receipt is updated
         $receipt->refresh();
@@ -107,7 +107,7 @@ class LiquidationLogicTest extends TestCase
             'user_id' => $this->employee->id,
             'status' => 'pending',
             'total_expense_amount' => 5000.00,
-            'variance_amount' => 0.00,
+            'outstanding_balance' => 5000.00,
         ]);
     }
 
@@ -150,7 +150,7 @@ class LiquidationLogicTest extends TestCase
         $response->assertJsonValidationErrors(['shortfall_explanation']);
     }
 
-    public function test_audit_liquidation_approval_updates_cash_advance_to_settled(): void
+    public function test_audit_liquidation_approval_on_full_payment_sets_advance_to_liquidated(): void
     {
         Http::fake([
             '*/api/verify-password' => Http::response(['valid' => true], 200),
@@ -162,7 +162,7 @@ class LiquidationLogicTest extends TestCase
             'status' => 'pending',
             'reimbursement_ids' => [99],
             'total_expense_amount' => 5000.00,
-            'variance_amount' => 0.00,
+            'outstanding_balance' => 5000.00,
         ]);
 
         $token = $this->generateMockToken([
@@ -184,8 +184,9 @@ class LiquidationLogicTest extends TestCase
         $liquidation->refresh();
         $this->assertEquals('liquidated', $liquidation->status);
 
+        // Full payment → advance must be liquidated, not settled
         $this->cashAdvance->refresh();
-        $this->assertEquals('settled', $this->cashAdvance->status);
+        $this->assertEquals('liquidated', $this->cashAdvance->status);
     }
 
     public function test_audit_liquidation_rejection_requires_admin_note(): void
@@ -200,7 +201,8 @@ class LiquidationLogicTest extends TestCase
             'status' => 'pending',
             'reimbursement_ids' => [99],
             'total_expense_amount' => 5000.00,
-            'variance_amount' => 0.00,
+            'outstanding_balance' => 5000.00,
+
         ]);
 
         $token = $this->generateMockToken([
@@ -231,5 +233,135 @@ class LiquidationLogicTest extends TestCase
         ]);
 
         $response->assertStatus(422);
+    }
+
+    public function test_audit_liquidation_approval_on_shortfall_sets_advance_to_incomplete(): void
+    {
+        Http::fake([
+            '*/api/verify-password' => Http::response(['valid' => true], 200),
+        ]);
+
+        // Advance: PHP 5,000 | Submitted: PHP 3,000 → shortfall of PHP 2,000
+        $liquidation = Liquidation::create([
+            'cash_advance_id' => $this->cashAdvance->id,
+            'user_id' => $this->employee->id,
+            'status' => 'pending',
+            'reimbursement_ids' => [99],
+            'total_expense_amount' => 3000.00,
+            'outstanding_balance' => 5000.00,            'shortfall_explanation' => 'Unused funds returned to petty cash.',
+        ]);
+
+        $token = $this->generateMockToken([
+            'email' => $this->admin->email,
+            'role' => $this->admin->role,
+            'first_name' => 'Jane',
+            'last_name' => 'Admin',
+        ]);
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+        ])->postJson("/api/liquidations/{$liquidation->id}/audit", [
+            'status' => 'approved',
+            'password' => 'supersecret',
+        ]);
+
+        $response->assertStatus(200);
+
+        // Shortfall → advance must be incomplete, not liquidated
+        $this->cashAdvance->refresh();
+        $this->assertEquals('incomplete', $this->cashAdvance->status);
+    }
+
+    public function test_resubmission_is_allowed_on_incomplete_advance(): void
+    {
+        // Set cash advance to incomplete (post-first-round approval with shortfall)
+        $this->cashAdvance->update(['status' => 'incomplete', 'acknowledged_at' => now()]);
+
+        $receipt = Receipt::create([
+            'uploaded_by' => $this->employee->id,
+            'file_path' => 'receipts/test_ocr2.png',
+            'file_hash' => str_repeat('e', 64),
+            'file_type' => 'png',
+            'file_size_bytes' => 512,
+            'vendor_name' => 'Second Round Vendor',
+            'total_amount' => 2000.00,
+        ]);
+
+        $token = $this->generateMockToken([
+            'email' => $this->employee->email,
+            'role' => $this->employee->role,
+            'first_name' => 'John',
+            'last_name' => 'Employee',
+        ]);
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+        ])->postJson('/api/liquidations', [
+            'cash_advance_id' => $this->cashAdvance->id,
+            'receipts' => [
+                [
+                    'id' => $receipt->id,
+                    'vendor_name' => 'Second Round Vendor',
+                    'transaction_date' => '2026-06-14',
+                    'total_amount' => 2000.00,
+                ]
+            ],
+            'total_expense_amount' => 2000.00,
+            'shortfall_explanation' => 'Partial payment toward remaining balance after first round.',
+        ]);
+
+        // Must succeed — incomplete is a reconcilable state
+        $response->assertStatus(210);
+
+        $this->cashAdvance->refresh();
+        $this->assertEquals('under-review', $this->cashAdvance->status);
+
+        // Two liquidation instances must be linked to the same cash advance
+        $this->assertDatabaseCount('liquidations', 1); // only this one created in this test
+        $this->assertDatabaseHas('liquidations', [
+            'cash_advance_id' => $this->cashAdvance->id,
+            'total_expense_amount' => 2000.00,
+        ]);
+    }
+
+    public function test_audit_rejection_on_incomplete_advance_returns_to_incomplete(): void
+    {
+        Http::fake([
+            '*/api/verify-password' => Http::response(['valid' => true], 200),
+        ]);
+
+        // Advance is already incomplete (partial liquidation from a previous round)
+        $this->cashAdvance->update(['status' => 'incomplete']);
+
+        $liquidation = Liquidation::create([
+            'cash_advance_id' => $this->cashAdvance->id,
+            'user_id' => $this->employee->id,
+            'status' => 'pending',
+            'reimbursement_ids' => [99],
+            'total_expense_amount' => 1000.00,
+            'outstanding_balance' => 2000.00, // Simulating a second partial liquidation
+            'shortfall_explanation' => 'Still cannot cover full amount.',
+        ]);
+
+        $token = $this->generateMockToken([
+            'email' => $this->admin->email,
+            'role' => $this->admin->role,
+            'first_name' => 'Jane',
+            'last_name' => 'Admin',
+        ]);
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+        ])->postJson("/api/liquidations/{$liquidation->id}/audit", [
+            'status' => 'rejected',
+            'password' => 'supersecret',
+            'admin_note' => 'Receipts are not valid for the claimed amounts.',
+        ]);
+
+        $response->assertStatus(200);
+
+        // Rejected on incomplete → must stay incomplete, not revert to signed/disbursed
+        $this->cashAdvance->refresh();
+        $this->assertEquals('incomplete', $this->cashAdvance->status);
     }
 }
