@@ -14,6 +14,7 @@ import BaseUtilityToolbar from "@/components/base/BaseUtilityToolbar.vue";
 import SkeletonLoader from "@/components/base/SkeletonLoader.vue";
 import DecisionConfirmationModal from "@/components/reimbursements/DecisionConfirmationModal.vue";
 import { formatPeso } from "@/utils/formatters";
+import { vatOf } from "@/utils/receiptUtils";
 import {
   Activity,
   AlertTriangle,
@@ -766,6 +767,13 @@ function selectReportAttachment(event) {
   const file = event.target.files?.[0];
   if (file) reportAttachment.value = file;
   event.target.value = "";
+}
+
+function handleAmountChange(receipt) {
+  if (receipt && receipt.ocrData) {
+    const amt = Number(receipt.ocrData.amount) || 0;
+    receipt.ocrData.vat = Number(vatOf(amt).toFixed(2));
+  }
 }
 
 function clearReportAttachment() {
@@ -2248,6 +2256,7 @@ function finalizeLiquidation() {
                         step="0.01"
                         class="input font-semibold !bg-white !text-primary font-heading text-lg"
                         v-model.number="receipt.ocrData.amount"
+                        @input="handleAmountChange(receipt)"
                       />
                     </div>
                   </div>
