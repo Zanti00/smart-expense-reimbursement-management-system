@@ -51,4 +51,26 @@ class CashAdvance extends Model
     {
         return $this->hasMany(CashAdvanceStatusHistory::class);
     }
+
+    public function penalties()
+    {
+        return $this->hasMany(\App\Modules\Liquidations\Models\PenaltyRecord::class);
+    }
+
+    public function liquidations()
+    {
+        return $this->hasMany(\App\Modules\Liquidations\Models\Liquidation::class);
+    }
+
+    protected static function booted()
+    {
+        static::updated(function ($cashAdvance) {
+            if ($cashAdvance->wasChanged('outstanding_balance')) {
+                \Illuminate\Support\Facades\DB::table('liquidations')
+                    ->where('cash_advance_id', $cashAdvance->id)
+                    ->update(['outstanding_balance' => $cashAdvance->outstanding_balance]);
+            }
+        });
+    }
 }
+

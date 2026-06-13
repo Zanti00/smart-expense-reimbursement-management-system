@@ -5,7 +5,7 @@ import { apiFetch } from '../utils/apiFetch'
 export const useLiquidationStore = defineStore('liquidation', () => {
   const settlements = ref([])
   const isLoading = ref(false)
-  const DAILY_PENALTY_PHP = 55 // approximately $1.00
+  const DAILY_PENALTY_PHP = 50
 
   /**
    * Fetch all liquidations from the backend.
@@ -28,29 +28,56 @@ export const useLiquidationStore = defineStore('liquidation', () => {
 
   /**
    * Calculates the aging and penalty for a cash advance.
-   * Logic: 7-day grace period. Day 8 starts penalty.
+   * Logic: flat 50 PHP penalty per day after due date.
    */
   function calculateAging(advance) {
-    const issueDate = new Date(advance.date)
     const today = new Date()
-    const diffTime = Math.abs(today - issueDate)
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-    
-    let penalty = 0
-    let isOverdue = false
-    
-    const isAuditing = advance.status === 'pending' || advance.status === 'under-review' || advance.status === 'approved'
-    
-    if (diffDays > 7 && !['liquidated', 'settled', 'incomplete'].includes(advance.status) && !isAuditing) {
-      isOverdue = true
-      penalty = (diffDays - 7) * DAILY_PENALTY_PHP
+    today.setHours(0, 0, 0, 0)
+
+    const dueDateStr = advance.expected_liquidation_date || advance.dueDate
+    const dueDate = dueDateStr ? new Date(dueDateStr) : null
+    if (dueDate) {
+      dueDate.setHours(0, 0, 0, 0)
     }
 
+    // 1. Calculate sum of penalties from backend
+    let penalty = 0
+    if (advance.penalties && advance.penalties.length > 0) {
+      penalty = advance.penalties.reduce((sum, p) => sum + Number(p.penalty_amount), 0)
+    }
+
+    // 2. Overdue calculation
+    const isAuditing = advance.status === 'pending' || advance.status === 'under-review' || advance.status === 'approved'
+    const isOverdue = (advance.status === 'overdue' || (dueDate && today > dueDate)) && 
+                      !['liquidated', 'settled'].includes(advance.status) && 
+                      !isAuditing
+
+    // 3. Fallback dynamic penalty if backend did not return any penalties but it is overdue
+    if (isOverdue && penalty === 0 && dueDate && today > dueDate) {
+      const diffTime = today - dueDate
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+      if (diffDays > 0) {
+        penalty = diffDays * DAILY_PENALTY_PHP
+      }
+    }
+
+    // 4. Calculate days since issue
+    const issueDateStr = advance.date || advance.created_at
+    const issueDate = issueDateStr ? new Date(issueDateStr) : null
+    let daysSinceIssue = 0
+    if (issueDate) {
+      issueDate.setHours(0, 0, 0, 0)
+      const diffTime = Math.abs(today - issueDate)
+      daysSinceIssue = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    }
+
+    const graceRemaining = dueDate ? Math.max(0, Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24))) : 0
+
     return {
-      daysSinceIssue: diffDays,
+      daysSinceIssue,
       isOverdue,
       penalty,
-      graceRemaining: Math.max(0, 7 - diffDays)
+      graceRemaining
     }
   }
 

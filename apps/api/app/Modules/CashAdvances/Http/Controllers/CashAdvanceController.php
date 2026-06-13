@@ -32,9 +32,9 @@ class CashAdvanceController extends Controller
         $user = $request->user();
 
         if (!$user->can('serms.cash_advances.manage')) {
-            $advances = CashAdvance::with(['approvalActions'])->where('user_id', $user->id)->get();
+            $advances = CashAdvance::with(['approvalActions', 'penalties'])->where('user_id', $user->id)->get();
         } else {
-            $advances = CashAdvance::with(['requester', 'approvalActions'])->get();
+            $advances = CashAdvance::with(['requester', 'approvalActions', 'penalties'])->get();
         }
 
         return response()->json($advances);
@@ -64,7 +64,7 @@ class CashAdvanceController extends Controller
      */
     public function show(Request $request, $id)
     {
-        $advance = CashAdvance::with(['requester', 'approvalActions', 'statusHistory', 'disbursement'])->findOrFail($id);
+        $advance = CashAdvance::with(['requester', 'approvalActions', 'statusHistory', 'disbursement', 'penalties'])->findOrFail($id);
 
         Gate::authorize('view', $advance);
 
