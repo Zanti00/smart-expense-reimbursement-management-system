@@ -82,8 +82,8 @@ const employeeActiveStatus = ref("All");
 const employeeSortKey = ref("status");
 const employeeSortDirection = ref("asc");
 
-const statusFilters = ["All", "Incomplete", "Overpayment", "Liquidated", "Overdue"];
-const employeeStatusFilters = ["All", "Pending", "Approved", "Disbursed", "Overdue"];
+const statusFilters = ["All", "Pending", "Incomplete", "Overpayment", "Liquidated", "Overdue"];
+const employeeStatusFilters = ["All", "Pending", "Approved", "Disbursed", "Signed", "Under Review", "Overdue"];
 const employeeSortOptions = [
   { value: "status", label: "Status" },
   { value: "date", label: "Date" },
@@ -105,11 +105,12 @@ const variance = computed(() => {
 });
 
 const liquidationOutstandingBalance = computed(() => Math.max(variance.value, 0));
-const liquidationStatus = computed(() =>
-  selectedAdvance.value && liquidationOutstandingBalance.value === 0
-    ? "Liquidated"
-    : "Incomplete",
-);
+const liquidationStatus = computed(() => {
+  if (!selectedAdvance.value) return "Incomplete";
+  if (variance.value < 0) return "Overpayment";
+  if (variance.value > 0) return "Incomplete";
+  return "Liquidated";
+});
 const overpaymentAmount = computed(() => Math.max(totalExpenseAmount.value - (selectedAdvance.value?.amount || 0), 0));
 const needsReportAttachmentReminder = computed(() =>
   selectedAdvance.value &&
@@ -117,7 +118,7 @@ const needsReportAttachmentReminder = computed(() =>
 );
 
 const employeeOutstandingAdvances = computed(() =>
-  store.items.filter((item) => ["disbursed", "overdue"].includes(item.status)),
+  store.items.filter((item) => ["signed", "overdue"].includes(item.status) && item.acknowledgedAt),
 );
 
 const employeeFilteredAdvances = computed(() => {
@@ -260,6 +261,7 @@ const getFileUrl = (filePath) => {
 };
 
 const mapBackendStatusToDisplayStatus = (backendStatus, row, acceptedTotal) => {
+  if (backendStatus === 'pending') return 'Pending';
   if (backendStatus === 'liquidated') return 'Liquidated';
   if (backendStatus === 'rejected') return 'Rejected';
   return calculateLiquidationStatus(row, acceptedTotal);
@@ -323,7 +325,7 @@ const liquidationRows = computed(() =>
     const outstandingBalance = Math.max(row.cashAdvanceAmount - acceptedTotal, 0);
     
     let status = row.status;
-    if (status !== 'Liquidated' && status !== 'Rejected') {
+    if (status !== 'Liquidated' && status !== 'Rejected' && status !== 'Pending') {
       status = draft?.finalizedStatus || calculateLiquidationStatus(row, acceptedTotal);
     }
 
@@ -458,14 +460,18 @@ const employeeLiquidationKpis = computed(() => {
   const rows = employeeOutstandingAdvances.value;
   const overdue = rows.filter((item) => employeeAdvanceStatus(item) === "Overdue").length;
   const readyForLiquidation = rows.filter((item) =>
-    ["Approved", "Disbursed"].includes(employeeAdvanceStatus(item)),
+    ["Approved", "Signed"].includes(employeeAdvanceStatus(item)),
   ).length;
   const outstanding = rows.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  
+  const activeAdvances = store.items.filter((item) => 
+    ["pending", "approved", "disbursed", "signed"].includes(item.status)
+  ).length;
 
   return [
     {
       label: "Active Advances",
-      value: rows.length,
+      value: activeAdvances,
       sub: "To reconcile",
       icon: Activity,
       iconBg: "bg-amber-500/10",
@@ -507,7 +513,9 @@ function employeeAdvanceStatus(advance) {
   const status = String(advance.status || "pending").toLowerCase();
   if (status === "approved") return "Approved";
   if (status === "disbursed") return "Disbursed";
+  if (status === "signed") return "Signed";
   if (status === "pending") return "Pending";
+  if (status === "under-review") return "Under Review";
   return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
@@ -544,8 +552,8 @@ async function submitLiquidation() {
 
     const item = store.items.find((i) => i.id === selectedAdvance.value.id);
     if (item) {
-      item.status = "liquidated"; // matches backend lock transition
-      item.balance = 0;
+      item.status = 'under-review'; // matches backend lock transition
+      item.balance = Math.max(variance.value, 0);
     }
 
     submitting.value = false;
@@ -684,12 +692,28 @@ function forwardOverpaymentToReimbursement() {
     thumbnail: receipt.preview || "",
     amount: Number(receipt.ocrData?.amount ?? receipt.amount ?? 0),
     date: receipt.ocrData?.date || new Date().toISOString().slice(0, 10),
-    category: "Liquidation Overpayment",
-    source: "liquidation-overpayment",
+    category: receipt.category || "Other",
+    source: "liquidation-receipt",
     cashAdvanceId: selectedAdvance.value.id,
-    cashAdvanceAmount: selectedAdvance.value.amount || 0,
-    excessAmount: overpaymentAmount.value,
   }));
+
+  const cashAdvanceAmount = Number(selectedAdvance.value.amount || 0);
+  if (cashAdvanceAmount > 0) {
+    forwardedReceipts.push({
+      id: `LIQ-${selectedAdvance.value.id}-deduction`,
+      fileName: `Cash Advance Deduction (CA-${selectedAdvance.value.id})`,
+      fileType: "application/pdf",
+      thumbnail: "",
+      amount: -cashAdvanceAmount,
+      date: new Date().toISOString().slice(0, 10),
+      category: "Other",
+      source: "liquidation-deduction",
+      cashAdvanceId: selectedAdvance.value.id,
+      vatClassification: "non-vat",
+      subtotal: (-cashAdvanceAmount).toFixed(2),
+      tax: "0.00",
+    });
+  }
 
   sessionStorage.setItem("serms_forwarded_liquidation_receipts", JSON.stringify(forwardedReceipts));
   router.push("/reimbursements/new");
@@ -768,6 +792,7 @@ function isPastDue(value) {
 
 function statusBadgeClass(status) {
   const classes = {
+    Pending: "bg-purple-50 text-purple-700 border-purple-200",
     Incomplete: "bg-amber-50 text-amber-700 border-amber-200",
     Overpayment: "bg-blue-50 text-blue-700 border-blue-200",
     Liquidated: "bg-emerald-600 text-white border-emerald-600",
@@ -1923,6 +1948,7 @@ function finalizeLiquidation() {
         </div>
       </div>
     </div>
+  </div>
 
     <!-- Audit Confirmation Modal -->
     <DecisionConfirmationModal
@@ -1937,7 +1963,6 @@ function finalizeLiquidation() {
       @close="approvingId ? cancelApprove() : cancelReject()"
       @confirm="approvingId ? confirmApprove() : confirmReject()"
     />
-  </div>
 </template>
 
 <style scoped>

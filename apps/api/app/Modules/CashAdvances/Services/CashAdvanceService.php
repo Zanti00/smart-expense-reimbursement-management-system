@@ -119,9 +119,19 @@ class CashAdvanceService
     public function acknowledgeAdvance(CashAdvance $advance, array $data)
     {
         return DB::transaction(function () use ($advance, $data) {
+            $oldStatus = $advance->status;
+
             $advance->update([
                 'signature' => $data['signature'],
                 'acknowledged_at' => now(),
+                'status' => 'signed',
+            ]);
+
+            CashAdvanceStatusHistory::create([
+                'cash_advance_id' => $advance->id,
+                'from_status' => $oldStatus,
+                'to_status' => 'signed',
+                'changed_by' => auth()->id() ?? $advance->user_id,
             ]);
 
             return $advance;

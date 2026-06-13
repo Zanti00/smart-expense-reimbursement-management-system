@@ -89,6 +89,7 @@ function statusPillClass(status) {
     granted: "bg-emerald-50 text-emerald-700 border-emerald-200",
     approved: "bg-[#DCFCE7] text-[#166534] border-[#BBF7D0]",
     disbursed: "bg-[#DCFCE7] text-[#166534] border-[#BBF7D0]",
+    signed: "bg-[#E0F2FE] text-[#075985] border-[#BAE6FD]",
     pending: "bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]",
     rejected: "bg-[#FEE2E2] text-[#991B1B] border-[#FECACA]",
   };
@@ -98,7 +99,7 @@ function statusPillClass(status) {
 function outstandingBalance(record) {
   if (!record) return 0;
   if (typeof record.balance === "number") return record.balance;
-  return ["approved", "disbursed"].includes(record.status) ? record.amount : 0;
+  return ["approved", "disbursed", "signed", "under-review", "overdue"].includes(record.status) ? record.amount : 0;
 }
 
 function formatDateOnly(value) {

@@ -13,7 +13,8 @@ const config = {
   liquidated:   { color: 'bg-emerald-600', label: 'Liquidated' },
   unliquidated: { color: 'bg-amber-600',   label: 'Unliquidated' },
   overdue:      { color: 'bg-red-600',     label: 'Overdue' },
-  pending:      { color: 'bg-amber-600',   label: 'Pending' }
+  pending:      { color: 'bg-amber-600',   label: 'Pending' },
+  signed:       { color: 'bg-blue-600',    label: 'Signed' }
   ,
   'automatic-rejected': { color: 'bg-red-600', label: 'Automatic Rejected' },
   'pending-admin-re-review': { color: 'bg-accent', label: 'Pending Admin Re-review' },

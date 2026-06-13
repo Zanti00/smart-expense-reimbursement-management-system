@@ -48,7 +48,6 @@ class PasswordVerificationService
                 'Authorization' => "Bearer {$token}",
                 'Accept' => 'application/json',
             ];
-            
             if ($request->hasHeader('Cookie')) {
                 $headers['Cookie'] = $request->header('Cookie');
             }
@@ -66,6 +65,14 @@ class PasswordVerificationService
                 'status' => $response->status(),
                 'body' => $response->body(),
             ]);
+
+            if ($response->status() === 401) {
+                $message = $response->json('message') ?? 'Unauthenticated or session missing.';
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'password' => ["Authentication failed: {$message}. Please log out and log back in to refresh your session."]
+                ]);
+            }
+
             return false;
 
         } catch (\Exception $e) {
