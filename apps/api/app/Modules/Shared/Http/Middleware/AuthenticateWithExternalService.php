@@ -71,25 +71,46 @@ class AuthenticateWithExternalService
             $fullName = trim(($decoded->first_name ?? '') . ' ' . ($decoded->last_name ?? ''));
             $department = $decoded->department ?? 'General';
 
+            $userId = $decoded->sub ?? null;
+
+            if (!$userId) {
+                \Illuminate\Support\Facades\Log::error("Token payload missing sub. Payload: " . json_encode($decoded));
+                return response()->json(['message' => 'Unauthorized. Invalid token payload (missing user ID).'], 401);
+            }
+
             // Find or create the user in the local SERMS database to maintain foreign keys
-            $user = User::firstOrCreate(
-                ['email' => $email],
-                [
+            $user = User::where('auth_id', $userId)->first();
+
+            if (!$user) {
+                // Fallback to finding by email in case they were created before auth_id was added
+                $user = User::where('email', $email)->first();
+                if ($user) {
+                    $user->update([
+                        'auth_id' => $userId,
+                        'name' => $fullName,
+                        'role' => $sermsRole,
+                        'department' => $department,
+                    ]);
+                } else {
+                    $user = User::create([
+                        'auth_id' => $userId,
+                        'email' => $email,
+                        'name' => $fullName,
+                        'role' => $sermsRole,
+                        'department' => $department,
+                    ]);
+                }
+            } else {
+                // Update user details if they changed
+                $user->update([
+                    'email' => $email,
                     'name' => $fullName,
                     'role' => $sermsRole,
                     'department' => $department,
-                ]
-            );
-
-            // Update user details if they changed
-            $user->update([
-                'name' => $fullName,
-                'role' => $sermsRole,
-                'department' => $department,
-            ]);
+                ]);
+            }
 
             // Fetch fine-grained permissions from shared Redis cache
-            $userId = $decoded->sub ?? null;
             $permissions = [];
             if ($userId) {
                 $permissions = \Illuminate\Support\Facades\Cache::get("user_permissions:{$userId}", []);

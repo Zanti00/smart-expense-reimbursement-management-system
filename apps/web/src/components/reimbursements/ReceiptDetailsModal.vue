@@ -48,6 +48,8 @@ const emit = defineEmits([
 
 const auth = useAuthStore();
 
+const isProcessing = computed(() => props.receipt?.status === 'processing');
+
 const localReviewerNotes = computed({
   get: () => props.reviewerNotes,
   set: (val) => emit("update:reviewerNotes", val),
@@ -158,8 +160,9 @@ const localReviewerNotes = computed({
                 <div
                   class="overflow-hidden rounded-lg border border-slate-200 shadow-sm flex items-center justify-center bg-slate-50 flex-1 aspect-square lg:aspect-auto"
                 >
+                  <div v-if="isProcessing" class="h-full w-full animate-pulse bg-slate-200"></div>
                   <img
-                    v-if="receipt?.file_url"
+                    v-else-if="receipt?.file_url"
                     :src="receipt.file_url"
                     alt="Scanned receipt"
                     class="h-full w-full object-contain max-h-[500px]"
@@ -173,7 +176,7 @@ const localReviewerNotes = computed({
                   </div>
                 </div>
                 <a
-                  v-if="receipt?.file_url"
+                  v-if="receipt?.file_url && !isProcessing"
                   :href="receipt.file_url"
                   target="_blank"
                   class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-accent/20 bg-white px-3 py-2.5 text-xs font-bold text-accent transition-colors hover:bg-accent-50"
@@ -187,18 +190,21 @@ const localReviewerNotes = computed({
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <label class="space-y-1">
                     <span class="input-label">Invoice Number</span>
+                    <div v-if="isProcessing" class="h-10 w-full animate-pulse rounded-lg bg-slate-200"></div>
                     <input
+                      v-else
                       class="input bg-slate-50"
-                      readonly
+                      disabled
                       :value="receipt?.invoice_number || '--'"
                     />
                   </label>
                   <label class="space-y-1">
                     <span class="input-label">Transaction Date</span>
-                    <span class="relative block">
+                    <div v-if="isProcessing" class="h-10 w-full animate-pulse rounded-lg bg-slate-200"></div>
+                    <span v-else class="relative block">
                       <input
                         class="input pr-10 bg-slate-50"
-                        readonly
+                        disabled
                         :value="
                           receipt?.transaction_date
                             ? new Date(
@@ -222,17 +228,21 @@ const localReviewerNotes = computed({
                         AI Read
                       </span>
                     </span>
+                    <div v-if="isProcessing" class="h-10 w-full animate-pulse rounded-lg bg-slate-200"></div>
                     <input
+                      v-else
                       class="input bg-slate-50"
-                      readonly
+                      disabled
                       :value="receipt?.tin || '--'"
                     />
                   </label>
                   <label class="space-y-1">
                     <span class="input-label">Merchant Name</span>
+                    <div v-if="isProcessing" class="h-10 w-full animate-pulse rounded-lg bg-slate-200"></div>
                     <input
+                      v-else
                       class="input bg-slate-50"
-                      readonly
+                      disabled
                       :value="receipt?.vendor_name || '--'"
                     />
                   </label>
@@ -242,9 +252,11 @@ const localReviewerNotes = computed({
                         >VAT Classification</span
                       >
                     </span>
+                    <div v-if="isProcessing" class="h-10 w-full animate-pulse rounded-lg bg-slate-200"></div>
                     <input
+                      v-else
                       class="input bg-slate-50"
-                      readonly
+                      disabled
                       :value="
                         receipt?.vat_classification
                           ? receipt.vat_classification.toUpperCase()
@@ -255,9 +267,24 @@ const localReviewerNotes = computed({
                 </div>
 
                 <!-- Order Items List -->
+                <div v-if="isProcessing" class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                  <div class="border-b border-slate-200 bg-slate-50/50 px-5 py-3.5">
+                    <div class="h-3 w-24 animate-pulse rounded bg-slate-200"></div>
+                  </div>
+                  <ul class="divide-y divide-slate-100">
+                    <li class="flex items-center justify-between gap-4 px-5 py-4" v-for="i in 2" :key="i">
+                      <div class="flex items-center gap-3.5 w-full">
+                        <div class="h-9 w-9 shrink-0 animate-pulse rounded-full bg-slate-200"></div>
+                        <div class="h-4 w-1/3 animate-pulse rounded bg-slate-200"></div>
+                      </div>
+                      <div class="h-4 w-16 animate-pulse rounded bg-slate-200"></div>
+                    </li>
+                  </ul>
+                </div>
+
                 <div
                   class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
-                  v-if="
+                  v-else-if="
                     receipt?.items && receipt.items.length > 0
                   "
                 >
@@ -302,9 +329,11 @@ const localReviewerNotes = computed({
                 >
                   <label class="space-y-1">
                     <span class="input-label">Subtotal</span>
+                    <div v-if="isProcessing" class="h-10 w-full animate-pulse rounded-lg bg-slate-200"></div>
                     <input
+                      v-else
                       class="input font-semibold bg-slate-50"
-                      readonly
+                      disabled
                       :value="
                         receipt?.total_amount
                           ? formatPeso(receipt.total_amount)
@@ -314,9 +343,11 @@ const localReviewerNotes = computed({
                   </label>
                   <label class="space-y-1">
                     <span class="input-label">Tax (VAT)</span>
+                    <div v-if="isProcessing" class="h-10 w-full animate-pulse rounded-lg bg-slate-200"></div>
                     <input
+                      v-else
                       class="input font-semibold bg-slate-50"
-                      readonly
+                      disabled
                       :value="
                         receipt?.vat_amount !== undefined && receipt?.vat_amount !== null
                           ? formatPeso(receipt.vat_amount)
@@ -328,7 +359,9 @@ const localReviewerNotes = computed({
                     class="rounded-lg border border-accent/20 bg-accent-50 p-3"
                   >
                     <p class="input-label text-accent">Orders Total</p>
+                    <div v-if="isProcessing" class="mt-1 h-7 w-24 animate-pulse rounded bg-accent/20"></div>
                     <p
+                      v-else
                       class="mt-1 font-heading text-xl font-bold text-primary"
                     >
                       {{
@@ -368,8 +401,9 @@ const localReviewerNotes = computed({
             >
             <textarea
               v-model="localReviewerNotes"
-              class="input min-h-20 resize-none bg-slate-50"
+              class="input min-h-20 resize-none bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               placeholder="Add notes explaining the decision..."
+              :disabled="isProcessing || isSubmitting"
             />
           </div>
           <div
@@ -382,9 +416,9 @@ const localReviewerNotes = computed({
             </p>
             <div class="flex shrink-0 items-center gap-2">
               <button
-                class="inline-flex min-h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50"
+                class="inline-flex min-h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                 type="button"
-                :disabled="isSubmitting"
+                :disabled="isProcessing || isSubmitting"
                 @click="emit('cancel-decision')"
               >
                 Cancel
@@ -392,7 +426,7 @@ const localReviewerNotes = computed({
               <button
                 class="inline-flex min-h-9 items-center justify-center rounded-lg bg-accent px-4 text-xs font-bold text-white transition-colors hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-60"
                 type="button"
-                :disabled="isSubmitting"
+                :disabled="isProcessing || isSubmitting"
                 @click="emit('confirm-decision')"
               >
                 Confirm
@@ -401,16 +435,18 @@ const localReviewerNotes = computed({
           </div>
           <div v-else class="flex flex-col gap-2 sm:flex-row sm:justify-end">
             <button
-              class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 text-sm font-bold text-red-700 transition-colors hover:bg-red-100"
+              class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 text-sm font-bold text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60 disabled:bg-slate-50 disabled:text-slate-400 disabled:border-slate-200"
               type="button"
+              :disabled="isProcessing"
               @click="emit('request-decision', 'Reject')"
             >
               <XCircle class="h-4 w-4" />
               Reject
             </button>
             <button
-              class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-bold text-white transition-colors hover:bg-accent/90"
+              class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-bold text-white transition-colors hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-60 disabled:bg-slate-300"
               type="button"
+              :disabled="isProcessing"
               @click="emit('request-decision', 'Approve')"
             >
               <CheckCircle class="h-4 w-4" />

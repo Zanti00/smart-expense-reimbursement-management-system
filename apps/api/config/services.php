@@ -52,4 +52,9 @@ return [
         'jwt_secret' => env('JWT_SECRET'),
     ],
 
+    'prs' => [
+        'webhook_secret' => env('PRS_WEBHOOK_SECRET'),
+        'webhook_tolerance_seconds' => env('PRS_WEBHOOK_TOLERANCE_SECONDS', 300),
+    ],
+
 ];

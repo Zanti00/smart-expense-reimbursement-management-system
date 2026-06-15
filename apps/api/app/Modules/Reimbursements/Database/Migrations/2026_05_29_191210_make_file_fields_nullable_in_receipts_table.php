@@ -12,7 +12,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (DB::connection()->getDriverName() !== 'sqlite') {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            Schema::table('receipts', function (Blueprint $table) {
+                $table->string('file_path')->nullable()->change();
+                $table->char('file_hash', 64)->nullable()->change();
+                $table->string('file_type')->nullable()->change();
+                $table->unsignedInteger('file_size_bytes')->nullable()->change();
+            });
+        } else {
             DB::statement('ALTER TABLE receipts MODIFY file_path VARCHAR(255) NULL');
             DB::statement('ALTER TABLE receipts MODIFY file_hash CHAR(64) NULL');
             DB::statement("ALTER TABLE receipts MODIFY file_type ENUM('jpeg', 'png', 'pdf') NULL");
@@ -25,7 +32,14 @@ return new class extends Migration
      */
     public function down(): void
     {
-        if (DB::connection()->getDriverName() !== 'sqlite') {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            Schema::table('receipts', function (Blueprint $table) {
+                $table->string('file_path')->nullable(false)->change();
+                $table->char('file_hash', 64)->nullable(false)->change();
+                $table->string('file_type')->nullable(false)->change();
+                $table->unsignedInteger('file_size_bytes')->nullable(false)->change();
+            });
+        } else {
             DB::statement('ALTER TABLE receipts MODIFY file_path VARCHAR(255) NOT NULL');
             DB::statement('ALTER TABLE receipts MODIFY file_hash CHAR(64) NOT NULL');
             DB::statement("ALTER TABLE receipts MODIFY file_type ENUM('jpeg', 'png', 'pdf') NOT NULL");

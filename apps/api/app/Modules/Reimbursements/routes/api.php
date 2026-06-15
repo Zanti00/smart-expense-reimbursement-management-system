@@ -4,6 +4,9 @@ use Illuminate\Support\Facades\Route;
 use App\Modules\Reimbursements\Http\Controllers\ReimbursementController;
 use App\Modules\Reimbursements\Http\Controllers\ReceiptController;
 use App\Modules\Reimbursements\Http\Controllers\ExpenseCategoryController;
+use App\Modules\Reimbursements\Http\Controllers\PrsWebhookController;
+
+Route::post('/webhooks/prs', PrsWebhookController::class);
 
 Route::middleware(['auth.external'])->group(function () {
     Route::get('/', [ReimbursementController::class, 'index']);

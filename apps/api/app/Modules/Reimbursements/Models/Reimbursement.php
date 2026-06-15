@@ -20,6 +20,9 @@ class Reimbursement extends Model
         'report_file_path',
         'admin_notes',
         'submitted_by_name',
+        'source_system',
+        'source_submission_id',
+        'source_delivery_id',
     ];
 
     protected $casts = [

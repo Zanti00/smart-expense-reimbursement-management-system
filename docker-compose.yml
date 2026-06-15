@@ -37,6 +37,7 @@ services:
       - REDIS_HOST=auth-redis
       - CACHE_STORE=redis
       - JWT_PUBLIC_KEY_PATH=/var/www/storage/oauth-public.key
+      - PRS_WEBHOOK_SECRET=ucg6JjRwygbqcZrK+8sSBO8cnO2arZ+XZzonNIo11kA=
 
   web:
     build:
