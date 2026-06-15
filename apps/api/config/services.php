@@ -52,4 +52,11 @@ return [
         'jwt_secret' => env('JWT_SECRET'),
     ],
 
+    'prs' => [
+        'reimbursement_api_key' => env('PRS_REIMBURSEMENT_API_KEY'),
+        'reimbursement_status_api_url' => env('PRS_REIMBURSEMENT_STATUS_API_URL'),
+        'reimbursement_status_api_key' => env('PRS_REIMBURSEMENT_STATUS_API_KEY'),
+        'reimbursement_status_api_timeout' => env('PRS_REIMBURSEMENT_STATUS_API_TIMEOUT', 10),
+    ],
+
 ];

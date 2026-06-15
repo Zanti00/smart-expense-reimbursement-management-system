@@ -20,11 +20,15 @@ class Reimbursement extends Model
         'report_file_path',
         'admin_notes',
         'submitted_by_name',
+        'source_system',
+        'source_submission_id',
+        'is_request',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
         'date' => 'date',
+        'is_request' => 'boolean',
     ];
 
     public function user()

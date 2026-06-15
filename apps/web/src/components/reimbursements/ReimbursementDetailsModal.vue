@@ -259,9 +259,10 @@ function statusClass(status) {
                     />
                     <div
                       v-else
-                      class="flex flex-col items-center justify-center text-slate-300 py-10"
+                      class="flex flex-col items-center justify-center text-slate-400 py-10 text-center px-4"
                     >
-                      <FileText class="w-8 h-8" />
+                      <FileText class="w-8 h-8 mb-2 opacity-50" />
+                      <span class="text-xs font-medium">No Image Provided</span>
                     </div>
                   </div>
                   <div class="flex flex-col gap-3 p-4 flex-1 justify-between">

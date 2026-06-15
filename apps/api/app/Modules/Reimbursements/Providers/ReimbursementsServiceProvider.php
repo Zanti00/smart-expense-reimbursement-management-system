@@ -2,6 +2,7 @@
 
 namespace App\Modules\Reimbursements\Providers;
 
+use App\Modules\Reimbursements\Http\Middleware\AuthenticatePrsReimbursementApi;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Route;
 
@@ -20,6 +21,8 @@ class ReimbursementsServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        app('router')->aliasMiddleware('auth.prs-reimbursement-api', AuthenticatePrsReimbursementApi::class);
+
         // Load Migrations
         $migrationPath = __DIR__ . '/../Database/Migrations';
         if (is_dir($migrationPath)) {

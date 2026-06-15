@@ -6,6 +6,7 @@ use App\Modules\Users\Models\User;
 use App\Modules\Reimbursements\Models\Receipt;
 use App\Modules\Reimbursements\Models\Reimbursement;
 use App\Modules\AuditLogs\Services\AuditLogService;
+use App\Modules\Reimbursements\Jobs\UpdatePrsReimbursementStatusJob;
 use App\Modules\Shared\Services\PasswordVerificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -125,6 +126,10 @@ class ReimbursementService
                 afterState: $afterState,
                 ipAddress: $ipAddress
             );
+
+            if ($reimbursement->is_request == 1 && !empty($reimbursement->source_submission_id)) {
+                UpdatePrsReimbursementStatusJob::dispatch($reimbursement->source_submission_id);
+            }
 
             return $reimbursement;
         });

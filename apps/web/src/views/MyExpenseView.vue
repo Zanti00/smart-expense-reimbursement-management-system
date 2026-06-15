@@ -90,8 +90,18 @@ const filteredReceipts = computed(() => {
   if (searchQuery.value.trim()) {
     const q = searchQuery.value.trim().toLowerCase();
     base = base.filter((r) =>
-      [r.id, r.vendorName, r.fileName, r.category, r.status, r.invoiceNumber]
-        .some((value) => String(value || "").toLowerCase().includes(q)),
+      [
+        r.id,
+        r.vendorName,
+        r.fileName,
+        r.category,
+        r.status,
+        r.invoiceNumber,
+      ].some((value) =>
+        String(value || "")
+          .toLowerCase()
+          .includes(q),
+      ),
     );
   }
   return base;
@@ -113,7 +123,7 @@ function promptDelete(id) {
 
 async function confirmDelete(password) {
   const isValid = await auth.verifyPassword(password);
-  
+
   if (isValid) {
     receiptsStore.softDelete(selectedReceiptId.value);
     const s = new Set(selectedIds.value);
@@ -141,11 +151,15 @@ const receiptBeingEdited = ref(null);
 const adminNotesByReceipt = ref({});
 
 const automaticRejectedReceipts = computed(() =>
-  receiptsStore.visibleReceipts.filter((r) => r.status === "automatic-rejected"),
+  receiptsStore.visibleReceipts.filter(
+    (r) => r.status === "automatic-rejected",
+  ),
 );
 
 const pendingReReviewReceipts = computed(() =>
-  receiptsStore.visibleReceipts.filter((r) => r.status === "pending-admin-re-review"),
+  receiptsStore.visibleReceipts.filter(
+    (r) => r.status === "pending-admin-re-review",
+  ),
 );
 
 function openEditReceipt(receipt) {
@@ -161,7 +175,10 @@ function closeUploadModal(value) {
 async function finalizeReceiptReview(receipt, decision) {
   const notes = adminNotesByReceipt.value[receipt.id] || "";
   if (notes.trim().length < 10) {
-    addToast({ message: "Admin notes must be at least 10 characters.", type: "error" });
+    addToast({
+      message: "Admin notes must be at least 10 characters.",
+      type: "error",
+    });
     return;
   }
 
@@ -227,7 +244,7 @@ const kpis = computed(() => [
           <h1
             class="text-2xl font-bold text-slate-800 leading-tight"
             style="
-              font-family: 'Poppins', sans-serif;
+              font-family: &quot;Poppins&quot;, sans-serif;
               letter-spacing: -0.02em;
             "
           >
@@ -235,14 +252,14 @@ const kpis = computed(() => [
           </h1>
           <p
             class="text-sm text-slate-400 mt-1"
-            style="font-family: 'Open Sans', sans-serif"
+            style="font-family: &quot;Open Sans&quot;, sans-serif"
           >
             Organize and manage your receipts
           </p>
         </div>
         <div class="flex flex-wrap items-center gap-3">
           <!-- Forward to Reimbursement -->
-          <button
+          <!-- <button
             @click="forwardSelected"
             :disabled="selectedCount === 0"
             class="btn"
@@ -256,7 +273,7 @@ const kpis = computed(() => [
             Forward to Reimbursement{{
               selectedCount > 0 ? ` (${selectedCount})` : ""
             }}
-          </button>
+          </button> -->
           <!-- Upload Receipt -->
           <button
             @click="uploadModalOpen = true"
@@ -283,10 +300,14 @@ const kpis = computed(() => [
           <AlertTriangle class="mt-0.5 h-5 w-5 shrink-0 text-danger" />
           <div>
             <p class="font-heading text-sm font-bold text-danger">
-              {{ automaticRejectedReceipts.length }} receipt{{ automaticRejectedReceipts.length === 1 ? "" : "s" }} need correction
+              {{ automaticRejectedReceipts.length }} receipt{{
+                automaticRejectedReceipts.length === 1 ? "" : "s"
+              }}
+              need correction
             </p>
             <p class="mt-1 text-sm text-slate-600">
-              System validation automatically rejected these receipts. Edit and resubmit them for admin re-review.
+              System validation automatically rejected these receipts. Edit and
+              resubmit them for admin re-review.
             </p>
           </div>
         </div>
@@ -296,16 +317,21 @@ const kpis = computed(() => [
         v-if="auth.isAdmin && pendingReReviewReceipts.length > 0"
         class="overflow-hidden rounded-xl border border-accent/20 bg-white shadow-sm"
       >
-        <div class="flex items-center justify-between border-b border-slate-200 bg-accent-50 px-5 py-4">
+        <div
+          class="flex items-center justify-between border-b border-slate-200 bg-accent-50 px-5 py-4"
+        >
           <div>
             <h2 class="font-heading text-base font-bold text-primary">
               Pending Admin Re-review
             </h2>
             <p class="mt-0.5 text-xs text-slate-500">
-              Previously system rejected, then modified and resubmitted by employee.
+              Previously system rejected, then modified and resubmitted by
+              employee.
             </p>
           </div>
-          <span class="kpi-label text-accent">{{ pendingReReviewReceipts.length }} queued</span>
+          <span class="kpi-label text-accent"
+            >{{ pendingReReviewReceipts.length }} queued</span
+          >
         </div>
         <div class="divide-y divide-slate-100">
           <div
@@ -316,7 +342,9 @@ const kpis = computed(() => [
             <div class="space-y-2">
               <div class="flex flex-wrap items-center gap-2">
                 <StatusBadge status="pending-admin-re-review" />
-                <span class="rounded-full border border-danger/20 bg-danger/5 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-danger">
+                <span
+                  class="rounded-full border border-danger/20 bg-danger/5 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-danger"
+                >
                   Previously System Rejected
                 </span>
               </div>
@@ -324,15 +352,21 @@ const kpis = computed(() => [
                 {{ receipt.vendorName || "Unknown Vendor" }}
               </h3>
               <p class="text-xs text-slate-500">
-                {{ receipt.id }} | {{ receipt.fileName }} | {{ formatPeso(receipt.amount || 0) }}
+                {{ receipt.id }} | {{ receipt.fileName }} |
+                {{ formatPeso(receipt.amount || 0) }}
               </p>
               <p class="text-xs text-slate-400">
-                {{ receipt.complianceReason || "Modified by employee after automatic system rejection." }}
+                {{
+                  receipt.complianceReason ||
+                  "Modified by employee after automatic system rejection."
+                }}
               </p>
             </div>
             <div class="space-y-3">
               <div class="input-wrapper">
-                <label class="input-label">Admin Notes <span class="text-danger">*</span></label>
+                <label class="input-label"
+                  >Admin Notes <span class="text-danger">*</span></label
+                >
                 <textarea
                   v-model="adminNotesByReceipt[receipt.id]"
                   class="input min-h-[88px] resize-none"
@@ -409,7 +443,7 @@ const kpis = computed(() => [
         <div>
           <p
             class="text-sm font-semibold text-slate-600"
-            style="font-family: 'Poppins', sans-serif"
+            style="font-family: &quot;Poppins&quot;, sans-serif"
           >
             No receipts found
           </p>
@@ -432,10 +466,7 @@ const kpis = computed(() => [
     />
 
     <!-- ── Delete Confirmation Modal ── -->
-    <DeleteConfirmModal
-      v-model="deleteModalOpen"
-      @confirm="confirmDelete"
-    />
+    <DeleteConfirmModal v-model="deleteModalOpen" @confirm="confirmDelete" />
 
     <!-- ── View Receipt Modal ── -->
     <ReceiptViewModal
@@ -469,7 +500,7 @@ const kpis = computed(() => [
             </p>
             <h2
               class="text-sm font-bold text-white leading-tight"
-              style="font-family: 'Poppins', sans-serif"
+              style="font-family: &quot;Poppins&quot;, sans-serif"
             >
               New Reimbursement
             </h2>

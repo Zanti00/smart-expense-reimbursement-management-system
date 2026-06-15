@@ -37,6 +37,38 @@ services:
       - REDIS_HOST=auth-redis
       - CACHE_STORE=redis
       - JWT_PUBLIC_KEY_PATH=/var/www/storage/oauth-public.key
+      - PRS_REIMBURSEMENT_API_KEY=prs-serms-local-service-key
+      - PRS_REIMBURSEMENT_STATUS_API_URL=http://prs_api:8000/api/integrations/serms/reimbursement-status
+      - PRS_REIMBURSEMENT_STATUS_API_KEY=serms-prs-local-service-key
+      - PRS_REIMBURSEMENT_STATUS_API_TIMEOUT=10
+
+  api_queue:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: serms_api_queue
+    restart: unless-stopped
+    volumes:
+      - ./apps/api:/var/www
+      - ../capstone-auth-module/auth-service/storage/oauth-public.key:/var/www/storage/oauth-public.key:ro
+    depends_on:
+      - mysql
+    networks:
+      - serms_network
+      - shared-capstone-network
+    environment:
+      - DB_HOST=mysql
+      - DB_DATABASE=serms
+      - DB_USERNAME=root
+      - DB_PASSWORD=secret
+      - REDIS_HOST=auth-redis
+      - CACHE_STORE=redis
+      - JWT_PUBLIC_KEY_PATH=/var/www/storage/oauth-public.key
+      - PRS_REIMBURSEMENT_API_KEY=prs-serms-local-service-key
+      - PRS_REIMBURSEMENT_STATUS_API_URL=http://prs_api:8000/api/integrations/serms/reimbursement-status
+      - PRS_REIMBURSEMENT_STATUS_API_KEY=serms-prs-local-service-key
+      - PRS_REIMBURSEMENT_STATUS_API_TIMEOUT=10
+    command: php artisan queue:work --sleep=3 --tries=3
 
   web:
     build:

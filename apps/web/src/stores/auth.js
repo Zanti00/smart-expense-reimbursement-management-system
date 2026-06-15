@@ -124,18 +124,19 @@ export const useAuthStore = defineStore("auth", () => {
    * @returns {Promise<boolean>} - True if verified, false otherwise
    */
   async function verifyPassword(password) {
-    if (!token.value) {
-      return false;
-    }
-
     try {
-      const response = await fetch(`${AUTH_MODULE_URL}/api/verify-password`, {
+      const headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      };
+      if (token.value) {
+        headers["Authorization"] = `Bearer ${token.value}`;
+      }
+
+      const response = await fetch(`/api/serms/auth/verify-password`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token.value}`,
-          "Accept": "application/json",
-        },
+        headers,
+        credentials: "include",
         body: JSON.stringify({ password }),
       });
 

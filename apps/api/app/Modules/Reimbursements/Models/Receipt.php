@@ -40,6 +40,11 @@ class Receipt extends Model
         if (!$this->file_path) {
             return null;
         }
+        
+        if (str_starts_with($this->file_path, 'http://') || str_starts_with($this->file_path, 'https://')) {
+            return $this->file_path;
+        }
+
         $baseUrl = config('filesystems.disks.supabase.url');
         if ($baseUrl) {
             return rtrim($baseUrl, '/') . '/' . ltrim($this->file_path, '/');
