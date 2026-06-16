@@ -10,10 +10,12 @@ import MetaAndAttachments from "@/components/reimbursements/MetaAndAttachments.v
 import ReimbursementSummaryPanel from "@/components/reimbursements/ReimbursementSummaryPanel.vue";
 import ReimbursementFormHeader from "@/components/reimbursements/ReimbursementFormHeader.vue";
 import ReimbursementFormEmptyState from "@/components/reimbursements/ReimbursementFormEmptyState.vue";
+import ConfirmModal from "@/components/base/ConfirmModal.vue";
 
 // Composables
 import { useReceiptUploads } from "@/composables/reimbursements/useReceiptUploads";
 import { useReimbursementSubmit } from "@/composables/reimbursements/useReimbursementSubmit";
+import { useUnsavedChanges } from "@/composables/useUnsavedChanges";
 
 // Utils
 import {
@@ -71,6 +73,19 @@ const canProceed = computed(
     receipts.value.every((r) => !r.isUploading),
 );
 
+const isDirty = computed(() => {
+  return receipts.value.length > 0 || cutoffPeriod.value !== "" || reportFile.value !== null;
+});
+
+const isSubmitted = ref(false);
+
+const {
+  showConfirmModal,
+  handleConfirmLeave,
+  handleCancelLeave,
+  dismissWithConfirm
+} = useUnsavedChanges(isDirty, isSubmitted);
+
 // Form submission
 const { submitting, submitReimbursement } = useReimbursementSubmit(
   emit,
@@ -84,6 +99,7 @@ async function handleSubmit() {
     reportFile: reportFile.value,
     totalAmount: totalAmount.value,
   });
+  isSubmitted.value = true;
 }
 
 // Lifecycle
@@ -128,11 +144,13 @@ onBeforeUnmount(() => {
   });
 });
 
-//  Dismiss â”€
+//  Dismiss ─
 function dismiss() {
-  emit("close");
-  // If opened standalone (via route), go back
-  if (!props.forwardedReceipts.length) router.back();
+  dismissWithConfirm(() => {
+    emit("close");
+    // If opened standalone (via route), go back
+    if (!props.forwardedReceipts.length) router.back();
+  });
 }
 </script>
 
@@ -222,6 +240,17 @@ function dismiss() {
         </button>
       </div>
     </template>
+
+    <ConfirmModal
+      :is-open="showConfirmModal"
+      title="Unsaved Changes"
+      message="You have unsaved changes. Are you sure you want to leave? All progress will be lost."
+      confirm-text="Leave Page"
+      cancel-text="Stay"
+      :danger="true"
+      @confirm="handleConfirmLeave"
+      @close="handleCancelLeave"
+    />
   </div>
 </template>
 

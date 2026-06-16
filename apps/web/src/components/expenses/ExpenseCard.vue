@@ -1,5 +1,14 @@
 <script setup>
-import { AlertTriangle, FileText, Image as ImageIcon, Eye, Pencil, Trash2 } from "lucide-vue-next";
+import { ref } from "vue";
+import {
+  AlertTriangle,
+  FileText,
+  Image as ImageIcon,
+  Eye,
+  Pencil,
+  Trash2,
+  MoreVertical,
+} from "lucide-vue-next";
 import { formatPeso as formatCurrency, formatDate } from "@/utils/formatters";
 import StatusBadge from "@/components/base/StatusBadge.vue";
 
@@ -15,6 +24,8 @@ const props = defineProps({
 });
 
 defineEmits(["select", "view", "delete", "edit"]);
+
+const isMenuOpen = ref(false);
 </script>
 
 <template>
@@ -121,37 +132,63 @@ defineEmits(["select", "view", "delete", "edit"]);
         </span>
       </div>
 
-      <div class="mb-3">
+      <!-- <div class="mb-3">
         <StatusBadge :status="expense.status" />
-      </div>
+      </div> -->
 
       <!-- Action Buttons -->
       <div class="flex gap-2">
-        <button
-          v-if="expense.status === 'automatic-rejected'"
-          class="btn btn-secondary flex-1 !py-2 !text-xs"
-          @click.stop="$emit('edit', expense)"
-        >
-          <Pencil class="w-3.5 h-3.5" /> Edit Receipt
-        </button>
         <button
           class="btn btn-primary flex-1 !py-2 !text-xs"
           @click.stop="$emit('view', expense)"
         >
           <Eye class="w-3.5 h-3.5" /> View
         </button>
-        <button
-          class="px-3 py-2 rounded-lg border transition-all flex items-center justify-center"
-          :class="
-            isSelected
-              ? 'border-danger/30 text-danger hover:bg-red-50'
-              : 'border-slate-200 text-slate-400 hover:border-danger/30 hover:text-danger hover:bg-red-50'
-          "
-          @click.stop="$emit('delete', expense.id)"
-          title="Delete"
-        >
-          <Trash2 class="w-4 h-4" />
-        </button>
+
+        <div class="relative flex" @click.stop>
+          <button
+            class="px-3 py-2 rounded-lg border transition-all flex items-center justify-center"
+            :class="
+              isSelected
+                ? 'border-slate-300 bg-slate-100 text-slate-600'
+                : 'border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-600'
+            "
+            @click="isMenuOpen = !isMenuOpen"
+            title="Options"
+          >
+            <MoreVertical class="w-4 h-4" />
+          </button>
+
+          <div
+            v-if="isMenuOpen"
+            class="fixed inset-0 z-10"
+            @click="isMenuOpen = false"
+          ></div>
+
+          <div
+            v-if="isMenuOpen"
+            class="absolute right-0 bottom-full mb-2 w-36 bg-white rounded-lg shadow-lg border border-slate-100 py-1 z-20"
+          >
+            <button
+              class="w-full text-left px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 flex items-center gap-2"
+              @click="
+                isMenuOpen = false;
+                $emit('edit', expense);
+              "
+            >
+              <Pencil class="w-4 h-4" /> Edit
+            </button>
+            <button
+              class="w-full text-left px-4 py-2 text-sm text-danger hover:bg-danger/5 flex items-center gap-2"
+              @click="
+                isMenuOpen = false;
+                $emit('delete', expense.id);
+              "
+            >
+              <Trash2 class="w-4 h-4" /> Delete
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>

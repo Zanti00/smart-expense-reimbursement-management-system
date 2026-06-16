@@ -13,6 +13,8 @@ import BasePagination from "@/components/base/BasePagination.vue";
 import BaseUtilityToolbar from "@/components/base/BaseUtilityToolbar.vue";
 import SkeletonLoader from "@/components/base/SkeletonLoader.vue";
 import DecisionConfirmationModal from "@/components/reimbursements/DecisionConfirmationModal.vue";
+import ConfirmModal from "@/components/base/ConfirmModal.vue";
+import { useUnsavedChanges } from "@/composables/useUnsavedChanges";
 import { formatPeso } from "@/utils/formatters";
 import { vatOf } from "@/utils/receiptUtils";
 import {
@@ -67,6 +69,17 @@ const rejectingId = ref(null);
 const confirmPassword = ref("");
 const rejectionComment = ref("");
 const isReviewSubmitting = ref(false);
+
+const isDirty = computed(() => {
+  return receipts.value.length > 0 || reportAttachment.value !== null || shortfallExplanation.value !== "";
+});
+
+const {
+  showConfirmModal,
+  handleConfirmLeave,
+  handleCancelLeave,
+  dismissWithConfirm
+} = useUnsavedChanges(isDirty, submitted);
 
 const sortKey = ref("id");
 const sortDirection = ref("asc");
@@ -757,10 +770,13 @@ async function confirmReject() {
 }
 
 function selectAdvance(adv) {
-  selectedAdvance.value = adv;
-  submitted.value = false;
-  receipts.value = [];
-  reportAttachment.value = null;
+  dismissWithConfirm(() => {
+    selectedAdvance.value = adv;
+    submitted.value = false;
+    receipts.value = [];
+    reportAttachment.value = null;
+    shortfallExplanation.value = "";
+  });
 }
 
 function selectReportAttachment(event) {
@@ -2450,6 +2466,17 @@ function finalizeLiquidation() {
         </div>
       </div>
     </div>
+
+    <ConfirmModal
+      :is-open="showConfirmModal"
+      title="Unsaved Changes"
+      message="You have unsaved changes in your liquidation form. Are you sure you want to leave? All progress will be lost."
+      confirm-text="Leave"
+      cancel-text="Stay"
+      :danger="true"
+      @confirm="handleConfirmLeave"
+      @close="handleCancelLeave"
+    />
   </div>
 </template>
 

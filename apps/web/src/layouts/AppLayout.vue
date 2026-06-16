@@ -241,7 +241,7 @@ async function logout() {
         </div> -->
 
         <!-- System Alerts -->
-        <button
+        <!-- <button
           id="notif-bell"
           class="btn btn-secondary !p-2 relative"
           @click="notifOpen = !notifOpen"
@@ -253,7 +253,7 @@ async function logout() {
           >
             {{ unreadCount }}
           </span>
-        </button>
+        </button> -->
       </header>
 
       <!-- Active Workspace -->

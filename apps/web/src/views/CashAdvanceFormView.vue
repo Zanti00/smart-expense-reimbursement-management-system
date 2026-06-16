@@ -1,9 +1,11 @@
 <script setup>
-import { ref, reactive } from "vue";
+import { ref, reactive, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useCashAdvanceStore } from "@/stores/cashAdvance";
 import { useToast } from "@/composables/useToast";
 import ToastNotification from "@/components/ToastNotification.vue";
+import ConfirmModal from "@/components/base/ConfirmModal.vue";
+import { useUnsavedChanges } from "@/composables/useUnsavedChanges";
 import {
   ArrowLeft,
   FileText,
@@ -27,6 +29,25 @@ const form = reactive({
   documents: [],
 });
 const fileInput = ref(null);
+
+const isDirty = computed(() => {
+  return (
+    form.purpose !== "" ||
+    form.amount !== "" ||
+    form.expected_disbursement_date !== "" ||
+    form.expected_liquidation_date !== "" ||
+    form.documents.length > 0
+  );
+});
+
+const isSubmitted = ref(false);
+
+const {
+  showConfirmModal,
+  handleConfirmLeave,
+  handleCancelLeave,
+  dismissWithConfirm
+} = useUnsavedChanges(isDirty, isSubmitted);
 
 function handleFileUpload(event) {
   const files = Array.from(event.target.files);
@@ -139,6 +160,7 @@ async function handleRequest() {
       message: "Cash advance requested successfully",
       type: "success",
     });
+    isSubmitted.value = true;
     router.push("/cash-advances");
   } catch (error) {
     addToast({
@@ -151,7 +173,9 @@ async function handleRequest() {
 }
 
 function goBack() {
-  router.push("/cash-advances");
+  dismissWithConfirm(() => {
+    router.push("/cash-advances");
+  });
 }
 </script>
 
@@ -414,5 +438,16 @@ function goBack() {
         </footer>
       </div>
     </main>
+
+    <ConfirmModal
+      :is-open="showConfirmModal"
+      title="Unsaved Changes"
+      message="You have unsaved changes. Are you sure you want to leave? All progress will be lost."
+      confirm-text="Leave Page"
+      cancel-text="Stay"
+      :danger="true"
+      @confirm="handleConfirmLeave"
+      @close="handleCancelLeave"
+    />
   </div>
 </template>
