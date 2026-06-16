@@ -38,12 +38,8 @@ const statusFilters = computed(() =>
 );
 
 const employeeReimbursementColumns = [
-  { key: "id", label: "Id" },
   { key: "reportDescription", label: "Report Description" },
-  { key: "cutoffPeriod", label: "Cutoff Period" },
   { key: "category", label: "Category" },
-  { key: "receiptQuantity", label: "Receipt Quantity", align: "center" },
-  { key: "quantityReport", label: "Quantity Report", align: "center" },
   { key: "amount", label: "Amount", align: "right" },
   { key: "dateSubmitted", label: "Date Submitted" },
   { key: "displayStatus", label: "Status", align: "center" },
@@ -51,9 +47,7 @@ const employeeReimbursementColumns = [
 ];
 
 const adminReimbursementColumns = [
-  { key: "id", label: "Id" },
   { key: "reportDescription", label: "Report Description" },
-  { key: "cutoffPeriod", label: "Cutoff Period" },
   { key: "category", label: "Category" },
   { key: "dateSubmitted", label: "Date Submitted" },
   { key: "submittedBy", label: "Submitted By" },

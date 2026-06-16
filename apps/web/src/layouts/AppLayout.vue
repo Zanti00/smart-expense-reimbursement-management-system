@@ -57,16 +57,16 @@ const navLinks = computed(() => {
     { name: "Cash Advances", to: "/cash-advances", icon: Wallet },
     { name: "Liquidations", to: "/liquidations", icon: FilePieChart },
   ];
-  const employee = [
-    { name: "My Expense", to: "/my-expense", icon: FileCheck },
-  ];
+  const employee = [{ name: "My Expense", to: "/my-expense", icon: FileCheck }];
   const admin = [
     { header: "SYSTEM ADMIN" },
     { name: "Policy", to: "/admin/policy", icon: ShieldCheck },
     { name: "Audit Log", to: "/admin/audit", icon: ClipboardList },
     { name: "Reports", to: "/admin/reports", icon: FileBarChart2 },
   ];
-  return auth.isAdmin ? [...base, { divider: true }, ...admin] : [...base, ...employee];
+  return auth.isAdmin
+    ? [...base, { divider: true }, ...admin]
+    : [...base, ...employee];
 });
 
 const unreadCount = computed(() => notif.alerts.filter((a) => !a.read).length);
@@ -85,7 +85,9 @@ async function logout() {
 </script>
 
 <template>
-  <div class="flex h-screen overflow-hidden bg-clinical font-sans text-slate-700 select-none">
+  <div
+    class="flex h-screen overflow-hidden bg-clinical font-sans text-slate-700 select-none"
+  >
     <!-- ======================== SIDEBAR ======================== -->
     <!-- Mobile overlay -->
     <Transition name="fade">
@@ -179,9 +181,7 @@ async function logout() {
           </div>
           <Transition name="fade">
             <div v-if="sidebarOpen" class="flex-1 min-w-0">
-              <p
-                class="text-white text-xs font-heading font-bold truncate"
-              >
+              <p class="text-white text-xs font-heading font-bold truncate">
                 {{ auth.user?.name }}
               </p>
               <div class="flex items-center gap-1.5 mt-0.5">
@@ -229,7 +229,7 @@ async function logout() {
         <div class="flex-1" />
 
         <!-- Search -->
-        <div
+        <!-- <div
           class="hidden md:flex items-center gap-2 bg-white/80 border border-black/5 rounded-md px-3 py-2 w-56 shadow-sm hover:border-accent/30 focus-within:border-accent/50 focus-within:bg-white transition-all duration-200"
         >
           <Search class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
@@ -238,7 +238,7 @@ async function logout() {
             class="bg-transparent text-sm text-slate-600 placeholder-slate-400 outline-none flex-1 min-w-0"
             style="transition: none"
           />
-        </div>
+        </div> -->
 
         <!-- System Alerts -->
         <button
@@ -270,7 +270,7 @@ async function logout() {
 
     <!-- Notification Sidebar -->
     <NotificationPanel :open="notifOpen" @close="notifOpen = false" />
-    
+
     <!-- Global Toast Notifications -->
     <ToastNotification />
   </div>

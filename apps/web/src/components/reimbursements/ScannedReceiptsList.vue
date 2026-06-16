@@ -168,7 +168,7 @@ function removeReceiptItem(receipt, index) {
             <!-- Row 1: Invoice + Date -->
             <div class="grid grid-cols-2 gap-4">
               <div class="input-wrapper">
-                <label class="input-label">Invoice Number</label>
+                <label class="input-label">Invoice Number <span class="text-danger">*</span></label>
                 <input
                   class="input disabled:opacity-50 disabled:cursor-not-allowed"
                   type="text"
@@ -177,7 +177,7 @@ function removeReceiptItem(receipt, index) {
                 />
               </div>
               <div class="input-wrapper">
-                <label class="input-label">Date</label>
+                <label class="input-label">Date <span class="text-danger">*</span></label>
                 <div class="relative">
                   <input
                     class="input disabled:opacity-50 disabled:cursor-not-allowed"
@@ -192,13 +192,13 @@ function removeReceiptItem(receipt, index) {
             <!-- Merchant -->
             <div class="input-wrapper">
               <div class="flex items-center justify-between">
-                <label class="input-label">TIN Number</label>
+                <label class="input-label">TIN Number <span class="text-danger">*</span></label>
               </div>
               <input class="input disabled:opacity-50 disabled:cursor-not-allowed" type="text" v-model="receipt.tin" :disabled="receipt.isUploading" />
             </div>
 
             <div class="input-wrapper">
-              <label class="input-label">Merchant Name</label>
+              <label class="input-label">Merchant Name <span class="text-danger">*</span></label>
               <input
                 class="input disabled:opacity-50 disabled:cursor-not-allowed"
                 type="text"
@@ -209,7 +209,7 @@ function removeReceiptItem(receipt, index) {
 
             <!-- Location -->
             <div class="input-wrapper">
-              <label class="input-label">Location</label>
+              <label class="input-label">Location <span class="text-danger">*</span></label>
               <div class="relative">
                 <input
                   class="input pr-10 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -226,7 +226,7 @@ function removeReceiptItem(receipt, index) {
             <!-- Category with AI badge -->
             <div class="input-wrapper">
               <label class="input-label"
-                >Category (AI Auto-Detected)</label
+                >Category (AI Auto-Detected) <span class="text-danger">*</span></label
               >
               <div class="flex gap-2">
                 <div class="relative flex-1">
@@ -258,7 +258,7 @@ function removeReceiptItem(receipt, index) {
             <!-- Order Items -->
             <div class="input-wrapper">
               <label class="input-label"
-                >Order Items</label
+                >Order Items <span class="text-danger">*</span></label
               >
               <div
                 class="border border-slate-100 rounded-lg overflow-hidden shadow-sm bg-white"
@@ -341,7 +341,7 @@ function removeReceiptItem(receipt, index) {
               <div class="flex items-end justify-between gap-4">
                 <div class="flex gap-4 flex-wrap items-end">
                   <div class="input-wrapper">
-                    <label class="input-label">VAT Classification</label>
+                    <label class="input-label">VAT Classification <span class="text-danger">*</span></label>
                     <div class="relative">
                       <select
                         class="input !w-32 !bg-white appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
@@ -356,7 +356,7 @@ function removeReceiptItem(receipt, index) {
                     </div>
                   </div>
                   <div class="input-wrapper">
-                    <label class="input-label">Subtotal</label>
+                    <label class="input-label">Subtotal <span class="text-danger">*</span></label>
                     <input
                       class="input !w-32 !bg-white disabled:opacity-50 disabled:cursor-not-allowed"
                       type="number"
@@ -366,7 +366,7 @@ function removeReceiptItem(receipt, index) {
                     />
                   </div>
                   <div class="input-wrapper">
-                    <label class="input-label">Tax (VAT 12%)</label>
+                    <label class="input-label">Tax (VAT 12%) <span class="text-danger">*</span></label>
                     <input
                       class="input !w-32 !bg-white disabled:opacity-50 disabled:cursor-not-allowed"
                       type="number"
@@ -381,7 +381,7 @@ function removeReceiptItem(receipt, index) {
                 >
                   <label
                     class="text-[10px] font-bold text-accent uppercase tracking-wider mb-1"
-                    >Total</label
+                    >Total <span class="text-danger">*</span></label
                   >
                   <input
                     type="number"

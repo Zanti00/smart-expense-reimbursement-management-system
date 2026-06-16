@@ -16,7 +16,13 @@ import { useReceiptUploads } from "@/composables/reimbursements/useReceiptUpload
 import { useReimbursementSubmit } from "@/composables/reimbursements/useReimbursementSubmit";
 
 // Utils
-import { tinFor, cleanName, vatOf, subtotalOf, getItems } from "@/utils/receiptUtils";
+import {
+  tinFor,
+  cleanName,
+  vatOf,
+  subtotalOf,
+  getItems,
+} from "@/utils/receiptUtils";
 
 const props = defineProps({
   forwardedReceipts: {
@@ -50,10 +56,10 @@ const receipts = computed(() => [
 
 // Financials
 const totalAmount = computed(() =>
-  receipts.value.reduce((sum, r) => sum + (Number(r.amount) || 0), 0)
+  receipts.value.reduce((sum, r) => sum + (Number(r.amount) || 0), 0),
 );
 const totalVat = computed(() =>
-  receipts.value.reduce((sum, r) => sum + (Number(r.tax) || 0), 0)
+  receipts.value.reduce((sum, r) => sum + (Number(r.tax) || 0), 0),
 );
 const totalSubtotal = computed(() => totalAmount.value - totalVat.value);
 
@@ -62,11 +68,14 @@ const canProceed = computed(
     receipts.value.length >= 1 &&
     cutoffPeriod.value &&
     reportFile.value &&
-    receipts.value.every((r) => !r.isUploading)
+    receipts.value.every((r) => !r.isUploading),
 );
 
 // Form submission
-const { submitting, submitReimbursement } = useReimbursementSubmit(emit, router);
+const { submitting, submitReimbursement } = useReimbursementSubmit(
+  emit,
+  router,
+);
 
 async function handleSubmit() {
   await submitReimbursement({
@@ -80,7 +89,9 @@ async function handleSubmit() {
 // Lifecycle
 onMounted(() => {
   policyStore.fetchAll();
-  const forwarded = sessionStorage.getItem("serms_forwarded_liquidation_receipts");
+  const forwarded = sessionStorage.getItem(
+    "serms_forwarded_liquidation_receipts",
+  );
   if (forwarded) {
     try {
       const parsed = JSON.parse(forwarded);
@@ -122,11 +133,6 @@ function dismiss() {
   emit("close");
   // If opened standalone (via route), go back
   if (!props.forwardedReceipts.length) router.back();
-}
-
-function viewMyClaims() {
-  emit("close");
-  router.push({ name: "Reimbursements" });
 }
 </script>
 
@@ -200,9 +206,8 @@ function viewMyClaims() {
 
       <!--  Footer Actions  -->
       <div class="flex justify-end gap-4 pb-4">
-        <button class="btn btn-secondary !px-8" @click="dismiss">Cancel</button>
         <button
-          class="btn !px-10 transition-all duration-200"
+          class="btn p-3 !px-10 transition-all duration-200"
           :class="
             canProceed
               ? 'btn-primary'

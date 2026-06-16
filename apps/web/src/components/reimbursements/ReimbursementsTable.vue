@@ -58,9 +58,7 @@ function statusClass(status) {
   );
 }
 
-const tableMinWidth = computed(() =>
-  props.isAdmin ? "min-w-[1040px]" : "min-w-[1320px]",
-);
+const tableMinWidth = computed(() => "min-w-full");
 </script>
 
 <template>
@@ -86,7 +84,7 @@ const tableMinWidth = computed(() =>
       </span>
     </div>
     <div class="overflow-x-auto">
-      <table class="w-full border-collapse text-left" :class="tableMinWidth">
+      <table class="w-full table-fixed border-collapse text-left" :class="tableMinWidth">
         <thead>
           <tr class="border-b border-slate-200 bg-slate-50">
             <th
@@ -175,17 +173,12 @@ const tableMinWidth = computed(() =>
             <tr
               v-for="row in rows"
               :key="row.id"
-              class="group whitespace-nowrap transition-colors duration-200 ease-out hover:bg-slate-50/80"
+              class="group whitespace-nowrap transition-colors duration-200 ease-out"
             >
-              <td class="px-5 py-5 font-mono text-sm font-bold text-slate-900">
-                {{ row.id }}
-              </td>
               <td class="max-w-[240px] px-5 py-5 text-sm text-slate-600">
                 <span class="block truncate">{{ row.reportDescription }}</span>
               </td>
-              <td class="px-5 py-5 text-sm text-slate-500">
-                {{ row.cutoffPeriod }}
-              </td>
+
               <td class="px-5 py-5">
                 <span
                   class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-500"
@@ -194,26 +187,16 @@ const tableMinWidth = computed(() =>
                 </span>
               </td>
               <template v-if="!isAdmin">
-                <td
-                  class="px-5 py-5 text-center text-sm font-semibold text-slate-600"
-                >
-                  {{ row.receiptQuantity }}
-                </td>
-                <td
-                  class="px-5 py-5 text-center text-sm font-semibold text-slate-600"
-                >
-                  {{ row.quantityReport }}
-                </td>
                 <td class="px-5 py-5 text-right text-sm font-bold text-primary">
                   {{ formatPeso(row.amount) }}
                 </td>
               </template>
-              <td class="px-5 py-5 text-sm text-slate-500">
+              <td class="truncate px-5 py-5 text-sm text-slate-500">
                 {{ formatDate(row.dateSubmitted) }}
               </td>
               <td
                 v-if="isAdmin"
-                class="px-5 py-5 text-sm font-semibold text-slate-600"
+                class="truncate px-5 py-5 text-sm font-semibold text-slate-600"
               >
                 {{ row.submittedBy }}
               </td>

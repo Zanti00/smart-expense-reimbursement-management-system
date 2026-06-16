@@ -95,6 +95,14 @@ async function handleRequest() {
   )
     return;
 
+  if (form.purpose.length > 255) {
+    addToast({
+      message: "Purpose must not exceed 255 characters.",
+      type: "error",
+    });
+    return;
+  }
+
   const today = new Date().toISOString().split("T")[0];
   if (form.expected_liquidation_date < today) {
     addToast({
@@ -106,7 +114,8 @@ async function handleRequest() {
 
   if (form.expected_disbursement_date >= form.expected_liquidation_date) {
     addToast({
-      message: "Disbursement date cannot be greater than or equal to the liquidation date.",
+      message:
+        "Disbursement date cannot be greater than or equal to the liquidation date.",
       type: "error",
     });
     return;
@@ -117,7 +126,10 @@ async function handleRequest() {
   const formData = new FormData();
   formData.append("purpose", form.purpose);
   formData.append("amount", form.amount);
-  formData.append("expected_disbursement_date", form.expected_disbursement_date);
+  formData.append(
+    "expected_disbursement_date",
+    form.expected_disbursement_date,
+  );
   formData.append("expected_liquidation_date", form.expected_liquidation_date);
   form.documents.forEach((file) => formData.append("documents[]", file));
 
@@ -129,7 +141,10 @@ async function handleRequest() {
     });
     router.push("/cash-advances");
   } catch (error) {
-    addToast({ message: error.message || "Failed to create request", type: "error" });
+    addToast({
+      message: error.message || "Failed to create request",
+      type: "error",
+    });
   } finally {
     submitting.value = false;
   }
@@ -145,7 +160,9 @@ function goBack() {
     <ToastNotification />
     <main class="flex-1 overflow-y-auto">
       <div class="mx-auto flex w-full max-w-5xl flex-col gap-8 p-6">
-        <header class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <header
+          class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"
+        >
           <div class="flex items-start gap-3">
             <button
               class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition-all hover:bg-slate-50 hover:text-primary"
@@ -160,7 +177,9 @@ function goBack() {
                 <FileText class="h-3.5 w-3.5 text-accent" />
                 <span class="section-label">Advance Request</span>
               </div>
-              <h1 class="font-heading text-2xl font-bold leading-tight text-slate-800">
+              <h1
+                class="font-heading text-2xl font-bold leading-tight text-slate-800"
+              >
                 New Cash Advance Request
               </h1>
               <p class="mt-1 text-sm text-slate-400">
@@ -171,12 +190,21 @@ function goBack() {
         </header>
 
         <section class="card p-5 md:p-6">
-          <form id="cashAdvanceForm" class="space-y-6" @submit.prevent="handleRequest">
+          <form
+            id="cashAdvanceForm"
+            class="space-y-6"
+            @submit.prevent="handleRequest"
+          >
             <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
               <div class="input-wrapper">
-                <label class="input-label" for="ca-amount">Amount Requested *</label>
+                <label class="input-label" for="ca-amount"
+                  >Amount Requested <span class="text-danger">*</span></label
+                >
                 <div class="relative">
-                  <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-mono text-slate-400">PHP</span>
+                  <span
+                    class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-mono text-slate-400"
+                    >PHP</span
+                  >
                   <input
                     id="ca-amount"
                     v-model="form.amount"
@@ -189,45 +217,62 @@ function goBack() {
               </div>
 
               <div class="input-wrapper">
-                <label class="input-label" for="ca-disbursement">Disbursement Date *</label>
+                <label class="input-label" for="ca-disbursement"
+                  >Disbursement Date <span class="text-danger">*</span></label
+                >
                 <div class="relative">
                   <input
                     id="ca-disbursement"
                     v-model="form.expected_disbursement_date"
-                    class="input !pr-12 text-base"
+                    class="input text-base"
                     type="date"
                   />
-                  <Calendar class="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 </div>
               </div>
 
               <div class="input-wrapper">
-                <label class="input-label" for="ca-due">Liquidation Deadline *</label>
+                <label class="input-label" for="ca-due"
+                  >Liquidation Deadline
+                  <span class="text-danger">*</span></label
+                >
                 <div class="relative">
                   <input
                     id="ca-due"
                     v-model="form.expected_liquidation_date"
-                    class="input !pr-12 text-base"
+                    class="input text-base"
                     type="date"
                   />
-                  <Calendar class="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 </div>
               </div>
             </div>
 
             <div class="input-wrapper">
-              <label class="input-label" for="ca-purpose">Purpose *</label>
+              <label class="input-label" for="ca-purpose"
+                >Purpose <span class="text-danger">*</span></label
+              >
               <textarea
                 id="ca-purpose"
                 v-model="form.purpose"
                 class="input min-h-[132px] resize-none text-base leading-relaxed"
                 placeholder="Describe the purpose of this cash advance request..."
+                maxlength="255"
                 rows="4"
               />
+              <div class="mt-1 flex justify-end">
+                <span
+                  class="text-xs font-medium text-slate-400"
+                  :class="{ 'text-danger': form.purpose.length >= 255 }"
+                >
+                  {{ form.purpose.length }} / 255
+                </span>
+              </div>
             </div>
 
             <div class="input-wrapper">
-              <label class="input-label">Request Documents (Max 5) *</label>
+              <label class="input-label"
+                >Request Documents (Max 5)
+                <span class="text-danger">*</span></label
+              >
               <input
                 type="file"
                 ref="fileInput"
@@ -237,7 +282,10 @@ function goBack() {
                 multiple
               />
 
-              <div v-if="form.documents.length > 0" class="flex flex-col gap-3 mb-4">
+              <div
+                v-if="form.documents.length > 0"
+                class="flex flex-col gap-3 mb-4"
+              >
                 <div
                   v-for="(file, index) in form.documents"
                   :key="index"
@@ -249,12 +297,19 @@ function goBack() {
                       :src="file.previewUrl"
                       class="h-10 w-10 rounded object-cover"
                     />
-                    <div v-else class="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-slate-400">
+                    <div
+                      v-else
+                      class="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-slate-400"
+                    >
                       <FileText class="h-5 w-5" />
                     </div>
                     <div class="flex flex-col">
-                      <span class="text-sm font-bold text-slate-800">{{ file.name }}</span>
-                      <span class="text-xs font-semibold text-slate-400">{{ (file.size / 1024 / 1024).toFixed(2) }} MB</span>
+                      <span class="text-sm font-bold text-slate-800">{{
+                        file.name
+                      }}</span>
+                      <span class="text-xs font-semibold text-slate-400"
+                        >{{ (file.size / 1024 / 1024).toFixed(2) }} MB</span
+                      >
                     </div>
                   </div>
                   <button
@@ -274,24 +329,36 @@ function goBack() {
                 @click="fileInput.click()"
               >
                 <div class="flex flex-col items-center gap-4 md:flex-row">
-                  <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-white text-slate-400 shadow-sm transition-colors group-hover:text-accent">
+                  <div
+                    class="flex h-12 w-12 items-center justify-center rounded-lg bg-white text-slate-400 shadow-sm transition-colors group-hover:text-accent"
+                  >
                     <UploadCloud class="h-6 w-6" />
                   </div>
                   <div class="text-center md:text-left">
-                    <h3 class="font-heading text-base font-bold text-slate-800">Select files</h3>
-                    <p class="text-sm text-slate-500">Upload up to 5 request documents (PDF, DOC, DOCX, XLSX, Images)</p>
+                    <h3 class="font-heading text-base font-bold text-slate-800">
+                      Select files
+                    </h3>
+                    <p class="text-sm text-slate-500">
+                      Upload up to 5 request documents (PDF, DOC, DOCX, XLSX,
+                      Images)
+                    </p>
                   </div>
                 </div>
-                <span class="rounded-md border border-black/5 bg-white px-5 py-2 text-sm font-bold text-primary shadow-sm transition-colors group-hover:border-accent/20 group-hover:text-accent">
+                <span
+                  class="rounded-md border border-black/5 bg-white px-5 py-2 text-sm font-bold text-primary shadow-sm transition-colors group-hover:border-accent/20 group-hover:text-accent"
+                >
                   Browse
                 </span>
               </button>
               <p
                 class="mt-1 flex items-center gap-1 text-xs font-semibold"
-                :class="form.documents.length > 0 ? 'text-success' : 'text-danger'"
+                :class="
+                  form.documents.length > 0 ? 'text-success' : 'text-danger'
+                "
               >
                 <Info class="h-3.5 w-3.5" />
-                At least 1 request document is required to process your cash advance.
+                At least 1 request document is required to process your cash
+                advance.
               </p>
             </div>
           </form>
@@ -305,19 +372,28 @@ function goBack() {
                 Important Information
               </h3>
             </div>
-            <ul class="list-inside list-disc space-y-2 text-sm leading-relaxed text-accent-800">
-              <li>Cash advance requests are subject to approval by the accounting department</li>
-              <li>Approved amounts will be disbursed within 3-5 business days</li>
-              <li>You must submit reimbursement with receipts after using the cash advance</li>
+            <ul
+              class="list-inside list-disc space-y-2 text-sm leading-relaxed text-accent-800"
+            >
+              <!-- <li>
+                Cash advance requests are subject to approval by the accounting
+                department
+              </li>
+              <li>
+                Approved amounts will be disbursed within 3-5 business days
+              </li>
+              <li>
+                You must submit reimbursement with receipts after using the cash
+                advance
+              </li> -->
               <li>Unused amounts must be returned to the company</li>
             </ul>
           </div>
         </section>
 
-        <footer class="flex flex-col items-center justify-end gap-3 border-t border-black/5 pt-6 sm:flex-row">
-          <button class="btn btn-secondary w-full px-8 py-3 sm:w-auto" type="button" @click="goBack">
-            Cancel
-          </button>
+        <footer
+          class="flex flex-col items-center justify-end gap-3 border-t border-black/5 pt-6 sm:flex-row"
+        >
           <button
             id="submit-advance-btn"
             class="btn btn-primary w-full px-8 py-3 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"

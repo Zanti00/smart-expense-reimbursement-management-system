@@ -25,7 +25,7 @@ class StoreReimbursementRequest extends FormRequest
             'amount' => 'required|numeric|min:0.01',
             'date' => 'required|date',
             'cutoff_period' => 'required|string|max:255',
-            'report_file' => 'required|file|mimes:jpeg,png,pdf|max:2048',
+            'report_file' => 'required|file|mimes:pdf,doc,docx|max:2048',
             'receipt_ids' => 'required|array|min:1',
             'receipt_ids.*' => 'exists:receipts,id',
             'receipts' => 'nullable|array',

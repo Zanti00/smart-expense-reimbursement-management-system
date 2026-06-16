@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from "vue";
 import { ChevronDown, FileText } from "lucide-vue-next";
+import { useToast } from "@/composables/useToast";
 
 defineProps({
   cutoffPeriod: {
@@ -26,16 +27,35 @@ const CUTOFF_OPTIONS = [
 
 const reportDrag = ref(false);
 const reportInput = ref(null);
+const { addToast } = useToast();
+
+const VALID_MIMES = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+];
+
+function isValidFile(file) {
+  if (!file) return false;
+  if (!VALID_MIMES.includes(file.type)) {
+    addToast({
+      message: "Invalid file type. Only PDF, DOC, and DOCX are allowed for the report.",
+      type: "error",
+    });
+    return false;
+  }
+  return true;
+}
 
 function handleReportDrop(e) {
   reportDrag.value = false;
   const file = e.dataTransfer.files[0];
-  if (file) emit("update:reportFile", file);
+  if (file && isValidFile(file)) emit("update:reportFile", file);
 }
 
 function handleReportSelect(e) {
   const file = e.target.files[0];
-  if (file) emit("update:reportFile", file);
+  if (file && isValidFile(file)) emit("update:reportFile", file);
   // Reset input value so same file can be selected again if needed
   if (e.target) e.target.value = "";
 }
