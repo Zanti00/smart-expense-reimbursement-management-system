@@ -350,4 +350,137 @@ class LiquidationController extends Controller
             ]);
         });
     }
+
+    /**
+     * Update a pending liquidation settlement (employee self-edit).
+     */
+    public function update(Request $request, $id)
+    {
+        $user = $request->user();
+        $liquidation = Liquidation::findOrFail($id);
+
+        if ($liquidation->user_id !== $user->id) {
+            return response()->json(['message' => 'Forbidden. You do not own this liquidation.'], 403);
+        }
+
+        if (!in_array($liquidation->status, ['pending', 'rejected'])) {
+            return response()->json(['message' => 'Only pending or rejected liquidations can be edited.'], 409);
+        }
+
+        $validated = $request->validate([
+            'receipts' => 'sometimes',
+            'report_attachment' => 'nullable|file|mimes:jpeg,png,pdf,doc,docx|max:5120',
+            'total_expense_amount' => 'sometimes|numeric|min:0.00',
+            'shortfall_explanation' => 'nullable|string',
+        ]);
+
+        return DB::transaction(function () use ($user, $liquidation, $validated, $request) {
+            // Handle receipts update
+            if (isset($validated['receipts'])) {
+                $receiptsData = is_string($validated['receipts'])
+                    ? json_decode($validated['receipts'], true)
+                    : $validated['receipts'];
+
+                if (is_array($receiptsData)) {
+                    $receiptIds = [];
+                    foreach ($receiptsData as $receiptData) {
+                        if (!isset($receiptData['id'])) continue;
+                        $receipt = Receipt::findOrFail($receiptData['id']);
+                        $receipt->update([
+                            'vendor_name' => $receiptData['vendor_name'] ?? $receipt->vendor_name,
+                            'transaction_date' => $receiptData['transaction_date'] ?? $receipt->transaction_date,
+                            'total_amount' => $receiptData['total_amount'] ?? $receipt->total_amount,
+                            'vat_amount' => $receiptData['vat_amount'] ?? $receipt->vat_amount,
+                            'tin' => $receiptData['tin'] ?? $receipt->tin,
+                            'invoice_number' => $receiptData['invoice_number'] ?? $receipt->invoice_number,
+                            'status' => 'pending',
+                        ]);
+                        $receiptIds[] = $receipt->id;
+                    }
+                    $liquidation->reimbursement_ids = $receiptIds;
+                }
+            }
+
+            // Handle report attachment
+            if ($request->hasFile('report_attachment')) {
+                if ($liquidation->report_file_path) {
+                    Storage::disk('supabase')->delete($liquidation->report_file_path);
+                }
+                $liquidation->report_file_path = $request->file('report_attachment')->store('report_letters', 'supabase');
+            }
+
+            if (isset($validated['total_expense_amount'])) {
+                $liquidation->total_expense_amount = $validated['total_expense_amount'];
+            }
+
+            if (array_key_exists('shortfall_explanation', $validated)) {
+                $liquidation->shortfall_explanation = $validated['shortfall_explanation'];
+            }
+
+            // Reset rejected → pending on re-submission
+            if ($liquidation->status === 'rejected') {
+                $liquidation->status = 'pending';
+            }
+
+            $liquidation->save();
+
+            return response()->json([
+                'message' => 'Liquidation updated successfully.',
+                'data' => $liquidation,
+            ]);
+        });
+    }
+
+    /**
+     * Delete a pending liquidation settlement.
+     */
+    public function destroy(Request $request, $id)
+    {
+        $user = $request->user();
+        $liquidation = Liquidation::findOrFail($id);
+
+        if ($liquidation->user_id !== $user->id) {
+            return response()->json(['message' => 'Forbidden. You do not own this liquidation.'], 403);
+        }
+
+        if ($liquidation->status !== 'pending') {
+            return response()->json(['message' => 'Only pending liquidations can be deleted.'], 409);
+        }
+
+        $validated = $request->validate([
+            'password' => 'required|string',
+        ]);
+
+        // Verify password
+        if (!PasswordVerificationService::verify($request, $validated['password'])) {
+            throw ValidationException::withMessages([
+                'password' => ['Invalid password. Please try again.']
+            ]);
+        }
+
+        return DB::transaction(function () use ($liquidation) {
+            $advance = CashAdvance::findOrFail($liquidation->cash_advance_id);
+
+            // Remove report file from storage
+            if ($liquidation->report_file_path) {
+                Storage::disk('supabase')->delete($liquidation->report_file_path);
+            }
+
+            // Revert cash advance status back to reconcilable state
+            $advance->update(['status' => 'incomplete']);
+
+            \App\Modules\CashAdvances\Models\CashAdvanceStatusHistory::create([
+                'cash_advance_id' => $advance->id,
+                'from_status' => 'under-review',
+                'to_status' => 'incomplete',
+                'changed_by' => auth()->id(),
+            ]);
+
+            $liquidation->delete();
+
+            return response()->json([
+                'message' => 'Liquidation deleted successfully.',
+            ]);
+        });
+    }
 }

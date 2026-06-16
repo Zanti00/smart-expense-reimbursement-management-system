@@ -47,6 +47,7 @@ function normalizeStatus(status) {
     reject: "rejected",
     rejected: "rejected",
     paid: "granted",
+    processing: "processing",
   };
   return statusMap[normalized] || normalized;
 }
@@ -57,6 +58,7 @@ function statusLabel(status) {
     approved: "Approved",
     rejected: "Rejected",
     granted: "Granted",
+    processing: "Processing",
   };
   return labels[normalizeStatus(status)] || "Pending";
 }
@@ -77,6 +79,7 @@ function statusClass(status) {
     pending: "bg-yellow-100 text-yellow-800 border border-yellow-200",
     rejected: "bg-[#FEF2F2] text-[#B91C1C] border border-red-200",
     granted: "bg-[#F0FDFA] text-[#0D9488] border border-teal-100",
+    processing: "bg-blue-100 text-blue-800 border border-blue-200",
   };
   return (
     classes[normalizeStatus(status)] ||
@@ -305,11 +308,14 @@ function statusClass(status) {
                       >
                     </div>
                     <button
-                      class="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-accent-50 px-3 py-2 text-xs font-bold text-accent transition-colors hover:bg-accent-100"
+                      class="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold transition-colors"
+                      :class="receipt.status === 'processing' ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-accent-50 text-accent hover:bg-accent-100'"
+                      :disabled="receipt.status === 'processing'"
                       @click="emit('view-receipt-details', receipt)"
                     >
-                      <Eye class="h-3.5 w-3.5" />
-                      Details
+                      <Activity v-if="receipt.status === 'processing'" class="h-3.5 w-3.5 animate-spin" />
+                      <Eye v-else class="h-3.5 w-3.5" />
+                      {{ receipt.status === 'processing' ? 'Processing...' : 'Details' }}
                     </button>
                   </div>
                 </div>

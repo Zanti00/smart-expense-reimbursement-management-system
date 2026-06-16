@@ -122,7 +122,7 @@ class ReimbursementController extends Controller
     }
 
     /**
-     * Update reimbursement details (admin notes, status).
+     * Update reimbursement details (admin notes or employee self-edit).
      */
     public function update(UpdateReimbursementRequest $request, $id)
     {
@@ -133,15 +133,42 @@ class ReimbursementController extends Controller
                 $request->user(),
                 (int)$id,
                 $request->validated(),
-                $canManage
+                $canManage,
+                $request->file('report_file')
             );
 
             return response()->json([
                 'message' => 'Reimbursement updated successfully.',
                 'data' => $reimbursement,
             ]);
-        } catch (AuthorizationException $e) {
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             return response()->json(['message' => $e->getMessage()], 403);
+        }
+    }
+
+    /**
+     * Delete a pending reimbursement request.
+     */
+    public function destroy(Request $request, $id)
+    {
+        try {
+            $this->service->deleteReimbursement(
+                $request->user(),
+                (int)$id,
+                $request->input('password', ''),
+                $request
+            );
+
+            return response()->json([
+                'message' => 'Reimbursement request deleted successfully.',
+            ]);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json(['message' => $e->getMessage()], 403);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => 'The given data was invalid.',
+                'errors' => $e->errors(),
+            ], 422);
         }
     }
 }

@@ -149,6 +149,62 @@ export const useReimbursementStore = defineStore("reimbursement", () => {
     }
   }
 
+  /**
+   * Update a pending/rejected reimbursement request (employee self-edit).
+   */
+  async function updateRequest(id, formData) {
+    isLoading.value = true;
+    try {
+      if (formData instanceof FormData) {
+        formData.append("_method", "PATCH");
+      }
+      const response = await apiFetch(`/api/serms/reimbursements/${id}`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!response.ok) {
+        const errJson = await response.json().catch(() => ({}));
+        throw new Error(errJson.message || "Failed to update reimbursement");
+      }
+      const json = await response.json();
+      const index = items.value.findIndex((i) => i.id == id);
+      if (index !== -1) items.value[index] = json.data;
+      if (currentItem.value?.id == id) currentItem.value = json.data;
+      return json.data;
+    } catch (e) {
+      console.error(e);
+      throw e;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /**
+   * Delete a pending reimbursement request.
+   */
+  async function deleteRequest(id, password) {
+    isLoading.value = true;
+    try {
+      const response = await apiFetch(`/api/serms/reimbursements/${id}`, {
+        method: "DELETE",
+        body: JSON.stringify({ password }),
+      });
+      if (!response.ok) {
+        const errJson = await response.json().catch(() => ({}));
+        const errMsg = errJson.errors?.password?.[0] || errJson.message || "Failed to delete";
+        throw new Error(errMsg);
+      }
+      items.value = items.value.filter((i) => i.id != id);
+      if (currentItem.value?.id == id) currentItem.value = null;
+      return true;
+    } catch (e) {
+      console.error(e);
+      throw e;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   return {
     items,
     currentItem,
@@ -164,5 +220,7 @@ export const useReimbursementStore = defineStore("reimbursement", () => {
     approve,
     reject,
     updateNotes,
+    updateRequest,
+    deleteRequest,
   };
 });

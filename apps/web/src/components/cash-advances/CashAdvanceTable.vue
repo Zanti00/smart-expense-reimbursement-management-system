@@ -1,9 +1,10 @@
 <script setup>
 import { computed, ref, watch } from "vue";
-import { ChevronDown, ChevronUp, ChevronsUpDown, Eye } from "lucide-vue-next";
+import { ChevronDown, ChevronUp, ChevronsUpDown, Eye, Pencil, Trash2 } from "lucide-vue-next";
 import { formatPeso } from "@/utils/formatters";
 import BasePagination from "@/components/base/BasePagination.vue";
 import CashAdvanceTableSkeleton from "./CashAdvanceTableSkeleton.vue";
+import ActionDropdownMenu from "@/components/base/ActionDropdownMenu.vue";
 
 const props = defineProps({
   rows: {
@@ -20,7 +21,32 @@ const props = defineProps({
   },
 });
 
-defineEmits(["view"]);
+const emit = defineEmits(["view", "edit", "delete"]);
+
+function getActions(row) {
+  const status = String(row.status || "").toLowerCase();
+  return [
+    {
+      label: "Edit",
+      icon: Pencil,
+      visible: !props.isAdmin && (status === "pending" || status === "rejected"),
+      handler: () => emit("edit", row),
+    },
+    {
+      label: "View",
+      icon: Eye,
+      visible: true,
+      handler: () => emit("view", row),
+    },
+    {
+      label: "Delete",
+      icon: Trash2,
+      visible: !props.isAdmin && status === "pending",
+      variant: "danger",
+      handler: () => emit("delete", row),
+    },
+  ];
+}
 
 const sortKey = ref("");
 const sortDirection = ref("asc");
@@ -246,14 +272,7 @@ function statusClass(status) {
                 >
               </td>
               <td class="px-5 py-5 text-center">
-                <button
-                  class="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-accent/15 bg-accent/5 px-3 text-xs font-bold text-accent transition-all duration-200 ease-out hover:bg-accent/10 hover:scale-[1.02] focus:outline-none"
-                  title="View cash advance"
-                  @click="$emit('view', row)"
-                >
-                  <Eye class="h-3.5 w-3.5" />
-                  <span>View</span>
-                </button>
+                <ActionDropdownMenu :actions="getActions(row)" />
               </td>
             </tr>
           </template>

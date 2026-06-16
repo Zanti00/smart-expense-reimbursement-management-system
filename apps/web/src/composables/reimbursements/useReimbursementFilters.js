@@ -9,6 +9,7 @@ export function normalizeStatus(status) {
     reject: "rejected",
     rejected: "rejected",
     paid: "granted",
+    processing: "processing",
   };
   return statusMap[normalized] || normalized;
 }
@@ -19,6 +20,7 @@ export function statusLabel(status) {
     approved: "Approved",
     rejected: "Rejected",
     granted: "Granted",
+    processing: "Processing",
   };
   return labels[normalizeStatus(status)] || "Pending";
 }

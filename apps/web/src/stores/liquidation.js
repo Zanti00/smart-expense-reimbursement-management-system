@@ -151,5 +151,95 @@ export const useLiquidationStore = defineStore('liquidation', () => {
     }
   }
 
-  return { settlements, isLoading, calculateAging, fetchSettlements, submitSettlement, auditSettlement }
+  /**
+   * Update a pending/rejected liquidation settlement (employee self-edit).
+   */
+  async function updateSettlement(id, payload) {
+    isLoading.value = true
+    try {
+      const formData = new FormData();
+      formData.append('total_expense_amount', payload.totalExpenses);
+      if (payload.shortfall_explanation) {
+        formData.append('shortfall_explanation', payload.shortfall_explanation);
+      } else {
+        formData.append('shortfall_explanation', '');
+      }
+      
+      if (payload.reportAttachment) {
+        formData.append('report_attachment', payload.reportAttachment);
+      }
+
+      const formattedReceipts = payload.receipts.map(r => ({
+        id: r.ocrData?.id || r.id, // backend DB ID
+        vendor_name: r.ocrData?.vendor || r.merchantName,
+        transaction_date: r.ocrData?.date || r.transactionDate,
+        total_amount: r.ocrData?.amount || r.amount,
+        vat_amount: r.ocrData?.vat || r.vat,
+        tin: r.ocrData?.tin || r.tinNumber,
+        invoice_number: r.ocrData?.invoiceNumber || r.invoiceNumber,
+      }));
+      formData.append('receipts', JSON.stringify(formattedReceipts));
+
+      // Laravel file upload via PUT requires POST with _method override
+      formData.append('_method', 'PUT');
+
+      const response = await apiFetch(`/api/serms/liquidations/${id}`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Failed to update liquidation')
+      }
+
+      await fetchSettlements()
+      return await response.json()
+    } catch (err) {
+      console.error('Failed to update liquidation', err)
+      throw err;
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  /**
+   * Delete a pending liquidation settlement.
+   */
+  async function deleteSettlement(id, password) {
+    isLoading.value = true
+    try {
+      const response = await apiFetch(`/api/serms/liquidations/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+        body: JSON.stringify({ password }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        const errMsg = errorData.errors?.password?.[0] || errorData.message || 'Failed to delete liquidation'
+        throw new Error(errMsg)
+      }
+
+      await fetchSettlements()
+      return true
+    } catch (err) {
+      console.error('Failed to delete liquidation', err)
+      throw err;
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  return {
+    settlements,
+    isLoading,
+    calculateAging,
+    fetchSettlements,
+    submitSettlement,
+    auditSettlement,
+    updateSettlement,
+    deleteSettlement
+  }
 })

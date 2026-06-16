@@ -1,6 +1,13 @@
 <script setup>
 import { ArrowLeft } from "lucide-vue-next";
 
+defineProps({
+  isEdit: {
+    type: Boolean,
+    default: false,
+  },
+});
+
 defineEmits(["dismiss"]);
 </script>
 
@@ -15,10 +22,10 @@ defineEmits(["dismiss"]);
       </button>
       <div class="min-w-0">
         <h1 class="font-heading text-2xl font-bold leading-tight text-slate-800">
-          New Reimbursement
+          {{ isEdit ? "Edit Reimbursement" : "New Reimbursement" }}
         </h1>
         <p class="mt-1 text-sm text-slate-400">
-          Submit your expense reimbursement request
+          {{ isEdit ? "Update your expense reimbursement request" : "Submit your expense reimbursement request" }}
         </p>
       </div>
     </div>

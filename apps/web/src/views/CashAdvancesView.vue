@@ -1,10 +1,12 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import { useRouter } from "vue-router";
 import { useCashAdvanceStore } from "@/stores/cashAdvance";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "@/composables/useToast";
 import { useCashAdvanceList } from "@/composables/useCashAdvanceList";
 import ToastNotification from "@/components/ToastNotification.vue";
+import DeleteConfirmModal from "@/components/base/DeleteConfirmModal.vue";
 
 import BaseKpiGrid from "@/components/base/BaseKpiGrid.vue";
 import BaseUtilityToolbar from "@/components/base/BaseUtilityToolbar.vue";
@@ -16,6 +18,7 @@ import { formatPeso } from "@/utils/formatters";
 
 const store = useCashAdvanceStore();
 const auth = useAuthStore();
+const router = useRouter();
 const { addToast } = useToast();
 
 const { activeStatus, statusTabs, filteredRows, activeMetrics } =
@@ -173,6 +176,36 @@ const kpis = computed(() => {
 
   return cards;
 });
+
+const isDeleteModalOpen = ref(false);
+const deletingRequestId = ref(null);
+
+function handleEdit(row) {
+  router.push({ name: "CashAdvanceEdit", params: { id: row.id } });
+}
+
+function handleDelete(row) {
+  deletingRequestId.value = row.id;
+  isDeleteModalOpen.value = true;
+}
+
+async function confirmDelete(password) {
+  if (!deletingRequestId.value) return;
+  try {
+    await store.deleteRequest(deletingRequestId.value, password);
+    addToast({
+      message: "Cash advance request deleted successfully.",
+      type: "success",
+    });
+    isDeleteModalOpen.value = false;
+    deletingRequestId.value = null;
+  } catch (error) {
+    addToast({
+      message: error.message || "Failed to delete request.",
+      type: "error",
+    });
+  }
+}
 </script>
 
 <template>
@@ -237,6 +270,8 @@ const kpis = computed(() => {
       :isAdmin="auth.isAdmin"
       :isLoading="store.isLoading"
       @view="openDetails"
+      @edit="handleEdit"
+      @delete="handleDelete"
     />
 
     <!-- Rejection Modal -->
@@ -256,6 +291,14 @@ const kpis = computed(() => {
       @reject="openRejectModal"
       @approve-advance="quickApproveAdvance"
       @approve-settlement="quickApproveSettlement"
+    />
+
+    <!-- Delete Confirmation Modal -->
+    <DeleteConfirmModal
+      v-model="isDeleteModalOpen"
+      title="Delete Cash Advance Request"
+      message="Are you sure you want to delete this pending cash advance request? This action cannot be undone."
+      @confirm="confirmDelete"
     />
   </div>
 </template>

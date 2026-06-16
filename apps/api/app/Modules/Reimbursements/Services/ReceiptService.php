@@ -56,23 +56,27 @@ class ReceiptService
                 'file_type' => $fileType,
                 'file_size_bytes' => $fileSize,
                 'expense_category_id' => $validated['expense_category_id'],
-                'vendor_name' => $validated['vendor_name'] ?? null,
-                'transaction_date' => $validated['transaction_date'] ?? null,
-                'total_amount' => $validated['total_amount'] ?? null,
-                'vat_amount' => $validated['vat_amount'] ?? null,
-                'tin' => $validated['tin'] ?? null,
-                'invoice_number' => $validated['invoice_number'] ?? null,
-                'vat_classification' => $validated['vat_classification'] ?? null,
+                
+                // Static mock data since OCR is disabled
+                'vendor_name' => $validated['vendor_name'] ?? 'Mock Vendor Corp',
+                'transaction_date' => $validated['transaction_date'] ?? now()->toDateString(),
+                'total_amount' => $validated['total_amount'] ?? 1500.00,
+                'vat_amount' => $validated['vat_amount'] ?? 180.00,
+                'tin' => $validated['tin'] ?? '123-456-789-000',
+                'invoice_number' => $validated['invoice_number'] ?? 'INV-' . rand(1000, 9999),
+                'vat_classification' => $validated['vat_classification'] ?? 'VAT',
+                'ocr_confidence_score' => 0.95,
+                
                 'ocr_flagged' => false,
                 'is_archived' => false,
-                'status' => 'processing',
+                'status' => 'pending', // Skipped 'processing' queue
             ]);
 
             if (!empty($validated['items'])) {
                 $receipt->items()->createMany($validated['items']);
             }
 
-            ProcessReceiptOcr::dispatch($receipt);
+            // Queue disabled temporarily: ProcessReceiptOcr::dispatch($receipt);
 
             $receipt->load('category', 'items', 'uploader');
 

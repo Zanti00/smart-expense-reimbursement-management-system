@@ -35,6 +35,13 @@ const routes = [
         component: () => import("@/views/ReimbursementFormView.vue"),
         meta: { title: "New Reimbursement" },
       },
+      {
+        path: "reimbursements/:id/edit",
+        name: "ReimbursementEdit",
+        component: () => import("@/views/ReimbursementFormView.vue"),
+        meta: { title: "Edit Reimbursement" },
+        props: true,
+      },
 
       {
         path: "cash-advances",
@@ -47,6 +54,13 @@ const routes = [
         name: "CashAdvanceForm",
         component: () => import("@/views/CashAdvanceFormView.vue"),
         meta: { title: "New Cash Advance" },
+      },
+      {
+        path: "cash-advances/:id/edit",
+        name: "CashAdvanceEdit",
+        component: () => import("@/views/CashAdvanceFormView.vue"),
+        meta: { title: "Edit Cash Advance" },
+        props: true,
       },
       {
         path: "liquidations",

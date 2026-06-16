@@ -14,6 +14,8 @@ import BaseUtilityToolbar from "@/components/base/BaseUtilityToolbar.vue";
 import SkeletonLoader from "@/components/base/SkeletonLoader.vue";
 import DecisionConfirmationModal from "@/components/reimbursements/DecisionConfirmationModal.vue";
 import ConfirmModal from "@/components/base/ConfirmModal.vue";
+import DeleteConfirmModal from "@/components/base/DeleteConfirmModal.vue";
+import ActionDropdownMenu from "@/components/base/ActionDropdownMenu.vue";
 import { useUnsavedChanges } from "@/composables/useUnsavedChanges";
 import { formatPeso } from "@/utils/formatters";
 import { vatOf } from "@/utils/receiptUtils";
@@ -655,7 +657,11 @@ async function submitLiquidation() {
   };
 
   try {
-    await liqStore.submitSettlement(selectedAdvance.value.id, payload);
+    if (existingLiquidation.value) {
+      await liqStore.updateSettlement(existingLiquidation.value.id, payload);
+    } else {
+      await liqStore.submitSettlement(selectedAdvance.value.id, payload);
+    }
 
     const item = store.items.find((i) => i.id === selectedAdvance.value.id);
     if (item) {
@@ -769,13 +775,103 @@ async function confirmReject() {
   }
 }
 
+const existingLiquidation = computed(() => {
+  if (!selectedAdvance.value) return null;
+  const status = String(selectedAdvance.value.status || "").toLowerCase();
+  // If the cash advance is under-review or incomplete, look for a pending/rejected liquidation
+  if (status === "under-review" || status === "incomplete") {
+    return liqStore.settlements.find(
+      (s) => s.cash_advance_id === selectedAdvance.value.id && ["pending", "rejected"].includes(s.status)
+    );
+  }
+  return null;
+});
+
+const isDeleteLiqModalOpen = ref(false);
+const deletingLiqId = ref(null);
+
+function handleDeleteLiquidation() {
+  if (!existingLiquidation.value) return;
+  deletingLiqId.value = existingLiquidation.value.id;
+  isDeleteLiqModalOpen.value = true;
+}
+
+async function confirmDeleteLiquidation(password) {
+  if (!deletingLiqId.value) return;
+  try {
+    submitting.value = true;
+    await liqStore.deleteSettlement(deletingLiqId.value, password);
+    addToast({
+      title: "Deleted",
+      message: "Liquidation settlement deleted successfully.",
+      type: "success",
+    });
+    isDeleteLiqModalOpen.value = false;
+    deletingLiqId.value = null;
+    selectedAdvance.value = null; // Close form
+    await refreshAll();
+  } catch (error) {
+    addToast({
+      title: "Failed",
+      message: error.message || "Failed to delete liquidation.",
+      type: "danger",
+    });
+  } finally {
+    submitting.value = false;
+  }
+}
+
+function getActions(row) {
+  return [
+    {
+      label: "Review",
+      icon: Eye,
+      visible: true,
+      handler: () => openReview(row),
+    },
+  ];
+}
+
 function selectAdvance(adv) {
   dismissWithConfirm(() => {
     selectedAdvance.value = adv;
     submitted.value = false;
-    receipts.value = [];
-    reportAttachment.value = null;
-    shortfallExplanation.value = "";
+    
+    // Find if there is an existing pending or rejected liquidation in liqStore.settlements
+    const existingLiq = liqStore.settlements.find(
+      (s) => s.cash_advance_id === adv.id && ["pending", "rejected"].includes(s.status)
+    );
+    
+    if (existingLiq) {
+      shortfallExplanation.value = existingLiq.shortfall_explanation || "";
+      // If it's a string filepath from backend, reportAttachment can be set to it
+      reportAttachment.value = existingLiq.report_file_path;
+      
+      if (existingLiq.receipts && Array.isArray(existingLiq.receipts)) {
+        receipts.value = existingLiq.receipts.map((r) => ({
+          id: r.id,
+          name: r.vendor_name || `Receipt-${r.id}`,
+          ocrStatus: "done",
+          category: r.category || "General",
+          amount: r.total_amount,
+          ocrData: {
+            id: r.id,
+            vendor: r.vendor_name,
+            date: r.transaction_date,
+            amount: r.total_amount,
+            vat: r.vat_amount || 0,
+            tin: r.tin,
+            invoiceNumber: r.invoice_number,
+          }
+        }));
+      } else {
+        receipts.value = [];
+      }
+    } else {
+      receipts.value = [];
+      reportAttachment.value = null;
+      shortfallExplanation.value = "";
+    }
   });
 }
 
@@ -1219,15 +1315,7 @@ function finalizeLiquidation() {
                   </span>
                 </td>
                 <td class="px-5 py-5 text-center">
-                  <button
-                    class="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-accent/15 bg-accent/5 px-3 text-xs font-bold text-accent transition-all duration-200 ease-out hover:bg-accent/10 hover:scale-[1.02] focus:outline-none"
-                    type="button"
-                    title="View liquidation"
-                    @click="openReview(row)"
-                  >
-                    <Eye class="h-3.5 w-3.5" />
-                    <span>View</span>
-                  </button>
+                  <ActionDropdownMenu :actions="getActions(row)" />
                 </td>
               </tr>
             </template>
@@ -2439,7 +2527,18 @@ function finalizeLiquidation() {
             </div>
           </section>
 
-          <div class="mt-4 flex justify-end">
+          <div class="mt-4 flex justify-end gap-3">
+            <BaseButton
+              v-if="existingLiquidation && existingLiquidation.status === 'pending'"
+              id="delete-liquidation-btn"
+              variant="danger"
+              class="w-fit px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white"
+              :disabled="submitting"
+              @click="handleDeleteLiquidation"
+            >
+              DELETE SETTLEMENT
+            </BaseButton>
+
             <BaseButton
               id="submit-liquidation-btn"
               variant="primary"
@@ -2455,11 +2554,11 @@ function finalizeLiquidation() {
             >
               <div v-if="submitting" class="flex items-center gap-2">
                 <Activity class="h-4 w-4 animate-spin" />
-                <span>ENCODING SETTLEMENT...</span>
+                <span>{{ existingLiquidation ? "UPDATING SETTLEMENT..." : "ENCODING SETTLEMENT..." }}</span>
               </div>
               <div v-else class="flex items-center gap-2">
                 <Upload class="h-4 w-4" />
-                <span>SUBMIT FOR AUDIT</span>
+                <span>{{ existingLiquidation ? "UPDATE SETTLEMENT" : "SUBMIT FOR AUDIT" }}</span>
               </div>
             </BaseButton>
           </div>
@@ -2476,6 +2575,13 @@ function finalizeLiquidation() {
       :danger="true"
       @confirm="handleConfirmLeave"
       @close="handleCancelLeave"
+    />
+
+    <DeleteConfirmModal
+      v-model="isDeleteLiqModalOpen"
+      title="Delete Liquidation Settlement"
+      message="Are you sure you want to delete this pending liquidation request? This will revert the parent cash advance status back to incomplete. This action cannot be undone."
+      @confirm="confirmDeleteLiquidation"
     />
   </div>
 </template>

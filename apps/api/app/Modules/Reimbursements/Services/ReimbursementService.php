@@ -10,6 +10,7 @@ use App\Modules\Reimbursements\Jobs\UpdatePrsReimbursementStatusJob;
 use App\Modules\Shared\Services\PasswordVerificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class ReimbursementService
@@ -180,17 +181,128 @@ class ReimbursementService
     }
 
     /**
-     * Update reimbursement details (admin notes, status).
+     * Update reimbursement details.
+     *
+     * Supports two modes:
+     * 1. Admin: update admin_notes / status (existing behaviour)
+     * 2. Employee self-edit: update fields when status is pending or rejected
      */
-    public function updateReimbursement(User $user, int $id, array $data, bool $canManage)
+    public function updateReimbursement(User $user, int $id, array $data, bool $canManage, $reportFile = null)
     {
-        if (!$canManage) {
-            throw new \Illuminate\Auth\Access\AuthorizationException('Unauthorized.');
+        $reimbursement = Reimbursement::findOrFail($id);
+
+        // Admin mode — existing behaviour
+        if ($canManage && ($user->id !== $reimbursement->user_id)) {
+            $reimbursement->update($data);
+            return $reimbursement;
         }
 
-        $reimbursement = Reimbursement::findOrFail($id);
-        $reimbursement->update($data);
+        // Employee self-edit mode
+        if ($reimbursement->user_id !== $user->id) {
+            throw new \Illuminate\Auth\Access\AuthorizationException('Forbidden. You do not own this reimbursement.');
+        }
 
-        return $reimbursement;
+        if (!in_array($reimbursement->status, ['pending', 'rejected'])) {
+            throw new \Illuminate\Auth\Access\AuthorizationException('Only pending or rejected reimbursements can be edited.');
+        }
+
+        return DB::transaction(function () use ($reimbursement, $user, $data, $reportFile) {
+            // Update receipt data if provided
+            if (!empty($data['receipts'])) {
+                foreach ($data['receipts'] as $receiptData) {
+                    $receipt = Receipt::find($receiptData['id']);
+                    if ($receipt && $receipt->uploaded_by === $user->id) {
+                        $receipt->update([
+                            'vendor_name' => $receiptData['vendor_name'] ?? $receipt->vendor_name,
+                            'transaction_date' => $receiptData['transaction_date'] ?? $receipt->transaction_date,
+                            'total_amount' => $receiptData['total_amount'] ?? $receipt->total_amount,
+                            'vat_amount' => $receiptData['vat_amount'] ?? $receipt->vat_amount,
+                            'vat_classification' => $receiptData['vat_classification'] ?? $receipt->vat_classification,
+                            'tin' => $receiptData['tin'] ?? $receipt->tin,
+                            'invoice_number' => $receiptData['invoice_number'] ?? $receipt->invoice_number,
+                        ]);
+
+                        if (isset($receiptData['items'])) {
+                            $receipt->items()->delete();
+                            $receipt->items()->createMany($receiptData['items']);
+                        }
+                    }
+                }
+            }
+
+            // Sync receipt associations if provided
+            if (!empty($data['receipt_ids'])) {
+                $reimbursement->receipts()->sync($data['receipt_ids']);
+            }
+
+            // Handle report file upload
+            $reportPath = $reimbursement->report_file_path;
+            if ($reportFile) {
+                // Delete old file if exists
+                if ($reportPath) {
+                    Storage::disk('supabase')->delete($reportPath);
+                }
+                $reportPath = $reportFile->store('reports', 'supabase');
+            }
+
+            // Build update payload
+            $updatePayload = array_filter([
+                'description' => $data['description'] ?? null,
+                'category' => $data['category'] ?? null,
+                'amount' => $data['amount'] ?? null,
+                'date' => $data['date'] ?? null,
+                'cutoff_period' => $data['cutoff_period'] ?? null,
+                'report_file_path' => $reportPath,
+            ], fn($v) => $v !== null);
+
+            // Reset rejected → pending on re-submission
+            if ($reimbursement->status === 'rejected') {
+                $updatePayload['status'] = 'pending';
+                $updatePayload['rejection_comment'] = null;
+            }
+
+            $reimbursement->update($updatePayload);
+
+            return $reimbursement->load('receipts');
+        });
+    }
+
+    /**
+     * Delete a pending reimbursement request.
+     *
+     * Only the owner can delete, and only when status is pending.
+     */
+    public function deleteReimbursement(User $user, int $id, string $password, Request $requestContext)
+    {
+        $reimbursement = Reimbursement::findOrFail($id);
+
+        if ($reimbursement->user_id !== $user->id) {
+            throw new \Illuminate\Auth\Access\AuthorizationException('Forbidden. You do not own this reimbursement.');
+        }
+
+        if ($reimbursement->status !== 'pending') {
+            throw new \Illuminate\Auth\Access\AuthorizationException('Only pending reimbursements can be deleted.');
+        }
+
+        // Verify password against external auth service
+        if (!PasswordVerificationService::verify($requestContext, $password)) {
+            throw ValidationException::withMessages([
+                'password' => ['Invalid password. Please try again.']
+            ]);
+        }
+
+        return DB::transaction(function () use ($reimbursement) {
+            // Detach receipt associations
+            $reimbursement->receipts()->detach();
+
+            // Remove report file from storage
+            if ($reimbursement->report_file_path) {
+                Storage::disk('supabase')->delete($reimbursement->report_file_path);
+            }
+
+            $reimbursement->delete();
+
+            return true;
+        });
     }
 }

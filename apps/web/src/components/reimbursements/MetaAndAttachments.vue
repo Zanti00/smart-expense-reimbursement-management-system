@@ -9,7 +9,7 @@ defineProps({
     required: true,
   },
   reportFile: {
-    type: File,
+    type: [File, String, Object],
     default: null,
   },
 });
@@ -32,14 +32,15 @@ const { addToast } = useToast();
 const VALID_MIMES = [
   "application/pdf",
   "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ];
 
 function isValidFile(file) {
   if (!file) return false;
   if (!VALID_MIMES.includes(file.type)) {
     addToast({
-      message: "Invalid file type. Only PDF, DOC, and DOCX are allowed for the report.",
+      message:
+        "Invalid file type. Only PDF, DOC, and DOCX are allowed for the report.",
       type: "error",
     });
     return false;
@@ -68,7 +69,7 @@ function handleReportSelect(e) {
       <div>
         <h3
           class="text-base font-bold text-primary mb-1"
-          style="font-family: 'Poppins', sans-serif"
+          style="font-family: &quot;Poppins&quot;, sans-serif"
         >
           Cutoff Period <span class="text-danger">*</span>
         </h3>
@@ -98,7 +99,7 @@ function handleReportSelect(e) {
     <section class="card p-6 flex flex-col gap-4">
       <h3
         class="text-base font-bold text-primary"
-        style="font-family: 'Poppins', sans-serif"
+        style="font-family: &quot;Poppins&quot;, sans-serif"
       >
         Report Attachment
         <span class="text-danger">*</span>
@@ -114,18 +115,25 @@ function handleReportSelect(e) {
         @dragleave.prevent="reportDrag = false"
         @drop.prevent="handleReportDrop"
       >
-        <div class="flex items-center gap-4">
+        <div class="flex items-center gap-4 min-w-0 flex-1">
           <div
             class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0"
           >
             <FileText class="w-5 h-5 text-slate-400" />
           </div>
-          <div>
+          <div class="min-w-0 flex-1">
             <p
-              class="text-sm font-semibold text-slate-700"
-              style="font-family: 'Poppins', sans-serif"
+              class="text-sm truncate font-semibold text-slate-700"
+              style="font-family: &quot;Poppins&quot;, sans-serif"
             >
-              {{ reportFile ? reportFile.name : "No file selected" }}
+              {{
+                reportFile
+                  ? reportFile.name ||
+                    (typeof reportFile === "string"
+                      ? reportFile.split("/").pop()
+                      : "Attached Report")
+                  : "No file selected"
+              }}
             </p>
             <p class="text-[11px] text-slate-400">
               Upload activity report (PDF, DOC, DOCX)

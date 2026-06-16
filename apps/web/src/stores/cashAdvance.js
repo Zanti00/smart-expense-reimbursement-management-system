@@ -189,6 +189,57 @@ export const useCashAdvanceStore = defineStore("cashAdvance", () => {
     }
   }
 
+  /**
+   * Update a pending/rejected cash advance request (employee self-edit).
+   */
+  async function updateRequest(id, formData) {
+    try {
+      if (formData instanceof FormData) {
+        formData.append("_method", "PUT");
+      }
+      const response = await apiFetch(`/api/serms/cash-advances/${id}`, {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+      if (response.ok) {
+        const result = await response.json();
+        await fetchAll();
+        return result.data;
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to update cash advance");
+      }
+    } catch (err) {
+      console.error("Failed to update cash advance", err);
+      throw err;
+    }
+  }
+
+  /**
+   * Delete a pending cash advance request.
+   */
+  async function deleteRequest(id, password) {
+    try {
+      const response = await apiFetch(`/api/serms/cash-advances/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+        body: JSON.stringify({ password }),
+      });
+      if (response.ok) {
+        items.value = items.value.filter((i) => i.id != id);
+        return true;
+      } else {
+        const errorData = await response.json();
+        const errMsg = errorData.errors?.password?.[0] || errorData.message || "Failed to delete";
+        throw new Error(errMsg);
+      }
+    } catch (err) {
+      console.error("Failed to delete cash advance", err);
+      throw err;
+    }
+  }
+
   return {
     items,
     isLoading,
@@ -204,5 +255,7 @@ export const useCashAdvanceStore = defineStore("cashAdvance", () => {
     acknowledgeRequest,
     approveSettlement,
     rejectSettlement,
+    updateRequest,
+    deleteRequest,
   };
 });

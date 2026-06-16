@@ -12,4 +12,6 @@ Route::middleware(['auth.external'])->group(function () {
     Route::post('/{id}/reject', [CashAdvanceController::class, 'reject']);
     Route::post('/{id}/disburse', [CashAdvanceController::class, 'disburse']);
     Route::post('/{id}/acknowledge', [CashAdvanceController::class, 'acknowledge']);
+    Route::put('/{id}', [CashAdvanceController::class, 'update']);
+    Route::delete('/{id}', [CashAdvanceController::class, 'destroy']);
 });

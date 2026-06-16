@@ -1,6 +1,7 @@
 <script setup>
 import { Eye } from "lucide-vue-next";
 import { formatPeso } from "@/utils/formatters";
+import ActionDropdownMenu from "@/components/base/ActionDropdownMenu.vue";
 
 defineProps({
   rows: {
@@ -9,7 +10,18 @@ defineProps({
   },
 });
 
-defineEmits(["view"]);
+const emit = defineEmits(["view"]);
+
+function getActions(row) {
+  return [
+    {
+      label: "View",
+      icon: Eye,
+      visible: true,
+      handler: () => emit("view", row),
+    },
+  ];
+}
 
 
 
@@ -75,10 +87,7 @@ function statusClass(status) {
               <span :class="['inline-flex rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide', statusClass(row.status)]">{{ row.status }}</span>
             </td>
             <td class="px-5 py-5 text-center">
-              <button class="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-accent/15 bg-accent/5 px-3 text-xs font-bold text-accent transition-all duration-200 ease-out hover:bg-accent/10 hover:scale-[1.02] focus:outline-none" title="View cash advance" @click="$emit('view', row)">
-                <Eye class="h-3.5 w-3.5" />
-                <span>View</span>
-              </button>
+              <ActionDropdownMenu :actions="getActions(row)" />
             </td>
           </tr>
         </tbody>

@@ -9,4 +9,6 @@ Route::middleware(['auth.external'])->group(function () {
     Route::post('/scan', [LiquidationController::class, 'scan']);
     Route::get('/{id}', [LiquidationController::class, 'show']);
     Route::post('/{id}/audit', [LiquidationController::class, 'audit']);
+    Route::put('/{id}', [LiquidationController::class, 'update']);
+    Route::delete('/{id}', [LiquidationController::class, 'destroy']);
 });

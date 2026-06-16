@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useReimbursementStore } from "@/stores/reimbursement";
 import { useAuthStore } from "@/stores/auth";
@@ -10,6 +10,7 @@ import BaseUtilityToolbar from "@/components/base/BaseUtilityToolbar.vue";
 import ReimbursementDetailsModal from "@/components/reimbursements/ReimbursementDetailsModal.vue";
 import ReceiptDetailsModal from "@/components/reimbursements/ReceiptDetailsModal.vue";
 import DecisionConfirmationModal from "@/components/reimbursements/DecisionConfirmationModal.vue";
+import DeleteConfirmModal from "@/components/base/DeleteConfirmModal.vue";
 import ReimbursementsTable from "@/components/reimbursements/ReimbursementsTable.vue";
 import { formatPeso } from "@/utils/formatters";
 import { useReimbursementFilters, normalizeStatus } from "@/composables/reimbursements/useReimbursementFilters";
@@ -167,6 +168,36 @@ const {
   confirmReject,
 } = useReimbursementDecisions(store, addToast, viewingRecord);
 
+const isDeleteModalOpen = ref(false);
+const deletingRequestId = ref(null);
+
+function handleEdit(row) {
+  router.push({ name: "ReimbursementEdit", params: { id: row.id } });
+}
+
+function handleDelete(row) {
+  deletingRequestId.value = row.id;
+  isDeleteModalOpen.value = true;
+}
+
+async function confirmDelete(password) {
+  if (!deletingRequestId.value) return;
+  try {
+    await store.deleteRequest(deletingRequestId.value, password);
+    addToast({
+      message: "Reimbursement request deleted successfully.",
+      type: "success",
+    });
+    isDeleteModalOpen.value = false;
+    deletingRequestId.value = null;
+  } catch (error) {
+    addToast({
+      message: error.message || "Failed to delete request.",
+      type: "error",
+    });
+  }
+}
+
 onMounted(() => store.fetchAll());
 </script>
 
@@ -231,6 +262,8 @@ onMounted(() => store.fetchAll());
       :page-size="pageSize"
       @toggle-sort="toggleSort"
       @view-details="openDetails"
+      @edit-request="handleEdit"
+      @delete-request="handleDelete"
     />
 
     <!-- ── Record Detail Panel (Modal) ── -->
@@ -267,6 +300,14 @@ onMounted(() => store.fetchAll());
       v-model:comment="rejectionComment"
       @close="approvingId ? cancelApprove() : cancelReject()"
       @confirm="approvingId ? confirmApprove() : confirmReject()"
+    />
+
+    <!-- Delete Confirmation Modal -->
+    <DeleteConfirmModal
+      v-model="isDeleteModalOpen"
+      title="Delete Reimbursement Request"
+      message="Are you sure you want to delete this pending reimbursement request? This action cannot be undone."
+      @confirm="confirmDelete"
     />
   </div>
 </template>

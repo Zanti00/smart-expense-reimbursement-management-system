@@ -2,7 +2,8 @@
 import { computed } from "vue";
 import { formatPeso, formatDate } from "@/utils/formatters";
 import BasePagination from "@/components/base/BasePagination.vue";
-import { ChevronUp, ChevronDown, ChevronsUpDown, Eye } from "lucide-vue-next";
+import { ChevronUp, ChevronDown, ChevronsUpDown, Eye, Pencil, Trash2 } from "lucide-vue-next";
+import ActionDropdownMenu from "@/components/base/ActionDropdownMenu.vue";
 
 const props = defineProps({
   isLoading: { type: Boolean, default: false },
@@ -16,7 +17,7 @@ const props = defineProps({
   pageSize: { type: Number, default: 10 },
 });
 
-const emit = defineEmits(["update:currentPage", "toggle-sort", "view-details"]);
+const emit = defineEmits(["update:currentPage", "toggle-sort", "view-details", "edit-request", "delete-request"]);
 
 const columnCount = computed(() => props.columns.length);
 
@@ -43,6 +44,31 @@ function normalizeStatus(status) {
     paid: "granted",
   };
   return statusMap[normalized] || normalized;
+}
+
+function getActions(row) {
+  const status = normalizeStatus(row.displayStatus);
+  return [
+    {
+      label: "Edit",
+      icon: Pencil,
+      visible: !props.isAdmin && (status === "pending" || status === "rejected"),
+      handler: () => emit("edit-request", row),
+    },
+    {
+      label: "View",
+      icon: Eye,
+      visible: true,
+      handler: () => emit("view-details", row),
+    },
+    {
+      label: "Delete",
+      icon: Trash2,
+      visible: !props.isAdmin && status === "pending",
+      variant: "danger",
+      handler: () => emit("delete-request", row),
+    },
+  ];
 }
 
 function statusClass(status) {
@@ -211,14 +237,7 @@ const tableMinWidth = computed(() => "min-w-full");
                 </span>
               </td>
               <td class="px-5 py-5 text-center">
-                <button
-                  class="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-accent/15 bg-accent/5 px-3 text-xs font-bold text-accent transition-all duration-200 ease-out hover:bg-accent/10 hover:scale-[1.02] focus:outline-none"
-                  title="View reimbursement"
-                  @click="handleViewDetails(row)"
-                >
-                  <Eye class="h-3.5 w-3.5" />
-                  <span>View</span>
-                </button>
+                <ActionDropdownMenu :actions="getActions(row)" />
               </td>
             </tr>
           </template>

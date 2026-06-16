@@ -1,4 +1,4 @@
-import { ref } from "vue";
+import { ref, onUnmounted } from "vue";
 import { apiFetch } from "@/utils/apiFetch";
 
 export function useReimbursementDetails(store, addToast) {
@@ -9,8 +9,57 @@ export function useReimbursementDetails(store, addToast) {
   const pendingReceiptDecision = ref(null);
   const isReceiptReviewSubmitting = ref(false);
   const modalLoading = ref(false);
+  let pollingInterval = null;
+
+  function stopPolling() {
+    if (pollingInterval) {
+      clearInterval(pollingInterval);
+      pollingInterval = null;
+    }
+  }
+
+  function startPolling(id) {
+    stopPolling();
+    pollingInterval = setInterval(async () => {
+      try {
+        const response = await apiFetch(`/api/serms/reimbursements/${id}`);
+        if (response.ok) {
+          const fullRecord = await response.json();
+          viewingRecord.value = fullRecord;
+
+          if (selectedReceipt.value) {
+            const updatedReceipt = fullRecord.receipts.find(
+              (r) => r.id === selectedReceipt.value.id
+            );
+            if (updatedReceipt) {
+              selectedReceipt.value = {
+                ...selectedReceipt.value,
+                ...updatedReceipt,
+              };
+            }
+          }
+
+          // Update store items to keep main table fresh
+          const itemIndex = store.items.findIndex((i) => i.id === fullRecord.id);
+          if (itemIndex > -1) {
+            store.items[itemIndex] = fullRecord;
+          }
+
+          const stillProcessing = fullRecord.receipts.some(
+            (r) => r.status === "processing"
+          );
+          if (!stillProcessing) {
+            stopPolling();
+          }
+        }
+      } catch (error) {
+        console.error("Failed to poll reimbursement details:", error);
+      }
+    }, 3000);
+  }
 
   function closeDetails() {
+    stopPolling();
     viewingRecord.value = null;
     receiptDetailsOpen.value = false;
     selectedReceipt.value = null;
@@ -41,6 +90,13 @@ export function useReimbursementDetails(store, addToast) {
       const fullRecord = await response.json();
       viewingRecord.value = fullRecord;
       reviewerNotes.value = fullRecord.admin_notes || "";
+
+      const needsPolling = fullRecord.receipts.some(
+        (r) => r.status === "processing"
+      );
+      if (needsPolling) {
+        startPolling(fullRecord.id);
+      }
     } catch (error) {
       addToast({
         message: "Failed to load reimbursement details",
@@ -135,6 +191,10 @@ export function useReimbursementDetails(store, addToast) {
       isReceiptReviewSubmitting.value = false;
     }
   }
+
+  onUnmounted(() => {
+    stopPolling();
+  });
 
   return {
     viewingRecord,

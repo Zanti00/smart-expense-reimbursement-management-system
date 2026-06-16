@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, computed } from "vue";
+import { ref, reactive, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useCashAdvanceStore } from "@/stores/cashAdvance";
 import { useToast } from "@/composables/useToast";
@@ -16,6 +16,13 @@ import {
   X,
 } from "lucide-vue-next";
 
+const props = defineProps({
+  id: {
+    type: [String, Number],
+    default: null,
+  },
+});
+
 const router = useRouter();
 const store = useCashAdvanceStore();
 const { addToast } = useToast();
@@ -29,6 +36,8 @@ const form = reactive({
   documents: [],
 });
 const fileInput = ref(null);
+
+const isEditMode = computed(() => !!props.id);
 
 const isDirty = computed(() => {
   return (
@@ -48,6 +57,39 @@ const {
   handleCancelLeave,
   dismissWithConfirm
 } = useUnsavedChanges(isDirty, isSubmitted);
+
+onMounted(async () => {
+  if (isEditMode.value) {
+    try {
+      const data = await store.fetchRequest(props.id);
+      if (data) {
+        form.purpose = data.purpose;
+        form.amount = data.amount;
+        if (data.expected_disbursement_date) {
+          form.expected_disbursement_date = new Date(data.expected_disbursement_date).toISOString().split("T")[0];
+        }
+        if (data.expected_liquidation_date) {
+          form.expected_liquidation_date = new Date(data.expected_liquidation_date).toISOString().split("T")[0];
+        }
+        
+        const doc = await store.fetchDocument(props.id);
+        if (doc) {
+          form.documents.push({
+            name: doc.file_name || doc.file_path.split("/").pop(),
+            isExisting: true,
+            file_path: doc.file_path,
+          });
+        }
+      }
+    } catch (error) {
+      addToast({
+        message: "Failed to load cash advance details.",
+        type: "error",
+      });
+      router.push("/cash-advances");
+    }
+  }
+});
 
 function handleFileUpload(event) {
   const files = Array.from(event.target.files);
@@ -152,19 +194,32 @@ async function handleRequest() {
     form.expected_disbursement_date,
   );
   formData.append("expected_liquidation_date", form.expected_liquidation_date);
-  form.documents.forEach((file) => formData.append("documents[]", file));
+  
+  form.documents.forEach((file) => {
+    if (!file.isExisting) {
+      formData.append("documents[]", file);
+    }
+  });
 
   try {
-    await store.request(formData);
-    addToast({
-      message: "Cash advance requested successfully",
-      type: "success",
-    });
+    if (isEditMode.value) {
+      await store.updateRequest(props.id, formData);
+      addToast({
+        message: "Cash advance request updated successfully",
+        type: "success",
+      });
+    } else {
+      await store.request(formData);
+      addToast({
+        message: "Cash advance requested successfully",
+        type: "success",
+      });
+    }
     isSubmitted.value = true;
     router.push("/cash-advances");
   } catch (error) {
     addToast({
-      message: error.message || "Failed to create request",
+      message: error.message || "Failed to process request",
       type: "error",
     });
   } finally {
@@ -204,10 +259,10 @@ function goBack() {
               <h1
                 class="font-heading text-2xl font-bold leading-tight text-slate-800"
               >
-                New Cash Advance Request
+                {{ isEditMode ? "Edit Cash Advance Request" : "New Cash Advance Request" }}
               </h1>
               <p class="mt-1 text-sm text-slate-400">
-                Submit a cash advance request for review and disbursement.
+                {{ isEditMode ? "Update your cash advance request details." : "Submit a cash advance request for review and disbursement." }}
               </p>
             </div>
           </div>
@@ -433,7 +488,7 @@ function goBack() {
             type="submit"
           >
             <Send class="h-4 w-4" />
-            {{ submitting ? "Submitting..." : "Submit Request" }}
+            {{ submitting ? (isEditMode ? "Updating..." : "Submitting...") : (isEditMode ? "Update Request" : "Submit Request") }}
           </button>
         </footer>
       </div>

@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Gate;
 use App\Modules\CashAdvances\Models\CashAdvance;
 use App\Modules\CashAdvances\Services\CashAdvanceService;
 use App\Modules\CashAdvances\Http\Requests\StoreCashAdvanceRequest;
+use App\Modules\CashAdvances\Http\Requests\UpdateCashAdvanceRequest;
 use App\Modules\CashAdvances\Http\Requests\ApproveCashAdvanceRequest;
 use App\Modules\CashAdvances\Http\Requests\RejectCashAdvanceRequest;
 use App\Modules\CashAdvances\Http\Requests\DisburseCashAdvanceRequest;
@@ -184,5 +185,69 @@ class CashAdvanceController extends Controller
             'message' => 'Cash advance acknowledged successfully.',
             'data' => $advance,
         ]);
+    }
+
+    /**
+     * Update a pending or rejected cash advance (employee self-edit).
+     */
+    public function update(UpdateCashAdvanceRequest $request, $id)
+    {
+        $advance = CashAdvance::findOrFail($id);
+
+        // Only the owner can edit
+        if ($advance->user_id !== $request->user()->id) {
+            return response()->json(['message' => 'Forbidden. You do not own this cash advance.'], 403);
+        }
+
+        if (!in_array($advance->status, ['pending', 'rejected'])) {
+            return response()->json(['message' => 'Only pending or rejected cash advances can be edited.'], 409);
+        }
+
+        $advance = $this->service->updateAdvance(
+            $advance,
+            $request->user(),
+            $request->validated(),
+            $request->file('documents', [])
+        );
+
+        return response()->json([
+            'message' => 'Cash advance updated successfully.',
+            'data' => $advance->load('document'),
+        ]);
+    }
+
+    /**
+     * Delete a pending cash advance request.
+     */
+    public function destroy(Request $request, $id)
+    {
+        $advance = CashAdvance::findOrFail($id);
+
+        // Only the owner can delete
+        if ($advance->user_id !== $request->user()->id) {
+            return response()->json(['message' => 'Forbidden. You do not own this cash advance.'], 403);
+        }
+
+        if ($advance->status !== 'pending') {
+            return response()->json(['message' => 'Only pending cash advances can be deleted.'], 409);
+        }
+
+        try {
+            $this->service->deleteAdvance(
+                $advance,
+                $request->user(),
+                $request->input('password', ''),
+                $request
+            );
+
+            return response()->json([
+                'message' => 'Cash advance request deleted successfully.',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'message' => 'The given data was invalid.',
+                'errors' => $e->errors(),
+            ], 422);
+        }
     }
 }
