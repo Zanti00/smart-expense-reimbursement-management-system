@@ -12,6 +12,21 @@ services:
       - "3306:3306"
     volumes:
       - serms_mysql_data:/var/lib/mysql
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "serms_user",
+          "-psecret",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     networks:
       - serms_network
 
@@ -23,9 +38,12 @@ services:
     restart: unless-stopped
     volumes:
       - ./apps/api:/var/www
+      - serms_api_vendor:/var/www/vendor
+      - serms_api_bootstrap_cache:/var/www/bootstrap/cache
       - ../capstone-auth-module/auth-service/storage/oauth-public.key:/var/www/storage/oauth-public.key:ro
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
     networks:
       - serms_network
       - shared-capstone-network
@@ -36,6 +54,7 @@ services:
       - DB_PASSWORD=secret
       - REDIS_HOST=auth-redis
       - CACHE_STORE=redis
+      - SERMS_SERVICE_ROLE=api
       - JWT_PUBLIC_KEY_PATH=/var/www/storage/oauth-public.key
       - PRS_REIMBURSEMENT_API_KEY=prs-serms-local-service-key
       - PRS_REIMBURSEMENT_STATUS_API_URL=http://prs_api:8000/api/integrations/serms/reimbursement-status
@@ -50,9 +69,12 @@ services:
     restart: unless-stopped
     volumes:
       - ./apps/api:/var/www
+      - serms_api_vendor:/var/www/vendor
+      - serms_api_bootstrap_cache:/var/www/bootstrap/cache
       - ../capstone-auth-module/auth-service/storage/oauth-public.key:/var/www/storage/oauth-public.key:ro
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
     networks:
       - serms_network
       - shared-capstone-network
@@ -63,6 +85,7 @@ services:
       - DB_PASSWORD=secret
       - REDIS_HOST=auth-redis
       - CACHE_STORE=redis
+      - SERMS_SERVICE_ROLE=worker
       - JWT_PUBLIC_KEY_PATH=/var/www/storage/oauth-public.key
       - PRS_REIMBURSEMENT_API_KEY=prs-serms-local-service-key
       - PRS_REIMBURSEMENT_STATUS_API_URL=http://prs_api:8000/api/integrations/serms/reimbursement-status
@@ -109,3 +132,5 @@ networks:
 
 volumes:
   serms_mysql_data:
+  serms_api_vendor:
+  serms_api_bootstrap_cache:

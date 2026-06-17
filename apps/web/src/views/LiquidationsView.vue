@@ -671,8 +671,6 @@ async function submitLiquidation() {
 
     submitting.value = false;
     submitted.value = true;
-
-    await refreshAll();
   } catch (err) {
     addToast({
       title: "Submission Failed",

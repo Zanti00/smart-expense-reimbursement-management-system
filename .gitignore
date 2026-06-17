@@ -65,6 +65,7 @@ Homestead.json
 Homestead.yaml
 .stylelintcache
 .prettiercache
+/apps/api/bootstrap/cache/routes-v*.php
 
 # Consolidated from apps/api/database/.gitignore
 /apps/api/database/*.sqlite*
@@ -123,4 +124,3 @@ Homestead.yaml
 /apps/api/vendor/hamcrest/hamcrest-php/composer.lock
 /apps/api/vendor/hamcrest/hamcrest-php/tests/.phpunit.result.cache
 /apps/api/vendor/hamcrest/hamcrest-php/vendor
-

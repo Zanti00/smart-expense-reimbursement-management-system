@@ -33,9 +33,9 @@ class CashAdvanceController extends Controller
         $user = $request->user();
 
         if (!$user->can('serms.cash_advances.manage')) {
-            $advances = CashAdvance::with(['approvalActions', 'penalties'])->where('user_id', $user->id)->get();
+            $advances = CashAdvance::with(['approvalActions', 'penalties', 'document'])->where('user_id', $user->id)->get();
         } else {
-            $advances = CashAdvance::with(['requester', 'approvalActions', 'penalties'])->get();
+            $advances = CashAdvance::with(['requester', 'approvalActions', 'penalties', 'document'])->get();
         }
 
         return response()->json($advances);
@@ -56,7 +56,7 @@ class CashAdvanceController extends Controller
 
         return response()->json([
             'message' => 'Cash advance request created successfully.',
-            'data' => $advance->load('document'),
+            'data' => $advance->load(['requester', 'approvalActions', 'penalties', 'document']),
         ], 201);
     }
 
@@ -65,7 +65,7 @@ class CashAdvanceController extends Controller
      */
     public function show(Request $request, $id)
     {
-        $advance = CashAdvance::with(['requester', 'approvalActions', 'statusHistory', 'disbursement', 'penalties'])->findOrFail($id);
+        $advance = CashAdvance::with(['requester', 'approvalActions', 'statusHistory', 'disbursement', 'penalties', 'document'])->findOrFail($id);
 
         Gate::authorize('view', $advance);
 
@@ -105,7 +105,7 @@ class CashAdvanceController extends Controller
 
         return response()->json([
             'message' => 'Cash advance approved successfully.',
-            'data' => $advance,
+            'data' => $advance->load(['requester', 'approvalActions', 'penalties', 'document']),
         ]);
     }
 
@@ -130,7 +130,7 @@ class CashAdvanceController extends Controller
 
         return response()->json([
             'message' => 'Cash advance rejected successfully.',
-            'data' => $advance,
+            'data' => $advance->load(['requester', 'approvalActions', 'penalties', 'document']),
         ]);
     }
 
@@ -155,7 +155,7 @@ class CashAdvanceController extends Controller
 
         return response()->json([
             'message' => 'Cash advance disbursed successfully.',
-            'data' => $advance,
+            'data' => $advance->load(['requester', 'approvalActions', 'penalties', 'document']),
         ]);
     }
 
@@ -183,7 +183,7 @@ class CashAdvanceController extends Controller
 
         return response()->json([
             'message' => 'Cash advance acknowledged successfully.',
-            'data' => $advance,
+            'data' => $advance->load(['requester', 'approvalActions', 'penalties', 'document']),
         ]);
     }
 
@@ -212,7 +212,7 @@ class CashAdvanceController extends Controller
 
         return response()->json([
             'message' => 'Cash advance updated successfully.',
-            'data' => $advance->load('document'),
+            'data' => $advance->load(['requester', 'approvalActions', 'penalties', 'document']),
         ]);
     }
 

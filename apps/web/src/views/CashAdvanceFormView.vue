@@ -71,8 +71,7 @@ onMounted(async () => {
         if (data.expected_liquidation_date) {
           form.expected_liquidation_date = new Date(data.expected_liquidation_date).toISOString().split("T")[0];
         }
-        
-        const doc = await store.fetchDocument(props.id);
+        const doc = data.document;
         if (doc) {
           form.documents.push({
             name: doc.file_name || doc.file_path.split("/").pop(),

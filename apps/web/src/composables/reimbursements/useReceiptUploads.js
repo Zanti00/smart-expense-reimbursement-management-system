@@ -73,7 +73,6 @@ export function useReceiptUploads() {
       try {
         const formData = new FormData();
         formData.append("file", file);
-        formData.append("expense_category_id", 1);
 
         const headers = { Accept: "application/json" };
         if (authStore.token)

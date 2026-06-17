@@ -63,12 +63,15 @@ function openDetails(row) {
       (row.status === "pending" || row.status === "rejected"
         ? "--"
         : "02/15/2025"),
-    documentFileName:
-      row.fileDescription || `Cash_Advance_Request_${row.id}.pdf`,
     adminNotes: row.adminNotes || "N/A",
     acknowledgedAt: row.acknowledgedAt,
     signatureImage: row.signatureImage,
+    document: row.document,
     documentUrl: row.documentUrl,
+    documentFileName:
+      row.documentFileName ||
+      row.fileDescription ||
+      `Cash_Advance_Request_${row.id}.pdf`,
   };
 }
 

@@ -59,21 +59,9 @@ watch(
       adminReviewNotes.value = "";
       confirmationAction.value = "";
       showAcknowledgeModal.value = false;
-      documentData.value = null;
+      documentData.value = props.record?.document || null;
       adminPassword.value = "";
       clearSignature();
-
-      if (props.record?.id) {
-        isLoadingDocument.value = true;
-        try {
-          const doc = await store.fetchDocument(props.record.id);
-          documentData.value = doc;
-        } catch (error) {
-          console.error("Failed to load document", error);
-        } finally {
-          isLoadingDocument.value = false;
-        }
-      }
     }
   },
 );
@@ -115,8 +103,19 @@ function formatDateOnly(value) {
   }).format(date);
 }
 
-function downloadDocument() {
+async function downloadDocument() {
   if (!props.record) return;
+  if (!documentData.value && props.record.id) {
+    isLoadingDocument.value = true;
+    try {
+      documentData.value = await store.fetchDocument(props.record.id);
+    } catch (error) {
+      console.error("Failed to load document", error);
+    } finally {
+      isLoadingDocument.value = false;
+    }
+  }
+
   const fileName =
     documentData.value?.file_name ||
     props.record.documentFileName ||

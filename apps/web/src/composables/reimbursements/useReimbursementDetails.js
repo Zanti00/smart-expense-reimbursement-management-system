@@ -10,17 +10,28 @@ export function useReimbursementDetails(store, addToast) {
   const isReceiptReviewSubmitting = ref(false);
   const modalLoading = ref(false);
   let pollingInterval = null;
+  let pollingInFlight = false;
+
+  function hasProcessingReceipts(record) {
+    return (record?.receipts || []).some(
+      (r) => String(r.status || "").toLowerCase() === "processing",
+    );
+  }
 
   function stopPolling() {
     if (pollingInterval) {
       clearInterval(pollingInterval);
       pollingInterval = null;
     }
+    pollingInFlight = false;
   }
 
   function startPolling(id) {
     stopPolling();
     pollingInterval = setInterval(async () => {
+      if (pollingInFlight) return;
+      pollingInFlight = true;
+
       try {
         const response = await apiFetch(`/api/serms/reimbursements/${id}`);
         if (response.ok) {
@@ -45,15 +56,15 @@ export function useReimbursementDetails(store, addToast) {
             store.items[itemIndex] = fullRecord;
           }
 
-          const stillProcessing = fullRecord.receipts.some(
-            (r) => r.status === "processing"
-          );
+          const stillProcessing = hasProcessingReceipts(fullRecord);
           if (!stillProcessing) {
             stopPolling();
           }
         }
       } catch (error) {
         console.error("Failed to poll reimbursement details:", error);
+      } finally {
+        pollingInFlight = false;
       }
     }, 3000);
   }
@@ -91,9 +102,7 @@ export function useReimbursementDetails(store, addToast) {
       viewingRecord.value = fullRecord;
       reviewerNotes.value = fullRecord.admin_notes || "";
 
-      const needsPolling = fullRecord.receipts.some(
-        (r) => r.status === "processing"
-      );
+      const needsPolling = hasProcessingReceipts(fullRecord);
       if (needsPolling) {
         startPolling(fullRecord.id);
       }

@@ -13,6 +13,49 @@ export const useCashAdvanceStore = defineStore("cashAdvance", () => {
     items.value.reduce((s, i) => s + (i.amount || 0), 0),
   ); // simplistic for now
 
+  function normalizeAdvance(item = {}) {
+    const document = item.document || null;
+
+    return {
+      ...item,
+      document,
+      // Map backend fields to frontend expected fields
+      userId: item.user_id ?? item.userId,
+      requestedBy: item.requester?.name || item.requestedBy || "Unknown",
+      dueDate: item.expected_liquidation_date ?? item.dueDate,
+      date: item.submitted_at || item.date || item.created_at,
+      // outstanding_balance is DB-authoritative. Fall back to full amount for
+      // advances not yet disbursed where balance is still null.
+      balance: item.outstanding_balance !== null && item.outstanding_balance !== undefined
+        ? Number(item.outstanding_balance)
+        : Number(item.balance ?? item.amount ?? 0),
+      adminNotes:
+        item.adminNotes ??
+        (item.approval_actions && item.approval_actions.length
+          ? item.approval_actions[item.approval_actions.length - 1].comment
+          : null),
+      acknowledgedAt: item.acknowledged_at ?? item.acknowledgedAt,
+      signatureImage: item.signature ?? item.signatureImage,
+      documentUrl: document?.file_url || item.documentUrl || null,
+      documentFileName: document?.file_name || item.documentFileName || null,
+    };
+  }
+
+  function upsertAdvance(item) {
+    const existingIndex = items.value.findIndex((i) => i.id == item.id);
+    const merged = normalizeAdvance(
+      existingIndex === -1 ? item : { ...items.value[existingIndex], ...item },
+    );
+
+    if (existingIndex === -1) {
+      items.value.unshift(merged);
+    } else {
+      items.value[existingIndex] = merged;
+    }
+
+    return merged;
+  }
+
   async function fetchAll() {
     isLoading.value = true;
     try {
@@ -21,26 +64,7 @@ export const useCashAdvanceStore = defineStore("cashAdvance", () => {
       });
       if (response.ok) {
         const data = await response.json();
-        items.value = data.map((item) => ({
-          ...item,
-          // Map backend fields to frontend expected fields
-          userId: item.user_id,
-          requestedBy: item.requester ? item.requester.name : "Unknown",
-          dueDate: item.expected_liquidation_date,
-          date: item.submitted_at || item.created_at,
-          // outstanding_balance is now persisted in the DB and returned by the API.
-          // Fall back to full amount for advances not yet disbursed (null balance).
-          balance: item.outstanding_balance !== null && item.outstanding_balance !== undefined
-            ? Number(item.outstanding_balance)
-            : Number(item.amount ?? 0),
-          adminNotes:
-            item.approval_actions && item.approval_actions.length
-              ? item.approval_actions[item.approval_actions.length - 1].comment
-              : null,
-          acknowledgedAt: item.acknowledged_at,
-          signatureImage: item.signature,
-          documentUrl: item.document ? item.document.file_url : null,
-        }));
+        items.value = data.map(normalizeAdvance);
       }
     } catch (err) {
       console.error("Failed to fetch cash advances", err);
@@ -58,8 +82,7 @@ export const useCashAdvanceStore = defineStore("cashAdvance", () => {
       });
       if (response.ok) {
         const result = await response.json();
-        await fetchAll();
-        return result.data;
+        return upsertAdvance(result.data);
       } else {
         const errorData = await response.json();
         throw new Error(errorData.message || "Failed to create cash advance");
@@ -78,7 +101,8 @@ export const useCashAdvanceStore = defineStore("cashAdvance", () => {
         body: JSON.stringify({ comment }),
       });
       if (response.ok) {
-        await fetchAll();
+        const result = await response.json();
+        return upsertAdvance(result.data);
       } else {
         const errorData = await response.json();
         throw new Error(errorData.message || "Failed to approve cash advance");
@@ -97,7 +121,8 @@ export const useCashAdvanceStore = defineStore("cashAdvance", () => {
         body: JSON.stringify({ comment }),
       });
       if (response.ok) {
-        await fetchAll();
+        const result = await response.json();
+        return upsertAdvance(result.data);
       } else {
         const errorData = await response.json();
         throw new Error(errorData.message || "Failed to reject cash advance");
@@ -116,7 +141,8 @@ export const useCashAdvanceStore = defineStore("cashAdvance", () => {
         body: JSON.stringify(payload),
       });
       if (response.ok) {
-        await fetchAll();
+        const result = await response.json();
+        return upsertAdvance(result.data);
       } else {
         const errorData = await response.json();
         throw new Error(errorData.message || "Failed to disburse cash advance");
@@ -138,7 +164,8 @@ export const useCashAdvanceStore = defineStore("cashAdvance", () => {
         },
       );
       if (response.ok) {
-        await fetchAll();
+        const result = await response.json();
+        return upsertAdvance(result.data);
       } else {
         const errorData = await response.json();
         throw new Error(
@@ -165,7 +192,7 @@ export const useCashAdvanceStore = defineStore("cashAdvance", () => {
         credentials: "include",
       });
       if (response.ok) {
-        return await response.json();
+        return normalizeAdvance(await response.json());
       }
       return null;
     } catch (err) {
@@ -204,8 +231,7 @@ export const useCashAdvanceStore = defineStore("cashAdvance", () => {
       });
       if (response.ok) {
         const result = await response.json();
-        await fetchAll();
-        return result.data;
+        return upsertAdvance(result.data);
       } else {
         const errorData = await response.json();
         throw new Error(errorData.message || "Failed to update cash advance");

@@ -85,6 +85,24 @@ class ReimbursementLogicTest extends TestCase
         ]);
     }
 
+    public function test_receipt_upload_allows_missing_category(): void
+    {
+        $response = $this
+            ->withoutMiddleware(\App\Modules\Shared\Http\Middleware\AuthenticateWithExternalService::class)
+            ->actingAs($this->employee)
+            ->post('/api/reimbursements/receipts', [
+                'file' => UploadedFile::fake()->create('receipt.pdf', 100, 'application/pdf'),
+            ]);
+
+        $response->assertStatus(201);
+        $response->assertJsonPath('data.expense_category_id', null);
+
+        $this->assertDatabaseHas('receipts', [
+            'uploaded_by' => $this->employee->id,
+            'expense_category_id' => null,
+        ]);
+    }
+
     public function test_self_approval_is_prohibited(): void
     {
         // Mock external password verification to return true via Http fake

@@ -12,7 +12,7 @@ export function useCashAdvanceList(store, auth) {
   const formattedItems = computed(() => {
     return store.items.map((item) => ({
       ...item,
-      fileDescription: item.document?.file_name || "Document Attached",
+      fileDescription: item.document?.file_name || item.documentFileName || "Document Attached",
       documentUrl: item.documentUrl,
       requested: item.date ? new Date(item.date).toLocaleDateString() : "--",
       dueDate: item.dueDate

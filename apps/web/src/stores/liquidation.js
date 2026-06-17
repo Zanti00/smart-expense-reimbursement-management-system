@@ -7,6 +7,20 @@ export const useLiquidationStore = defineStore('liquidation', () => {
   const isLoading = ref(false)
   const DAILY_PENALTY_PHP = 50
 
+  function upsertSettlement(item) {
+    const existingIndex = settlements.value.findIndex((s) => s.id == item.id)
+    if (existingIndex === -1) {
+      settlements.value.unshift(item)
+    } else {
+      settlements.value[existingIndex] = {
+        ...settlements.value[existingIndex],
+        ...item,
+      }
+    }
+
+    return settlements.value[existingIndex === -1 ? 0 : existingIndex]
+  }
+
   /**
    * Fetch all liquidations from the backend.
    */
@@ -119,8 +133,8 @@ export const useLiquidationStore = defineStore('liquidation', () => {
         throw new Error(errorData.message || 'Failed to submit liquidation')
       }
 
-      await fetchSettlements()
-      return await response.json()
+      const result = await response.json()
+      return upsertSettlement(result.data)
     } catch (err) {
       console.error('Failed to submit liquidation', err)
       throw err;
@@ -143,8 +157,8 @@ export const useLiquidationStore = defineStore('liquidation', () => {
         throw new Error(errorData.message || 'Failed to audit liquidation')
       }
 
-      await fetchSettlements()
-      return await response.json()
+      const result = await response.json()
+      return upsertSettlement(result.data)
     } catch (err) {
       console.error('Failed to audit liquidation', err)
       throw err;
@@ -194,8 +208,8 @@ export const useLiquidationStore = defineStore('liquidation', () => {
         throw new Error(errorData.message || 'Failed to update liquidation')
       }
 
-      await fetchSettlements()
-      return await response.json()
+      const result = await response.json()
+      return upsertSettlement(result.data)
     } catch (err) {
       console.error('Failed to update liquidation', err)
       throw err;

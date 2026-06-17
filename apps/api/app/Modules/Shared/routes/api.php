@@ -1,15 +1,10 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Modules\Shared\Http\Controllers\AuthController;
 
 Route::prefix('api')->middleware('auth.external')->group(function () {
-    Route::get('/auth/me', function (\Illuminate\Http\Request $request) {
-        return response()->json($request->user());
-    });
+    Route::get('/auth/me', [AuthController::class, 'me']);
 
-    Route::post('/auth/verify-password', function (\Illuminate\Http\Request $request) {
-        $password = $request->input('password');
-        $valid = \App\Modules\Shared\Services\PasswordVerificationService::verify($request, $password);
-        return response()->json(['valid' => $valid]);
-    });
+    Route::post('/auth/verify-password', [AuthController::class, 'verifyPassword']);
 });

@@ -55,7 +55,7 @@ class ReceiptService
                 'file_hash' => $fileHash,
                 'file_type' => $fileType,
                 'file_size_bytes' => $fileSize,
-                'expense_category_id' => $validated['expense_category_id'],
+                'expense_category_id' => $validated['expense_category_id'] ?? null,
                 
                 // Static mock data since OCR is disabled
                 'vendor_name' => $validated['vendor_name'] ?? 'Mock Vendor Corp',
