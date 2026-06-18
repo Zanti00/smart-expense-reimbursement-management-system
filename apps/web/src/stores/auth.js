@@ -9,7 +9,7 @@ export const useAuthStore = defineStore("auth", () => {
   const token = ref(localStorage.getItem("serms_token") || null);
 
   const isAuthenticated = computed(() => !!user.value);
-  const isAdmin = computed(() => user.value?.role === "admin");
+  const isAdmin = computed(() => user.value?.is_admin === true);
 
   /**
    * Persist a JWT token received from the auth callback.

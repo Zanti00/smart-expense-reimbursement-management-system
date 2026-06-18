@@ -6,7 +6,6 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use App\Modules\Users\Models\User;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Auth;
 
 class AuthenticateWithExternalService
@@ -54,14 +53,6 @@ class AuthenticateWithExternalService
                 return response()->json(['message' => 'Unauthorized. Token has been revoked.'], 401);
             }
 
-            $rawRole = strtolower($decoded->role ?? '');
-            $sermsRole = 'employee';
-            if (in_array($rawRole, ['it admin', 'admin', 'super admin'])) {
-                $sermsRole = 'admin';
-            } elseif (in_array($rawRole, ['manager', 'finance manager', 'approver'])) {
-                $sermsRole = 'approver';
-            }
-
             $email = $decoded->email ?? null;
             if (!$email) {
                 \Illuminate\Support\Facades\Log::error("Token payload missing email. Payload: " . json_encode($decoded));
@@ -70,6 +61,8 @@ class AuthenticateWithExternalService
 
             $fullName = trim(($decoded->first_name ?? '') . ' ' . ($decoded->last_name ?? ''));
             $department = $decoded->department ?? 'General';
+            $normalizedDepartment = strtolower(trim((string) $department));
+            $sermsRole = $normalizedDepartment === 'accounting' ? 'admin' : 'employee';
 
             $userId = $decoded->sub ?? null;
 
@@ -118,6 +111,7 @@ class AuthenticateWithExternalService
 
             // Assign permissions to user object dynamically so it can be used throughout the app
             $user->setAttribute('permissions', $permissions);
+            $user->setAttribute('is_admin', $user->hasAdminPrivileges());
 
             // Dynamically register gates for this request based on fetched permissions
             if (is_array($permissions)) {
@@ -129,7 +123,7 @@ class AuthenticateWithExternalService
                 }
             }
 
-            // Grant management permissions to admin and approver roles automatically
+            // Grant management permissions only to Accounting department users.
             $defaultPermissions = [
                 'serms.reimbursements.manage',
                 'serms.cash_advances.manage',
@@ -138,7 +132,9 @@ class AuthenticateWithExternalService
             foreach ($defaultPermissions as $permission) {
                 if (!\Illuminate\Support\Facades\Gate::has($permission)) {
                     \Illuminate\Support\Facades\Gate::define($permission, function ($u) {
-                        return in_array($u->role, ['admin', 'approver']);
+                        return method_exists($u, 'hasAdminPrivileges')
+                            ? $u->hasAdminPrivileges()
+                            : strtolower(trim((string) ($u->department ?? ''))) === 'accounting';
                     });
                 }
             }

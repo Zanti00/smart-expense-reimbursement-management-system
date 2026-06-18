@@ -78,19 +78,19 @@ const routes = [
         path: "admin/policy",
         name: "Policy",
         component: () => import("@/views/admin/PolicyView.vue"),
-        meta: { title: "Policy Management", roles: ["admin"] },
+        meta: { title: "Policy Management", requiresAdmin: true },
       },
       {
         path: "admin/audit",
         name: "Audit",
         component: () => import("@/views/admin/AuditView.vue"),
-        meta: { title: "Audit Log", roles: ["admin"] },
+        meta: { title: "Audit Log", requiresAdmin: true },
       },
       {
         path: "admin/reports",
         name: "Reports",
         component: () => import("@/views/admin/ReportsView.vue"),
-        meta: { title: "Reports & Exports", roles: ["admin"] },
+        meta: { title: "Reports & Exports", requiresAdmin: true },
       },
     ],
   },
@@ -152,8 +152,7 @@ router.beforeEach(async (to) => {
     return false;
   }
 
-  // Role-based access control
-  if (to.meta.roles && !to.meta.roles.includes(auth.user?.role)) {
+  if (to.meta.requiresAdmin && !auth.isAdmin) {
     return { name: "Dashboard" };
   }
 });

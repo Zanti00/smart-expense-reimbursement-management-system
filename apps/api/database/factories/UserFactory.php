@@ -27,7 +27,7 @@ class UserFactory extends Factory
             'email'      => fake()->unique()->safeEmail(),
             'role'       => fake()->randomElement(['employee', 'approver', 'admin']),
             'grade'      => fake()->randomElement(['L1', 'L2', 'L3', 'EXEC']),
-            'department' => fake()->randomElement(['SALES', 'FINANCE', 'ENGINEERING', 'HR']),
+            'department' => fake()->randomElement(['SALES', 'ACCOUNTING', 'ENGINEERING', 'HR']),
             'avatar'     => strtoupper(substr(fake()->name(), 0, 2)),
         ];
     }

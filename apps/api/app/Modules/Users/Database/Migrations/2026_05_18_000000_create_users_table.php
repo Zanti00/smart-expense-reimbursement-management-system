@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->enum('role', ['employee', 'approver', 'admin'])->default('employee');
             $table->string('grade')->nullable(); // e.g. L1, L2, EXEC
-            $table->string('department')->nullable(); // e.g. SALES, FINANCE
+            $table->string('department')->nullable(); // e.g. SALES, ACCOUNTING
             $table->string('avatar')->nullable();
             $table->timestamps();
         });
