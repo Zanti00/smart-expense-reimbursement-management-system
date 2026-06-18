@@ -24,8 +24,8 @@ import { useUnsavedChanges } from "@/composables/useUnsavedChanges";
 import {
   tinFor,
   cleanName,
-  vatOf,
-  subtotalOf,
+  normalizeVatClassification,
+  receiptFinancials,
   getItems,
 } from "@/utils/receiptUtils";
 
@@ -144,25 +144,37 @@ onMounted(async () => {
       reportFile.value = data.report_file_path;
       
       if (data.receipts && Array.isArray(data.receipts)) {
-        localReceipts.value = data.receipts.map((r) => ({
-          id: r.id,
-          fileName: r.vendor_name || `Receipt-${r.id}`,
-          merchantName: r.vendor_name,
-          date: r.transaction_date,
-          amount: r.total_amount,
-          subtotal: r.total_amount - (r.vat_amount || 0),
-          tax: r.vat_amount || 0,
-          vatClassification: r.vat_classification || "vat",
-          tin: r.tin,
-          invoiceNumber: r.invoice_number,
-          thumbnail: r.file_path,
-          items: (r.items || []).map((item) => ({
+        localReceipts.value = data.receipts.map((r) => {
+          const amount = Number(r.total_amount) || 0;
+          const vatClassification = normalizeVatClassification(
+            r.vat_classification,
+          );
+          const items = (r.items || []).map((item) => ({
             name: item.name,
             qty: item.quantity,
             price: Number(item.price),
-          })),
-          isUploading: false,
-        }));
+          }));
+          const amounts = receiptFinancials(
+            { amount, items },
+            vatClassification,
+          );
+
+          return {
+            id: r.id,
+            fileName: r.vendor_name || `Receipt-${r.id}`,
+            merchantName: r.vendor_name,
+            date: r.transaction_date,
+            amount: amounts.gross,
+            subtotal: amounts.subtotal.toFixed(2),
+            tax: amounts.vat.toFixed(2),
+            vatClassification: amounts.vatClassification,
+            tin: r.tin,
+            invoiceNumber: r.invoice_number,
+            thumbnail: r.file_path,
+            items,
+            isUploading: false,
+          };
+        });
       }
     } catch (error) {
       addToast({
@@ -183,13 +195,20 @@ onMounted(async () => {
       const parsed = JSON.parse(forwarded);
       localReceipts.value = parsed.map((r) => ({
         ...r,
+        ...(() => {
+          const amounts = receiptFinancials(r, r.vatClassification);
+
+          return {
+            amount: amounts.gross,
+            subtotal: amounts.subtotal.toFixed(2),
+            tax: amounts.vat.toFixed(2),
+            vatClassification: amounts.vatClassification,
+          };
+        })(),
         invoiceNumber: r.invoiceNumber || r.id,
         tin: r.tin || tinFor(r),
         merchantName: r.merchantName || cleanName(r.fileName),
         location: r.location || "Metro Manila, Philippines",
-        subtotal: r.subtotal || subtotalOf(r.amount || 0).toFixed(2),
-        tax: r.tax || vatOf(r.amount || 0).toFixed(2),
-        vatClassification: r.vatClassification || "vat",
         items:
           r.items ||
           getItems(r.category || "Food & Dining").map((name) => ({

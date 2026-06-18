@@ -2,8 +2,54 @@ export function vatOf(amount) {
   return amount > 0 ? (amount * 0.12) / 1.12 : 0;
 }
 
-export function subtotalOf(amount) {
-  return amount > 0 ? amount - vatOf(amount) : 0;
+export function normalizeVatClassification(value) {
+  return String(value || "").toLowerCase() === "non-vat" ? "non-vat" : "vat";
+}
+
+export function vatFor(amount, vatClassification = "vat") {
+  return normalizeVatClassification(vatClassification) === "non-vat"
+    ? 0
+    : vatOf(amount);
+}
+
+export function subtotalOf(amount, vatClassification = "vat") {
+  return amount > 0 ? amount - vatFor(amount, vatClassification) : 0;
+}
+
+export function itemGrossAmount(item) {
+  const quantity = Number(item?.quantity ?? item?.qty ?? 1) || 1;
+  const price = Number(item?.price) || 0;
+
+  return quantity * price;
+}
+
+export function itemsGrossAmount(items = []) {
+  return items.reduce((sum, item) => sum + itemGrossAmount(item), 0);
+}
+
+export function receiptGrossAmount(receipt) {
+  if (receipt?.items?.length) {
+    return itemsGrossAmount(receipt.items);
+  }
+
+  return Number(receipt?.amount ?? receipt?.total_amount ?? 0);
+}
+
+export function receiptFinancials(receipt, vatClassification) {
+  const classification = normalizeVatClassification(
+    vatClassification ??
+      receipt?.vatClassification ??
+      receipt?.vat_classification,
+  );
+  const gross = receiptGrossAmount(receipt);
+  const vat = vatFor(gross, classification);
+
+  return {
+    gross,
+    vat,
+    subtotal: Math.max(gross - vat, 0),
+    vatClassification: classification,
+  };
 }
 
 export function cleanName(fileName) {

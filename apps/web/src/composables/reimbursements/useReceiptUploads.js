@@ -1,7 +1,13 @@
 import { ref } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "@/composables/useToast";
-import { tinFor, cleanName, subtotalOf, vatOf, getItems } from "@/utils/receiptUtils";
+import {
+  tinFor,
+  cleanName,
+  normalizeVatClassification,
+  receiptFinancials,
+  getItems,
+} from "@/utils/receiptUtils";
 
 const CATEGORIES = [
   "Food & Dining",
@@ -56,7 +62,7 @@ export function useReceiptUploads() {
           : "",
         amount: 0,
         subtotal: 0,
-        tax: 0,
+        tax: receiptFinancials({ amount: 0 }, "vat").vat.toFixed(2),
         vatClassification: "vat",
         date: new Date().toISOString().slice(0, 10),
         category: "Food & Dining",
@@ -89,17 +95,22 @@ export function useReceiptUploads() {
         const index = localReceipts.value.findIndex((r) => r.id === tempId);
         if (index !== -1) {
           const amount = data.data.total_amount || 0;
-          const subtotal = subtotalOf(amount).toFixed(2);
-          const tax = vatOf(amount).toFixed(2);
+          const vatClassification = normalizeVatClassification(
+            data.data.vat_classification,
+          );
+          const amounts = receiptFinancials(
+            { amount },
+            vatClassification,
+          );
 
           localReceipts.value[index] = {
             ...localReceipts.value[index],
             id: data.data.id,
             invoiceNumber: data.data.id,
             amount: amount,
-            subtotal: subtotal,
-            tax: tax,
-            vatClassification: data.data.vat_classification || "vat",
+            subtotal: amounts.subtotal.toFixed(2),
+            tax: amounts.vat.toFixed(2),
+            vatClassification: amounts.vatClassification,
             date: data.data.transaction_date || receiptObj.date,
             isUploading: false,
           };

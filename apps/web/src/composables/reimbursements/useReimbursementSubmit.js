@@ -69,7 +69,7 @@ export function useReimbursementSubmit(emit, router) {
         formData.append(`receipts[${index}][id]`, r.id);
         formData.append(`receipts[${index}][vendor_name]`, r.merchantName || "");
         formData.append(`receipts[${index}][transaction_date]`, r.date || "");
-        formData.append(`receipts[${index}][total_amount]`, r.subtotal || 0);
+        formData.append(`receipts[${index}][total_amount]`, r.amount || 0);
         formData.append(`receipts[${index}][vat_amount]`, r.tax || 0);
         formData.append(
           `receipts[${index}][vat_classification]`,
@@ -176,7 +176,7 @@ export function useReimbursementSubmit(emit, router) {
         formData.append(`receipts[${index}][id]`, r.id);
         formData.append(`receipts[${index}][vendor_name]`, r.merchantName || "");
         formData.append(`receipts[${index}][transaction_date]`, r.date || "");
-        formData.append(`receipts[${index}][total_amount]`, r.subtotal || 0);
+        formData.append(`receipts[${index}][total_amount]`, r.amount || 0);
         formData.append(`receipts[${index}][vat_amount]`, r.tax || 0);
         formData.append(
           `receipts[${index}][vat_classification]`,

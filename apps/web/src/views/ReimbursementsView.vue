@@ -50,6 +50,7 @@ const employeeReimbursementColumns = [
 const adminReimbursementColumns = [
   { key: "reportDescription", label: "Report Description" },
   { key: "category", label: "Category" },
+  { key: "amount", label: "Amount", align: "right" },
   { key: "dateSubmitted", label: "Date Submitted" },
   { key: "submittedBy", label: "Submitted By" },
   { key: "displayStatus", label: "Status", align: "center" },

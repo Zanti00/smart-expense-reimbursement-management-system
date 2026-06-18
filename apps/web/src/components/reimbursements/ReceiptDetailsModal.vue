@@ -1,7 +1,11 @@
 <script setup>
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { formatPeso } from "@/utils/formatters";
+import {
+  normalizeVatClassification,
+  receiptFinancials,
+} from "@/utils/receiptUtils";
 import {
   ArrowLeft,
   CalendarDays,
@@ -48,12 +52,58 @@ const emit = defineEmits([
 
 const auth = useAuthStore();
 
-const isProcessing = computed(() => props.receipt?.status === 'processing');
+const TAX_CLASSIFICATIONS = [
+  { value: "vat", label: "VAT" },
+  { value: "non-vat", label: "Non-VAT" },
+];
+
+const selectedVatClassification = ref("vat");
+
+const isProcessing = computed(() => props.receipt?.status === "processing");
+const isReviewableReceipt = computed(() =>
+  ["processing", "pending", "submitted"].includes(props.receipt?.status),
+);
+const canEditVatClassification = computed(
+  () => auth.isAdmin && isReviewableReceipt.value && !isProcessing.value,
+);
+const hasVatClassification = computed(() => !!selectedVatClassification.value);
+const isApproveDisabled = computed(
+  () => isProcessing.value || props.isSubmitting || !hasVatClassification.value,
+);
+const isConfirmDecisionDisabled = computed(
+  () =>
+    isProcessing.value ||
+    props.isSubmitting ||
+    (props.pendingDecisionAction === "Approve" && !hasVatClassification.value),
+);
+const hasReceiptGrossAmount = computed(
+  () =>
+    props.receipt?.items?.length ||
+    (props.receipt?.total_amount !== undefined &&
+      props.receipt?.total_amount !== null &&
+      props.receipt?.total_amount !== ""),
+);
+const receiptAmounts = computed(() =>
+  receiptFinancials(props.receipt, selectedVatClassification.value),
+);
+const receiptGrossSalesAmount = computed(() => receiptAmounts.value.gross);
+const receiptVatAmount = computed(() => receiptAmounts.value.vat);
+const receiptSubtotalAmount = computed(() => receiptAmounts.value.subtotal);
 
 const localReviewerNotes = computed({
   get: () => props.reviewerNotes,
   set: (val) => emit("update:reviewerNotes", val),
 });
+
+watch(
+  () => [props.receipt?.id, props.receipt?.vat_classification],
+  ([, vatClassification]) => {
+    selectedVatClassification.value = normalizeVatClassification(
+      vatClassification,
+    );
+  },
+  { immediate: true },
+);
 </script>
 
 <template>
@@ -253,16 +303,21 @@ const localReviewerNotes = computed({
                       >
                     </span>
                     <div v-if="isProcessing" class="h-10 w-full animate-pulse rounded-lg bg-slate-200"></div>
-                    <input
+                    <select
                       v-else
-                      class="input bg-slate-50"
-                      disabled
-                      :value="
-                        receipt?.vat_classification
-                          ? receipt.vat_classification.toUpperCase()
-                          : 'N/A'
-                      "
-                    />
+                      v-model="selectedVatClassification"
+                      class="input bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      :class="{ 'cursor-pointer bg-white': canEditVatClassification }"
+                      :disabled="!canEditVatClassification || isSubmitting"
+                    >
+                      <option
+                        v-for="option in TAX_CLASSIFICATIONS"
+                        :key="option.value"
+                        :value="option.value"
+                      >
+                        {{ option.label }}
+                      </option>
+                    </select>
                   </label>
                 </div>
 
@@ -328,45 +383,43 @@ const localReviewerNotes = computed({
                   class="grid grid-cols-1 gap-3 border-t border-slate-200 pt-4 sm:grid-cols-3"
                 >
                   <label class="space-y-1">
-                    <span class="input-label">Subtotal</span>
+                    <span class="input-label">Net Sales</span>
                     <div v-if="isProcessing" class="h-10 w-full animate-pulse rounded-lg bg-slate-200"></div>
                     <input
                       v-else
                       class="input font-semibold bg-slate-50"
                       disabled
                       :value="
-                        receipt?.total_amount
-                          ? formatPeso(receipt.total_amount)
+                        hasReceiptGrossAmount
+                          ? formatPeso(receiptSubtotalAmount)
                           : '--'
                       "
                     />
                   </label>
                   <label class="space-y-1">
-                    <span class="input-label">Tax (VAT)</span>
+                    <span class="input-label">Tax (VAT 12%)</span>
                     <div v-if="isProcessing" class="h-10 w-full animate-pulse rounded-lg bg-slate-200"></div>
                     <input
                       v-else
                       class="input font-semibold bg-slate-50"
                       disabled
                       :value="
-                        receipt?.vat_amount !== undefined && receipt?.vat_amount !== null
-                          ? formatPeso(receipt.vat_amount)
-                          : formatPeso(0)
+                        hasReceiptGrossAmount ? formatPeso(receiptVatAmount) : '--'
                       "
                     />
                   </label>
                   <div
                     class="rounded-lg border border-accent/20 bg-accent-50 p-3"
                   >
-                    <p class="input-label text-accent">Orders Total</p>
+                    <p class="input-label text-accent">Gross Sales</p>
                     <div v-if="isProcessing" class="mt-1 h-7 w-24 animate-pulse rounded bg-accent/20"></div>
                     <p
                       v-else
                       class="mt-1 font-heading text-xl font-bold text-primary"
                     >
                       {{
-                        receipt?.total_amount
-                          ? formatPeso(Number(receipt.total_amount) + Number(receipt.vat_amount || 0))
+                        hasReceiptGrossAmount
+                          ? formatPeso(receiptGrossSalesAmount)
                           : "--"
                       }}
                     </p>
@@ -426,8 +479,14 @@ const localReviewerNotes = computed({
               <button
                 class="inline-flex min-h-9 items-center justify-center rounded-lg bg-accent px-4 text-xs font-bold text-white transition-colors hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-60"
                 type="button"
-                :disabled="isProcessing || isSubmitting"
-                @click="emit('confirm-decision')"
+                :disabled="isConfirmDecisionDisabled"
+                @click="
+                  emit('confirm-decision', {
+                    vat_classification: selectedVatClassification,
+                    vat_amount: receiptVatAmount,
+                    total_amount: receiptGrossSalesAmount,
+                  })
+                "
               >
                 Confirm
               </button>
@@ -437,7 +496,7 @@ const localReviewerNotes = computed({
             <button
               class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 text-sm font-bold text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60 disabled:bg-slate-50 disabled:text-slate-400 disabled:border-slate-200"
               type="button"
-              :disabled="isProcessing"
+              :disabled="isProcessing || isSubmitting"
               @click="emit('request-decision', 'Reject')"
             >
               <XCircle class="h-4 w-4" />
@@ -446,7 +505,7 @@ const localReviewerNotes = computed({
             <button
               class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-bold text-white transition-colors hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-60 disabled:bg-slate-300"
               type="button"
-              :disabled="isProcessing"
+              :disabled="isApproveDisabled"
               @click="emit('request-decision', 'Approve')"
             >
               <CheckCircle class="h-4 w-4" />

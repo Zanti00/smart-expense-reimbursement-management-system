@@ -86,7 +86,7 @@ async function logout() {
 
 <template>
   <div
-    class="flex h-screen overflow-hidden bg-clinical font-sans text-slate-700 select-none"
+    class="flex h-screen overflow-hidden font-sans select-none bg-clinical text-slate-700"
   >
     <!-- ======================== SIDEBAR ======================== -->
     <!-- Mobile overlay -->
@@ -127,7 +127,7 @@ async function logout() {
       <!-- Navigation -->
       <nav class="flex-1 px-0 py-4 overflow-y-auto scrollbar-thin space-y-0.5">
         <template v-for="(link, i) in navLinks" :key="i">
-          <div v-if="link.divider" class="border-t border-white/10 my-4 mx-4" />
+          <div v-if="link.divider" class="mx-4 my-4 border-t border-white/10" />
           <div v-else-if="link.header" class="px-4 pt-3 pb-1">
             <Transition name="fade">
               <span
@@ -156,7 +156,7 @@ async function logout() {
             <Transition name="fade-text">
               <span
                 v-if="sidebarOpen"
-                class="flex-1 truncate text-sm font-semibold"
+                class="flex-1 text-sm font-semibold truncate"
               >
                 {{ link.name }}
               </span>
@@ -172,16 +172,16 @@ async function logout() {
       </nav>
 
       <!-- Operator Status -->
-      <div class="border-t border-white/10 bg-black/10 p-4">
+      <div class="p-4 border-t border-white/10 bg-black/10">
         <div class="flex items-center gap-3">
-          <div
+          <!-- <div
             class="w-8 h-8 rounded-md border border-white/10 bg-white/10 flex items-center justify-center flex-shrink-0 text-white text-[10px] font-bold font-mono shadow-sm"
           >
             {{ auth.user?.avatar }}
-          </div>
+          </div> -->
           <Transition name="fade">
             <div v-if="sidebarOpen" class="flex-1 min-w-0">
-              <p class="text-white text-xs font-heading font-bold truncate">
+              <p class="text-xs font-bold text-white truncate font-heading">
                 {{ auth.user?.name }}
               </p>
               <div class="flex items-center gap-1.5 mt-0.5">
@@ -230,12 +230,12 @@ async function logout() {
 
         <!-- Search -->
         <!-- <div
-          class="hidden md:flex items-center gap-2 bg-white/80 border border-black/5 rounded-md px-3 py-2 w-56 shadow-sm hover:border-accent/30 focus-within:border-accent/50 focus-within:bg-white transition-all duration-200"
+          class="items-center hidden w-56 gap-2 px-3 py-2 transition-all duration-200 border rounded-md shadow-sm md:flex bg-white/80 border-black/5 hover:border-accent/30 focus-within:border-accent/50 focus-within:bg-white"
         >
           <Search class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
           <input
             placeholder="Search…"
-            class="bg-transparent text-sm text-slate-600 placeholder-slate-400 outline-none flex-1 min-w-0"
+            class="flex-1 min-w-0 text-sm bg-transparent outline-none text-slate-600 placeholder-slate-400"
             style="transition: none"
           />
         </div> -->
@@ -258,7 +258,7 @@ async function logout() {
 
       <!-- Active Workspace -->
       <main
-        class="flex-1 overflow-y-auto scrollbar-thin p-6 animate-fade-in bg-clinical"
+        class="flex-1 p-6 overflow-y-auto scrollbar-thin animate-fade-in bg-clinical"
       >
         <RouterView v-slot="{ Component, route: viewRoute }">
           <Transition name="page" mode="out-in">

@@ -22,6 +22,9 @@ class UpdateReceiptRequest extends FormRequest
         return [
             'admin_notes' => 'nullable|string',
             'status' => 'nullable|string|in:pending,approved,rejected',
+            'total_amount' => 'nullable|numeric|min:0',
+            'vat_amount' => 'nullable|numeric|min:0',
+            'vat_classification' => 'nullable|string|in:vat,non-vat',
         ];
     }
 }

@@ -2,7 +2,14 @@
 import { computed } from "vue";
 import { formatPeso, formatDate } from "@/utils/formatters";
 import BasePagination from "@/components/base/BasePagination.vue";
-import { ChevronUp, ChevronDown, ChevronsUpDown, Eye, Pencil, Trash2 } from "lucide-vue-next";
+import {
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown,
+  Eye,
+  Pencil,
+  Trash2,
+} from "lucide-vue-next";
 import ActionDropdownMenu from "@/components/base/ActionDropdownMenu.vue";
 
 const props = defineProps({
@@ -17,7 +24,13 @@ const props = defineProps({
   pageSize: { type: Number, default: 10 },
 });
 
-const emit = defineEmits(["update:currentPage", "toggle-sort", "view-details", "edit-request", "delete-request"]);
+const emit = defineEmits([
+  "update:currentPage",
+  "toggle-sort",
+  "view-details",
+  "edit-request",
+  "delete-request",
+]);
 
 const columnCount = computed(() => props.columns.length);
 
@@ -52,7 +65,8 @@ function getActions(row) {
     {
       label: "Edit",
       icon: Pencil,
-      visible: !props.isAdmin && (status === "pending" || status === "rejected"),
+      visible:
+        !props.isAdmin && (status === "pending" || status === "rejected"),
       handler: () => emit("edit-request", row),
     },
     {
@@ -89,14 +103,14 @@ const tableMinWidth = computed(() => "min-w-full");
 
 <template>
   <section
-    class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+    class="overflow-hidden bg-white border shadow-sm rounded-xl border-slate-200"
   >
     <div
-      class="flex flex-col gap-1 border-b border-slate-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+      class="flex flex-col gap-1 px-5 py-4 bg-white border-b border-slate-200 sm:flex-row sm:items-center sm:justify-between"
     >
       <div>
         <h2
-          class="font-heading text-base font-bold leading-tight text-slate-800"
+          class="text-base font-bold leading-tight font-heading text-slate-800"
         >
           Reimbursement Requests
         </h2>
@@ -110,7 +124,10 @@ const tableMinWidth = computed(() => "min-w-full");
       </span>
     </div>
     <div class="overflow-x-auto">
-      <table class="w-full table-fixed border-collapse text-left" :class="tableMinWidth">
+      <table
+        class="w-full text-left border-collapse table-fixed"
+        :class="tableMinWidth"
+      >
         <thead>
           <tr class="border-b border-slate-200 bg-slate-50">
             <th
@@ -189,7 +206,7 @@ const tableMinWidth = computed(() => "min-w-full");
             <tr>
               <td
                 :colspan="columnCount"
-                class="px-5 py-8 text-center text-sm text-slate-500"
+                class="px-5 py-8 text-sm text-center text-slate-500"
               >
                 No reimbursement records found.
               </td>
@@ -199,7 +216,7 @@ const tableMinWidth = computed(() => "min-w-full");
             <tr
               v-for="row in rows"
               :key="row.id"
-              class="group whitespace-nowrap transition-colors duration-200 ease-out"
+              class="transition-colors duration-200 ease-out group whitespace-nowrap"
             >
               <td class="max-w-[240px] px-5 py-5 text-sm text-slate-600">
                 <span class="block truncate">{{ row.reportDescription }}</span>
@@ -212,17 +229,15 @@ const tableMinWidth = computed(() => "min-w-full");
                   {{ row.category }}
                 </span>
               </td>
-              <template v-if="!isAdmin">
-                <td class="px-5 py-5 text-right text-sm font-bold text-primary">
-                  {{ formatPeso(row.amount) }}
-                </td>
-              </template>
-              <td class="truncate px-5 py-5 text-sm text-slate-500">
+              <td class="px-5 py-5 text-sm font-bold text-right text-primary">
+                {{ formatPeso(row.amount) }}
+              </td>
+              <td class="px-5 py-5 text-sm truncate text-slate-500">
                 {{ formatDate(row.dateSubmitted) }}
               </td>
               <td
                 v-if="isAdmin"
-                class="truncate px-5 py-5 text-sm font-semibold text-slate-600"
+                class="px-5 py-5 text-sm font-semibold truncate text-slate-600"
               >
                 {{ row.submittedBy }}
               </td>

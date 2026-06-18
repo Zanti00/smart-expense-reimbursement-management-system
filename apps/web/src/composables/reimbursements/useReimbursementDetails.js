@@ -134,12 +134,22 @@ export function useReimbursementDetails(store, addToast) {
     return pendingReceiptDecision.value?.receiptId === receipt.id;
   }
 
-  async function confirmReceiptDecision() {
+  async function confirmReceiptDecision(receiptUpdates = {}) {
     if (!viewingRecord.value || !pendingReceiptDecision.value) return;
 
     isReceiptReviewSubmitting.value = true;
     const { receiptId, action } = pendingReceiptDecision.value;
     const status = action === "Approve" ? "approved" : "rejected";
+    const vatClassification =
+      receiptUpdates.vat_classification ||
+      selectedReceipt.value?.vat_classification ||
+      "vat";
+    const vatAmount =
+      vatClassification === "non-vat"
+        ? 0
+        : receiptUpdates.vat_amount ?? selectedReceipt.value?.vat_amount ?? 0;
+    const totalAmount =
+      receiptUpdates.total_amount ?? selectedReceipt.value?.total_amount ?? 0;
 
     try {
       const res = await apiFetch(
@@ -149,6 +159,9 @@ export function useReimbursementDetails(store, addToast) {
           body: JSON.stringify({
             status,
             admin_notes: reviewerNotes.value,
+            total_amount: totalAmount,
+            vat_amount: vatAmount,
+            vat_classification: vatClassification,
           }),
         },
       );

@@ -38,6 +38,24 @@ const form = reactive({
 const fileInput = ref(null);
 
 const isEditMode = computed(() => !!props.id);
+const todayDate = computed(() => formatDateInputValue(new Date()));
+const liquidationMinDate = computed(() => {
+  if (!form.expected_disbursement_date) {
+    return todayDate.value;
+  }
+
+  const nextDateAfterDisbursement = addDays(
+    parseDateInputValue(form.expected_disbursement_date),
+    1,
+  );
+  const minDateAfterDisbursement = formatDateInputValue(
+    nextDateAfterDisbursement,
+  );
+
+  return minDateAfterDisbursement > todayDate.value
+    ? minDateAfterDisbursement
+    : todayDate.value;
+});
 
 const isDirty = computed(() => {
   return (
@@ -57,6 +75,27 @@ const {
   handleCancelLeave,
   dismissWithConfirm
 } = useUnsavedChanges(isDirty, isSubmitted);
+
+function formatDateInputValue(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function parseDateInputValue(value) {
+  const [year, month, day] = value.split("-").map(Number);
+
+  return new Date(year, month - 1, day);
+}
+
+function addDays(date, days) {
+  const nextDate = new Date(date);
+  nextDate.setDate(nextDate.getDate() + days);
+
+  return nextDate;
+}
 
 onMounted(async () => {
   if (isEditMode.value) {
@@ -165,7 +204,15 @@ async function handleRequest() {
     return;
   }
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayDate.value;
+  if (form.expected_disbursement_date < today) {
+    addToast({
+      message: "Disbursement date must be today or a future date.",
+      type: "error",
+    });
+    return;
+  }
+
   if (form.expected_liquidation_date < today) {
     addToast({
       message: "Liquidation Deadline must be today or a future date.",
@@ -303,6 +350,7 @@ function goBack() {
                     id="ca-disbursement"
                     v-model="form.expected_disbursement_date"
                     class="input text-base"
+                    :min="todayDate"
                     type="date"
                   />
                 </div>
@@ -318,6 +366,7 @@ function goBack() {
                     id="ca-due"
                     v-model="form.expected_liquidation_date"
                     class="input text-base"
+                    :min="liquidationMinDate"
                     type="date"
                   />
                 </div>

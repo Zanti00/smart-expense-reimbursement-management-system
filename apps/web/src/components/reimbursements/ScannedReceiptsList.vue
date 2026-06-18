@@ -9,6 +9,10 @@ import {
   X,
   PlusCircle,
 } from "lucide-vue-next";
+import {
+  itemsGrossAmount,
+  receiptFinancials,
+} from "@/utils/receiptUtils";
 
 defineProps({
   receipts: {
@@ -33,23 +37,15 @@ function cleanName(fileName) {
   return (fileName || "").replace(/\.[^.]+$/, "").replace(/[_-]/g, " ");
 }
 
-function vatOf(amount) {
-  return amount > 0 ? (amount * 0.12) / 1.12 : 0;
-}
-
-function subtotalOf(amount) {
-  return amount > 0 ? amount - vatOf(amount) : 0;
-}
-
 function recalculateFinancials(receipt) {
-  const amt = Number(receipt.amount) || 0;
-  if (receipt.vatClassification === 'non-vat') {
-    receipt.tax = "0.00";
-    receipt.subtotal = amt.toFixed(2);
-  } else {
-    receipt.tax = vatOf(amt).toFixed(2);
-    receipt.subtotal = subtotalOf(amt).toFixed(2);
-  }
+  const amounts = receiptFinancials(
+    { amount: Number(receipt.amount) || 0 },
+    receipt.vatClassification,
+  );
+
+  receipt.vatClassification = amounts.vatClassification;
+  receipt.tax = amounts.vat.toFixed(2);
+  receipt.subtotal = amounts.subtotal.toFixed(2);
 }
 
 function recalculateFromSubtotal(receipt) {
@@ -75,9 +71,7 @@ function addReceiptItem(receipt) {
 }
 
 function recalculateFromItems(receipt) {
-  const newTotal = receipt.items.reduce((sum, item) => {
-    return sum + (Number(item.qty) || 0) * (Number(item.price) || 0);
-  }, 0);
+  const newTotal = itemsGrossAmount(receipt.items || []);
   receipt.amount = newTotal;
   recalculateFinancials(receipt);
 }
