@@ -374,6 +374,11 @@ const sourceCases = computed(() => {
       databaseId: item.id,
       advanceId: `CA-${String(item.cash_advance_id).padStart(3, "0")}`,
       cashAdvanceId: item.cash_advance_id,
+      requestorId:
+        item.user?.id ??
+        item.user_id ??
+        item.cash_advance?.user_id ??
+        item.cash_advance?.userId,
       requestorName: item.user?.name || "Employee",
       dateOfAdvances: item.cash_advance?.date || item.created_at,
       dueDate:
@@ -505,6 +510,21 @@ const reviewStatus = computed(() =>
     ? calculateLiquidationStatus(reviewingCase.value, acceptedReviewTotal.value)
     : "Incomplete",
 );
+const isReviewingOwnLiquidation = computed(() => {
+  const currentUserId = auth.user?.id;
+  const ownerId =
+    reviewingCase.value?.requestorId ??
+    reviewingCase.value?.userId ??
+    reviewingCase.value?.user_id;
+
+  return (
+    currentUserId !== null &&
+    currentUserId !== undefined &&
+    ownerId !== null &&
+    ownerId !== undefined &&
+    String(currentUserId) === String(ownerId)
+  );
+});
 
 const liquidationKpis = computed(() => {
   const rows = liquidationRows.value;
@@ -682,6 +702,15 @@ async function submitLiquidation() {
 }
 
 function openApproveModal() {
+  if (isReviewingOwnLiquidation.value) {
+    addToast({
+      title: "Action Not Allowed",
+      message: "You cannot process your own liquidation settlement.",
+      type: "danger",
+    });
+    return;
+  }
+
   confirmPassword.value = "";
   rejectionComment.value = "";
   approvingId.value = reviewingCase.value.databaseId;
@@ -689,6 +718,15 @@ function openApproveModal() {
 }
 
 function openRejectModal() {
+  if (isReviewingOwnLiquidation.value) {
+    addToast({
+      title: "Action Not Allowed",
+      message: "You cannot process your own liquidation settlement.",
+      type: "danger",
+    });
+    return;
+  }
+
   confirmPassword.value = "";
   rejectionComment.value = "";
   rejectingId.value = reviewingCase.value.databaseId;
@@ -1106,6 +1144,15 @@ function setReceiptDecision(receiptId, decision) {
 }
 
 function requestReceiptDecision(decision) {
+  if (isReviewingOwnLiquidation.value) {
+    addToast({
+      title: "Action Not Allowed",
+      message: "You cannot process receipts from your own liquidation settlement.",
+      type: "danger",
+    });
+    return;
+  }
+
   pendingReceiptDecision.value = decision;
 }
 
@@ -1533,18 +1580,26 @@ function finalizeLiquidation() {
                 formatPeso(acceptedReviewTotal)
               }}</span>
             </div>
+            <p
+              v-if="isReviewingOwnLiquidation"
+              class="text-sm font-semibold text-danger"
+            >
+              You cannot process your own liquidation settlement.
+            </p>
             <div class="flex gap-2">
               <button
-                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-5 text-sm font-bold text-red-700 transition-colors hover:bg-red-100"
+                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-5 text-sm font-bold text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
                 type="button"
+                :disabled="isReviewingOwnLiquidation"
                 @click="openRejectModal"
               >
                 <XCircle class="h-4 w-4" />
                 Reject Settlement
               </button>
               <button
-                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-emerald-800 px-5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-emerald-900"
+                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-emerald-800 px-5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-60"
                 type="button"
+                :disabled="isReviewingOwnLiquidation"
                 @click="openApproveModal"
               >
                 <ShieldCheck class="h-4 w-4" />
@@ -1896,16 +1951,18 @@ function finalizeLiquidation() {
           </div>
           <div v-else class="flex flex-col gap-2 sm:flex-row sm:justify-end">
             <button
-              class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 text-sm font-bold text-red-700 transition-colors hover:bg-red-100"
+              class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 text-sm font-bold text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
               type="button"
+              :disabled="isReviewingOwnLiquidation"
               @click="requestReceiptDecision('rejected')"
             >
               <XCircle class="h-4 w-4" />
               Reject
             </button>
             <button
-              class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-bold text-white transition-colors hover:bg-accent/90"
+              class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-bold text-white transition-colors hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-60"
               type="button"
+              :disabled="isReviewingOwnLiquidation"
               @click="requestReceiptDecision('accepted')"
             >
               <CheckCircle class="h-4 w-4" />

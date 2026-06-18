@@ -60,20 +60,45 @@ const TAX_CLASSIFICATIONS = [
 const selectedVatClassification = ref("vat");
 
 const isProcessing = computed(() => props.receipt?.status === "processing");
+const isOwnSubmission = computed(() => {
+  const currentUserId = auth.user?.id;
+  const ownerId =
+    props.receipt?.reimbursement_user_id ??
+    props.receipt?.user_id ??
+    props.receipt?.userId ??
+    props.receipt?.user?.id;
+
+  return (
+    currentUserId !== null &&
+    currentUserId !== undefined &&
+    ownerId !== null &&
+    ownerId !== undefined &&
+    String(currentUserId) === String(ownerId)
+  );
+});
 const isReviewableReceipt = computed(() =>
   ["processing", "pending", "submitted"].includes(props.receipt?.status),
 );
 const canEditVatClassification = computed(
-  () => auth.isAdmin && isReviewableReceipt.value && !isProcessing.value,
+  () =>
+    auth.isAdmin &&
+    isReviewableReceipt.value &&
+    !isProcessing.value &&
+    !isOwnSubmission.value,
 );
 const hasVatClassification = computed(() => !!selectedVatClassification.value);
 const isApproveDisabled = computed(
-  () => isProcessing.value || props.isSubmitting || !hasVatClassification.value,
+  () =>
+    isProcessing.value ||
+    props.isSubmitting ||
+    isOwnSubmission.value ||
+    !hasVatClassification.value,
 );
 const isConfirmDecisionDisabled = computed(
   () =>
     isProcessing.value ||
     props.isSubmitting ||
+    isOwnSubmission.value ||
     (props.pendingDecisionAction === "Approve" && !hasVatClassification.value),
 );
 const hasReceiptGrossAmount = computed(
@@ -448,6 +473,12 @@ watch(
           "
           class="border-t border-slate-200 bg-white px-5 py-4"
         >
+          <p
+            v-if="isOwnSubmission"
+            class="mb-3 text-sm font-semibold text-danger"
+          >
+            You cannot process receipts from your own request.
+          </p>
           <div class="mb-4">
             <label class="input-label mb-1.5 block"
               >Reviewer Notes (Optional)</label
@@ -456,7 +487,7 @@ watch(
               v-model="localReviewerNotes"
               class="input min-h-20 resize-none bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               placeholder="Add notes explaining the decision..."
-              :disabled="isProcessing || isSubmitting"
+              :disabled="isProcessing || isSubmitting || isOwnSubmission"
             />
           </div>
           <div
@@ -496,7 +527,7 @@ watch(
             <button
               class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 text-sm font-bold text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60 disabled:bg-slate-50 disabled:text-slate-400 disabled:border-slate-200"
               type="button"
-              :disabled="isProcessing || isSubmitting"
+              :disabled="isProcessing || isSubmitting || isOwnSubmission"
               @click="emit('request-decision', 'Reject')"
             >
               <XCircle class="h-4 w-4" />

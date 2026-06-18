@@ -13,9 +13,6 @@ import {
   Receipt,
   Wallet,
   FilePieChart,
-  ShieldCheck,
-  ClipboardList,
-  FileBarChart2,
   Bell,
   LogOut,
   Menu,
@@ -58,15 +55,7 @@ const navLinks = computed(() => {
     { name: "Liquidations", to: "/liquidations", icon: FilePieChart },
   ];
   const employee = [{ name: "My Expense", to: "/my-expense", icon: FileCheck }];
-  const admin = [
-    { header: "SYSTEM ADMIN" },
-    { name: "Policy", to: "/admin/policy", icon: ShieldCheck },
-    { name: "Audit Log", to: "/admin/audit", icon: ClipboardList },
-    { name: "Reports", to: "/admin/reports", icon: FileBarChart2 },
-  ];
-  return auth.isAdmin
-    ? [...base, { divider: true }, ...admin]
-    : [...base, ...employee];
+  return auth.isAdmin ? base : [...base, ...employee];
 });
 
 const unreadCount = computed(() => notif.alerts.filter((a) => !a.read).length);

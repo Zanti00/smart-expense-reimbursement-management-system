@@ -37,6 +37,22 @@ const emit = defineEmits([
 const auth = useAuthStore();
 
 const activeReceiptItems = computed(() => props.viewingRecord?.receipts || []);
+const isOwnSubmission = computed(() => {
+  const currentUserId = auth.user?.id;
+  const ownerId =
+    props.viewingRecord?.user?.id ??
+    props.viewingRecord?.user_id ??
+    props.viewingRecord?.userId ??
+    props.viewingRecord?.submitted_by;
+
+  return (
+    currentUserId !== null &&
+    currentUserId !== undefined &&
+    ownerId !== null &&
+    ownerId !== undefined &&
+    String(currentUserId) === String(ownerId)
+  );
+});
 
 function normalizeStatus(status) {
   const normalized = String(status || "").toLowerCase();
@@ -333,16 +349,24 @@ function statusClass(status) {
           "
           class="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-3"
         >
+          <p
+            v-if="isOwnSubmission"
+            class="mr-auto text-sm font-semibold text-danger"
+          >
+            You cannot process your own request.
+          </p>
           <button
-            class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 text-sm font-bold text-red-600 transition-colors hover:bg-red-100"
+            class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 text-sm font-bold text-red-600 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
             type="button"
+            :disabled="isOwnSubmission"
             @click="emit('reject', viewingRecord.id)"
           >
             <XCircle class="w-4 h-4" /> Reject Claim
           </button>
           <button
-            class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-bold text-white transition-colors hover:bg-accent/90"
+            class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-bold text-white transition-colors hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-60"
             type="button"
+            :disabled="isOwnSubmission"
             @click="emit('approve', viewingRecord.id)"
           >
             <CheckCircle class="w-4 h-4" /> Approve Claim

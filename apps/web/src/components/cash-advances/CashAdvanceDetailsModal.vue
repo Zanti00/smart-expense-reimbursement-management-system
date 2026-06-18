@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { useCashAdvanceStore } from "@/stores/cashAdvance";
 import { useToast } from "@/composables/useToast";
@@ -51,6 +51,22 @@ const adminPassword = ref("");
 
 const documentData = ref(null);
 const isLoadingDocument = ref(false);
+const isOwnSubmission = computed(() => {
+  const currentUserId = auth.user?.id;
+  const ownerId =
+    props.record?.userId ??
+    props.record?.user_id ??
+    props.record?.requester?.id ??
+    props.record?.user?.id;
+
+  return (
+    currentUserId !== null &&
+    currentUserId !== undefined &&
+    ownerId !== null &&
+    ownerId !== undefined &&
+    String(currentUserId) === String(ownerId)
+  );
+});
 
 watch(
   () => props.isOpen,
@@ -135,6 +151,17 @@ async function downloadDocument() {
 }
 
 function requestConfirmation(action) {
+  if (
+    isOwnSubmission.value &&
+    ["approve", "reject", "disburse"].includes(action)
+  ) {
+    addToast({
+      message: "You cannot process your own request.",
+      type: "error",
+    });
+    return;
+  }
+
   if (action !== "disburse" && adminReviewNotes.value.trim().length < 10) {
     addToast({
       message: "Please enter at least 10 characters in the admin notes.",
@@ -492,7 +519,7 @@ async function confirmAcknowledge() {
         >
           <div
             class="text-sm font-semibold text-danger text-center sm:text-left"
-            v-if="record.userId === auth.user?.id"
+            v-if="isOwnSubmission"
           >
             You cannot process your own request.
           </div>
@@ -502,7 +529,7 @@ async function confirmAcknowledge() {
               <button
                 class="btn btn-secondary w-full !border-danger/30 !text-danger hover:!bg-danger/5 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
                 type="button"
-                :disabled="record.userId === auth.user?.id"
+                :disabled="isOwnSubmission"
                 @click="requestConfirmation('reject')"
               >
                 Reject
@@ -510,7 +537,7 @@ async function confirmAcknowledge() {
               <button
                 class="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-bold text-white transition-colors hover:bg-accent/90 sm:w-auto disabled:cursor-not-allowed disabled:opacity-50"
                 type="button"
-                :disabled="record.userId === auth.user?.id"
+                :disabled="isOwnSubmission"
                 @click="requestConfirmation('approve')"
               >
                 <CheckCircle class="h-4 w-4" />
@@ -521,7 +548,7 @@ async function confirmAcknowledge() {
               <button
                 class="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-bold text-white transition-colors hover:bg-accent/90 sm:w-auto disabled:cursor-not-allowed disabled:opacity-50"
                 type="button"
-                :disabled="record.userId === auth.user?.id"
+                :disabled="isOwnSubmission"
                 @click="requestConfirmation('disburse')"
               >
                 <Wallet class="h-4 w-4" />

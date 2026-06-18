@@ -37,7 +37,11 @@ const searchedRows = computed(() => {
       row.fileDescription,
       row.requested,
       row.dueDate,
-    ].some((value) => String(value || "").toLowerCase().includes(q)),
+    ].some((value) =>
+      String(value || "")
+        .toLowerCase()
+        .includes(q),
+    ),
   );
 });
 
@@ -212,19 +216,19 @@ async function confirmDelete(password) {
 </script>
 
 <template>
-  <div class="mx-auto flex w-full max-w-7xl flex-col gap-6 font-sans">
+  <div class="flex flex-col w-full gap-6 mx-auto font-sans max-w-7xl">
     <ToastNotification />
     <!-- Page Header -->
     <section
       class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"
     >
       <div class="min-w-0">
-        <div class="mb-2 flex items-center gap-2">
+        <div class="flex items-center gap-2 mb-2">
           <Wallet class="h-3.5 w-3.5 text-accent" />
           <span class="section-label">Advance Requests</span>
         </div>
         <h1
-          class="font-heading text-2xl font-bold leading-tight text-slate-800"
+          class="text-2xl font-bold leading-tight font-heading text-slate-800"
         >
           Cash Advance
         </h1>
@@ -236,7 +240,6 @@ async function confirmDelete(password) {
           }}
         </p>
       </div>
-
     </section>
 
     <!-- Analytics Metrics -->
@@ -255,13 +258,13 @@ async function confirmDelete(password) {
       v-model:status-value="activeStatus"
       :statuses="statusTabs"
     >
-      <template v-if="!auth.isAdmin" #actions>
+      <template #actions>
         <button
           id="request-advance-btn"
           class="inline-flex min-h-[42px] w-full items-center justify-center gap-2 rounded-lg bg-accent px-5 font-heading text-sm font-bold text-white shadow-sm transition-all duration-200 ease-out hover:bg-accent-600 hover:shadow-xl hover:scale-[1.01] active:scale-[0.98] sm:w-fit"
           @click="$router.push('/cash-advances/new')"
         >
-          <Plus class="h-4 w-4" />
+          <Plus class="w-4 h-4" />
           New Request
         </button>
       </template>

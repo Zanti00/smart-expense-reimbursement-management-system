@@ -13,7 +13,10 @@ import DecisionConfirmationModal from "@/components/reimbursements/DecisionConfi
 import DeleteConfirmModal from "@/components/base/DeleteConfirmModal.vue";
 import ReimbursementsTable from "@/components/reimbursements/ReimbursementsTable.vue";
 import { formatPeso } from "@/utils/formatters";
-import { useReimbursementFilters, normalizeStatus } from "@/composables/reimbursements/useReimbursementFilters";
+import {
+  useReimbursementFilters,
+  normalizeStatus,
+} from "@/composables/reimbursements/useReimbursementFilters";
 import { useReimbursementDetails } from "@/composables/reimbursements/useReimbursementDetails";
 import { useReimbursementDecisions } from "@/composables/reimbursements/useReimbursementDecisions";
 import {
@@ -24,7 +27,6 @@ import {
   Clock,
   Wallet,
   Send,
-  CreditCard,
 } from "lucide-vue-next";
 
 const store = useReimbursementStore();
@@ -106,17 +108,6 @@ const reimbursementKpis = computed(() => [
     iconBg: "bg-red-500/10",
     iconColor: "text-red-500",
     accent: "bg-red-500",
-  },
-  {
-    label: "Granted",
-    value: store.items.filter(
-      (item) => normalizeStatus(item.status) === "granted",
-    ).length,
-    sub: "Settled claims",
-    icon: CreditCard,
-    iconBg: "bg-blue-900/10",
-    iconColor: "text-blue-900",
-    accent: "bg-blue-900",
   },
   {
     label: "Total Amount",
@@ -209,12 +200,12 @@ onMounted(() => store.fetchAll());
       class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"
     >
       <div class="min-w-0">
-        <div class="mb-2 flex items-center gap-2">
+        <div class="flex items-center gap-2 mb-2">
           <Activity class="w-3.5 h-3.5 text-accent" />
           <span class="section-label">Claim Records</span>
         </div>
         <h1
-          class="font-heading text-2xl font-bold leading-tight text-slate-800"
+          class="text-2xl font-bold leading-tight font-heading text-slate-800"
         >
           Reimbursements
         </h1>
@@ -227,9 +218,9 @@ onMounted(() => store.fetchAll());
     <!-- ── KPI Cards ── -->
     <BaseKpiGrid
       :kpis="reimbursementKpis"
-      gridClasses="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4"
+      gridClasses="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4"
       :isLoading="store.isLoading"
-      :skeletonCount="6"
+      :skeletonCount="5"
     />
     <BaseUtilityToolbar
       v-model:search="searchQuery"
@@ -238,7 +229,7 @@ onMounted(() => store.fetchAll());
       :statuses="statusFilters"
       :categories="categoryFilters"
     >
-      <template v-if="!auth.isAdmin" #actions>
+      <template #actions>
         <BaseButton
           id="new-reimbursement-btn"
           variant="cta"
@@ -283,11 +274,17 @@ onMounted(() => store.fetchAll());
       :is-open="!!viewingRecord && receiptDetailsOpen"
       :receipt="selectedReceipt"
       v-model:reviewer-notes="reviewerNotes"
-      :pending-decision-action="isReceiptDecisionPending(selectedReceipt) ? pendingReceiptDecision?.action : null"
+      :pending-decision-action="
+        isReceiptDecisionPending(selectedReceipt)
+          ? pendingReceiptDecision?.action
+          : null
+      "
       :is-submitting="isReceiptReviewSubmitting"
       @close="receiptDetailsOpen = false"
       @close-all="closeDetails"
-      @request-decision="action => requestReceiptDecision(selectedReceipt, action)"
+      @request-decision="
+        (action) => requestReceiptDecision(selectedReceipt, action)
+      "
       @cancel-decision="cancelReceiptDecision"
       @confirm-decision="confirmReceiptDecision"
     />

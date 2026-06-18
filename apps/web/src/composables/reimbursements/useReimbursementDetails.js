@@ -80,7 +80,14 @@ export function useReimbursementDetails(store, addToast) {
   }
 
   function viewReceiptDetails(receipt) {
-    selectedReceipt.value = receipt;
+    selectedReceipt.value = {
+      ...receipt,
+      reimbursement_user_id:
+        viewingRecord.value?.user?.id ??
+        viewingRecord.value?.user_id ??
+        viewingRecord.value?.userId ??
+        viewingRecord.value?.submitted_by,
+    };
     reviewerNotes.value = receipt.admin_notes || "";
     pendingReceiptDecision.value = null;
     receiptDetailsOpen.value = true;

@@ -1,13 +1,40 @@
 import { ref } from "vue";
+import { useAuthStore } from "@/stores/auth";
 
 export function useReimbursementDecisions(store, addToast, viewingRecord) {
+  const auth = useAuthStore();
   const approvingId = ref(null);
   const rejectingId = ref(null);
   const rejectionComment = ref("");
   const confirmPassword = ref("");
   const isReviewSubmitting = ref(false);
 
+  function isOwnSubmission() {
+    const currentUserId = auth.user?.id;
+    const ownerId =
+      viewingRecord.value?.user?.id ??
+      viewingRecord.value?.user_id ??
+      viewingRecord.value?.userId ??
+      viewingRecord.value?.submitted_by;
+
+    return (
+      currentUserId !== null &&
+      currentUserId !== undefined &&
+      ownerId !== null &&
+      ownerId !== undefined &&
+      String(currentUserId) === String(ownerId)
+    );
+  }
+
   function openApproveModal(id) {
+    if (isOwnSubmission()) {
+      addToast({
+        message: "You cannot process your own request.",
+        type: "error",
+      });
+      return;
+    }
+
     approvingId.value = id;
     confirmPassword.value = "";
   }
@@ -42,6 +69,14 @@ export function useReimbursementDecisions(store, addToast, viewingRecord) {
   }
 
   function openRejectModal(id) {
+    if (isOwnSubmission()) {
+      addToast({
+        message: "You cannot process your own request.",
+        type: "error",
+      });
+      return;
+    }
+
     rejectingId.value = id;
     rejectionComment.value = "";
     confirmPassword.value = "";
