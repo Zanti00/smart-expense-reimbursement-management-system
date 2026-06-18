@@ -6,24 +6,17 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::table('receipts', function (Blueprint $table) {
-            $table->text('admin_notes')->nullable();
-            $table->string('status')->default('processed');
+            $table->string('status')->default('processed')->change();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::table('receipts', function (Blueprint $table) {
-            $table->dropColumn(['admin_notes', 'status']);
+            $table->string('status')->default('pending')->change();
         });
     }
 };

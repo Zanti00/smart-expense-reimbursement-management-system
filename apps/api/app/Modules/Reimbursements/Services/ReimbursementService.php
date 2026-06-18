@@ -21,10 +21,10 @@ class ReimbursementService
     public function listReimbursements(User $user, bool $canManage)
     {
         if (!$canManage) {
-            return Reimbursement::with(['receipts', 'user'])->where('user_id', $user->id)->get();
+            return Reimbursement::with(['receipts.category', 'user', 'expenseCategory'])->where('user_id', $user->id)->get();
         }
 
-        return Reimbursement::with(['receipts', 'user'])->get();
+        return Reimbursement::with(['receipts.category', 'user', 'expenseCategory'])->get();
     }
 
     /**
@@ -33,11 +33,34 @@ class ReimbursementService
     public function storeReimbursement(User $user, array $validated, $reportFile)
     {
         return DB::transaction(function () use ($user, $validated, $reportFile) {
+            $receiptIds = array_values(array_unique($validated['receipt_ids']));
+            $ownedReceiptCount = Receipt::whereIn('id', $receiptIds)
+                ->where('uploaded_by', $user->id)
+                ->count();
+
+            if ($ownedReceiptCount !== count($receiptIds)) {
+                throw ValidationException::withMessages([
+                    'receipt_ids' => ['You can only submit reimbursements for your own receipts.'],
+                ]);
+            }
+
+            $claimedReceiptIds = Receipt::whereIn('id', $receiptIds)
+                ->whereHas('reimbursements')
+                ->pluck('id')
+                ->all();
+
+            if (!empty($claimedReceiptIds)) {
+                throw ValidationException::withMessages([
+                    'receipt_ids' => ['One or more receipts are already attached to a reimbursement.'],
+                ]);
+            }
+
             if (!empty($validated['receipts'])) {
                 foreach ($validated['receipts'] as $receiptData) {
                     $receipt = Receipt::find($receiptData['id']);
                     if ($receipt && $receipt->uploaded_by === $user->id) {
                         $receipt->update([
+                            'expense_category_id' => $receiptData['expense_category_id'] ?? $receipt->expense_category_id,
                             'vendor_name' => $receiptData['vendor_name'] ?? $receipt->vendor_name,
                             'transaction_date' => $receiptData['transaction_date'] ?? $receipt->transaction_date,
                             'total_amount' => $receiptData['total_amount'] ?? $receipt->total_amount,
@@ -55,6 +78,9 @@ class ReimbursementService
                 }
             }
 
+            $expenseCategoryId = $validated['expense_category_id']
+                ?? Receipt::whereIn('id', $receiptIds)->whereNotNull('expense_category_id')->value('expense_category_id');
+
             $reportPath = null;
             if ($reportFile) {
                 $reportPath = $reportFile->store('reports', 'supabase');
@@ -63,7 +89,7 @@ class ReimbursementService
             $reimbursement = Reimbursement::create([
                 'user_id' => $user->id,
                 'description' => $validated['description'],
-                'category' => $validated['category'],
+                'expense_category_id' => $expenseCategoryId,
                 'amount' => $validated['amount'],
                 'date' => $validated['date'],
                 'cutoff_period' => $validated['cutoff_period'],
@@ -72,7 +98,7 @@ class ReimbursementService
                 'submitted_by_name' => $user->name,
             ]);
 
-            $reimbursement->receipts()->attach($validated['receipt_ids']);
+            $reimbursement->receipts()->attach($receiptIds);
 
             return $reimbursement->load('receipts');
         });
@@ -83,7 +109,7 @@ class ReimbursementService
      */
     public function showReimbursement(User $user, int $id, bool $canManage)
     {
-        $reimbursement = Reimbursement::with(['receipts.items', 'user'])->findOrFail($id);
+        $reimbursement = Reimbursement::with(['receipts.items', 'receipts.category', 'user', 'expenseCategory'])->findOrFail($id);
 
         if (!$canManage && $reimbursement->user_id !== $user->id) {
             throw new \Illuminate\Auth\Access\AuthorizationException('Forbidden.');
@@ -213,6 +239,7 @@ class ReimbursementService
                     $receipt = Receipt::find($receiptData['id']);
                     if ($receipt && $receipt->uploaded_by === $user->id) {
                         $receipt->update([
+                            'expense_category_id' => $receiptData['expense_category_id'] ?? $receipt->expense_category_id,
                             'vendor_name' => $receiptData['vendor_name'] ?? $receipt->vendor_name,
                             'transaction_date' => $receiptData['transaction_date'] ?? $receipt->transaction_date,
                             'total_amount' => $receiptData['total_amount'] ?? $receipt->total_amount,
@@ -248,7 +275,7 @@ class ReimbursementService
             // Build update payload
             $updatePayload = array_filter([
                 'description' => $data['description'] ?? null,
-                'category' => $data['category'] ?? null,
+                'expense_category_id' => $data['expense_category_id'] ?? null,
                 'amount' => $data['amount'] ?? null,
                 'date' => $data['date'] ?? null,
                 'cutoff_period' => $data['cutoff_period'] ?? null,

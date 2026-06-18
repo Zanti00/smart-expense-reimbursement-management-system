@@ -29,18 +29,11 @@ const searchedRows = computed(() => {
   if (!searchQuery.value.trim()) return filteredRows.value;
   const q = searchQuery.value.trim().toLowerCase();
   return filteredRows.value.filter((row) =>
-    [
-      row.id,
-      row.purpose,
-      row.status,
-      row.user,
-      row.fileDescription,
-      row.requested,
-      row.dueDate,
-    ].some((value) =>
-      String(value || "")
-        .toLowerCase()
-        .includes(q),
+    [row.purpose, row.status, row.user, row.requested, row.dueDate].some(
+      (value) =>
+        String(value || "")
+          .toLowerCase()
+          .includes(q),
     ),
   );
 });
@@ -73,9 +66,7 @@ function openDetails(row) {
     document: row.document,
     documentUrl: row.documentUrl,
     documentFileName:
-      row.documentFileName ||
-      row.fileDescription ||
-      `Cash_Advance_Request_${row.id}.pdf`,
+      row.documentFileName || `Cash_Advance_Request_${row.id}.pdf`,
   };
 }
 
@@ -171,10 +162,7 @@ const kpis = computed(() => {
   cards.push({
     label: admin ? "Total Outstanding Balance" : "Outstanding Balance",
     value: formatPeso(m.outstanding || 0),
-    sub: admin ? "" : "To be settled",
-    subtext: admin
-      ? `(Total employees with outstanding balance: ${m.outstandingEmployees || 0})`
-      : undefined,
+    sub: admin ? "Total" : "To be settled",
     icon: Wallet,
     iconBg: "bg-blue-900/10",
     iconColor: "text-blue-900",

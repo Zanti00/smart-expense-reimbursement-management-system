@@ -12,6 +12,10 @@ class ExpenseCategoryController extends Controller
      */
     public function index()
     {
+        if (!ExpenseCategory::query()->exists()) {
+            ExpenseCategory::ensureDefaults();
+        }
+
         $categories = ExpenseCategory::orderBy('name')->get();
 
         return response()->json([

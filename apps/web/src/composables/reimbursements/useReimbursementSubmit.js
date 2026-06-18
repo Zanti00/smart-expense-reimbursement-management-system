@@ -13,6 +13,13 @@ export function useReimbursementSubmit(emit, router) {
     if (!receipts.length || !cutoffPeriod || !reportFile || receipts.some(r => r.isUploading)) {
       return false;
     }
+    if (receipts.some((r) => !r.categoryId)) {
+      addToast({
+        message: "Category is required for every receipt.",
+        type: "error",
+      });
+      return false;
+    }
 
     for (let idx = 0; idx < receipts.length; idx++) {
       const r = receipts[idx];
@@ -52,7 +59,7 @@ export function useReimbursementSubmit(emit, router) {
           .map((r) => r.merchantName || cleanName(r.fileName))
           .join(", "),
       );
-      formData.append("category", receipts[0]?.category || "General");
+      formData.append("expense_category_id", receipts[0].categoryId);
       formData.append("amount", totalAmount);
       formData.append(
         "date",
@@ -67,6 +74,9 @@ export function useReimbursementSubmit(emit, router) {
       receipts.forEach((r, index) => {
         formData.append(`receipt_ids[${index}]`, r.id);
         formData.append(`receipts[${index}][id]`, r.id);
+        if (r.categoryId) {
+          formData.append(`receipts[${index}][expense_category_id]`, r.categoryId);
+        }
         formData.append(`receipts[${index}][vendor_name]`, r.merchantName || "");
         formData.append(`receipts[${index}][transaction_date]`, r.date || "");
         formData.append(`receipts[${index}][total_amount]`, r.amount || 0);
@@ -159,7 +169,9 @@ export function useReimbursementSubmit(emit, router) {
           .map((r) => r.merchantName || cleanName(r.fileName))
           .join(", "),
       );
-      formData.append("category", receipts[0]?.category || "General");
+      if (receipts[0].categoryId) {
+        formData.append("expense_category_id", receipts[0].categoryId);
+      }
       formData.append("amount", totalAmount);
       formData.append(
         "date",
@@ -174,6 +186,9 @@ export function useReimbursementSubmit(emit, router) {
       receipts.forEach((r, index) => {
         formData.append(`receipt_ids[${index}]`, r.id);
         formData.append(`receipts[${index}][id]`, r.id);
+        if (r.categoryId) {
+          formData.append(`receipts[${index}][expense_category_id]`, r.categoryId);
+        }
         formData.append(`receipts[${index}][vendor_name]`, r.merchantName || "");
         formData.append(`receipts[${index}][transaction_date]`, r.date || "");
         formData.append(`receipts[${index}][total_amount]`, r.amount || 0);

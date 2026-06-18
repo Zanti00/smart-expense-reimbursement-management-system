@@ -56,8 +56,6 @@ function statusClass(status) {
       <table class="w-full min-w-[1080px] border-collapse text-left">
         <thead>
           <tr class="border-b border-slate-200 bg-slate-50">
-            <th class="px-5 py-4 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">File Description</th>
-            <th class="px-5 py-4 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Purpose</th>
             <th class="px-5 py-4 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Date Requested</th>
             <th class="px-5 py-4 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Due Date</th>
             <th class="px-5 py-4 text-right text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Amount</th>
@@ -69,8 +67,6 @@ function statusClass(status) {
         </thead>
         <tbody class="divide-y divide-slate-100">
           <tr v-for="row in rows" :key="row.id" class="whitespace-nowrap transition-colors duration-200 ease-out hover:bg-slate-50/80">
-            <td class="max-w-[170px] px-5 py-5 text-sm text-slate-500"><span class="block truncate">{{ row.fileDescription }}</span></td>
-            <td class="max-w-[220px] px-5 py-5 text-sm text-slate-600"><span class="block truncate">{{ row.purpose }}</span></td>
             <td class="px-5 py-5 text-sm text-slate-500">{{ row.requested }}</td>
             <td class="px-5 py-5 text-sm text-slate-500">{{ row.dueDate }}</td>
             <td class="px-5 py-5 text-right text-sm font-bold text-primary">{{ formatPeso(row.amount) }}</td>

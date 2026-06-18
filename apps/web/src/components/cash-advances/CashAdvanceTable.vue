@@ -1,6 +1,13 @@
 <script setup>
 import { computed, ref, watch } from "vue";
-import { ChevronDown, ChevronUp, ChevronsUpDown, Eye, Pencil, Trash2 } from "lucide-vue-next";
+import {
+  ChevronDown,
+  ChevronUp,
+  ChevronsUpDown,
+  Eye,
+  Pencil,
+  Trash2,
+} from "lucide-vue-next";
 import { formatPeso } from "@/utils/formatters";
 import BasePagination from "@/components/base/BasePagination.vue";
 import CashAdvanceTableSkeleton from "./CashAdvanceTableSkeleton.vue";
@@ -29,7 +36,8 @@ function getActions(row) {
     {
       label: "Edit",
       icon: Pencil,
-      visible: !props.isAdmin && (status === "pending" || status === "rejected"),
+      visible:
+        !props.isAdmin && (status === "pending" || status === "rejected"),
       handler: () => emit("edit", row),
     },
     {
@@ -54,18 +62,11 @@ const pageSize = 10;
 const currentPage = ref(1);
 
 const columns = computed(() => [
-  ...(props.isAdmin
-    ? [
-        { key: "id", label: "ID" },
-        { key: "fileDescription", label: "File Description" },
-      ]
-    : []),
-  { key: "purpose", label: "Purpose" },
-  { key: "requested", label: "Date Requested" },
-  { key: "dueDate", label: "Due Date" },
+  ...(props.isAdmin ? [{ key: "user", label: "User" }] : []),
   { key: "amount", label: "Amount", align: "right" },
   { key: "outstanding", label: "Outstanding", align: "right" },
-  ...(props.isAdmin ? [{ key: "user", label: "User" }] : []),
+  { key: "requested", label: "Date Requested" },
+  { key: "dueDate", label: "Due Date" },
   { key: "status", label: "Status", align: "center" },
   { key: "actions", sortKey: "id", label: "Actions", align: "center" },
 ]);
@@ -107,7 +108,9 @@ function getSortValue(row, key) {
   if (["amount", "outstanding"].includes(key)) return Number(value || 0);
   if (["requested", "dueDate"].includes(key)) {
     const timestamp = new Date(value).getTime();
-    return Number.isNaN(timestamp) ? String(value || "").toLowerCase() : timestamp;
+    return Number.isNaN(timestamp)
+      ? String(value || "").toLowerCase()
+      : timestamp;
   }
   return String(value || "").toLowerCase();
 }
@@ -144,14 +147,14 @@ function statusClass(status) {
 
 <template>
   <section
-    class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+    class="overflow-hidden bg-white border shadow-sm rounded-xl border-slate-200"
   >
     <div
-      class="flex flex-col gap-1 border-b border-slate-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+      class="flex flex-col gap-1 px-5 py-4 bg-white border-b border-slate-200 sm:flex-row sm:items-center sm:justify-between"
     >
       <div>
         <h2
-          class="font-heading text-base font-bold leading-tight text-slate-800"
+          class="text-base font-bold leading-tight font-heading text-slate-800"
         >
           Cash Advance {{ isAdmin ? "Management" : "Requests" }}
         </h2>
@@ -170,8 +173,8 @@ function statusClass(status) {
     </div>
     <div class="overflow-x-auto">
       <table
-        class="w-full border-collapse text-left"
-        :class="isAdmin ? 'min-w-[1180px]' : 'min-w-[880px]'"
+        class="w-full text-left border-collapse"
+        :class="isAdmin ? 'min-w-[920px]' : 'min-w-[640px]'"
       >
         <thead>
           <tr class="border-b border-slate-200 bg-slate-50">
@@ -180,18 +183,31 @@ function statusClass(status) {
               :key="column.key"
               class="px-5 py-4 text-[11px] font-bold uppercase tracking-[0.08em]"
               :class="[
-                column.align === 'right' ? 'text-right' : column.align === 'center' ? 'text-center' : 'text-left',
+                column.align === 'right'
+                  ? 'text-right'
+                  : column.align === 'center'
+                    ? 'text-center'
+                    : 'text-left',
                 isSorted(column) ? 'text-accent' : 'text-slate-500',
               ]"
             >
               <button
                 class="inline-flex items-center gap-1.5 transition-colors hover:text-accent"
-                :class="column.align === 'right' ? 'justify-end' : column.align === 'center' ? 'justify-center' : 'justify-start'"
+                :class="
+                  column.align === 'right'
+                    ? 'justify-end'
+                    : column.align === 'center'
+                      ? 'justify-center'
+                      : 'justify-start'
+                "
                 type="button"
                 @click="toggleSort(column)"
               >
                 <span>{{ column.label }}</span>
-                <ChevronUp v-if="isSorted(column) && sortDirection === 'asc'" class="h-3.5 w-3.5" />
+                <ChevronUp
+                  v-if="isSorted(column) && sortDirection === 'asc'"
+                  class="h-3.5 w-3.5"
+                />
                 <ChevronDown v-else-if="isSorted(column)" class="h-3.5 w-3.5" />
                 <ChevronsUpDown v-else class="h-3.5 w-3.5 text-slate-300" />
               </button>
@@ -209,8 +225,8 @@ function statusClass(status) {
           <template v-else-if="sortedRows.length === 0">
             <tr>
               <td
-                :colspan="isAdmin ? 10 : 7"
-                class="px-5 py-8 text-center text-sm text-slate-500"
+                :colspan="isAdmin ? 7 : 5"
+                class="px-5 py-8 text-sm text-center text-slate-500"
               >
                 No cash advance records found.
               </td>
@@ -220,28 +236,14 @@ function statusClass(status) {
             <tr
               v-for="row in paginatedRows"
               :key="row.id"
-              class="group whitespace-nowrap transition-colors duration-200 ease-out hover:bg-slate-50/80"
+              class="transition-colors duration-200 ease-out group whitespace-nowrap hover:bg-slate-50/80"
             >
-              <td
-                v-if="isAdmin"
-                class="px-5 py-5 font-mono text-sm font-bold text-slate-900"
-              >
-                {{ row.id }}
-              </td>
-              <td
-                v-if="isAdmin"
-                class="max-w-[170px] px-5 py-5 text-sm text-slate-500"
-              >
-                <span class="block truncate">{{ row.fileDescription }}</span>
-              </td>
-              <td class="max-w-[220px] px-5 py-5 text-sm text-slate-600">
-                <span class="block truncate">{{ row.purpose }}</span>
-              </td>
-              <td class="px-5 py-5 text-sm text-slate-500">
-                {{ row.requested }}
-              </td>
-              <td class="px-5 py-5 text-sm text-slate-500">
-                {{ row.dueDate }}
+              <td v-if="isAdmin" class="px-5 py-5">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-medium text-slate-700">{{
+                    row.user
+                  }}</span>
+                </div>
               </td>
               <td class="px-5 py-5 text-right text-sm font-bold text-primary">
                 {{ formatPeso(row.amount) }}
@@ -251,16 +253,11 @@ function statusClass(status) {
               >
                 {{ formatPeso(row.outstanding) }}
               </td>
-              <td v-if="isAdmin" class="px-5 py-5">
-                <div class="flex items-center gap-2">
-                  <span
-                    class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary"
-                    >{{ row.initials }}</span
-                  >
-                  <span class="text-sm font-medium text-slate-700">{{
-                    row.user
-                  }}</span>
-                </div>
+              <td class="px-5 py-5 text-sm text-slate-500">
+                {{ row.requested }}
+              </td>
+              <td class="px-5 py-5 text-sm text-slate-500">
+                {{ row.dueDate }}
               </td>
               <td class="px-5 py-5 text-center">
                 <span

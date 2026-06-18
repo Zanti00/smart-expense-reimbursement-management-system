@@ -96,11 +96,111 @@ class ReimbursementLogicTest extends TestCase
 
         $response->assertStatus(201);
         $response->assertJsonPath('data.expense_category_id', null);
+        $response->assertJsonPath('data.status', 'processed');
 
         $this->assertDatabaseHas('receipts', [
             'uploaded_by' => $this->employee->id,
             'expense_category_id' => null,
+            'status' => 'processed',
         ]);
+    }
+
+    public function test_categories_endpoint_seeds_defaults_when_empty(): void
+    {
+        $response = $this
+            ->withoutMiddleware(\App\Modules\Shared\Http\Middleware\AuthenticateWithExternalService::class)
+            ->actingAs($this->employee)
+            ->getJson('/api/reimbursements/categories');
+
+        $response->assertStatus(200);
+        $response->assertJsonFragment(['name' => 'Meals']);
+        $response->assertJsonFragment(['name' => 'Transportation']);
+
+        $this->assertDatabaseHas('expense_categories', ['name' => 'Meals']);
+        $this->assertDatabaseHas('expense_categories', ['name' => 'Transportation']);
+    }
+
+    public function test_receipt_list_includes_reimbursement_count(): void
+    {
+        $receipt = Receipt::create([
+            'uploaded_by' => $this->employee->id,
+            'file_path' => 'receipts/rcpt_claimed.png',
+            'file_hash' => str_repeat('d', 64),
+            'file_type' => 'png',
+            'file_size_bytes' => 1024,
+            'vendor_name' => 'Claimed Vendor',
+            'transaction_date' => '2026-06-10',
+            'total_amount' => 100.00,
+            'invoice_number' => 'INV-COUNT',
+            'status' => 'Processed',
+        ]);
+
+        $reimbursement = Reimbursement::create([
+            'user_id' => $this->employee->id,
+            'description' => 'Claimed Receipt',
+            'category' => 'Meals',
+            'amount' => 100.00,
+            'date' => Carbon::now(),
+            'cutoff_period' => '2026-06',
+            'status' => 'pending',
+            'submitted_by_name' => $this->employee->name,
+        ]);
+
+        $reimbursement->receipts()->attach($receipt->id);
+
+        $response = $this
+            ->withoutMiddleware(\App\Modules\Shared\Http\Middleware\AuthenticateWithExternalService::class)
+            ->actingAs($this->employee)
+            ->getJson('/api/reimbursements/receipts');
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('data.0.reimbursements_count', 1);
+    }
+
+    public function test_reimbursement_cannot_reuse_claimed_receipt(): void
+    {
+        $receipt = Receipt::create([
+            'uploaded_by' => $this->employee->id,
+            'file_path' => 'receipts/rcpt_reused.png',
+            'file_hash' => str_repeat('e', 64),
+            'file_type' => 'png',
+            'file_size_bytes' => 1024,
+            'vendor_name' => 'Already Claimed Vendor',
+            'transaction_date' => '2026-06-10',
+            'total_amount' => 100.00,
+            'invoice_number' => 'INV-REUSED',
+            'status' => 'Processed',
+        ]);
+
+        $reimbursement = Reimbursement::create([
+            'user_id' => $this->employee->id,
+            'description' => 'Original Claim',
+            'category' => 'Meals',
+            'amount' => 100.00,
+            'date' => Carbon::now(),
+            'cutoff_period' => '2026-06',
+            'status' => 'pending',
+            'submitted_by_name' => $this->employee->name,
+        ]);
+
+        $reimbursement->receipts()->attach($receipt->id);
+
+        $response = $this
+            ->withoutMiddleware(\App\Modules\Shared\Http\Middleware\AuthenticateWithExternalService::class)
+            ->actingAs($this->employee)
+            ->withHeaders(['Accept' => 'application/json'])
+            ->post('/api/reimbursements', [
+                'description' => 'Duplicate Claim',
+                'category' => 'Meals',
+                'amount' => 100.00,
+                'date' => '2026-06-10',
+                'cutoff_period' => '2026-06',
+                'receipt_ids' => [$receipt->id],
+                'report_file' => UploadedFile::fake()->create('report.pdf', 100, 'application/pdf'),
+            ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors('receipt_ids');
     }
 
     public function test_self_approval_is_prohibited(): void

@@ -1,11 +1,15 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useReceiptStore } from "@/stores/receipts";
-import { useNotificationStore } from "@/stores/notification";
 import { useToast } from "@/composables/useToast";
 import { formatPeso } from "@/utils/formatters";
 import { EXPENSE_CATEGORIES } from "@/utils/constants";
+import {
+  getForwardingBlockReason,
+  mapReceiptToReimbursement,
+} from "@/utils/reimbursementForwarding";
 
 import StatusBadge from "@/components/base/StatusBadge.vue";
 import BaseKpiGrid from "@/components/base/BaseKpiGrid.vue";
@@ -15,24 +19,21 @@ import ExpenseCard from "@/components/expenses/ExpenseCard.vue";
 import ExpenseCardSkeleton from "@/components/expenses/ExpenseCardSkeleton.vue";
 import ReceiptUploadModal from "@/components/expenses/ReceiptUploadModal.vue";
 import DeleteConfirmModal from "@/components/base/DeleteConfirmModal.vue";
-import ReimbursementFormView from "@/views/ReimbursementFormView.vue";
 import {
   AlertTriangle,
   Search,
-  X,
   UploadCloud,
   Send,
   Receipt,
   Wallet,
   CheckSquare,
-  DatabaseZap,
   ShieldCheck,
 } from "lucide-vue-next";
 
 const auth = useAuthStore();
 const receiptsStore = useReceiptStore();
-const notif = useNotificationStore();
 const { addToast } = useToast();
+const router = useRouter();
 
 // ── Selection ────────────────────────────────────────────────────
 const selectedIds = ref(new Set());
@@ -46,19 +47,38 @@ function toggleSelect(id) {
 
 const selectedCount = computed(() => selectedIds.value.size);
 
-const showReimbursementForm = ref(false);
-
 const selectedReceiptsData = computed(() =>
   receiptsStore.visibleReceipts.filter((r) => selectedIds.value.has(r.id)),
 );
 
 function forwardSelected() {
-  if (selectedCount.value === 0) return;
-  showReimbursementForm.value = true;
+  forwardReceipts(selectedReceiptsData.value);
+}
+
+function forwardReceipt(receipt) {
+  forwardReceipts([receipt]);
+}
+
+function forwardReceipts(receipts) {
+  const reason = getForwardingBlockReason(receipts);
+  if (reason) {
+    addToast({ message: reason, type: "error" });
+    return;
+  }
+
+  sessionStorage.setItem(
+    "serms_forwarded_reimbursement_receipts",
+    JSON.stringify(receipts.map(mapReceiptToReimbursement)),
+  );
+  router.push("/reimbursements/new");
 }
 
 const CATEGORIES = computed(() => {
-  return ["All", ...EXPENSE_CATEGORIES.map((c) => c.name)];
+  const source = receiptsStore.categories.length
+    ? receiptsStore.categories
+    : EXPENSE_CATEGORIES;
+
+  return ["All", ...source.map((c) => c.name)];
 });
 const activeCategory = ref("All");
 const activeStatus = ref("All");
@@ -66,6 +86,7 @@ const searchQuery = ref("");
 
 const STATUS_FILTERS = [
   "All",
+  "Processing",
   "Processed",
   "Automatic Rejected",
   "Pending Admin Re-review",
@@ -163,6 +184,14 @@ const pendingReReviewReceipts = computed(() =>
 );
 
 function openEditReceipt(receipt) {
+  if (String(receipt?.status || "").toLowerCase() !== "processed") {
+    addToast({
+      message: "Only receipts with processed status can be edited.",
+      type: "error",
+    });
+    return;
+  }
+
   receiptBeingEdited.value = receipt;
   uploadModalOpen.value = true;
 }
@@ -194,7 +223,10 @@ async function finalizeReceiptReview(receipt, decision) {
 
 // ── Lifecycle ─────────────────────────────────────────────────────
 onMounted(async () => {
-  await Promise.all([receiptsStore.fetchAll()]);
+  await Promise.all([
+    receiptsStore.fetchAll(),
+    receiptsStore.fetchCategories(),
+  ]);
 });
 
 // KPI definitions matching dashboard pattern
@@ -231,18 +263,14 @@ const kpis = computed(() => [
 
 <template>
   <div>
-    <div class="flex flex-col gap-6 max-w-7xl mx-auto pb-12 animate-fade-up">
+    <div class="flex flex-col gap-6 pb-12 mx-auto max-w-7xl animate-fade-up">
       <!-- ── Page Header ── -->
       <div
-        class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+        class="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center"
       >
         <div>
-          <div class="flex items-center gap-2 mb-2">
-            <DatabaseZap class="w-3.5 h-3.5 text-accent" />
-            <span class="section-label">Expense Validation Module</span>
-          </div>
           <h1
-            class="text-2xl font-bold text-slate-800 leading-tight"
+            class="text-2xl font-bold leading-tight text-slate-800"
             style="
               font-family: &quot;Poppins&quot;, sans-serif;
               letter-spacing: -0.02em;
@@ -251,7 +279,7 @@ const kpis = computed(() => [
             My Expense
           </h1>
           <p
-            class="text-sm text-slate-400 mt-1"
+            class="mt-1 text-sm text-slate-400"
             style="font-family: &quot;Open Sans&quot;, sans-serif"
           >
             Organize and manage your receipts
@@ -259,21 +287,19 @@ const kpis = computed(() => [
         </div>
         <div class="flex flex-wrap items-center gap-3">
           <!-- Forward to Reimbursement -->
-          <!-- <button
+          <button
             @click="forwardSelected"
             :disabled="selectedCount === 0"
-            class="btn"
+            class="btn min-h-[42px] px-4 py-2 border border-transparent inline-flex items-center justify-center gap-2 font-medium"
             :class="
               selectedCount > 0
-                ? 'btn-primary'
-                : 'btn-secondary opacity-50 cursor-not-allowed'
+                ? 'bg-primary text-white hover:bg-primary/90'
+                : 'bg-slate-100 text-slate-400 opacity-50 cursor-not-allowed'
             "
           >
-            <Send class="w-4 h-4" />
-            Forward to Reimbursement{{
-              selectedCount > 0 ? ` (${selectedCount})` : ""
-            }}
-          </button> -->
+            <Send class="w-4 h-4 shrink-0" />
+            <span>To Reimbursement</span>
+          </button>
           <!-- Upload Receipt -->
           <button
             @click="uploadModalOpen = true"
@@ -294,12 +320,12 @@ const kpis = computed(() => [
 
       <div
         v-if="!auth.isAdmin && automaticRejectedReceipts.length > 0"
-        class="rounded-xl border border-danger/20 bg-danger/5 p-4"
+        class="p-4 border rounded-xl border-danger/20 bg-danger/5"
       >
         <div class="flex items-start gap-3">
           <AlertTriangle class="mt-0.5 h-5 w-5 shrink-0 text-danger" />
           <div>
-            <p class="font-heading text-sm font-bold text-danger">
+            <p class="text-sm font-bold font-heading text-danger">
               {{ automaticRejectedReceipts.length }} receipt{{
                 automaticRejectedReceipts.length === 1 ? "" : "s"
               }}
@@ -315,13 +341,13 @@ const kpis = computed(() => [
 
       <section
         v-if="auth.isAdmin && pendingReReviewReceipts.length > 0"
-        class="overflow-hidden rounded-xl border border-accent/20 bg-white shadow-sm"
+        class="overflow-hidden bg-white border shadow-sm rounded-xl border-accent/20"
       >
         <div
-          class="flex items-center justify-between border-b border-slate-200 bg-accent-50 px-5 py-4"
+          class="flex items-center justify-between px-5 py-4 border-b border-slate-200 bg-accent-50"
         >
           <div>
-            <h2 class="font-heading text-base font-bold text-primary">
+            <h2 class="text-base font-bold font-heading text-primary">
               Pending Admin Re-review
             </h2>
             <p class="mt-0.5 text-xs text-slate-500">
@@ -348,7 +374,7 @@ const kpis = computed(() => [
                   Previously System Rejected
                 </span>
               </div>
-              <h3 class="font-heading text-sm font-bold text-slate-900">
+              <h3 class="text-sm font-bold font-heading text-slate-900">
                 {{ receipt.vendorName || "Unknown Vendor" }}
               </h3>
               <p class="text-xs text-slate-500">
@@ -378,7 +404,7 @@ const kpis = computed(() => [
                   class="btn btn-primary !py-2"
                   @click="finalizeReceiptReview(receipt, 'approve')"
                 >
-                  <ShieldCheck class="h-4 w-4" />
+                  <ShieldCheck class="w-4 h-4" />
                   Approve Override
                 </button>
                 <button
@@ -407,7 +433,7 @@ const kpis = computed(() => [
         v-if="receiptsStore.isLoading"
         tag="div"
         name="list"
-        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
+        class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
       >
         <ExpenseCardSkeleton v-for="i in 8" :key="'skeleton-' + i" />
       </TransitionGroup>
@@ -416,7 +442,7 @@ const kpis = computed(() => [
         v-else-if="filteredReceipts.length > 0"
         tag="div"
         name="list"
-        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
+        class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
       >
         <ExpenseCard
           v-for="receipt in filteredReceipts"
@@ -427,16 +453,17 @@ const kpis = computed(() => [
           @view="openViewModal"
           @edit="openEditReceipt"
           @delete="promptDelete"
+          @forward-reimbursement="forwardReceipt"
         />
       </TransitionGroup>
 
       <!-- Empty State -->
       <div
         v-else
-        class="card p-16 flex flex-col items-center gap-4 text-center"
+        class="flex flex-col items-center gap-4 p-16 text-center card"
       >
         <div
-          class="w-16 h-16 rounded-2xl bg-primary/5 flex items-center justify-center"
+          class="flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/5"
         >
           <Search class="w-7 h-7 text-primary/30" />
         </div>
@@ -447,11 +474,11 @@ const kpis = computed(() => [
           >
             No receipts found
           </p>
-          <p class="text-xs text-slate-400 mt-1">
+          <p class="mt-1 text-xs text-slate-400">
             Try a different category filter or upload a new receipt.
           </p>
         </div>
-        <button @click="uploadModalOpen = true" class="btn btn-cta mt-2">
+        <button @click="uploadModalOpen = true" class="mt-2 btn btn-cta">
           <UploadCloud class="w-4 h-4" /> Upload Receipt
         </button>
       </div>
@@ -460,7 +487,7 @@ const kpis = computed(() => [
     <!-- ── Upload / Receipt Scanned Modal ── -->
     <ReceiptUploadModal
       :model-value="uploadModalOpen"
-      :categories="EXPENSE_CATEGORIES"
+      :categories="receiptsStore.categories"
       :receipt-to-edit="receiptBeingEdited"
       @update:model-value="closeUploadModal"
     />
@@ -476,60 +503,6 @@ const kpis = computed(() => [
       @edit="openEditReceipt"
     />
 
-    <!-- ── In-Page Reimbursement Form Overlay ── -->
-    <Transition name="slide-up">
-      <div
-        v-if="showReimbursementForm"
-        class="fixed inset-0 z-[60] flex flex-col bg-clinical overflow-hidden"
-      >
-        <!-- Sticky top bar with back button -->
-        <div
-          class="flex-shrink-0 flex items-center gap-3 px-6 py-3 bg-primary border-b border-slate-100 shadow-sm sticky top-0 z-10"
-        >
-          <button
-            @click="showReimbursementForm = false"
-            class="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors text-white"
-          >
-            <X class="w-4 h-4" />
-          </button>
-          <div>
-            <p
-              class="text-[10px] font-semibold text-white/60 uppercase tracking-widest"
-            >
-              My Expense
-            </p>
-            <h2
-              class="text-sm font-bold text-white leading-tight"
-              style="font-family: &quot;Poppins&quot;, sans-serif"
-            >
-              New Reimbursement
-            </h2>
-          </div>
-          <div
-            class="ml-auto flex items-center gap-2 text-white/60 text-[11px]"
-          >
-            <Send class="w-3.5 h-3.5" />
-            <span
-              >{{ selectedCount }} receipt{{
-                selectedCount !== 1 ? "s" : ""
-              }}
-              forwarded</span
-            >
-          </div>
-        </div>
-
-        <!-- Scrollable form body -->
-        <div class="flex-1 overflow-y-auto">
-          <div class="p-6">
-            <ReimbursementFormView
-              :forwarded-receipts="selectedReceiptsData"
-              @submitted="showReimbursementForm = false"
-              @close="showReimbursementForm = false"
-            />
-          </div>
-        </div>
-      </div>
-    </Transition>
   </div>
 </template>
 
@@ -557,26 +530,6 @@ const kpis = computed(() => [
     transform: scale(1) translateY(0);
     opacity: 1;
   }
-}
-
-/* ── Full-page slide-up overlay ── */
-.slide-up-enter-active {
-  transition:
-    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 0.25s ease-out;
-}
-.slide-up-leave-active {
-  transition:
-    transform 0.25s cubic-bezier(0.55, 0, 1, 0.45),
-    opacity 0.2s ease-in;
-}
-.slide-up-enter-from {
-  transform: translateY(100%);
-  opacity: 0;
-}
-.slide-up-leave-to {
-  transform: translateY(100%);
-  opacity: 0;
 }
 
 /* ── Grid List Transitions ── */

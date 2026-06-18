@@ -4,11 +4,11 @@ namespace App\Modules\Reimbursements\Services;
 
 use App\Modules\Users\Models\User;
 use App\Modules\Reimbursements\Models\Receipt;
-use App\Modules\Reimbursements\Models\Reimbursement;
 use App\Modules\AuditLogs\Services\AuditLogService;
 use App\Modules\Reimbursements\Jobs\ProcessReceiptOcr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Auth\Access\AuthorizationException;
 
 class ReceiptService
 {
@@ -17,7 +17,8 @@ class ReceiptService
      */
     public function listReceipts(User $user, bool $canManage)
     {
-        $query = Receipt::with('category', 'uploader', 'items');
+        $query = Receipt::with('category', 'uploader', 'items')
+            ->withCount('reimbursements');
 
         if (!$canManage) {
             $query->where('uploaded_by', $user->id);
@@ -32,29 +33,14 @@ class ReceiptService
     public function storeReceipt(User $user, array $validated, $file)
     {
         return DB::transaction(function () use ($user, $validated, $file) {
-            $path = null;
-            $fileHash = null;
-            $fileType = null;
-            $fileSize = null;
-
-            if ($file) {
-                // Store in Supabase bucket
-                $path = $file->store('receipts', 'supabase');
-                $fileHash = hash_file('sha256', $file->getRealPath());
-                
-                $fileType = $file->extension();
-                if ($fileType === 'jpg') {
-                    $fileType = 'jpeg';
-                }
-                $fileSize = $file->getSize();
-            }
+            $storedFile = $this->storeReceiptFile($file);
 
             $receipt = Receipt::create([
                 'uploaded_by' => $user->id,
-                'file_path' => $path,
-                'file_hash' => $fileHash,
-                'file_type' => $fileType,
-                'file_size_bytes' => $fileSize,
+                'file_path' => $storedFile['file_path'],
+                'file_hash' => $storedFile['file_hash'],
+                'file_type' => $storedFile['file_type'],
+                'file_size_bytes' => $storedFile['file_size_bytes'],
                 'expense_category_id' => $validated['expense_category_id'] ?? null,
                 
                 // Static mock data since OCR is disabled
@@ -69,7 +55,7 @@ class ReceiptService
                 
                 'ocr_flagged' => false,
                 'is_archived' => false,
-                'status' => 'pending', // Skipped 'processing' queue
+                'status' => 'processed',
             ]);
 
             if (!empty($validated['items'])) {
@@ -90,13 +76,89 @@ class ReceiptService
     public function updateReceipt(User $user, int $id, array $data, bool $canManage)
     {
         if (!$canManage) {
-            throw new \Illuminate\Auth\Access\AuthorizationException('Unauthorized.');
+            throw new AuthorizationException('Unauthorized.');
         }
 
         $receipt = Receipt::findOrFail($id);
         $receipt->update($data);
 
         return $receipt;
+    }
+
+    /**
+     * Let the uploader edit a processed receipt while keeping it processed.
+     */
+    public function resubmitReceipt(User $user, int $id, array $data, $file = null)
+    {
+        return DB::transaction(function () use ($user, $id, $data, $file) {
+            $receipt = Receipt::with('items')->findOrFail($id);
+
+            if ($receipt->uploaded_by !== $user->id) {
+                throw new AuthorizationException('Unauthorized. You can only resubmit your own receipts.');
+            }
+
+            if ($receipt->status !== 'processed') {
+                throw ValidationException::withMessages([
+                    'status' => ['Only receipts with processed status can be edited.'],
+                ]);
+            }
+
+            $updateData = collect($data)
+                ->except(['file', 'items'])
+                ->toArray();
+
+            if (array_key_exists('vat_classification', $updateData)) {
+                $updateData['vat_classification'] = strtolower((string)$updateData['vat_classification']);
+            }
+
+            if ($file) {
+                $updateData = array_merge($updateData, $this->storeReceiptFile($file));
+            }
+
+            $updateData['status'] = 'processed';
+            $updateData['ocr_flagged'] = false;
+
+            $receipt->update($updateData);
+
+            if (array_key_exists('items', $data)) {
+                $receipt->items()->delete();
+
+                if (!empty($data['items'])) {
+                    $receipt->items()->createMany($data['items']);
+                }
+            }
+
+            return $receipt->fresh(['category', 'items', 'uploader'])
+                ->loadCount('reimbursements');
+        });
+    }
+
+    /**
+     * Store the uploaded file on the configured Supabase disk and return DB columns.
+     */
+    private function storeReceiptFile($file): array
+    {
+        if (!$file) {
+            return [
+                'file_path' => null,
+                'file_hash' => null,
+                'file_type' => null,
+                'file_size_bytes' => null,
+            ];
+        }
+
+        $fileType = $file->extension();
+
+        if ($fileType === 'jpg') {
+            $fileType = 'jpeg';
+        }
+
+        return [
+            'file_path' => $file->store('receipts', 'supabase'),
+            'file_hash' => hash_file('sha256', $file->getRealPath()),
+            'file_type' => $fileType,
+            'file_size_bytes' => $file->getSize(),
+        ];
     }
 
     /**
@@ -109,11 +171,11 @@ class ReceiptService
 
             // Check RBAC: Only uploader or admin can delete
             if ($receipt->uploaded_by !== $user->id && !$canManage) {
-                throw new \Illuminate\Auth\Access\AuthorizationException('Unauthorized. You can only delete your own receipts.');
+                throw new AuthorizationException('Unauthorized. You can only delete your own receipts.');
             }
 
             // Check constraints: Block deletion if linked to a Reimbursement
-            if (Reimbursement::where('receipt_id', $receipt->id)->exists()) {
+            if ($receipt->reimbursements()->exists()) {
                 throw ValidationException::withMessages([
                     'receipt' => ['Cannot delete a receipt that is attached to a reimbursement.']
                 ]);

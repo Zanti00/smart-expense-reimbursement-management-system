@@ -2,6 +2,7 @@
 import { ref, computed, onBeforeUnmount, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { usePolicyStore } from "@/stores/policy";
+import { useReceiptStore } from "@/stores/receipts";
 import { useReimbursementStore } from "@/stores/reimbursement";
 import { useToast } from "@/composables/useToast";
 import { Activity, Save, Send } from "lucide-vue-next";
@@ -42,6 +43,7 @@ const props = defineProps({
 const emit = defineEmits(["submitted", "close"]);
 
 const policyStore = usePolicyStore();
+const receiptsStore = useReceiptStore();
 const reimbursementStore = useReimbursementStore();
 const { addToast } = useToast();
 const router = useRouter();
@@ -50,6 +52,12 @@ const router = useRouter();
 const cutoffPeriod = ref("");
 const reportFile = ref(null);
 const fetching = ref(false);
+const storedForwardedReceipts = ref([]);
+const forwardedSource = ref("My Expense");
+const FORWARDED_RECEIPTS_KEY = "serms_forwarded_reimbursement_receipts";
+const LEGACY_LIQUIDATION_RECEIPTS_KEY = "serms_forwarded_liquidation_receipts";
+const SUPABASE_RECEIPT_BASE_URL =
+  "https://vbabvrcfqcmvvjwmzuwx.supabase.co/storage/v1/object/public/cash_advances/";
 
 // Form uploads and file management
 const {
@@ -79,8 +87,10 @@ const canProceed = computed(
   () =>
     receipts.value.length >= 1 &&
     cutoffPeriod.value &&
-    reportFile.value &&
-    receipts.value.every((r) => !r.isUploading),
+    (isEditMode.value || reportFile.value) &&
+    receipts.value.every(
+      (r) => !r.isUploading && (isEditMode.value || r.categoryId),
+    ),
 );
 
 const isDirty = computed(() => {
@@ -97,6 +107,25 @@ const {
 } = useUnsavedChanges(isDirty, isSubmitted);
 
 const isEditMode = computed(() => !!props.id);
+const forwardedReceiptCount = computed(
+  () => props.forwardedReceipts.length || storedForwardedReceipts.value.length,
+);
+const isForwardedMode = computed(() => forwardedReceiptCount.value > 0);
+const isEmbeddedForwardedMode = computed(() => props.forwardedReceipts.length > 0);
+
+function resolveReceiptPreviewUrl(fileUrl, filePath) {
+  if (fileUrl) return fileUrl;
+  if (!filePath) return null;
+  if (
+    String(filePath).startsWith("http://") ||
+    String(filePath).startsWith("https://") ||
+    String(filePath).startsWith("blob:")
+  ) {
+    return filePath;
+  }
+
+  return `${SUPABASE_RECEIPT_BASE_URL}${String(filePath).replace(/^\/+/, "")}`;
+}
 
 // Form submission
 const { submitting, submitReimbursement, updateReimbursement } = useReimbursementSubmit(
@@ -135,6 +164,7 @@ async function handleSubmit() {
 // Lifecycle
 onMounted(async () => {
   policyStore.fetchAll();
+  receiptsStore.fetchCategories();
 
   if (isEditMode.value) {
     fetching.value = true;
@@ -162,6 +192,7 @@ onMounted(async () => {
           return {
             id: r.id,
             fileName: r.vendor_name || `Receipt-${r.id}`,
+            fileType: r.file_type,
             merchantName: r.vendor_name,
             date: r.transaction_date,
             amount: amounts.gross,
@@ -170,7 +201,9 @@ onMounted(async () => {
             vatClassification: amounts.vatClassification,
             tin: r.tin,
             invoiceNumber: r.invoice_number,
-            thumbnail: r.file_path,
+            category: r.category?.name || data.expense_category?.name || "",
+            categoryId: r.expense_category_id || data.expense_category_id || null,
+            thumbnail: resolveReceiptPreviewUrl(r.file_url, r.file_path),
             items,
             isUploading: false,
           };
@@ -187,12 +220,17 @@ onMounted(async () => {
     }
   }
 
-  const forwarded = sessionStorage.getItem(
-    "serms_forwarded_liquidation_receipts",
-  );
-  if (forwarded) {
+  const forwarded =
+    sessionStorage.getItem(FORWARDED_RECEIPTS_KEY) ||
+    sessionStorage.getItem(LEGACY_LIQUIDATION_RECEIPTS_KEY);
+
+  if (!isEditMode.value && forwarded) {
     try {
       const parsed = JSON.parse(forwarded);
+      storedForwardedReceipts.value = parsed;
+      forwardedSource.value = sessionStorage.getItem(FORWARDED_RECEIPTS_KEY)
+        ? "My Expense"
+        : "Liquidation";
       localReceipts.value = parsed.map((r) => ({
         ...r,
         ...(() => {
@@ -211,7 +249,7 @@ onMounted(async () => {
         location: r.location || "Metro Manila, Philippines",
         items:
           r.items ||
-          getItems(r.category || "Food & Dining").map((name) => ({
+          getItems(r.category || "Expense").map((name) => ({
             name,
             qty: 1,
             price: 0,
@@ -220,7 +258,8 @@ onMounted(async () => {
     } catch {
       localReceipts.value = [];
     } finally {
-      sessionStorage.removeItem("serms_forwarded_liquidation_receipts");
+      sessionStorage.removeItem(FORWARDED_RECEIPTS_KEY);
+      sessionStorage.removeItem(LEGACY_LIQUIDATION_RECEIPTS_KEY);
     }
   }
 });
@@ -238,7 +277,7 @@ function dismiss() {
   dismissWithConfirm(() => {
     emit("close");
     // If opened standalone (via route), go back
-    if (!props.forwardedReceipts.length) router.back();
+    router.back();
   });
 }
 </script>
@@ -256,7 +295,7 @@ function dismiss() {
 
     <!--  Page Header (standalone route mode only)  -->
     <ReimbursementFormHeader
-      v-if="!forwardedReceipts.length"
+      v-if="!isEmbeddedForwardedMode"
       :is-edit="isEditMode"
       @dismiss="dismiss"
     />
@@ -276,15 +315,15 @@ function dismiss() {
       <!--  Success State  -->
       <!--  Alert Banner (forwarded mode)  -->
       <div
-        v-if="forwardedReceipts.length"
+        v-if="isForwardedMode"
         class="flex items-center gap-3 px-4 py-3 bg-accent-50 border border-accent/15 rounded-xl"
       >
         <Send class="w-4 h-4 text-accent flex-shrink-0" />
         <p class="text-sm font-semibold text-accent">
-          {{ forwardedReceipts.length }} receipt{{
-            forwardedReceipts.length !== 1 ? "s" : ""
+          {{ forwardedReceiptCount }} receipt{{
+            forwardedReceiptCount !== 1 ? "s" : ""
           }}
-          forwarded from My Expense and pre-filled below.
+          forwarded from {{ forwardedSource }} and pre-filled below.
         </p>
       </div>
 
@@ -301,6 +340,7 @@ function dismiss() {
       <template v-else>
         <!--  CARD 1: Upload Receipt Management  -->
         <ReceiptsManagementHeader
+          v-if="!isForwardedMode"
           :receipt-count="receipts.length"
           @add-receipts="receiptInput?.click()"
         />
@@ -308,6 +348,8 @@ function dismiss() {
         <!--  CARD 2: One Scanned Receipt Block Per Receipt  -->
         <ScannedReceiptsList
           :receipts="receipts"
+          :categories="receiptsStore.categories"
+          :allow-remove="!isForwardedMode"
           @remove-receipt="removeReceipt"
         />
 

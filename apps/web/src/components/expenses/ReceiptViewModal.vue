@@ -28,6 +28,10 @@ const props = defineProps({
 
 const emit = defineEmits(["update:modelValue", "delete", "edit"]);
 
+const canEdit = computed(
+  () => String(props.receipt?.status || "").toLowerCase() === "processed",
+);
+
 function close() {
   emit("update:modelValue", false);
 }
@@ -296,7 +300,7 @@ function formatDate(dateStr) {
           >
             <div class="flex gap-2">
               <button
-                v-if="receipt.status === 'automatic-rejected'"
+                v-if="canEdit"
                 class="btn btn-primary !py-2 !text-xs"
                 @click="editReceipt"
               >

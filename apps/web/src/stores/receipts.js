@@ -90,6 +90,7 @@ export const useReceiptStore = defineStore("receipts", () => {
 
     if (r.status === "pending-admin-re-review") return r.status;
     if (r.status === "automatic-rejected") return r.status;
+    if (r.status === "processing") return r.status;
     if (r.ocr_flagged || missingRequiredFields || (score > 0 && score < 0.75)) {
       return "automatic-rejected";
     }
@@ -99,6 +100,9 @@ export const useReceiptStore = defineStore("receipts", () => {
 
   function mapReceipt(r) {
     const complianceStatus = getComplianceStatus(r);
+    const reimbursementCount = Number(
+      r.reimbursements_count ?? r.reimbursements?.length ?? 0,
+    );
 
     return {
       id: `RCPT-2026-${String(r.id).padStart(3, "0")}`,
@@ -126,6 +130,8 @@ export const useReceiptStore = defineStore("receipts", () => {
       hash: r.file_hash,
       thumbnail: r.file_url || (r.file_path ? `https://vbabvrcfqcmvvjwmzuwx.supabase.co/storage/v1/object/public/cash_advances/${r.file_path}` : null),
       isDeleted: !!r.deleted_at,
+      reimbursementCount,
+      isReimbursed: reimbursementCount > 0,
       vendorName: r.vendor_name,
       vatAmount: Number(r.vat_amount) || 0,
       tin: r.tin,
@@ -255,12 +261,17 @@ export const useReceiptStore = defineStore("receipts", () => {
       throw new Error("Receipt not found.");
     }
 
+    if (String(rx.status || "").toLowerCase() !== "processed") {
+      isSaving.value = false;
+      throw new Error("Only receipts with processed status can be edited.");
+    }
+
     const previousStatus = rx.status;
     const payload = {
       ...metadata,
-      status: "pending-admin-re-review",
-      complianceStatus: "pending-admin-re-review",
-      modifiedAfterSystemRejection: true,
+      status: "processed",
+      complianceStatus: "processed",
+      modifiedAfterSystemRejection: false,
       previousStatus,
       resubmittedAt: new Date().toISOString(),
     };
@@ -274,14 +285,26 @@ export const useReceiptStore = defineStore("receipts", () => {
         if (value == null) return;
         formData.append(key, Array.isArray(value) ? JSON.stringify(value) : value);
       });
-      formData.append("status", "pending-admin-re-review");
+      formData.append("status", "processed");
 
       if (rx.dbId) {
-        await apiFetch(`/api/serms/reimbursements/receipts/${rx.dbId}/resubmit`, {
+        const response = await apiFetch(`/api/serms/reimbursements/receipts/${rx.dbId}/resubmit`, {
           method: "POST",
           credentials: "include",
           body: formData,
-        }).catch(() => null);
+        });
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(
+            errData.message ||
+              `Failed to resubmit receipt (Status ${response.status})`,
+          );
+        }
+
+        const resData = await response.json();
+        Object.assign(rx, mapReceipt(resData.data));
+        return rx;
       }
 
       Object.assign(rx, {

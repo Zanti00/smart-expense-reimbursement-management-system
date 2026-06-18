@@ -9,16 +9,6 @@ import {
   getItems,
 } from "@/utils/receiptUtils";
 
-const CATEGORIES = [
-  "Food & Dining",
-  "Transportation",
-  "Lodging",
-  "Supplies",
-  "Entertainment",
-  "Utilities",
-  "Other",
-];
-
 export function useReceiptUploads() {
   const localReceipts = ref([]);
   const receiptDrag = ref(false);
@@ -65,8 +55,9 @@ export function useReceiptUploads() {
         tax: receiptFinancials({ amount: 0 }, "vat").vat.toFixed(2),
         vatClassification: "vat",
         date: new Date().toISOString().slice(0, 10),
-        category: "Food & Dining",
-        items: getItems("Food & Dining").map((name) => ({
+        category: "",
+        categoryId: null,
+        items: getItems("Expense").map((name) => ({
           name,
           qty: 1,
           price: 0,
@@ -112,6 +103,8 @@ export function useReceiptUploads() {
             tax: amounts.vat.toFixed(2),
             vatClassification: amounts.vatClassification,
             date: data.data.transaction_date || receiptObj.date,
+            category: data.data.category?.name || "",
+            categoryId: data.data.expense_category_id || null,
             isUploading: false,
           };
           // Recalculate item prices based on total amount

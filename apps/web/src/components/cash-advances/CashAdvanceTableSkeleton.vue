@@ -10,19 +10,9 @@ defineProps({
 <template>
   <tr class="whitespace-nowrap">
     <td v-if="isAdmin" class="px-5 py-5">
-      <div class="h-4 w-6 max-w-full animate-pulse rounded bg-slate-200"></div>
-    </td>
-    <td v-if="isAdmin" class="px-5 py-5">
-      <div class="h-3.5 w-20 max-w-full animate-pulse rounded bg-slate-200 sm:w-24"></div>
-    </td>
-    <td class="px-5 py-5">
-      <div class="h-3.5 w-24 max-w-full animate-pulse rounded bg-slate-200 sm:w-32"></div>
-    </td>
-    <td class="px-5 py-5">
-      <div class="h-3.5 w-16 max-w-full animate-pulse rounded bg-slate-200 sm:w-20"></div>
-    </td>
-    <td class="px-5 py-5">
-      <div class="h-3.5 w-16 max-w-full animate-pulse rounded bg-slate-200 sm:w-20"></div>
+      <div
+        class="h-3.5 w-20 max-w-full animate-pulse rounded bg-slate-200 sm:w-24"
+      ></div>
     </td>
     <td class="px-5 py-5 text-right">
       <div
@@ -34,15 +24,11 @@ defineProps({
         class="ml-auto h-3.5 w-14 max-w-full animate-pulse rounded bg-slate-200 sm:w-16"
       ></div>
     </td>
-    <td v-if="isAdmin" class="px-5 py-5">
-      <div class="flex items-center gap-2">
-        <div
-          class="h-7 w-7 shrink-0 animate-pulse rounded-full bg-slate-200"
-        ></div>
-        <div
-          class="h-3.5 w-20 max-w-full animate-pulse rounded bg-slate-200 sm:w-24"
-        ></div>
-      </div>
+    <td class="px-5 py-5">
+      <div class="h-3.5 w-20 max-w-full animate-pulse rounded bg-slate-200 sm:w-24"></div>
+    </td>
+    <td class="px-5 py-5">
+      <div class="h-3.5 w-16 max-w-full animate-pulse rounded bg-slate-200 sm:w-20"></div>
     </td>
     <td class="px-5 py-5 text-center">
       <div

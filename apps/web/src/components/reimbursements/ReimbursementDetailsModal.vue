@@ -102,6 +102,10 @@ function statusClass(status) {
     "bg-slate-100 text-slate-600 border border-slate-200"
   );
 }
+
+function categoryName(record) {
+  return record?.expense_category?.name || record?.category?.name || record?.category || "Uncategorized";
+}
 </script>
 
 <template>
@@ -316,7 +320,7 @@ function statusClass(status) {
                     >
                       <span
                         class="inline-flex rounded-md bg-accent-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-accent"
-                        >{{ receipt.category || "Expense" }}</span
+                        >{{ categoryName(receipt) }}</span
                       >
                       <span
                         class="font-heading text-sm font-bold text-primary"

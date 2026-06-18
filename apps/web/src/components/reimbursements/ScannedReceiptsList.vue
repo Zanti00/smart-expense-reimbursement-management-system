@@ -14,24 +14,33 @@ import {
   receiptFinancials,
 } from "@/utils/receiptUtils";
 
-defineProps({
+const props = defineProps({
   receipts: {
     type: Array,
     required: true,
+  },
+  categories: {
+    type: Array,
+    default: () => [],
+  },
+  allowRemove: {
+    type: Boolean,
+    default: true,
   },
 });
 
 defineEmits(["remove-receipt"]);
 
-const CATEGORIES = [
-  "Food & Dining",
-  "Transportation",
-  "Lodging",
-  "Supplies",
-  "Entertainment",
-  "Utilities",
-  "Other",
-];
+function getCategoryOptions() {
+  return props.categories;
+}
+
+function syncCategoryName(receipt) {
+  const category = props.categories.find(
+    (cat) => String(cat.id) === String(receipt.categoryId),
+  );
+  receipt.category = category?.name || "";
+}
 
 function cleanName(fileName) {
   return (fileName || "").replace(/\.[^.]+$/, "").replace(/[_-]/g, " ");
@@ -147,6 +156,7 @@ function removeReceiptItem(receipt, index) {
             </div>
             <div>
               <button
+                v-if="allowRemove"
                 class="inline-flex h-9 w-fit items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3.5 text-xs font-bold text-danger transition-colors hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
                 type="button"
                 :disabled="receipt.isUploading"
@@ -226,15 +236,17 @@ function removeReceiptItem(receipt, index) {
                 <div class="relative flex-1">
                   <select
                     class="input appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                    v-model="receipt.category"
+                    v-model="receipt.categoryId"
                     :disabled="receipt.isUploading"
+                    @change="syncCategoryName(receipt)"
                   >
+                    <option value="" disabled>Select category</option>
                     <option
-                      v-for="cat in CATEGORIES"
-                      :key="cat"
-                      :value="cat"
+                      v-for="cat in getCategoryOptions()"
+                      :key="cat.id"
+                      :value="cat.id"
                     >
-                      {{ cat }}
+                      {{ cat.name }}
                     </option>
                   </select>
                   <ChevronDown

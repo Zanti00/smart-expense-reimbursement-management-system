@@ -101,6 +101,7 @@ class ExpenseService
                 'ocr_confidence_score' => $data['ocr_confidence_score'] ?? null,
                 'ocr_flagged' => ($data['ocr_confidence_score'] ?? 100) < 80,
                 'expense_category_id' => $expenseCategoryId,
+                'status' => 'processed',
             ]);
 
             $receipt->load('category');

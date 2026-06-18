@@ -1,11 +1,12 @@
 <script setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import {
   AlertTriangle,
   FileText,
   Image as ImageIcon,
   Eye,
   Pencil,
+  Send,
   Trash2,
   MoreVertical,
 } from "lucide-vue-next";
@@ -23,9 +24,12 @@ const props = defineProps({
   },
 });
 
-defineEmits(["select", "view", "delete", "edit"]);
+defineEmits(["select", "view", "delete", "edit", "forward-reimbursement"]);
 
 const isMenuOpen = ref(false);
+const canEdit = computed(
+  () => String(props.expense?.status || "").toLowerCase() === "processed",
+);
 </script>
 
 <template>
@@ -167,9 +171,19 @@ const isMenuOpen = ref(false);
 
           <div
             v-if="isMenuOpen"
-            class="absolute right-0 bottom-full mb-2 w-36 bg-white rounded-lg shadow-lg border border-slate-100 py-1 z-20"
+            class="absolute right-0 bottom-full mb-2 w-44 bg-white rounded-lg shadow-lg border border-slate-100 py-1 z-20"
           >
             <button
+              class="w-full text-left px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 flex items-center gap-2"
+              @click="
+                isMenuOpen = false;
+                $emit('forward-reimbursement', expense);
+              "
+            >
+              <Send class="w-4 h-4" /> To Reimbursement
+            </button>
+            <button
+              v-if="canEdit"
               class="w-full text-left px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 flex items-center gap-2"
               @click="
                 isMenuOpen = false;

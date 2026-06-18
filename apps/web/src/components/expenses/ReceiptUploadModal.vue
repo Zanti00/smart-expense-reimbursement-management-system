@@ -1,9 +1,13 @@
 <script setup>
 import { ref, computed, watch } from "vue";
 import { useReceiptStore } from "@/stores/receipts";
-import { useNotificationStore } from "@/stores/notification";
+import { useToast } from "@/composables/useToast";
 import ConfirmModal from "@/components/base/ConfirmModal.vue";
 import { useUnsavedChanges } from "@/composables/useUnsavedChanges";
+import {
+  itemsGrossAmount,
+  receiptFinancials,
+} from "@/utils/receiptUtils";
 import {
   X,
   Sparkles,
@@ -33,7 +37,11 @@ const props = defineProps({
 const emit = defineEmits(["update:modelValue"]);
 
 const receiptsStore = useReceiptStore();
-const notif = useNotificationStore();
+const { addToast } = useToast();
+
+function notify(message, type = "info") {
+  addToast({ message, type });
+}
 
 const uploadFileInput = ref(null);
 const uploadFile = ref(null);
@@ -50,11 +58,67 @@ const uploadForm = ref({
   items: [],
 });
 
-const itemsSubtotal = computed(() => {
-  return uploadForm.value.items.reduce(
-    (sum, item) => sum + (Number(item.price) * Number(item.quantity) || 0),
-    0,
-  );
+const itemsGrossTotal = computed(() => itemsGrossAmount(uploadForm.value.items));
+
+const receiptAmounts = computed(() =>
+  receiptFinancials(
+    { amount: Number(uploadForm.value.total_amount) || 0 },
+    uploadForm.value.vat_classification,
+  ),
+);
+
+const vatExclusiveSubtotal = computed(() => receiptAmounts.value.subtotal);
+
+const validationErrors = computed(() => {
+  const errors = [];
+
+  if (!uploadFile.value && !props.receiptToEdit) {
+    errors.push("Please select a receipt file.");
+  }
+  if (!uploadForm.value.invoice_number) {
+    errors.push("Invoice number is required.");
+  }
+  if (!uploadForm.value.transaction_date) {
+    errors.push("Transaction date is required.");
+  }
+  if (!uploadForm.value.tin) {
+    errors.push("TIN number is required.");
+  } else {
+    const tinDigits = uploadForm.value.tin.replace(/\D/g, "");
+    if (tinDigits.length < 9) {
+      errors.push("TIN must contain at least 9 digits.");
+    }
+  }
+  if (!uploadForm.value.vendor_name) {
+    errors.push("Vendor name is required.");
+  }
+  if (!uploadForm.value.expense_category_id) {
+    errors.push("Category is required.");
+  }
+  if (!uploadForm.value.vat_classification) {
+    errors.push("VAT classification is required.");
+  }
+  if (
+    uploadForm.value.total_amount === "" ||
+    uploadForm.value.total_amount == null
+  ) {
+    errors.push("Total amount is required.");
+  }
+  if (
+    uploadForm.value.vat_classification === "vat" &&
+    (uploadForm.value.vat_amount === "" || uploadForm.value.vat_amount == null)
+  ) {
+    errors.push("VAT amount could not be computed.");
+  }
+
+  for (const item of uploadForm.value.items) {
+    if (!item.name || !item.quantity || item.price === "" || item.price == null) {
+      errors.push("All expense item fields are required.");
+      break;
+    }
+  }
+
+  return errors;
 });
 
 const isDirty = computed(() => {
@@ -79,15 +143,24 @@ const {
   dismissWithConfirm,
 } = useUnsavedChanges(isDirty, isSubmitted);
 
+watch(itemsGrossTotal, (newGross) => {
+  if (uploadForm.value.items.length > 0) {
+    uploadForm.value.total_amount =
+      newGross > 0 ? Number(newGross.toFixed(2)) : "";
+  }
+});
+
 watch(
-  [itemsSubtotal, () => uploadForm.value.vat_amount],
-  ([newSubtotal, newVat]) => {
-    if (uploadForm.value.items.length > 0) {
-      const calculatedTotal = (newSubtotal || 0) + (Number(newVat) || 0);
-      uploadForm.value.total_amount =
-        calculatedTotal > 0 ? Number(calculatedTotal.toFixed(2)) : "";
-    }
+  [() => uploadForm.value.total_amount, () => uploadForm.value.vat_classification],
+  () => {
+    const amounts = receiptFinancials(
+      { amount: Number(uploadForm.value.total_amount) || 0 },
+      uploadForm.value.vat_classification,
+    );
+
+    uploadForm.value.vat_amount = amounts.vat.toFixed(2);
   },
+  { immediate: true },
 );
 
 function formatDateForInput(dateStr) {
@@ -109,8 +182,14 @@ function formatDateForInput(dateStr) {
 
 watch(
   () => props.modelValue,
-  (open) => {
-    if (!open || !props.receiptToEdit) return;
+  async (open) => {
+    if (!open) return;
+
+    if (!props.categories.length) {
+      await receiptsStore.fetchCategories();
+    }
+
+    if (!props.receiptToEdit) return;
 
     uploadFile.value = null;
     uploadFilePreview.value = props.receiptToEdit.thumbnail || "";
@@ -121,8 +200,11 @@ watch(
       vendor_name: props.receiptToEdit.vendorName || "",
       expense_category_id: props.receiptToEdit.categoryId || "",
       total_amount: props.receiptToEdit.amount || "",
-      vat_amount: props.receiptToEdit.vatAmount || "",
       vat_classification: props.receiptToEdit.vatClassification || "vat",
+      vat_amount: receiptFinancials(
+        { amount: Number(props.receiptToEdit.amount) || 0 },
+        props.receiptToEdit.vatClassification || "vat",
+      ).vat.toFixed(2),
       items: props.receiptToEdit.items?.length
         ? props.receiptToEdit.items.map((item) => ({ ...item }))
         : [],
@@ -130,34 +212,7 @@ watch(
   },
 );
 
-const isFormValid = computed(() => {
-  if (!uploadFile.value && !props.receiptToEdit) return false;
-  if (!uploadForm.value.invoice_number) return false;
-  if (!uploadForm.value.transaction_date) return false;
-  if (!uploadForm.value.tin) return false;
-  const tinDigits = uploadForm.value.tin.replace(/\D/g, "");
-  if (tinDigits.length < 9) return false;
-  if (!uploadForm.value.vendor_name) return false;
-  if (!uploadForm.value.expense_category_id) return false;
-  if (!uploadForm.value.vat_classification) return false;
-  if (
-    uploadForm.value.total_amount === "" ||
-    uploadForm.value.total_amount == null
-  )
-    return false;
-  if (
-    uploadForm.value.vat_classification === "vat" &&
-    (uploadForm.value.vat_amount === "" || uploadForm.value.vat_amount == null)
-  )
-    return false;
-
-  for (const item of uploadForm.value.items) {
-    if (!item.name || !item.quantity || item.price === "" || item.price == null)
-      return false;
-  }
-
-  return true;
-});
+const isFormValid = computed(() => validationErrors.value.length === 0);
 
 function addItem() {
   uploadForm.value.items.push({
@@ -179,12 +234,12 @@ function handleUploadFileSelect(event) {
     const validExts = ["jpg", "jpeg", "png", "pdf"];
 
     if (!validTypes.includes(file.type) && !validExts.includes(ext)) {
-      notif.error("Invalid file type. Only JPEG, PNG, or PDF allowed.");
+      notify("Invalid file type. Only JPEG, PNG, or PDF allowed.", "error");
       event.target.value = "";
       return;
     }
     if (file.size > 2 * 1024 * 1024) {
-      notif.error("File size exceeds 2MB.");
+      notify("File size exceeds 2MB.", "error");
       event.target.value = "";
       return;
     }
@@ -243,14 +298,22 @@ function close() {
 }
 
 async function saveReceipt() {
+  if (
+    props.receiptToEdit &&
+    String(props.receiptToEdit.status || "").toLowerCase() !== "processed"
+  ) {
+    notify("Only receipts with processed status can be edited.", "error");
+    return;
+  }
+
   if (!isFormValid.value) {
-    notif.error("Please fill in all required fields.");
+    notify(validationErrors.value[0] || "Please fill in all required fields.", "error");
     return;
   }
   if (uploadForm.value.tin) {
     const tinRegex = /^\d{3}-\d{3}-\d{3}(?:-\d{3})?$/;
     if (!tinRegex.test(uploadForm.value.tin)) {
-      notif.error("TIN must be in the format 000-000-000 or 000-000-000-000");
+      notify("TIN must be in the format 000-000-000 or 000-000-000-000", "error");
       return;
     }
   }
@@ -269,22 +332,22 @@ async function saveReceipt() {
     };
 
     if (props.receiptToEdit) {
-      notif.info("Saving...");
+      notify("Saving...");
       await receiptsStore.resubmitReceipt(
         props.receiptToEdit.id,
         payload,
         uploadFile.value,
       );
-      notif.success("Receipt updated.");
+      notify("Receipt updated.", "success");
     } else {
-      notif.info("Uploading receipt...");
+      notify("Uploading receipt...");
       await receiptsStore.uploadReceipt(uploadFile.value, payload);
-      notif.success("Receipt uploaded and stored successfully.");
+      notify("Receipt uploaded and stored successfully.", "success");
     }
     isSubmitted.value = true;
     close();
   } catch (e) {
-    notif.error(e.message || "Failed to upload receipt.");
+    notify(e.message || "Failed to upload receipt.", "error");
   }
 }
 
@@ -496,10 +559,6 @@ function formatCurrency(amount) {
                 <select
                   class="input appearance-none cursor-pointer"
                   v-model="uploadForm.vat_classification"
-                  @change="
-                    uploadForm.vat_classification === 'non-vat' &&
-                    (uploadForm.vat_amount = '')
-                  "
                 >
                   <option value="vat">VAT</option>
                   <option value="non-vat">Non-VAT</option>
@@ -514,7 +573,8 @@ function formatCurrency(amount) {
             <div class="grid grid-cols-2 gap-4">
               <div class="input-wrapper">
                 <label class="input-label"
-                  >Total Amount <span class="text-danger">*</span></label
+                  >Total Amount (VAT-Inclusive)
+                  <span class="text-danger">*</span></label
                 >
                 <input
                   class="input"
@@ -531,7 +591,7 @@ function formatCurrency(amount) {
                   :class="{
                     'opacity-50': uploadForm.vat_classification === 'non-vat',
                   }"
-                  >VAT Amount
+                  >VAT Amount (Inclusive)
                   <span
                     v-if="uploadForm.vat_classification === 'vat'"
                     class="text-danger"
@@ -539,13 +599,13 @@ function formatCurrency(amount) {
                   ></label
                 >
                 <input
-                  class="input disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-50"
+                  class="input disabled:opacity-70 disabled:cursor-not-allowed disabled:bg-slate-50"
                   type="number"
                   step="0.01"
                   min="0"
                   v-model="uploadForm.vat_amount"
                   placeholder="0.00"
-                  :disabled="uploadForm.vat_classification === 'non-vat'"
+                  disabled
                 />
               </div>
             </div>
@@ -594,7 +654,8 @@ function formatCurrency(amount) {
                   </div>
                   <div class="w-28 input-wrapper !mb-0">
                     <label class="input-label !text-[10px]"
-                      >Price <span class="text-danger">*</span></label
+                      >Price (Incl. VAT)
+                      <span class="text-danger">*</span></label
                     >
                     <input
                       class="input !py-1.5 !text-sm"
@@ -629,13 +690,13 @@ function formatCurrency(amount) {
                 class="bg-slate-50 rounded-xl p-5 border border-slate-100 space-y-3"
               >
                 <div class="flex justify-between text-sm">
-                  <span class="text-slate-500">Items Subtotal</span>
+                  <span class="text-slate-500">VAT-Exclusive Subtotal</span>
                   <span class="font-mono font-medium text-slate-700">{{
-                    formatCurrency(itemsSubtotal)
+                    formatCurrency(vatExclusiveSubtotal)
                   }}</span>
                 </div>
                 <div class="flex justify-between text-sm">
-                  <span class="text-slate-500">VAT Amount</span>
+                  <span class="text-slate-500">Inclusive VAT Amount</span>
                   <span class="font-mono font-medium text-slate-700">{{
                     formatCurrency(Number(uploadForm.vat_amount) || 0)
                   }}</span>
@@ -663,7 +724,7 @@ function formatCurrency(amount) {
           <button
             @click="saveReceipt"
             class="btn btn-primary !px-8"
-            :disabled="receiptsStore.isSaving || !isFormValid"
+            :disabled="receiptsStore.isSaving"
           >
             <Save class="w-4 h-4" />
             {{ receiptsStore.isSaving ? "Saving..." : "Save Receipt" }}

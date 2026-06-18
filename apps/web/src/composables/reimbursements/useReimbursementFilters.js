@@ -61,6 +61,14 @@ export function useReimbursementFilters(store) {
   const tableRows = computed(() =>
     store.items.map((item) => ({
       ...item,
+      category:
+        item.expense_category?.name ||
+        item.receipts?.find((receipt) => receipt.category?.name)?.category?.name ||
+        "Uncategorized",
+      categoryId:
+        item.expense_category_id ||
+        item.receipts?.find((receipt) => receipt.expense_category_id)?.expense_category_id ||
+        null,
       originalStatus: item.status,
       reportDescription: item.description,
       cutoffPeriod: getCutoffPeriod(item.date),

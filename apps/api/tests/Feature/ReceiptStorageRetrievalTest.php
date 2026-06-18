@@ -96,11 +96,13 @@ class ReceiptStorageRetrievalTest extends TestCase
                 'vat_classification',
                 'ocr_confidence_score',
                 'ocr_flagged',
+                'status',
                 'category',
                 'created_at',
                 'updated_at',
             ]
         ]);
+        $response->assertJsonPath('data.status', 'processed');
 
         // Assert database values
         $this->assertDatabaseHas('receipts', [
@@ -109,6 +111,7 @@ class ReceiptStorageRetrievalTest extends TestCase
             'vendor_name' => 'Ramen Nagi',
             'total_amount' => '1250.00',
             'ocr_flagged' => false, // Confidence score 92.50 is >= 80, so ocr_flagged must be false
+            'status' => 'processed',
         ]);
     }
 

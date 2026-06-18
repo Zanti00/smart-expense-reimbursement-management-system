@@ -21,7 +21,7 @@ class StoreReimbursementRequest extends FormRequest
     {
         return [
             'description' => 'required|string|max:255',
-            'category' => 'required|string|max:100',
+            'expense_category_id' => 'required|integer|exists:expense_categories,id',
             'amount' => 'required|numeric|min:0.01',
             'date' => 'required|date',
             'cutoff_period' => 'required|string|max:255',
@@ -30,6 +30,7 @@ class StoreReimbursementRequest extends FormRequest
             'receipt_ids.*' => 'exists:receipts,id',
             'receipts' => 'nullable|array',
             'receipts.*.id' => 'required_with:receipts|exists:receipts,id',
+            'receipts.*.expense_category_id' => 'nullable|integer|exists:expense_categories,id',
             'receipts.*.vendor_name' => 'nullable|string|max:255',
             'receipts.*.transaction_date' => 'nullable|date',
             'receipts.*.total_amount' => 'nullable|numeric|min:0',

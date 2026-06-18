@@ -239,6 +239,10 @@ const getFileUrl = (filePath) => {
   return `https://vbabvrcfqcmvvjwmzuwx.supabase.co/storage/v1/object/public/cash_advances/${filePath}`;
 };
 
+function categoryName(record, fallback = "Expense") {
+  return record?.category?.name || record?.expense_category?.name || record?.category || fallback;
+}
+
 const mapBackendStatusToDisplayStatus = (backendStatus, row, acceptedTotal) => {
   if (backendStatus === "pending") return "Pending";
   if (backendStatus === "liquidated") return "Liquidated";
@@ -261,7 +265,8 @@ const sourceCases = computed(() => {
           : `receipt_${rIdx + 1}.jpg`,
         merchantName: r.vendor_name || "Unknown Vendor",
         location: r.location || "N/A",
-        category: r.category || "Expense",
+        category: categoryName(r),
+        categoryId: r.expense_category_id || null,
         invoiceNumber: r.invoice_number || "N/A",
         transactionDate: r.transaction_date || r.created_at,
         tinNumber: r.tin || "N/A",
@@ -806,7 +811,8 @@ function selectAdvance(adv) {
           id: r.id,
           name: r.vendor_name || `Receipt-${r.id}`,
           ocrStatus: "done",
-          category: r.category || "General",
+          category: categoryName(r, "General"),
+          categoryId: r.expense_category_id || null,
           amount: r.total_amount,
           ocrData: {
             id: r.id,
@@ -858,6 +864,7 @@ function forwardOverpaymentToReimbursement() {
     amount: Number(receipt.ocrData?.amount ?? receipt.amount ?? 0),
     date: receipt.ocrData?.date || new Date().toISOString().slice(0, 10),
     category: receipt.category || "Other",
+    categoryId: receipt.categoryId || null,
     source: "liquidation-receipt",
     cashAdvanceId: selectedAdvance.value.id,
   }));
@@ -872,6 +879,7 @@ function forwardOverpaymentToReimbursement() {
       amount: -cashAdvanceAmount,
       date: new Date().toISOString().slice(0, 10),
       category: "Other",
+      categoryId: null,
       source: "liquidation-deduction",
       cashAdvanceId: selectedAdvance.value.id,
       vatClassification: "non-vat",

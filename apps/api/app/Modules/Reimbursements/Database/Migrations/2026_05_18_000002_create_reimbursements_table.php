@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->foreignId('receipt_id')->nullable()->constrained('receipts')->nullOnDelete();
             $table->string('description');
-            $table->string('category');
+            $table->unsignedBigInteger('expense_category_id')->nullable();
             $table->decimal('amount', 15, 2);
             $table->date('date');
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');

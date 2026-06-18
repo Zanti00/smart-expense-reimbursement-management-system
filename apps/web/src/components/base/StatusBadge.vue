@@ -14,12 +14,14 @@ const config = {
   unliquidated: { color: 'bg-amber-600',   label: 'Unliquidated' },
   overdue:      { color: 'bg-red-600',     label: 'Overdue' },
   pending:      { color: 'bg-amber-600',   label: 'Pending' },
+  processing:   { color: 'bg-blue-600',    label: 'Processing' },
   signed:       { color: 'bg-blue-600',    label: 'Signed' },
   incomplete:   { color: 'bg-amber-500',   label: 'Incomplete' }
   ,
   'automatic-rejected': { color: 'bg-red-600', label: 'Automatic Rejected' },
   'pending-admin-re-review': { color: 'bg-accent', label: 'Pending Admin Re-review' },
   'final-rejected': { color: 'bg-red-700', label: 'Final Rejected' },
+  processed: { color: 'bg-primary', label: 'Processed' },
   Processed: { color: 'bg-primary', label: 'Processed' },
   Flagged: { color: 'bg-red-600', label: 'Flagged' }
 }

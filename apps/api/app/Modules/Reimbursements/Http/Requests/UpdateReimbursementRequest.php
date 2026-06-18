@@ -30,7 +30,7 @@ class UpdateReimbursementRequest extends FormRequest
 
             // Employee self-edit fields
             'description' => 'sometimes|string|max:500',
-            'category' => 'sometimes|string|max:100',
+            'expense_category_id' => 'nullable|integer|exists:expense_categories,id',
             'amount' => 'sometimes|numeric|min:0.01',
             'date' => 'sometimes|date',
             'cutoff_period' => 'sometimes|string|max:50',
@@ -39,6 +39,7 @@ class UpdateReimbursementRequest extends FormRequest
             'receipt_ids.*' => 'integer|exists:receipts,id',
             'receipts' => 'sometimes|array',
             'receipts.*.id' => 'required_with:receipts|integer|exists:receipts,id',
+            'receipts.*.expense_category_id' => 'nullable|integer|exists:expense_categories,id',
             'receipts.*.vendor_name' => 'nullable|string|max:255',
             'receipts.*.transaction_date' => 'nullable|date',
             'receipts.*.total_amount' => 'nullable|numeric|min:0',

@@ -3,6 +3,7 @@
 namespace App\Modules\Reimbursements\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Reimbursements\Models\ExpenseCategory;
 use App\Modules\Reimbursements\Models\Receipt;
 use App\Modules\Reimbursements\Models\Reimbursement;
 use App\Modules\Users\Models\User;
@@ -46,7 +47,8 @@ class PrsWebhookController extends Controller
             'receipt.items.*.quantity' => ['required_with:receipt.items', 'integer', 'min:1'],
             'receipt.items.*.price' => ['required_with:receipt.items', 'numeric', 'gt:0'],
             'reimbursement.description' => ['required', 'string', 'max:255'],
-            'reimbursement.category' => ['required', 'string', 'max:100'],
+            'reimbursement.expense_category_id' => ['nullable', 'integer', 'exists:expense_categories,id'],
+            'reimbursement.category' => ['nullable', 'string', 'max:100'],
             'reimbursement.amount' => ['required', 'numeric', 'min:0.01'],
             'reimbursement.date' => ['required', 'date'],
             'reimbursement.cutoff_period' => ['required', 'string', 'max:255'],
@@ -80,6 +82,13 @@ class PrsWebhookController extends Controller
             $sourceUser = $payload['source_user'] ?? [];
             $receiptData = $payload['receipt'];
             $claimData = $payload['reimbursement'];
+            $expenseCategoryId = $claimData['expense_category_id']
+                ?? $receiptData['expense_category_id']
+                ?? null;
+
+            if (!$expenseCategoryId && !empty($claimData['category'])) {
+                $expenseCategoryId = ExpenseCategory::firstOrCreate(['name' => $claimData['category']])->id;
+            }
 
             $user = User::firstOrCreate(
                 ['email' => $sourceUser['email'] ?? 'prs-user-' . $payload['source_submission_id'] . '@prs.local'],
@@ -115,7 +124,7 @@ class PrsWebhookController extends Controller
                 'user_id' => $user->id,
                 'receipt_id' => $receipt->id,
                 'description' => $claimData['description'],
-                'category' => $claimData['category'],
+                'expense_category_id' => $expenseCategoryId,
                 'amount' => $claimData['amount'],
                 'date' => $claimData['date'],
                 'cutoff_period' => $claimData['cutoff_period'],

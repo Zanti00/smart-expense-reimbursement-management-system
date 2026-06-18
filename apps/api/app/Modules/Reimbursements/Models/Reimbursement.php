@@ -11,7 +11,7 @@ class Reimbursement extends Model
         'user_id',
         'receipt_id',
         'description',
-        'category',
+        'expense_category_id',
         'amount',
         'date',
         'status',
@@ -44,5 +44,10 @@ class Reimbursement extends Model
     public function receipts()
     {
         return $this->belongsToMany(Receipt::class, 'reimbursement_receipts');
+    }
+
+    public function expenseCategory()
+    {
+        return $this->belongsTo(ExpenseCategory::class, 'expense_category_id');
     }
 }

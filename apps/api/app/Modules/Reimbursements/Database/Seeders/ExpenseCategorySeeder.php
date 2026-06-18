@@ -12,17 +12,6 @@ class ExpenseCategorySeeder extends Seeder
      */
     public function run(): void
     {
-        $categories = [
-            'Meals',
-            'Travel',
-            'Supplies',
-            'Accommodation',
-            'Transportation',
-            'Others'
-        ];
-
-        foreach ($categories as $category) {
-            ExpenseCategory::firstOrCreate(['name' => $category]);
-        }
+        ExpenseCategory::ensureDefaults();
     }
 }

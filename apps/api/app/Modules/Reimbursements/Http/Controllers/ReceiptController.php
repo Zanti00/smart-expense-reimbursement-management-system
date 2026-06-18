@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Modules\Reimbursements\Services\ReceiptService;
 use App\Modules\Reimbursements\Http\Requests\StoreReceiptRequest;
 use App\Modules\Reimbursements\Http\Requests\UpdateReceiptRequest;
+use App\Modules\Reimbursements\Http\Requests\ResubmitReceiptRequest;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Auth\Access\AuthorizationException;
 
@@ -100,6 +101,32 @@ class ReceiptController extends Controller
             ]);
         } catch (AuthorizationException $e) {
             return response()->json(['message' => $e->getMessage()], 403);
+        }
+    }
+
+    /**
+     * Edit a processed receipt while keeping it processed.
+     */
+    public function resubmit(ResubmitReceiptRequest $request, $id)
+    {
+        try {
+            $receipt = $this->service->resubmitReceipt(
+                $request->user(),
+                (int)$id,
+                $request->validated(),
+                $request->file('file')
+            );
+
+            return response()->json([
+                'message' => 'Receipt updated successfully.',
+                'data' => $receipt,
+            ]);
+        } catch (AuthorizationException $e) {
+            return response()->json(['message' => $e->getMessage()], 403);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => $e->validator->errors()->first('status') ?: $e->getMessage(),
+            ], 422);
         }
     }
 }
