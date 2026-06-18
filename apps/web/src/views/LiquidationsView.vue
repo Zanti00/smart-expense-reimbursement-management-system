@@ -64,6 +64,7 @@ const reportAttachmentInput = ref(null);
 const submitting = ref(false);
 const submitted = ref(false);
 const shortfallExplanation = ref("");
+const showAdminRequestForm = ref(false);
 
 // Audit state variables
 const approvingId = ref(null);
@@ -73,14 +74,18 @@ const rejectionComment = ref("");
 const isReviewSubmitting = ref(false);
 
 const isDirty = computed(() => {
-  return receipts.value.length > 0 || reportAttachment.value !== null || shortfallExplanation.value !== "";
+  return (
+    receipts.value.length > 0 ||
+    reportAttachment.value !== null ||
+    shortfallExplanation.value !== ""
+  );
 });
 
 const {
   showConfirmModal,
   handleConfirmLeave,
   handleCancelLeave,
-  dismissWithConfirm
+  dismissWithConfirm,
 } = useUnsavedChanges(isDirty, submitted);
 
 const sortKey = ref("id");
@@ -163,7 +168,10 @@ const calculatedOutstandingBalance = computed(() => {
   return Math.max(totalExpenseAmount.value - currentBalance, 0);
 });
 const overpaymentAmount = computed(() =>
-  Math.max(totalExpenseAmount.value - numberOrZero(selectedAdvance.value?.balance), 0),
+  Math.max(
+    totalExpenseAmount.value - numberOrZero(selectedAdvance.value?.balance),
+    0,
+  ),
 );
 const needsReportAttachmentReminder = computed(
   () =>
@@ -172,12 +180,34 @@ const needsReportAttachmentReminder = computed(
       (overpaymentAmount.value > 0 && !reportAttachment.value)),
 );
 
+const currentUserId = computed(() =>
+  auth.user?.id !== null && auth.user?.id !== undefined
+    ? String(auth.user.id)
+    : null,
+);
+
+function isOwnedByCurrentUser(item) {
+  const ownerId = item?.userId ?? item?.user_id ?? item?.user?.id;
+  return (
+    currentUserId.value !== null &&
+    ownerId !== null &&
+    ownerId !== undefined &&
+    String(ownerId) === currentUserId.value
+  );
+}
+
 const employeeOutstandingAdvances = computed(() =>
-  store.items.filter(
-    (item) =>
-      ["signed", "overdue", "incomplete"].includes(item.status) &&
-      item.acknowledgedAt,
-  ),
+  store.items.filter((item) => {
+    const status = String(item.status || "").toLowerCase();
+    const isEligibleAdvance =
+      ["signed", "overdue", "incomplete"].includes(status) &&
+      item.acknowledgedAt;
+
+    if (!isEligibleAdvance) return false;
+    if (!auth.isAdmin) return true;
+
+    return isOwnedByCurrentUser(item);
+  }),
 );
 
 const employeeFilteredAdvances = computed(() => {
@@ -240,7 +270,12 @@ const getFileUrl = (filePath) => {
 };
 
 function categoryName(record, fallback = "Expense") {
-  return record?.category?.name || record?.expense_category?.name || record?.category || fallback;
+  return (
+    record?.category?.name ||
+    record?.expense_category?.name ||
+    record?.category ||
+    fallback
+  );
 }
 
 const mapBackendStatusToDisplayStatus = (backendStatus, row, acceptedTotal) => {
@@ -430,7 +465,12 @@ const reviewOutstandingBalance = computed(() =>
 
 const reviewStatus = computed(() =>
   reviewingCase.value
-    ? calculateLiquidationStatus(reviewingCase.value, acceptedReviewTotal.value)
+    ? reviewReceipts.value.some((receipt) => receipt.decision === "rejected")
+      ? "Rejected"
+      : calculateLiquidationStatus(
+          reviewingCase.value,
+          acceptedReviewTotal.value,
+        )
     : "Incomplete",
 );
 const isReviewingOwnLiquidation = computed(() => {
@@ -556,6 +596,17 @@ const employeeLiquidationKpis = computed(() => {
 });
 
 function employeeAdvanceStatus(advance) {
+  const linkedLiquidation = liqStore.settlements.find(
+    (settlement) => settlement.cash_advance_id === advance.id,
+  );
+  const linkedLiquidationStatus = String(
+    linkedLiquidation?.status || "",
+  ).toLowerCase();
+
+  if (linkedLiquidationStatus === "rejected") return "Rejected";
+  if (linkedLiquidationStatus === "pending") return "Under Review";
+  if (linkedLiquidationStatus === "liquidated") return "Liquidated";
+
   if (liqStore.calculateAging(advance).isOverdue) return "Overdue";
   const status = String(advance.status || "pending").toLowerCase();
   if (status === "approved") return "Approved";
@@ -565,6 +616,13 @@ function employeeAdvanceStatus(advance) {
   if (status === "pending") return "Pending";
   if (status === "under-review") return "Under Review";
   return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+function employeeAdvanceBadgeStatus(advance) {
+  const derivedStatus = employeeAdvanceStatus(advance);
+  return derivedStatus === "Overdue"
+    ? "overdue"
+    : derivedStatus.toLowerCase().replace(/\s+/g, "-");
 }
 
 function employeeSortValue(advance, key) {
@@ -669,11 +727,20 @@ function cancelReject() {
 
 async function confirmApprove() {
   if (!approvingId.value || !confirmPassword.value) return;
+  if (rejectionComment.value.trim() && rejectionComment.value.trim().length < 10) {
+    addToast({
+      title: "Validation Error",
+      message: "Admin note must be at least 10 characters.",
+      type: "danger",
+    });
+    return;
+  }
   isReviewSubmitting.value = true;
   try {
     await liqStore.auditSettlement(approvingId.value, {
       status: "approved",
       password: confirmPassword.value,
+      admin_note: rejectionComment.value.trim() || null,
     });
     addToast({
       title: "Settlement Approved",
@@ -740,7 +807,9 @@ const existingLiquidation = computed(() => {
   // If the cash advance is under-review or incomplete, look for a pending/rejected liquidation
   if (status === "under-review" || status === "incomplete") {
     return liqStore.settlements.find(
-      (s) => s.cash_advance_id === selectedAdvance.value.id && ["pending", "rejected"].includes(s.status)
+      (s) =>
+        s.cash_advance_id === selectedAdvance.value.id &&
+        ["pending", "rejected"].includes(s.status),
     );
   }
   return null;
@@ -795,17 +864,19 @@ function selectAdvance(adv) {
   dismissWithConfirm(() => {
     selectedAdvance.value = adv;
     submitted.value = false;
-    
+
     // Find if there is an existing pending or rejected liquidation in liqStore.settlements
     const existingLiq = liqStore.settlements.find(
-      (s) => s.cash_advance_id === adv.id && ["pending", "rejected"].includes(s.status)
+      (s) =>
+        s.cash_advance_id === adv.id &&
+        ["pending", "rejected"].includes(s.status),
     );
-    
+
     if (existingLiq) {
       shortfallExplanation.value = existingLiq.shortfall_explanation || "";
       // If it's a string filepath from backend, reportAttachment can be set to it
       reportAttachment.value = existingLiq.report_file_path;
-      
+
       if (existingLiq.receipts && Array.isArray(existingLiq.receipts)) {
         receipts.value = existingLiq.receipts.map((r) => ({
           id: r.id,
@@ -822,7 +893,7 @@ function selectAdvance(adv) {
             vat: r.vat_amount || 0,
             tin: r.tin,
             invoiceNumber: r.invoice_number,
-          }
+          },
         }));
       } else {
         receipts.value = [];
@@ -832,6 +903,28 @@ function selectAdvance(adv) {
       reportAttachment.value = null;
       shortfallExplanation.value = "";
     }
+  });
+}
+
+function resetLiquidationComposer() {
+  selectedAdvance.value = null;
+  receipts.value = [];
+  reportAttachment.value = null;
+  shortfallExplanation.value = "";
+  submitted.value = false;
+}
+
+function openAdminRequestForm() {
+  dismissWithConfirm(() => {
+    resetLiquidationComposer();
+    showAdminRequestForm.value = true;
+  });
+}
+
+function closeAdminRequestForm() {
+  dismissWithConfirm(() => {
+    resetLiquidationComposer();
+    showAdminRequestForm.value = false;
   });
 }
 
@@ -846,6 +939,34 @@ function handleAmountChange(receipt) {
     const amt = Number(receipt.ocrData.amount) || 0;
     receipt.ocrData.vat = Number(vatOf(amt).toFixed(2));
   }
+}
+
+function formatTinValue(value, { padLastBlock = false } = {}) {
+  let digits = String(value || "")
+    .replace(/\D/g, "")
+    .slice(0, 12);
+  if (padLastBlock && digits.length === 9) {
+    digits = `${digits}000`;
+  }
+
+  const parts = [];
+  if (digits.length > 0) parts.push(digits.slice(0, 3));
+  if (digits.length > 3) parts.push(digits.slice(3, 6));
+  if (digits.length > 6) parts.push(digits.slice(6, 9));
+  if (digits.length > 9) parts.push(digits.slice(9, 12));
+  return parts.join("-");
+}
+
+function handleTinInput(receipt) {
+  if (!receipt?.ocrData) return;
+  receipt.ocrData.tin = formatTinValue(receipt.ocrData.tin);
+}
+
+function handleTinBlur(receipt) {
+  if (!receipt?.ocrData) return;
+  receipt.ocrData.tin = formatTinValue(receipt.ocrData.tin, {
+    padLastBlock: true,
+  });
 }
 
 function clearReportAttachment() {
@@ -957,8 +1078,7 @@ function toggleSort(column) {
 function getSortValue(row, key) {
   if (["cashAdvanceAmount", "outstandingBalance"].includes(key))
     return Number(row[key] || 0);
-  if (["dueDate"].includes(key))
-    return new Date(row[key] || 0).getTime();
+  if (["dueDate"].includes(key)) return new Date(row[key] || 0).getTime();
   if (key === "actions") return row.id;
   return String(row[key] || "").toLowerCase();
 }
@@ -968,8 +1088,8 @@ function openReview(row) {
     reviewDrafts.value[row.id] = {
       receipts: row.receipts.map((receipt) => ({
         ...receipt,
-        decision: "accepted",
-        notes: "",
+        decision: receipt.decision || "accepted",
+        notes: receipt.notes || "",
         detailsOpen: false,
       })),
       finalizedStatus: "",
@@ -1012,7 +1132,8 @@ function requestReceiptDecision(decision) {
   if (isReviewingOwnLiquidation.value) {
     addToast({
       title: "Action Not Allowed",
-      message: "You cannot process receipts from your own liquidation settlement.",
+      message:
+        "You cannot process receipts from your own liquidation settlement.",
       type: "danger",
     });
     return;
@@ -1028,7 +1149,28 @@ function cancelReceiptDecision() {
 function confirmReceiptDecision() {
   if (!selectedReceipt.value || !pendingReceiptDecision.value) return;
   setReceiptDecision(selectedReceipt.value.id, pendingReceiptDecision.value);
+  if (pendingReceiptDecision.value === "rejected") {
+    pendingReceiptDecision.value = "";
+    receiptDetailsOpen.value = false;
+    addToast({
+      title: "Settlement Rejection Required",
+      message:
+        "Rejecting a receipt also rejects the entire liquidation settlement.",
+      type: "danger",
+    });
+    openRejectModal();
+    return;
+  }
   pendingReceiptDecision.value = "";
+}
+
+function handleReceiptUploadError(payload) {
+  addToast({
+    title: "Upload Failed",
+    message:
+      payload?.message || "One or more receipt files could not be uploaded.",
+    type: "danger",
+  });
 }
 
 function finalizeLiquidation() {
@@ -1040,52 +1182,96 @@ function finalizeLiquidation() {
 </script>
 
 <template>
-  <div
-    v-if="auth.isAdmin"
-    class="mx-auto flex w-full max-w-7xl flex-col gap-6 font-sans"
-  >
+  <div class="flex flex-col w-full gap-6 mx-auto font-sans max-w-7xl">
     <section
       class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"
     >
       <div class="min-w-0">
-        <div class="mb-2 flex items-center gap-2">
-          <ArchiveRestore class="h-3.5 w-3.5 text-accent" />
-          <span class="section-label">Settlement Operations</span>
+        <div class="flex items-center gap-2 mb-2">
+          <component
+            :is="
+              auth.isAdmin && !showAdminRequestForm
+                ? ArchiveRestore
+                : FilePieChart
+            "
+            class="h-3.5 w-3.5 text-accent"
+          />
+          <span class="section-label">{{
+            auth.isAdmin && !showAdminRequestForm
+              ? "Settlement Operations"
+              : "Liquidation Workflow"
+          }}</span>
         </div>
         <h1
-          class="font-heading text-2xl font-bold leading-tight text-slate-800"
+          class="text-2xl font-bold leading-tight font-heading text-slate-800"
         >
-          Liquidation Console
+          {{
+            auth.isAdmin && !showAdminRequestForm
+              ? "Liquidation Console"
+              : "Liquidation"
+          }}
         </h1>
         <p class="mt-1 text-sm text-slate-400">
-          Review employee liquidation reports, receipts, and settlement balances
+          {{
+            auth.isAdmin && !showAdminRequestForm
+              ? "Review employee liquidation reports, receipts, and settlement balances"
+              : "Reconcile outstanding advances and settle balances"
+          }}
         </p>
       </div>
     </section>
 
     <BaseKpiGrid
+      v-if="auth.isAdmin && !showAdminRequestForm"
       :kpis="liquidationKpis"
       gridClasses="grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4"
       :isLoading="store.isLoading"
       :skeletonCount="4"
     />
 
-      <BaseUtilityToolbar
-        v-model:search="searchQuery"
-        v-model:status-value="activeStatus"
-        :statuses="statusFilters"
-        searchPlaceholder="Search employee, status, or amount..."
-      />
+    <div class="grid justify-between grid-cols-3">
+      <div class="col-span-2">
+        <BaseUtilityToolbar
+          v-if="auth.isAdmin && !showAdminRequestForm"
+          v-model:search="searchQuery"
+          v-model:status-value="activeStatus"
+          :statuses="statusFilters"
+          searchPlaceholder="Search employee, status, or amount..."
+        />
+      </div>
+      <div v-if="auth.isAdmin" class="flex justify-end col-span-1">
+        <button
+          v-if="!showAdminRequestForm"
+          id="admin-new-liquidation-request-btn"
+          class="inline-flex min-h-[42px] w-full items-center justify-center gap-2 rounded-lg bg-accent px-5 font-heading text-sm font-bold text-white shadow-sm transition-all duration-200 ease-out hover:bg-accent-600 hover:shadow-xl hover:scale-[1.01] active:scale-[0.98] sm:w-fit"
+          type="button"
+          @click="openAdminRequestForm"
+        >
+          <Upload class="w-4 h-4" />
+          New Request
+        </button>
+        <button
+          v-else
+          class="inline-flex min-h-[42px] w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-5 font-heading text-sm font-bold text-slate-700 shadow-sm transition-all duration-200 ease-out hover:bg-slate-50 hover:shadow-md sm:w-fit"
+          type="button"
+          @click="closeAdminRequestForm"
+        >
+          <ArrowLeft class="w-4 h-4" />
+          Back to Queue
+        </button>
+      </div>
+    </div>
 
     <section
-      class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+      v-if="auth.isAdmin && !showAdminRequestForm"
+      class="overflow-hidden bg-white border shadow-sm rounded-xl border-slate-200"
     >
       <div
-        class="flex flex-col gap-1 border-b border-slate-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+        class="flex flex-col gap-1 px-5 py-4 bg-white border-b border-slate-200 sm:flex-row sm:items-center sm:justify-between"
       >
         <div>
           <h2
-            class="font-heading text-base font-bold leading-tight text-slate-800"
+            class="text-base font-bold leading-tight font-heading text-slate-800"
           >
             Liquidation Management
           </h2>
@@ -1116,7 +1302,7 @@ function finalizeLiquidation() {
                 "
               >
                 <button
-                  class="inline-flex w-full items-center gap-2 transition-colors hover:text-accent"
+                  class="inline-flex items-center w-full gap-2 transition-colors hover:text-accent"
                   :class="
                     column.align === 'right'
                       ? 'justify-end'
@@ -1170,9 +1356,7 @@ function finalizeLiquidation() {
                       col === 1 ? 'w-24 sm:w-32' : '',
                       col === 2 ? 'w-24 sm:w-32' : '',
                       [3, 4].includes(col) ? 'ml-auto w-20 sm:w-24' : '',
-                      ![1, 2, 3, 4, 5, 6].includes(col)
-                        ? 'w-20 sm:w-28'
-                        : '',
+                      ![1, 2, 3, 4, 5, 6].includes(col) ? 'w-20 sm:w-28' : '',
                     ]"
                   ></div>
                 </td>
@@ -1181,7 +1365,7 @@ function finalizeLiquidation() {
             <tr v-else-if="sortedRows.length === 0">
               <td
                 :colspan="tableColumns.length"
-                class="px-5 py-10 text-center text-sm font-semibold text-slate-400"
+                class="px-5 py-10 text-sm font-semibold text-center text-slate-400"
               >
                 No liquidation reports found.
               </td>
@@ -1190,7 +1374,7 @@ function finalizeLiquidation() {
               <tr
                 v-for="row in paginatedRows"
                 :key="row.id"
-                class="whitespace-nowrap transition-colors duration-200 ease-out hover:bg-slate-50/80"
+                class="transition-colors duration-200 ease-out whitespace-nowrap hover:bg-slate-50/80"
               >
                 <td class="px-5 py-5 text-sm font-semibold text-slate-700">
                   {{ row.requestorName }}
@@ -1198,11 +1382,11 @@ function finalizeLiquidation() {
                 <td class="px-5 py-5 text-sm text-slate-500">
                   {{ formatDateOnly(row.dueDate) }}
                 </td>
-                <td class="px-5 py-5 text-right text-sm font-bold text-primary">
+                <td class="px-5 py-5 text-sm font-bold text-right text-primary">
                   {{ formatPeso(row.cashAdvanceAmount) }}
                 </td>
                 <td
-                  class="px-5 py-5 text-right text-sm font-semibold text-slate-700"
+                  class="px-5 py-5 text-sm font-semibold text-right text-slate-700"
                 >
                   {{ formatPeso(row.outstandingBalance) }}
                 </td>
@@ -1234,26 +1418,26 @@ function finalizeLiquidation() {
     </section>
 
     <div
-      v-if="reviewingCase"
+      v-if="auth.isAdmin && !showAdminRequestForm && reviewingCase"
       class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-[1px]"
     >
       <div
         class="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl"
       >
         <header
-          class="flex items-center justify-between border-b border-slate-200 bg-slate-50/80 px-6 py-4"
+          class="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50/80"
         >
           <div class="min-w-0">
-            <div class="mb-1 flex items-center gap-2">
-              <FileText class="h-4 w-4 text-accent" />
+            <div class="flex items-center gap-2 mb-1">
+              <FileText class="w-4 h-4 text-accent" />
               <span class="section-label">Liquidation Review</span>
             </div>
-            <h2 class="font-heading text-xl font-bold text-primary">
+            <!-- <h2 class="text-xl font-bold font-heading text-primary">
               {{ reviewingCase.id }} / {{ reviewingCase.advanceId }}
-            </h2>
+            </h2> -->
           </div>
           <button
-            class="inline-flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-danger"
+            class="inline-flex items-center justify-center w-10 h-10 transition-colors rounded-full text-slate-500 hover:bg-slate-100 hover:text-danger"
             type="button"
             title="Close review"
             @click="closeReview"
@@ -1262,30 +1446,30 @@ function finalizeLiquidation() {
           </button>
         </header>
 
-        <div class="flex-1 space-y-5 overflow-y-auto bg-slate-50/40 px-6 py-5">
+        <div class="flex-1 px-6 py-5 space-y-5 overflow-y-auto bg-slate-50/40">
           <section
-            class="grid grid-cols-1 gap-4 rounded-lg border border-slate-200 bg-white p-4 md:grid-cols-4"
+            class="grid grid-cols-1 gap-4 p-4 bg-white border rounded-lg border-slate-200 md:grid-cols-4"
           >
-            <div>
-              <p class="section-label mb-1">ID Code</p>
+            <!-- <div>
+              <p class="mb-1 section-label">ID Code</p>
               <p class="font-mono text-sm font-bold text-slate-900">
                 {{ reviewingCase.id }}
               </p>
             </div>
             <div>
-              <p class="section-label mb-1">Date</p>
+              <p class="mb-1 section-label">Date</p>
               <p class="text-sm font-bold text-slate-800">
                 {{ formatDateOnly(reviewingCase.dateOfAdvances) }}
               </p>
-            </div>
+            </div> -->
             <div>
-              <p class="section-label mb-1">Name of Employee</p>
+              <p class="mb-1 section-label">Name of Employee</p>
               <p class="text-sm font-bold text-slate-800">
                 {{ reviewingCase.requestorName }}
               </p>
             </div>
             <div>
-              <p class="section-label mb-1">Settlement Due Date</p>
+              <p class="mb-1 section-label">Settlement Due Date</p>
               <p class="text-sm font-bold text-slate-800">
                 {{ formatDateOnly(reviewingCase.dueDate) }}
               </p>
@@ -1293,13 +1477,13 @@ function finalizeLiquidation() {
           </section>
 
           <section class="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div class="rounded-lg border border-accent/20 bg-white p-5">
-              <p class="section-label mb-2">Original Cash Advance Amount</p>
-              <p class="font-heading text-3xl font-bold text-primary">
+            <div class="p-5 bg-white border rounded-lg border-accent/20">
+              <p class="mb-2 section-label">Original Cash Advance Amount</p>
+              <p class="text-3xl font-bold font-heading text-primary">
                 {{ formatPeso(reviewingCase.cashAdvanceAmount) }}
               </p>
             </div>
-            <div class="rounded-lg border border-slate-200 bg-white p-5">
+            <div class="p-5 bg-white border rounded-lg border-slate-200">
               <div class="flex items-center justify-between gap-3">
                 <p class="section-label">Ending Balance</p>
                 <span
@@ -1311,7 +1495,7 @@ function finalizeLiquidation() {
                   {{ reviewStatus }}
                 </span>
               </div>
-              <p class="mt-2 font-heading text-3xl font-bold text-primary">
+              <p class="mt-2 text-3xl font-bold font-heading text-primary">
                 {{ formatPeso(reviewOutstandingBalance) }}
               </p>
             </div>
@@ -1320,7 +1504,7 @@ function finalizeLiquidation() {
           <section class="space-y-4">
             <div class="flex items-center justify-between gap-3">
               <div>
-                <h3 class="font-heading text-base font-bold text-slate-800">
+                <h3 class="text-base font-bold font-heading text-slate-800">
                   Submitted Receipt Audit
                 </h3>
                 <p class="text-xs text-slate-400">
@@ -1337,24 +1521,24 @@ function finalizeLiquidation() {
               <article
                 v-for="receipt in reviewReceipts"
                 :key="receipt.id"
-                class="overflow-hidden rounded-xl border border-slate-200 bg-white transition-shadow hover:shadow-md"
+                class="overflow-hidden transition-shadow bg-white border rounded-xl border-slate-200 hover:shadow-md"
               >
                 <div class="aspect-[4/5] overflow-hidden bg-slate-100">
                   <img
                     :src="getFileUrl(receipt.filePath)"
                     alt="Scanned receipt"
-                    class="h-full w-full object-cover object-top transition-transform duration-500 hover:scale-105"
+                    class="object-cover object-top w-full h-full transition-transform duration-500 hover:scale-105"
                   />
                 </div>
                 <div class="flex flex-col gap-3 p-5">
                   <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0">
                       <h4
-                        class="truncate font-heading text-sm font-bold text-slate-900"
+                        class="text-sm font-bold truncate font-heading text-slate-900"
                       >
                         {{ receipt.merchantName }}
                       </h4>
-                      <p class="truncate text-xs text-slate-400">
+                      <p class="text-xs truncate text-slate-400">
                         {{ receipt.location }}
                       </p>
                     </div>
@@ -1376,7 +1560,7 @@ function finalizeLiquidation() {
                       class="inline-flex rounded-md bg-accent-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-accent"
                       >{{ receipt.category }}</span
                     >
-                    <span class="font-heading text-sm font-bold text-primary">{{
+                    <span class="text-sm font-bold font-heading text-primary">{{
                       formatPeso(receipt.amount || 0)
                     }}</span>
                   </div>
@@ -1385,7 +1569,7 @@ function finalizeLiquidation() {
                     type="button"
                     @click="viewReceiptDetails(receipt)"
                   >
-                    <Eye class="h-4 w-4" />
+                    <Eye class="w-4 h-4" />
                     View Receipt Details
                   </button>
                 </div>
@@ -1394,17 +1578,27 @@ function finalizeLiquidation() {
           </section>
 
           <section
+            v-if="reviewingCase.adminNote"
+            class="p-5 space-y-2 bg-white border rounded-xl border-slate-200"
+          >
+            <p class="section-label">Admin Notes</p>
+            <p class="text-sm leading-relaxed text-slate-700">
+              {{ reviewingCase.adminNote }}
+            </p>
+          </section>
+
+          <section
             v-if="reviewingCase.reportFilePath"
-            class="rounded-xl border border-slate-200 bg-white p-5 space-y-4"
+            class="p-5 space-y-4 bg-white border rounded-xl border-slate-200"
           >
             <div class="flex items-center gap-3">
               <span
-                class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent"
+                class="inline-flex items-center justify-center w-10 h-10 rounded-lg shrink-0 bg-accent/10 text-accent"
               >
-                <FileText class="h-5 w-5" />
+                <FileText class="w-5 h-5" />
               </span>
               <div>
-                <h3 class="font-heading text-base font-bold text-slate-800">
+                <h3 class="text-base font-bold font-heading text-slate-800">
                   Report Letter Attachment
                 </h3>
                 <p class="text-xs text-slate-400">
@@ -1417,13 +1611,13 @@ function finalizeLiquidation() {
               target="_blank"
               class="inline-flex w-fit items-center justify-center gap-2 rounded-lg bg-slate-100 px-4 py-2.5 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-200"
             >
-              <Download class="h-4 w-4" />
+              <Download class="w-4 h-4" />
               View / Download Report Letter
             </a>
           </section>
         </div>
 
-        <footer class="relative border-t border-slate-200 bg-white px-6 py-4">
+        <footer class="relative px-6 py-4 bg-white border-t border-slate-200">
           <div
             v-if="
               reviewingCase.status !== 'Liquidated' &&
@@ -1445,21 +1639,21 @@ function finalizeLiquidation() {
             </p>
             <div class="flex gap-2">
               <button
-                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-5 text-sm font-bold text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                class="inline-flex items-center justify-center gap-2 px-5 text-sm font-bold text-red-700 transition-colors border border-red-200 rounded-lg min-h-11 bg-red-50 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
                 type="button"
                 :disabled="isReviewingOwnLiquidation"
                 @click="openRejectModal"
               >
-                <XCircle class="h-4 w-4" />
+                <XCircle class="w-4 h-4" />
                 Reject Settlement
               </button>
               <button
-                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-emerald-800 px-5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-60"
+                class="inline-flex items-center justify-center gap-2 px-5 text-sm font-bold text-white transition-colors rounded-lg shadow-sm min-h-11 bg-emerald-800 hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-60"
                 type="button"
                 :disabled="isReviewingOwnLiquidation"
                 @click="openApproveModal"
               >
-                <ShieldCheck class="h-4 w-4" />
+                <ShieldCheck class="w-4 h-4" />
                 Accept as Liquidation
               </button>
             </div>
@@ -1481,7 +1675,7 @@ function finalizeLiquidation() {
             </div>
             <div
               v-if="reviewingCase.adminNote"
-              class="text-xs text-slate-500 max-w-md italic"
+              class="max-w-md text-xs italic text-slate-500"
             >
               Note: "{{ reviewingCase.adminNote }}"
             </div>
@@ -1498,53 +1692,53 @@ function finalizeLiquidation() {
         class="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl"
       >
         <header
-          class="flex items-center justify-between border-b border-primary/10 bg-primary px-5 py-4 text-white"
+          class="flex items-center justify-between px-5 py-4 text-white border-b border-primary/10 bg-primary"
         >
-          <div class="flex min-w-0 items-center gap-4">
+          <div class="flex items-center min-w-0 gap-4">
             <button
-              class="inline-flex items-center gap-2 rounded-md px-2 py-1 text-xs font-bold text-white/90 transition-colors hover:bg-white/10"
+              class="inline-flex items-center gap-2 px-2 py-1 text-xs font-bold transition-colors rounded-md text-white/90 hover:bg-white/10"
               type="button"
               @click="closeReceiptDetails"
             >
-              <ArrowLeft class="h-4 w-4" />
+              <ArrowLeft class="w-4 h-4" />
               Back
             </button>
-            <div class="h-6 w-px bg-white/20" />
-            <div class="flex min-w-0 items-center gap-2">
+            <div class="w-px h-6 bg-white/20" />
+            <div class="flex items-center min-w-0 gap-2">
               <span
-                class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10"
+                class="inline-flex items-center justify-center w-8 h-8 rounded-lg shrink-0 bg-white/10"
               >
-                <CalendarDays class="h-4 w-4" />
+                <CalendarDays class="w-4 h-4" />
               </span>
               <div class="min-w-0">
-                <h3 class="truncate font-heading text-lg font-bold text-white">
+                <h3 class="text-lg font-bold text-white truncate font-heading">
                   Receipt Details
                 </h3>
-                <p class="truncate text-xs font-semibold text-white/65">
+                <p class="text-xs font-semibold truncate text-white/65">
                   AI-scanned liquidation receipt extraction
                 </p>
               </div>
             </div>
           </div>
           <button
-            class="inline-flex h-9 w-9 items-center justify-center rounded-full text-white/85 transition-colors hover:bg-white/10 hover:text-white"
+            class="inline-flex items-center justify-center transition-colors rounded-full h-9 w-9 text-white/85 hover:bg-white/10 hover:text-white"
             type="button"
             title="Close receipt details"
             @click="closeReview"
           >
-            <X class="h-5 w-5" />
+            <X class="w-5 h-5" />
           </button>
         </header>
 
-        <div class="flex-1 overflow-y-auto bg-slate-50 p-5 scrollbar-thin">
+        <div class="flex-1 p-5 overflow-y-auto bg-slate-50 scrollbar-thin">
           <div
-            class="mb-4 flex flex-col gap-3 rounded-lg border border-accent/20 bg-accent-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+            class="flex flex-col gap-3 px-4 py-3 mb-4 border rounded-lg border-accent/20 bg-accent-50 sm:flex-row sm:items-center sm:justify-between"
           >
             <div class="flex items-center gap-3">
               <span
-                class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-accent shadow-sm"
+                class="inline-flex items-center justify-center bg-white rounded-lg shadow-sm h-9 w-9 shrink-0 text-accent"
               >
-                <Sparkles class="h-4 w-4" />
+                <Sparkles class="w-4 h-4" />
               </span>
               <div>
                 <p
@@ -1567,17 +1761,17 @@ function finalizeLiquidation() {
           </div>
 
           <div
-            class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+            class="overflow-hidden bg-white border shadow-sm rounded-xl border-slate-200"
           >
             <div class="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)]">
               <aside
-                class="border-b border-slate-200 bg-slate-100/70 p-5 lg:border-b-0 lg:border-r"
+                class="p-5 border-b border-slate-200 bg-slate-100/70 lg:border-b-0 lg:border-r"
               >
-                <div class="mb-4 flex items-center justify-between gap-3">
+                <div class="flex items-center justify-between gap-3 mb-4">
                   <div class="min-w-0">
                     <p class="kpi-label text-slate-400">Receipt Preview</p>
                     <h4
-                      class="mt-1 truncate font-heading text-base font-bold text-slate-900"
+                      class="mt-1 text-base font-bold truncate font-heading text-slate-900"
                     >
                       {{ selectedReceipt.merchantName }}
                     </h4>
@@ -1589,7 +1783,7 @@ function finalizeLiquidation() {
                   </span>
                 </div>
                 <div
-                  class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm"
+                  class="overflow-hidden bg-white border rounded-lg shadow-sm border-slate-200"
                 >
                   <img
                     :src="getFileUrl(selectedReceipt.filePath)"
@@ -1601,12 +1795,12 @@ function finalizeLiquidation() {
                   class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-accent/20 bg-white px-3 py-2.5 text-xs font-bold text-accent transition-colors hover:bg-accent-50"
                   type="button"
                 >
-                  <Download class="h-4 w-4" />
+                  <Download class="w-4 h-4" />
                   Download Receipt
                 </button>
               </aside>
 
-              <section class="space-y-5 p-5">
+              <section class="p-5 space-y-5">
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <label class="space-y-1">
                     <span class="input-label">Invoice Number</span>
@@ -1620,12 +1814,12 @@ function finalizeLiquidation() {
                     <span class="input-label">Transaction Date</span>
                     <span class="relative block">
                       <input
-                        class="input pr-10"
+                        class="pr-10 input"
                         readonly
                         :value="selectedReceipt.transactionDate"
                       />
                       <CalendarDays
-                        class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                        class="absolute w-4 h-4 -translate-y-1/2 pointer-events-none right-3 top-1/2 text-slate-400"
                       />
                     </span>
                   </label>
@@ -1635,7 +1829,7 @@ function finalizeLiquidation() {
                       <span
                         class="inline-flex items-center gap-1 rounded-full bg-accent-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent"
                       >
-                        <Sparkles class="h-3 w-3" />
+                        <Sparkles class="w-3 h-3" />
                         AI Read
                       </span>
                     </span>
@@ -1662,7 +1856,7 @@ function finalizeLiquidation() {
                         :value="selectedReceipt.location"
                       />
                       <MapPin
-                        class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-accent"
+                        class="absolute w-4 h-4 -translate-y-1/2 pointer-events-none left-3 top-1/2 text-accent"
                       />
                     </span>
                   </label>
@@ -1674,7 +1868,7 @@ function finalizeLiquidation() {
                       <span
                         class="inline-flex items-center gap-1 rounded-full bg-accent-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent"
                       >
-                        <Sparkles class="h-3 w-3" />
+                        <Sparkles class="w-3 h-3" />
                         AI Detected
                       </span>
                     </span>
@@ -1685,16 +1879,16 @@ function finalizeLiquidation() {
                 </div>
 
                 <div
-                  class="overflow-hidden rounded-lg border border-slate-200 bg-white"
+                  class="overflow-hidden bg-white border rounded-lg border-slate-200"
                 >
-                  <div class="border-b border-slate-200 bg-slate-50 px-4 py-3">
+                  <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
                     <h4
                       class="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500"
                     >
                       Order Items
                     </h4>
                   </div>
-                  <table class="w-full border-collapse text-left text-sm">
+                  <table class="w-full text-sm text-left border-collapse">
                     <thead>
                       <tr
                         class="border-b border-slate-100 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-400"
@@ -1716,7 +1910,7 @@ function finalizeLiquidation() {
                           {{ item.quantity }}
                         </td>
                         <td
-                          class="px-4 py-3 text-right font-semibold text-slate-700"
+                          class="px-4 py-3 font-semibold text-right text-slate-700"
                         >
                           {{ formatPeso(item.price) }}
                         </td>
@@ -1726,12 +1920,12 @@ function finalizeLiquidation() {
                 </div>
 
                 <div
-                  class="grid grid-cols-1 gap-3 border-t border-slate-200 pt-4 sm:grid-cols-3"
+                  class="grid grid-cols-1 gap-3 pt-4 border-t border-slate-200 sm:grid-cols-3"
                 >
                   <label class="space-y-1">
                     <span class="input-label">Subtotal</span>
                     <input
-                      class="input font-semibold"
+                      class="font-semibold input"
                       readonly
                       :value="formatPeso(selectedReceipt.subtotal)"
                     />
@@ -1739,16 +1933,16 @@ function finalizeLiquidation() {
                   <label class="space-y-1">
                     <span class="input-label">Tax (VAT)</span>
                     <input
-                      class="input font-semibold"
+                      class="font-semibold input"
                       readonly
                       :value="formatPeso(selectedReceipt.vat)"
                     />
                   </label>
                   <div
-                    class="rounded-lg border border-accent/20 bg-accent-50 p-3"
+                    class="p-3 border rounded-lg border-accent/20 bg-accent-50"
                   >
                     <p class="input-label text-accent">Orders Total</p>
-                    <p class="mt-1 font-heading text-xl font-bold text-primary">
+                    <p class="mt-1 text-xl font-bold font-heading text-primary">
                       {{ formatPeso(selectedReceipt.amount || 0) }}
                     </p>
                   </div>
@@ -1757,12 +1951,12 @@ function finalizeLiquidation() {
                 <footer
                   class="flex items-center gap-2 text-xs font-semibold text-slate-400"
                 >
-                  <FileText class="h-4 w-4" />
+                  <FileText class="w-4 h-4" />
                   Uploaded with receipt {{ selectedReceipt.id }}
                 </footer>
 
                 <div
-                  class="rounded-xl border border-slate-200 bg-slate-50/70 p-4"
+                  class="p-4 border rounded-xl border-slate-200 bg-slate-50/70"
                 >
                   <label class="space-y-2">
                     <span class="input-label"
@@ -1770,7 +1964,7 @@ function finalizeLiquidation() {
                     >
                     <textarea
                       v-model="selectedReceipt.notes"
-                      class="input min-h-24 resize-none bg-white"
+                      class="bg-white resize-none input min-h-24"
                       placeholder="Leave comments or auditor feedback for this receipt..."
                     />
                   </label>
@@ -1780,25 +1974,25 @@ function finalizeLiquidation() {
           </div>
         </div>
 
-        <div class="border-t border-slate-200 bg-white px-5 py-4">
+        <div class="px-5 py-4 bg-white border-t border-slate-200">
           <div
             v-if="pendingReceiptDecision"
-            class="flex flex-col gap-3 rounded-lg border border-accent/20 bg-accent-50 p-4 sm:flex-row sm:items-center sm:justify-between"
+            class="flex flex-col gap-3 p-4 border rounded-lg border-accent/20 bg-accent-50 sm:flex-row sm:items-center sm:justify-between"
           >
             <p class="text-sm font-semibold text-primary">
               Are you sure you want to {{ pendingReceiptDecision }} this
               receipt?
             </p>
-            <div class="flex shrink-0 items-center gap-2">
+            <div class="flex items-center gap-2 shrink-0">
               <button
-                class="inline-flex min-h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50"
+                class="inline-flex items-center justify-center px-4 text-xs font-bold transition-colors bg-white border rounded-lg min-h-9 border-slate-200 text-slate-600 hover:bg-slate-50"
                 type="button"
                 @click="cancelReceiptDecision"
               >
                 Cancel
               </button>
               <button
-                class="inline-flex min-h-9 items-center justify-center rounded-lg bg-accent px-4 text-xs font-bold text-white transition-colors hover:bg-accent/90"
+                class="inline-flex items-center justify-center px-4 text-xs font-bold text-white transition-colors rounded-lg min-h-9 bg-accent hover:bg-accent/90"
                 type="button"
                 @click="confirmReceiptDecision"
               >
@@ -1808,21 +2002,21 @@ function finalizeLiquidation() {
           </div>
           <div v-else class="flex flex-col gap-2 sm:flex-row sm:justify-end">
             <button
-              class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 text-sm font-bold text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+              class="inline-flex items-center justify-center gap-2 px-4 text-sm font-bold text-red-700 transition-colors border border-red-200 rounded-lg min-h-10 bg-red-50 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
               type="button"
               :disabled="isReviewingOwnLiquidation"
               @click="requestReceiptDecision('rejected')"
             >
-              <XCircle class="h-4 w-4" />
+              <XCircle class="w-4 h-4" />
               Reject
             </button>
             <button
-              class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-bold text-white transition-colors hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-60"
+              class="inline-flex items-center justify-center gap-2 px-4 text-sm font-bold text-white transition-colors rounded-lg min-h-10 bg-accent hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-60"
               type="button"
               :disabled="isReviewingOwnLiquidation"
               @click="requestReceiptDecision('accepted')"
             >
-              <CheckCircle class="h-4 w-4" />
+              <CheckCircle class="w-4 h-4" />
               Accept
             </button>
           </div>
@@ -1832,6 +2026,7 @@ function finalizeLiquidation() {
 
     <!-- Audit Confirmation Modal -->
     <DecisionConfirmationModal
+      v-if="auth.isAdmin && !showAdminRequestForm"
       :is-open="!!approvingId || !!rejectingId"
       :mode="approvingId ? 'approve' : 'reject'"
       :is-submitting="isReviewSubmitting"
@@ -1847,53 +2042,36 @@ function finalizeLiquidation() {
       @close="approvingId ? cancelApprove() : cancelReject()"
       @confirm="approvingId ? confirmApprove() : confirmReject()"
     />
-  </div>
-
-  <div v-else class="flex flex-col gap-6 font-sans">
-    <div
-      class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"
-    >
-      <div class="min-w-0">
-        <div class="mb-2 flex items-center gap-2">
-          <ArchiveRestore class="h-3.5 w-3.5 text-accent" />
-          <span class="section-label">Settlement Operations</span>
-        </div>
-        <h1
-          class="font-heading text-2xl font-bold leading-tight text-slate-800"
-        >
-          Liquidation Console
-        </h1>
-        <p class="mt-1 text-sm text-slate-400">
-          Reconcile outstanding advances and settle balances
-        </p>
-      </div>
-    </div>
-
     <BaseKpiGrid
+      v-if="!auth.isAdmin || showAdminRequestForm"
       :kpis="employeeLiquidationKpis"
       gridClasses="grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4"
       :isLoading="store.isLoading"
       :skeletonCount="4"
     />
 
-      <BaseUtilityToolbar
-        v-model:search="employeeSearchQuery"
-        v-model:status-value="employeeActiveStatus"
-        :statuses="employeeStatusFilters"
-        searchPlaceholder="Search purpose, status, or amount..."
-      />
+    <BaseUtilityToolbar
+      v-if="!auth.isAdmin || showAdminRequestForm"
+      v-model:search="employeeSearchQuery"
+      v-model:status-value="employeeActiveStatus"
+      :statuses="employeeStatusFilters"
+      searchPlaceholder="Search purpose, status, or amount..."
+    />
 
-    <div class="grid grid-cols-1 gap-6 lg:grid-cols-5">
+    <div
+      v-if="!auth.isAdmin || showAdminRequestForm"
+      class="grid grid-cols-1 gap-6 lg:grid-cols-5"
+    >
       <div class="flex flex-col gap-4 lg:col-span-2">
         <h3
           class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400"
         >
           <ClipboardList class="h-3.5 w-3.5" />
-          OUTSTANDING_ADVANCES
+          OUTSTANDING ADVANCES
         </h3>
 
         <div
-          class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+          class="overflow-hidden bg-white border shadow-sm rounded-xl border-slate-200"
         >
           <div
             class="grid grid-cols-[minmax(0,1fr)_6.5rem_6rem] border-b border-slate-200 bg-slate-50"
@@ -1940,7 +2118,7 @@ function finalizeLiquidation() {
 
         <div
           v-if="!store.isLoading && employeeFilteredAdvances.length === 0"
-          class="card flex min-h-32 items-center justify-center border-dashed p-6 text-center"
+          class="flex items-center justify-center p-6 text-center border-dashed card min-h-32"
         >
           <p
             class="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400"
@@ -1953,7 +2131,7 @@ function finalizeLiquidation() {
           <div
             v-for="i in 4"
             :key="`employee-advance-skeleton-${i}`"
-            class="card p-4"
+            class="p-4 card"
           >
             <SkeletonLoader variant="card" />
           </div>
@@ -1972,23 +2150,19 @@ function finalizeLiquidation() {
             @click="selectAdvance(adv)"
           >
             <div class="flex items-start justify-between">
-              <div class="min-w-0 flex-1">
+              <div class="flex-1 min-w-0">
                 <p
-                  class="truncate text-xs font-bold uppercase tracking-tight text-slate-900"
+                  class="text-xs font-bold tracking-tight uppercase truncate text-slate-900"
                 >
                   {{ adv.purpose }}
                 </p>
               </div>
               <StatusBadge
-                :status="
-                  liqStore.calculateAging(adv).isOverdue
-                    ? 'overdue'
-                    : adv.status
-                "
+                :status="employeeAdvanceBadgeStatus(adv)"
               />
             </div>
 
-            <div class="mt-4 flex items-end justify-between">
+            <div class="flex items-end justify-between mt-4">
               <div>
                 <p
                   class="mb-1 text-[9px] font-bold uppercase tracking-widest text-slate-400"
@@ -2035,9 +2209,9 @@ function finalizeLiquidation() {
       <div class="lg:col-span-3">
         <div
           v-if="!selectedAdvance"
-          class="card flex h-full flex-col items-center justify-center gap-4 border-2 border-dashed bg-clinical/20 p-16 text-center"
+          class="flex flex-col items-center justify-center h-full gap-4 p-16 text-center border-2 border-dashed card bg-clinical/20"
         >
-          <FilePieChart class="h-10 w-10 text-slate-200" />
+          <FilePieChart class="w-10 h-10 text-slate-200" />
           <p
             class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400"
           >
@@ -2047,9 +2221,9 @@ function finalizeLiquidation() {
 
         <div
           v-else-if="submitted"
-          class="card flex flex-col items-center gap-6 border-t-2 border-t-emerald-600 p-12 text-center"
+          class="flex flex-col items-center gap-6 p-12 text-center border-t-2 card border-t-emerald-600"
         >
-          <CheckCircle class="h-12 w-12 text-emerald-600" />
+          <CheckCircle class="w-12 h-12 text-emerald-600" />
           <h3 class="text-xs font-bold uppercase tracking-[0.2em] text-primary">
             Submission Received
           </h3>
@@ -2071,10 +2245,10 @@ function finalizeLiquidation() {
 
         <div
           v-else
-          class="card flex flex-col gap-6 border-t-2 border-t-primary p-6 shadow-sm"
+          class="flex flex-col gap-6 p-6 border-t-2 shadow-sm card border-t-primary"
         >
           <div
-            class="flex items-start justify-between border-b border-slate-100 pb-4"
+            class="flex items-start justify-between pb-4 border-b border-slate-100"
           >
             <div>
               <p
@@ -2083,7 +2257,7 @@ function finalizeLiquidation() {
                 RECONCILING REF: {{ selectedAdvance.id }}
               </p>
               <h3
-                class="text-xs font-bold uppercase tracking-widest text-primary"
+                class="text-xs font-bold tracking-widest uppercase text-primary"
               >
                 {{ selectedAdvance.purpose }}
               </h3>
@@ -2102,9 +2276,9 @@ function finalizeLiquidation() {
             </div>
           </div>
 
-          <div class="input-wrapper border-t border-slate-100 pt-4">
+          <div class="pt-4 border-t input-wrapper border-slate-100">
             <div
-              class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+              class="flex flex-col gap-2 mb-3 sm:flex-row sm:items-center sm:justify-between"
             >
               <label class="input-label !mb-0"
                 >DIGITAL RECEIPT ATTACHMENTS *</label
@@ -2118,20 +2292,22 @@ function finalizeLiquidation() {
             </div>
             <FileUpload
               v-model="receipts"
+              :max-size-mb="2"
               empty-action-label="Upload Receipt"
               add-action-label="Upload Receipt"
+              @upload-error="handleReceiptUploadError"
             />
           </div>
 
           <section
             v-if="receipts.length > 0"
-            class="space-y-4 rounded-xl border border-slate-200 bg-white p-4"
+            class="p-4 space-y-4 bg-white border rounded-xl border-slate-200"
           >
             <div
               class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
             >
               <div>
-                <p class="font-heading text-base font-bold text-primary">
+                <p class="text-base font-bold font-heading text-primary">
                   Receipt Scanning & Extraction
                 </p>
                 <p class="mt-0.5 text-xs font-semibold text-slate-400">
@@ -2143,33 +2319,33 @@ function finalizeLiquidation() {
             <article
               v-for="(receipt, index) in receipts"
               :key="receipt.name + index"
-              class="overflow-hidden rounded-xl border border-slate-200 bg-slate-50"
+              class="overflow-hidden border rounded-xl border-slate-200 bg-slate-50"
             >
               <div class="grid grid-cols-1 lg:grid-cols-[180px_minmax(0,1fr)]">
                 <aside
-                  class="border-b border-slate-200 bg-slate-100/70 p-4 lg:border-b-0 lg:border-r"
+                  class="p-4 border-b border-slate-200 bg-slate-100/70 lg:border-b-0 lg:border-r"
                 >
                   <p class="kpi-label text-slate-400">Receipt Preview</p>
                   <div
-                    class="mt-2 flex h-44 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm"
+                    class="flex items-center justify-center mt-2 overflow-hidden bg-white border rounded-lg shadow-sm h-44 border-slate-200"
                   >
                     <img
                       v-if="receipt.preview"
                       :src="receipt.preview"
                       alt="Uploaded receipt preview"
-                      class="h-full w-full object-cover object-top"
+                      class="object-cover object-top w-full h-full"
                     />
-                    <FileText v-else class="h-8 w-8 text-slate-300" />
+                    <FileText v-else class="w-8 h-8 text-slate-300" />
                   </div>
                 </aside>
 
-                <div class="space-y-4 bg-white p-4">
+                <div class="p-4 space-y-4 bg-white">
                   <div
                     class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"
                   >
                     <div class="min-w-0">
                       <p
-                        class="truncate font-heading text-sm font-bold text-slate-900"
+                        class="text-sm font-bold truncate font-heading text-slate-900"
                       >
                         {{ receipt.ocrData?.vendor || receipt.name }}
                       </p>
@@ -2197,7 +2373,7 @@ function finalizeLiquidation() {
                     <label class="space-y-1">
                       <span class="input-label">Merchant Name</span>
                       <input
-                        class="input bg-white"
+                        class="bg-white input"
                         v-model="receipt.ocrData.vendor"
                       />
                     </label>
@@ -2206,38 +2382,43 @@ function finalizeLiquidation() {
                       <span class="relative block">
                         <input
                           type="date"
-                          class="input pr-10 bg-white"
+                          class="pr-10 bg-white input"
                           v-model="receipt.ocrData.date"
                         />
                         <CalendarDays
-                          class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                          class="absolute w-4 h-4 -translate-y-1/2 pointer-events-none right-3 top-1/2 text-slate-400"
                         />
                       </span>
                     </label>
                     <label class="space-y-1">
                       <span class="input-label">TIN Number</span>
                       <input
-                        class="input bg-white"
+                        class="bg-white input"
                         v-model="receipt.ocrData.tin"
+                        inputmode="numeric"
+                        maxlength="15"
+                        placeholder="000-000-000-000"
+                        @input="handleTinInput(receipt)"
+                        @blur="handleTinBlur(receipt)"
                       />
                     </label>
                     <label class="space-y-1">
                       <span class="input-label">Invoice Number</span>
                       <input
-                        class="input bg-white"
+                        class="bg-white input"
                         v-model="receipt.ocrData.invoiceNumber"
                       />
                     </label>
                   </div>
 
                   <div
-                    class="grid grid-cols-1 gap-3 border-t border-slate-200 pt-4 sm:grid-cols-3"
+                    class="grid grid-cols-1 gap-3 pt-4 border-t border-slate-200 sm:grid-cols-3"
                   >
                     <label class="space-y-1">
                       <span class="input-label">Subtotal (Auto-Calc)</span>
                       <input
-                        class="input font-semibold bg-slate-50"
-                        readonly
+                        class="font-semibold cursor-not-allowed input bg-slate-100 text-slate-500"
+                        disabled
                         :value="
                           formatPeso(
                             Math.max(
@@ -2254,12 +2435,12 @@ function finalizeLiquidation() {
                       <input
                         type="number"
                         step="0.01"
-                        class="input font-semibold bg-white"
+                        class="font-semibold bg-white input"
                         v-model.number="receipt.ocrData.vat"
                       />
                     </label>
                     <div
-                      class="rounded-lg border border-accent/20 bg-accent-50 p-3"
+                      class="p-3 border rounded-lg border-accent/20 bg-accent-50"
                     >
                       <p class="input-label text-accent">Receipt Total</p>
                       <input
@@ -2276,7 +2457,7 @@ function finalizeLiquidation() {
             </article>
           </section>
 
-          <section class="rounded-xl border border-slate-200 bg-white p-4">
+          <section class="p-4 bg-white border rounded-xl border-slate-200">
             <input
               ref="reportAttachmentInput"
               type="file"
@@ -2288,7 +2469,7 @@ function finalizeLiquidation() {
               class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
             >
               <div class="min-w-0">
-                <p class="font-heading text-base font-bold text-primary">
+                <p class="text-base font-bold font-heading text-primary">
                   Cash Advance Report Letter
                 </p>
                 <p class="mt-1 text-sm text-slate-500">
@@ -2296,26 +2477,26 @@ function finalizeLiquidation() {
                 </p>
                 <p
                   v-if="reportAttachment"
-                  class="mt-2 truncate text-xs font-bold text-accent"
+                  class="mt-2 text-xs font-bold truncate text-accent"
                 >
                   Attached: {{ reportAttachment.name }}
                 </p>
               </div>
-              <div class="flex shrink-0 gap-2">
+              <div class="flex gap-2 shrink-0">
                 <button
                   v-if="reportAttachment"
-                  class="inline-flex min-h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50"
+                  class="inline-flex items-center justify-center px-4 text-xs font-bold transition-colors bg-white border rounded-lg min-h-10 border-slate-200 text-slate-600 hover:bg-slate-50"
                   type="button"
                   @click="clearReportAttachment"
                 >
                   Clear
                 </button>
                 <button
-                  class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-xs font-bold text-white transition-colors hover:bg-accent/90"
+                  class="inline-flex items-center justify-center gap-2 px-4 text-xs font-bold text-white transition-colors rounded-lg min-h-10 bg-accent hover:bg-accent/90"
                   type="button"
                   @click="reportAttachmentInput?.click()"
                 >
-                  <Upload class="h-4 w-4" />
+                  <Upload class="w-4 h-4" />
                   Attachment
                 </button>
               </div>
@@ -2323,8 +2504,20 @@ function finalizeLiquidation() {
           </section>
 
           <section
+            v-if="existingLiquidation?.admin_note || existingLiquidation?.adminNote"
+            class="p-4 bg-white border rounded-xl border-slate-200"
+          >
+            <p class="text-base font-bold font-heading text-primary">
+              Admin Notes / Rejection Feedback
+            </p>
+            <p class="mt-2 text-sm leading-relaxed text-slate-600">
+              {{ existingLiquidation.admin_note || existingLiquidation.adminNote }}
+            </p>
+          </section>
+
+          <section
             v-if="needsReportAttachmentReminder"
-            class="rounded-xl border border-amber-200 bg-amber-50 p-4"
+            class="p-4 border rounded-xl border-amber-200 bg-amber-50"
           >
             <div class="flex items-start gap-3">
               <AlertTriangle class="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
@@ -2337,24 +2530,24 @@ function finalizeLiquidation() {
           <!-- Shortfall Explanation -->
           <section
             v-if="variance > 0"
-            class="rounded-xl border border-amber-200 bg-amber-50/50 p-4 space-y-2"
+            class="p-4 space-y-2 border rounded-xl border-amber-200 bg-amber-50/50"
           >
             <label class="block space-y-1">
-              <span class="input-label text-amber-800 font-bold"
+              <span class="font-bold input-label text-amber-800"
                 >Shortfall Explanation <span class="text-danger">*</span></span
               >
               <textarea
                 v-model="shortfallExplanation"
                 rows="3"
-                class="input bg-white resize-none"
+                class="bg-white resize-none input"
                 placeholder="Explain why the total expense is less than the advanced amount (required)..."
               />
             </label>
           </section>
 
-          <div class="mt-2 border border-slate-200 bg-clinical/20 p-5">
-            <div class="mb-4 flex items-center gap-2">
-              <Calculator class="h-4 w-4 text-primary opacity-50" />
+          <div class="p-5 mt-2 border border-slate-200 bg-clinical/20">
+            <div class="flex items-center gap-2 mb-4">
+              <Calculator class="w-4 h-4 opacity-50 text-primary" />
               <h4
                 class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400"
               >
@@ -2363,18 +2556,20 @@ function finalizeLiquidation() {
             </div>
 
             <div class="flex">
-              <div class="space-y-4 w-full">
+              <div class="w-full space-y-4">
                 <div class="flex items-center justify-between text-[11px]">
                   <span
-                    class="font-bold uppercase tracking-tight text-slate-400"
+                    class="font-bold tracking-tight uppercase text-slate-400"
                     >Total Balance:</span
                   >
                   <span class="font-mono font-bold text-primary">{{
-                    formatPeso(selectedAdvance.balance ?? selectedAdvance.amount ?? 0)
+                    formatPeso(
+                      selectedAdvance.balance ?? selectedAdvance.amount ?? 0,
+                    )
                   }}</span>
                 </div>
                 <div class="flex items-center justify-between text-[11px]">
-                  <span class="font-bold uppercase tracking-tight text-danger"
+                  <span class="font-bold tracking-tight uppercase text-danger"
                     >Total Expenses:</span
                   >
                   <span class="font-mono font-bold text-danger"
@@ -2382,7 +2577,7 @@ function finalizeLiquidation() {
                   >
                 </div>
                 <div
-                  class="flex items-center justify-between border-t border-slate-200 pt-2"
+                  class="flex items-center justify-between pt-2 border-t border-slate-200"
                 >
                   <span
                     class="text-[10px] font-black uppercase tracking-widest text-slate-600"
@@ -2405,13 +2600,13 @@ function finalizeLiquidation() {
 
           <section
             v-if="overpaymentAmount > 0"
-            class="rounded-xl border border-accent/20 bg-accent-50 p-4"
+            class="p-4 border rounded-xl border-accent/20 bg-accent-50"
           >
             <div
               class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
             >
               <div>
-                <p class="font-heading text-base font-bold text-primary">
+                <p class="text-base font-bold font-heading text-primary">
                   Overpayment Can Be Reimbursed
                 </p>
                 <p class="mt-1 text-sm leading-relaxed text-slate-600">
@@ -2424,19 +2619,21 @@ function finalizeLiquidation() {
                 </p>
               </div>
               <button
-                class="inline-flex min-h-10 w-fit shrink-0 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-xs font-bold text-white transition-colors hover:bg-accent/90"
+                class="inline-flex items-center justify-center gap-2 px-4 text-xs font-bold text-white transition-colors rounded-lg min-h-10 w-fit shrink-0 bg-accent hover:bg-accent/90"
                 type="button"
                 @click="forwardOverpaymentToReimbursement"
               >
-                <Upload class="h-4 w-4" />
+                <Upload class="w-4 h-4" />
                 Reimbursement Filing
               </button>
             </div>
           </section>
 
-          <div class="mt-4 flex justify-end gap-3">
+          <div class="flex justify-end gap-3 mt-4">
             <BaseButton
-              v-if="existingLiquidation && existingLiquidation.status === 'pending'"
+              v-if="
+                existingLiquidation && existingLiquidation.status === 'pending'
+              "
               id="delete-liquidation-btn"
               variant="danger"
               class="w-fit px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white"
@@ -2460,12 +2657,18 @@ function finalizeLiquidation() {
               @click="submitLiquidation"
             >
               <div v-if="submitting" class="flex items-center gap-2">
-                <Activity class="h-4 w-4 animate-spin" />
-                <span>{{ existingLiquidation ? "UPDATING SETTLEMENT..." : "ENCODING SETTLEMENT..." }}</span>
+                <Activity class="w-4 h-4 animate-spin" />
+                <span>{{
+                  existingLiquidation
+                    ? "UPDATING SETTLEMENT..."
+                    : "ENCODING SETTLEMENT..."
+                }}</span>
               </div>
               <div v-else class="flex items-center gap-2">
-                <Upload class="h-4 w-4" />
-                <span>{{ existingLiquidation ? "UPDATE SETTLEMENT" : "SUBMIT FOR AUDIT" }}</span>
+                <Upload class="w-4 h-4" />
+                <span>{{
+                  existingLiquidation ? "UPDATE SETTLEMENT" : "SUBMIT FOR AUDIT"
+                }}</span>
               </div>
             </BaseButton>
           </div>

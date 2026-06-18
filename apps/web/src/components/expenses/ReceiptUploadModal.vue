@@ -5,6 +5,7 @@ import { useToast } from "@/composables/useToast";
 import ConfirmModal from "@/components/base/ConfirmModal.vue";
 import { useUnsavedChanges } from "@/composables/useUnsavedChanges";
 import {
+  buildReceiptUploadFormPrefill,
   itemsGrossAmount,
   receiptFinancials,
 } from "@/utils/receiptUtils";
@@ -252,6 +253,22 @@ function handleUploadFileSelect(event) {
     } else {
       uploadFilePreview.value = "";
     }
+
+    const prefill = buildReceiptUploadFormPrefill({
+      id: props.receiptToEdit?.id,
+      file,
+      receiptData: {
+        expense_category_id: uploadForm.value.expense_category_id || null,
+      },
+      thumbnail: uploadFilePreview.value,
+    });
+
+    uploadForm.value = {
+      ...uploadForm.value,
+      ...prefill,
+      expense_category_id:
+        prefill.expense_category_id || uploadForm.value.expense_category_id,
+    };
   }
 }
 
@@ -724,7 +741,7 @@ function formatCurrency(amount) {
           <button
             @click="saveReceipt"
             class="btn btn-primary !px-8"
-            :disabled="receiptsStore.isSaving"
+            :disabled="receiptsStore.isSaving || !isFormValid"
           >
             <Save class="w-4 h-4" />
             {{ receiptsStore.isSaving ? "Saving..." : "Save Receipt" }}

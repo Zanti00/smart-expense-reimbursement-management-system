@@ -15,7 +15,7 @@ class ReceiptService
     /**
      * List all receipts for the user.
      */
-    public function listReceipts(User $user, bool $canManage)
+    public function listReceipts(User $user, bool $canManage, array $filters = [])
     {
         $query = Receipt::with('category', 'uploader', 'items')
             ->withCount('reimbursements');
@@ -24,7 +24,31 @@ class ReceiptService
             $query->where('uploaded_by', $user->id);
         }
 
-        return $query->orderByDesc('created_at')->get();
+        if (!empty($filters['search'])) {
+            $search = trim((string) $filters['search']);
+            $query->where(function ($subQuery) use ($search) {
+                $subQuery
+                    ->where('vendor_name', 'like', "%{$search}%")
+                    ->orWhere('invoice_number', 'like', "%{$search}%")
+                    ->orWhere('file_path', 'like', "%{$search}%");
+            });
+        }
+
+        if (!empty($filters['status']) && strtolower((string) $filters['status']) !== 'all') {
+            $query->where('status', strtolower((string) $filters['status']));
+        }
+
+        if (!empty($filters['category']) && strtolower((string) $filters['category']) !== 'all') {
+            $category = (string) $filters['category'];
+            $query->whereHas('category', function ($subQuery) use ($category) {
+                $subQuery->where('name', $category);
+            });
+        }
+
+        $perPage = (int) ($filters['per_page'] ?? 10);
+        $perPage = max(1, min($perPage, 10));
+
+        return $query->orderByDesc('created_at')->paginate($perPage);
     }
 
     /**
@@ -172,6 +196,12 @@ class ReceiptService
             // Check RBAC: Only uploader or admin can delete
             if ($receipt->uploaded_by !== $user->id && !$canManage) {
                 throw new AuthorizationException('Unauthorized. You can only delete your own receipts.');
+            }
+
+            if (!$canManage && !in_array($receipt->status, ['processed', 'rejected'])) {
+                throw ValidationException::withMessages([
+                    'receipt' => ['Only processed or rejected receipts can be deleted.']
+                ]);
             }
 
             // Check constraints: Block deletion if linked to a Reimbursement

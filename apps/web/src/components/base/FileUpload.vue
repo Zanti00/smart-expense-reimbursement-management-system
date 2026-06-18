@@ -11,21 +11,51 @@ import {
   X,
 } from 'lucide-vue-next'
 import { apiFetch } from '../../utils/apiFetch'
+import { cleanName, tinFor } from '../../utils/receiptUtils'
 
 const props = defineProps({
   modelValue: { type: Array, default: () => [] },
   accept: { type: String, default: 'image/*,.pdf' },
-  maxSizeMb: { type: Number, default: 10 },
+  maxSizeMb: { type: Number, default: 2 },
   emptyActionLabel: { type: String, default: 'Select Files' },
   addActionLabel: { type: String, default: 'Add More Receipts' },
 })
 
-const emit = defineEmits(['update:modelValue', 'ocr-result'])
+const emit = defineEmits(['update:modelValue', 'ocr-result', 'upload-error'])
 
 const isDragging = ref(false)
 const files = ref([...props.modelValue])
 const localError = ref(null)
 const fileInput = ref(null)
+
+function formatTinValue(value, { padLastBlock = false } = {}) {
+  let digits = String(value || '').replace(/\D/g, '').slice(0, 12)
+  if (padLastBlock && digits.length === 9) {
+    digits = `${digits}000`
+  }
+
+  const parts = []
+  if (digits.length > 0) parts.push(digits.slice(0, 3))
+  if (digits.length > 3) parts.push(digits.slice(3, 6))
+  if (digits.length > 6) parts.push(digits.slice(6, 9))
+  if (digits.length > 9) parts.push(digits.slice(9, 12))
+  return parts.join('-')
+}
+
+function buildPrefilledOcrData(file) {
+  const fallbackTin = tinFor({ fileName: file.name })
+
+  return {
+    id: null,
+    amount: '0.00',
+    vat: '0.00',
+    tin: formatTinValue(fallbackTin, { padLastBlock: true }),
+    vendor: cleanName(file.name) || 'Unknown Vendor',
+    invoiceNumber: `INV-${Date.now().toString().slice(-6)}`,
+    date: new Date().toISOString().split('T')[0],
+    confidence: 0,
+  }
+}
 
 function formatSize(bytes) {
   if (bytes < 1024) return `${bytes} B`
@@ -38,7 +68,12 @@ function addFiles(fileList) {
 
   for (const file of fileList) {
     if (file.size > props.maxSizeMb * 1024 * 1024) {
-      localError.value = `File exceeds limits (${props.maxSizeMb}MB)`
+      emit('upload-error', {
+        type: 'size-exceeded',
+        message: `${file.name} exceeds the ${props.maxSizeMb}MB size limit.`,
+        fileName: file.name,
+        maxSizeMb: props.maxSizeMb,
+      })
       continue
     }
 
@@ -56,16 +91,7 @@ function addFiles(fileList) {
       size: file.size,
       preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
       ocrStatus: 'idle',
-      ocrData: {
-        id: null,
-        amount: '0.00',
-        vat: '0.00',
-        tin: '123-456-789-000',
-        vendor: file.name.split('.')[0] || 'Unknown Vendor',
-        invoiceNumber: `INV-${Date.now().toString().slice(-6)}`,
-        date: new Date().toISOString().split('T')[0],
-        confidence: 0,
-      },
+      ocrData: buildPrefilledOcrData(file),
     }
 
     files.value.push(entry)
@@ -98,11 +124,11 @@ async function simulateOCR(entry) {
     entry.ocrStatus = 'done'
     entry.ocrData = {
       id: ocrData.id,
-      amount: ocrData.total_amount || '0.00',
-      vat: ocrData.vat_amount || '0.00',
-      tin: ocrData.tin || '',
-      vendor: ocrData.vendor_name || '',
-      invoiceNumber: ocrData.invoice_number || '',
+      amount: ocrData.total_amount || entry.ocrData.amount || '0.00',
+      vat: ocrData.vat_amount || entry.ocrData.vat || '0.00',
+      tin: formatTinValue(ocrData.tin || entry.ocrData.tin, { padLastBlock: true }),
+      vendor: ocrData.vendor_name || entry.ocrData.vendor || '',
+      invoiceNumber: ocrData.invoice_number || entry.ocrData.invoiceNumber || '',
       date: ocrData.transaction_date || new Date().toISOString().split('T')[0],
       confidence: Math.round(ocrData.ocr_confidence_score || 85),
       file_path: ocrData.file_path,
@@ -115,16 +141,7 @@ async function simulateOCR(entry) {
   } catch (error) {
     console.error('OCR processing failed:', error)
     entry.ocrStatus = 'failed'
-    entry.ocrData = {
-      id: null,
-      amount: '0.00',
-      vat: '0.00',
-      tin: '',
-      vendor: '',
-      invoiceNumber: '',
-      date: new Date().toISOString().split('T')[0],
-      confidence: 0,
-    }
+    entry.ocrData = buildPrefilledOcrData(entry.file)
     emit('update:modelValue', files.value)
   }
 }

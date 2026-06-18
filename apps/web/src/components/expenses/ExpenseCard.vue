@@ -30,11 +30,16 @@ const isMenuOpen = ref(false);
 const canEdit = computed(
   () => String(props.expense?.status || "").toLowerCase() === "processed",
 );
+const canDelete = computed(() =>
+  ["processed", "rejected"].includes(
+    String(props.expense?.status || "").toLowerCase(),
+  ),
+);
 </script>
 
 <template>
   <div
-    class="bg-white rounded-xl overflow-hidden flex flex-col group transition-all hover:shadow-xl relative cursor-pointer"
+    class="relative flex flex-col overflow-hidden transition-all bg-white cursor-pointer rounded-xl group hover:shadow-xl"
     :class="
       isSelected
         ? 'border-2 border-primary shadow-md'
@@ -46,7 +51,7 @@ const canEdit = computed(
     <Transition name="pop">
       <div
         v-if="isSelected"
-        class="absolute top-3 right-3 z-10 w-7 h-7 bg-primary rounded-full flex items-center justify-center shadow-md"
+        class="absolute z-10 flex items-center justify-center rounded-full shadow-md top-3 right-3 w-7 h-7 bg-primary"
       >
         <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
           <path
@@ -60,20 +65,20 @@ const canEdit = computed(
 
     <!-- Expense Image Preview -->
     <div
-      class="aspect-square w-full bg-slate-50 overflow-hidden flex-shrink-0 border-b border-slate-100"
+      class="flex-shrink-0 w-full overflow-hidden border-b aspect-square bg-slate-50 border-slate-100"
     >
       <img
         v-if="expense.thumbnail"
         :src="expense.thumbnail"
         :alt="expense.fileName"
-        class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 opacity-100"
+        class="object-cover w-full h-full transition-transform duration-500 opacity-100 group-hover:scale-105"
       />
       <div
         v-else
-        class="w-full h-full flex flex-col items-center justify-center gap-2"
+        class="flex flex-col items-center justify-center w-full h-full gap-2"
       >
         <div
-          class="w-12 h-12 rounded-2xl bg-primary/5 flex items-center justify-center"
+          class="flex items-center justify-center w-12 h-12 rounded-2xl bg-primary/5"
         >
           <FileText
             v-if="
@@ -94,10 +99,10 @@ const canEdit = computed(
     </div>
 
     <!-- Card Body -->
-    <div class="p-4 flex flex-col flex-1">
+    <div class="flex flex-col flex-1 p-4">
       <div
         v-if="expense.status === 'automatic-rejected'"
-        class="mb-3 rounded-lg border border-danger/20 bg-danger/5 px-3 py-2"
+        class="px-3 py-2 mb-3 border rounded-lg border-danger/20 bg-danger/5"
       >
         <div class="flex items-start gap-2">
           <AlertTriangle class="mt-0.5 h-4 w-4 shrink-0 text-danger" />
@@ -124,7 +129,7 @@ const canEdit = computed(
       </div>
 
       <!-- Category + Amount -->
-      <div class="mt-auto flex items-center justify-between mb-3">
+      <div class="flex items-center justify-between mt-auto mb-3">
         <span
           class="px-2.5 py-1 bg-primary/5 text-primary-600 rounded-md text-[11px] font-semibold border border-primary/10 truncate max-w-[55%]"
           style="font-family: &quot;Poppins&quot;, sans-serif"
@@ -136,9 +141,9 @@ const canEdit = computed(
         </span>
       </div>
 
-      <!-- <div class="mb-3">
+      <div class="mb-3">
         <StatusBadge :status="expense.status" />
-      </div> -->
+      </div>
 
       <!-- Action Buttons -->
       <div class="flex gap-2">
@@ -151,7 +156,7 @@ const canEdit = computed(
 
         <div class="relative flex" @click.stop>
           <button
-            class="px-3 py-2 rounded-lg border transition-all flex items-center justify-center"
+            class="flex items-center justify-center px-3 py-2 transition-all border rounded-lg"
             :class="
               isSelected
                 ? 'border-slate-300 bg-slate-100 text-slate-600'
@@ -171,10 +176,10 @@ const canEdit = computed(
 
           <div
             v-if="isMenuOpen"
-            class="absolute right-0 bottom-full mb-2 w-44 bg-white rounded-lg shadow-lg border border-slate-100 py-1 z-20"
+            class="absolute right-0 z-20 py-1 mb-2 bg-white border rounded-lg shadow-lg bottom-full w-44 border-slate-100"
           >
             <button
-              class="w-full text-left px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 flex items-center gap-2"
+              class="flex items-center w-full gap-2 px-4 py-2 text-sm text-left text-slate-600 hover:bg-slate-50"
               @click="
                 isMenuOpen = false;
                 $emit('forward-reimbursement', expense);
@@ -184,7 +189,7 @@ const canEdit = computed(
             </button>
             <button
               v-if="canEdit"
-              class="w-full text-left px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 flex items-center gap-2"
+              class="flex items-center w-full gap-2 px-4 py-2 text-sm text-left text-slate-600 hover:bg-slate-50"
               @click="
                 isMenuOpen = false;
                 $emit('edit', expense);
@@ -193,7 +198,8 @@ const canEdit = computed(
               <Pencil class="w-4 h-4" /> Edit
             </button>
             <button
-              class="w-full text-left px-4 py-2 text-sm text-danger hover:bg-danger/5 flex items-center gap-2"
+              v-if="canDelete"
+              class="flex items-center w-full gap-2 px-4 py-2 text-sm text-left text-danger hover:bg-danger/5"
               @click="
                 isMenuOpen = false;
                 $emit('delete', expense.id);

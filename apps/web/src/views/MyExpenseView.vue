@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useReceiptStore } from "@/stores/receipts";
@@ -13,6 +13,7 @@ import {
 
 import StatusBadge from "@/components/base/StatusBadge.vue";
 import BaseKpiGrid from "@/components/base/BaseKpiGrid.vue";
+import BasePagination from "@/components/base/BasePagination.vue";
 import BaseUtilityToolbar from "@/components/base/BaseUtilityToolbar.vue";
 import ReceiptViewModal from "@/components/expenses/ReceiptViewModal.vue";
 import ExpenseCard from "@/components/expenses/ExpenseCard.vue";
@@ -83,15 +84,10 @@ const CATEGORIES = computed(() => {
 const activeCategory = ref("All");
 const activeStatus = ref("All");
 const searchQuery = ref("");
+const currentPage = ref(1);
+const pageSize = 10;
 
-const STATUS_FILTERS = [
-  "All",
-  "Processing",
-  "Processed",
-  "Automatic Rejected",
-  "Pending Admin Re-review",
-  "Final Rejected",
-];
+const STATUS_FILTERS = ["All", "Processed", "Pending", "Rejected", "Approved"];
 
 function normalizeFilterLabel(value) {
   return String(value || "")
@@ -99,34 +95,18 @@ function normalizeFilterLabel(value) {
     .replace(/\s+/g, "-");
 }
 
-const filteredReceipts = computed(() => {
-  let base = receiptsStore.visibleReceipts;
-  if (activeCategory.value !== "All") {
-    base = base.filter((r) => r.category === activeCategory.value);
-  }
-  if (activeStatus.value !== "All") {
-    const status = normalizeFilterLabel(activeStatus.value);
-    base = base.filter((r) => normalizeFilterLabel(r.status) === status);
-  }
-  if (searchQuery.value.trim()) {
-    const q = searchQuery.value.trim().toLowerCase();
-    base = base.filter((r) =>
-      [
-        r.id,
-        r.vendorName,
-        r.fileName,
-        r.category,
-        r.status,
-        r.invoiceNumber,
-      ].some((value) =>
-        String(value || "")
-          .toLowerCase()
-          .includes(q),
-      ),
-    );
-  }
-  return base;
-});
+const filteredReceipts = computed(() => receiptsStore.visibleReceipts);
+
+async function fetchReceipts(page = currentPage.value) {
+  currentPage.value = page;
+  await receiptsStore.fetchAll({
+    page,
+    perPage: pageSize,
+    search: searchQuery.value.trim(),
+    status: normalizeFilterLabel(activeStatus.value),
+    category: activeCategory.value,
+  });
+}
 
 // ── Metrics ───────────────────────────────────────────────────────
 const totalExpenses = computed(() =>
@@ -143,13 +123,36 @@ function promptDelete(id) {
 }
 
 async function confirmDelete(password) {
+  const receipt = receiptsStore.visibleReceipts.find(
+    (item) => item.id === selectedReceiptId.value,
+  );
+
+  if (
+    receipt &&
+    !["processed", "rejected"].includes(
+      String(receipt.status || "").toLowerCase(),
+    )
+  ) {
+    addToast({
+      message: "Only processed or rejected receipts can be deleted.",
+      type: "error",
+    });
+    deleteModalOpen.value = false;
+    return;
+  }
+
   const isValid = await auth.verifyPassword(password);
 
   if (isValid) {
-    receiptsStore.softDelete(selectedReceiptId.value);
+    await receiptsStore.softDelete(selectedReceiptId.value);
     const s = new Set(selectedIds.value);
     s.delete(selectedReceiptId.value);
     selectedIds.value = s;
+    const nextPage =
+      receiptsStore.visibleReceipts.length === 1 && currentPage.value > 1
+        ? currentPage.value - 1
+        : currentPage.value;
+    await fetchReceipts(nextPage);
     addToast({ message: "Receipt removed.", type: "success" });
     deleteModalOpen.value = false;
   } else {
@@ -224,16 +227,24 @@ async function finalizeReceiptReview(receipt, decision) {
 // ── Lifecycle ─────────────────────────────────────────────────────
 onMounted(async () => {
   await Promise.all([
-    receiptsStore.fetchAll(),
+    fetchReceipts(1),
     receiptsStore.fetchCategories(),
   ]);
+});
+
+watch([activeCategory, activeStatus], () => {
+  fetchReceipts(1);
+});
+
+watch(searchQuery, () => {
+  fetchReceipts(1);
 });
 
 // KPI definitions matching dashboard pattern
 const kpis = computed(() => [
   {
     label: "Total Receipts",
-    value: receiptsStore.visibleReceipts.length,
+    value: receiptsStore.pagination.total,
     sub: "In repository",
     icon: Receipt,
     iconBg: "bg-accent-100",
@@ -438,24 +449,34 @@ const kpis = computed(() => [
         <ExpenseCardSkeleton v-for="i in 8" :key="'skeleton-' + i" />
       </TransitionGroup>
 
-      <TransitionGroup
-        v-else-if="filteredReceipts.length > 0"
-        tag="div"
-        name="list"
-        class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-      >
-        <ExpenseCard
-          v-for="receipt in filteredReceipts"
-          :key="receipt.id"
-          :expense="receipt"
-          :is-selected="selectedIds.has(receipt.id)"
-          @select="toggleSelect"
-          @view="openViewModal"
-          @edit="openEditReceipt"
-          @delete="promptDelete"
-          @forward-reimbursement="forwardReceipt"
+      <template v-else-if="filteredReceipts.length > 0">
+        <TransitionGroup
+          tag="div"
+          name="list"
+          class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+        >
+          <ExpenseCard
+            v-for="receipt in filteredReceipts"
+            :key="receipt.id"
+            :expense="receipt"
+            :is-selected="selectedIds.has(receipt.id)"
+            @select="toggleSelect"
+            @view="openViewModal"
+            @edit="openEditReceipt"
+            @delete="promptDelete"
+            @forward-reimbursement="forwardReceipt"
+          />
+        </TransitionGroup>
+
+        <BasePagination
+          v-if="receiptsStore.pagination.total > pageSize"
+          :page="currentPage"
+          :page-size="pageSize"
+          :total="receiptsStore.pagination.total"
+          label="receipts"
+          @update:page="fetchReceipts"
         />
-      </TransitionGroup>
+      </template>
 
       <!-- Empty State -->
       <div
@@ -502,7 +523,6 @@ const kpis = computed(() => [
       @delete="promptDelete"
       @edit="openEditReceipt"
     />
-
   </div>
 </template>
 

@@ -15,6 +15,15 @@ use Illuminate\Validation\ValidationException;
 
 class ReimbursementService
 {
+    private function updateReceiptStatuses(array $receiptIds, string $status): void
+    {
+        if (empty($receiptIds)) {
+            return;
+        }
+
+        Receipt::whereIn('id', $receiptIds)->update(['status' => $status]);
+    }
+
     /**
      * List all reimbursements.
      */
@@ -99,6 +108,7 @@ class ReimbursementService
             ]);
 
             $reimbursement->receipts()->attach($receiptIds);
+            $this->updateReceiptStatuses($receiptIds, 'pending');
 
             return $reimbursement->load('receipts');
         });
@@ -140,6 +150,7 @@ class ReimbursementService
 
             $beforeState = $reimbursement->toArray();
             $reimbursement->update(['status' => 'approved']);
+            $this->updateReceiptStatuses($reimbursement->receipts()->pluck('receipts.id')->all(), 'approved');
             $afterState = $reimbursement->toArray();
 
             // Immutable Audit Log
@@ -188,6 +199,7 @@ class ReimbursementService
                 'admin_notes' => $comment,
                 'rejection_comment' => $comment,
             ]);
+            $this->updateReceiptStatuses($reimbursement->receipts()->pluck('receipts.id')->all(), 'rejected');
             $afterState = $reimbursement->toArray();
 
             // Immutable Audit Log
@@ -220,6 +232,12 @@ class ReimbursementService
         // Admin mode — existing behaviour
         if ($canManage && ($user->id !== $reimbursement->user_id)) {
             $reimbursement->update($data);
+            if (!empty($data['status']) && in_array($data['status'], ['pending', 'approved', 'rejected'])) {
+                $this->updateReceiptStatuses(
+                    $reimbursement->receipts()->pluck('receipts.id')->all(),
+                    $data['status'],
+                );
+            }
             return $reimbursement;
         }
 
@@ -259,7 +277,14 @@ class ReimbursementService
 
             // Sync receipt associations if provided
             if (!empty($data['receipt_ids'])) {
-                $reimbursement->receipts()->sync($data['receipt_ids']);
+                $currentReceiptIds = $reimbursement->receipts()->pluck('receipts.id')->all();
+                $newReceiptIds = array_values(array_unique($data['receipt_ids']));
+
+                $detachedReceiptIds = array_values(array_diff($currentReceiptIds, $newReceiptIds));
+
+                $reimbursement->receipts()->sync($newReceiptIds);
+                $this->updateReceiptStatuses($newReceiptIds, 'pending');
+                $this->updateReceiptStatuses($detachedReceiptIds, 'processed');
             }
 
             // Handle report file upload
@@ -286,6 +311,7 @@ class ReimbursementService
             if ($reimbursement->status === 'rejected') {
                 $updatePayload['status'] = 'pending';
                 $updatePayload['rejection_comment'] = null;
+                $this->updateReceiptStatuses($reimbursement->receipts()->pluck('receipts.id')->all(), 'pending');
             }
 
             $reimbursement->update($updatePayload);
@@ -319,8 +345,11 @@ class ReimbursementService
         }
 
         return DB::transaction(function () use ($reimbursement) {
+            $receiptIds = $reimbursement->receipts()->pluck('receipts.id')->all();
+
             // Detach receipt associations
             $reimbursement->receipts()->detach();
+            $this->updateReceiptStatuses($receiptIds, 'processed');
 
             // Remove report file from storage
             if ($reimbursement->report_file_path) {

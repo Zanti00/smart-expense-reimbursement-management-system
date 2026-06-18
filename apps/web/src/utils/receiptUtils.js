@@ -83,3 +83,87 @@ const MOCK_ITEMS = {
 export function getItems(cat) {
   return MOCK_ITEMS[cat] || MOCK_ITEMS.Uncategorized;
 }
+
+function buildDefaultItems(categoryLabel, amount) {
+  const itemNames = getItems(categoryLabel || "Expense");
+  const splitPrice = itemNames.length > 0 ? Number(amount || 0) / itemNames.length : 0;
+
+  return itemNames.map((name) => ({
+    name,
+    qty: 1,
+    price: Number(splitPrice.toFixed(2)),
+  }));
+}
+
+export function buildPrefilledReceiptDraft({
+  id,
+  file,
+  receiptData = {},
+  thumbnail = "",
+  defaultLocation = "Metro Manila, Philippines",
+} = {}) {
+  const resolvedId = receiptData.id || id || `temp-${Date.now()}`;
+  const fileName = file?.name || receiptData.file_name || `Receipt-${resolvedId}`;
+  const fileType = file?.type || receiptData.file_type || "";
+  const merchantName = receiptData.vendor_name || cleanName(fileName);
+  const vatClassification = normalizeVatClassification(
+    receiptData.vat_classification,
+  );
+  const amount = Number(receiptData.total_amount) || 0;
+  const categoryName = receiptData.category?.name || "";
+  const items =
+    Array.isArray(receiptData.items) && receiptData.items.length > 0
+      ? receiptData.items.map((item) => ({
+          name: item.name || "Item",
+          qty: Number(item.quantity ?? item.qty) || 1,
+          price: Number(item.price) || 0,
+        }))
+      : buildDefaultItems(categoryName || "Expense", amount);
+  const amounts = receiptFinancials({ amount, items }, vatClassification);
+
+  return {
+    id: resolvedId,
+    invoiceNumber:
+      receiptData.invoice_number || `INV-${String(resolvedId).replace(/\D/g, "").slice(-6) || "000000"}`,
+    tin: receiptData.tin || tinFor({ id: resolvedId, fileName }),
+    merchantName,
+    location: defaultLocation,
+    fileName,
+    fileType,
+    thumbnail,
+    amount: amounts.gross,
+    subtotal: amounts.subtotal.toFixed(2),
+    tax:
+      receiptData.vat_amount != null && receiptData.vat_amount !== ""
+        ? Number(receiptData.vat_amount).toFixed(2)
+        : amounts.vat.toFixed(2),
+    vatClassification: amounts.vatClassification,
+    date:
+      receiptData.transaction_date || new Date().toISOString().slice(0, 10),
+    category: categoryName,
+    categoryId: receiptData.expense_category_id || null,
+    items,
+    isUploading: false,
+    sourceFile: file || null,
+  };
+}
+
+export function buildReceiptUploadFormPrefill(options = {}) {
+  const receipt = buildPrefilledReceiptDraft(options);
+
+  return {
+    invoice_number: receipt.invoiceNumber,
+    transaction_date: receipt.date,
+    tin: receipt.tin,
+    vendor_name: receipt.merchantName,
+    expense_category_id: receipt.categoryId || "",
+    total_amount: receipt.amount > 0 ? Number(receipt.amount.toFixed(2)) : "",
+    vat_amount: receipt.tax,
+    vat_classification: receipt.vatClassification,
+    items: (receipt.items || []).map((item) => ({
+      name: item.name,
+      quantity: Number(item.qty ?? item.quantity) || 1,
+      price: Number(item.price) || 0,
+    })),
+  };
+}

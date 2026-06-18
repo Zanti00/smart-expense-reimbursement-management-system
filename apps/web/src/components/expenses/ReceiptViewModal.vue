@@ -31,6 +31,11 @@ const emit = defineEmits(["update:modelValue", "delete", "edit"]);
 const canEdit = computed(
   () => String(props.receipt?.status || "").toLowerCase() === "processed",
 );
+const canDelete = computed(() =>
+  ["processed", "rejected"].includes(
+    String(props.receipt?.status || "").toLowerCase(),
+  ),
+);
 
 function close() {
   emit("update:modelValue", false);
@@ -310,6 +315,7 @@ function formatDate(dateStr) {
                 <Download class="w-3.5 h-3.5" /> Download
               </button>
               <button
+                v-if="canDelete"
                 @click="
                   emit('delete', receipt.id);
                   close();

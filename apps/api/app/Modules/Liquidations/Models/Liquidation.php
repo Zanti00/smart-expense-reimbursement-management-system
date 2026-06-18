@@ -16,6 +16,7 @@ class Liquidation extends Model
         'total_expense_amount',
         'outstanding_balance',
         'shortfall_explanation',
+        'admin_note',
         'report_file_path',
     ];
 

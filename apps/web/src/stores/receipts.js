@@ -11,6 +11,14 @@ export const useReceiptStore = defineStore("receipts", () => {
   const categories = ref([]);
   const isLoading = ref(false);
   const isSaving = ref(false);
+  const pagination = ref({
+    currentPage: 1,
+    lastPage: 1,
+    pageSize: 10,
+    total: 0,
+    from: 0,
+    to: 0,
+  });
 
   // Filters State
   const filters = ref({
@@ -81,6 +89,7 @@ export const useReceiptStore = defineStore("receipts", () => {
    * Map a raw receipt API object to the frontend shape.
    */
   function getComplianceStatus(r) {
+    const normalizedStatus = String(r.status || "").toLowerCase();
     const score = Number(r.ocr_confidence_score);
     const missingRequiredFields =
       !r.vendor_name ||
@@ -88,9 +97,20 @@ export const useReceiptStore = defineStore("receipts", () => {
       !r.total_amount ||
       !r.invoice_number;
 
-    if (r.status === "pending-admin-re-review") return r.status;
-    if (r.status === "automatic-rejected") return r.status;
-    if (r.status === "processing") return r.status;
+    if (
+      [
+        "processed",
+        "pending",
+        "approved",
+        "rejected",
+        "pending-admin-re-review",
+        "automatic-rejected",
+        "processing",
+        "final-rejected",
+      ].includes(normalizedStatus)
+    ) {
+      return normalizedStatus;
+    }
     if (r.ocr_flagged || missingRequiredFields || (score > 0 && score < 0.75)) {
       return "automatic-rejected";
     }
@@ -175,16 +195,36 @@ export const useReceiptStore = defineStore("receipts", () => {
   /**
    * Fetch all receipts from the API.
    */
-  async function fetchAll() {
+  async function fetchAll(params = {}) {
     isLoading.value = true;
     try {
-      const response = await apiFetch("/api/serms/reimbursements/receipts", {
+      const query = new URLSearchParams();
+      query.set("page", String(params.page || 1));
+      query.set("per_page", String(params.perPage || pagination.value.pageSize || 10));
+      if (params.search) query.set("search", params.search);
+      if (params.status && params.status !== "All") {
+        query.set("status", String(params.status).toLowerCase());
+      }
+      if (params.category && params.category !== "All") {
+        query.set("category", params.category);
+      }
+
+      const response = await apiFetch(`/api/serms/reimbursements/receipts?${query.toString()}`, {
         credentials: "include",
       });
       if (response.ok) {
         const data = await response.json();
-        const fetchedItems = (data.data || data).map(mapReceipt);
+        const fetchedItems = (data.data || []).map(mapReceipt);
         receipts.value = fetchedItems;
+        const meta = data.meta || {};
+        pagination.value = {
+          currentPage: Number(meta.current_page) || 1,
+          lastPage: Number(meta.last_page) || 1,
+          pageSize: Number(meta.per_page) || 10,
+          total: Number(meta.total) || fetchedItems.length,
+          from: Number(meta.from) || (fetchedItems.length ? 1 : 0),
+          to: Number(meta.to) || fetchedItems.length,
+        };
       }
     } catch (e) {
       console.error("Failed to fetch receipts from database:", e);
@@ -357,8 +397,8 @@ export const useReceiptStore = defineStore("receipts", () => {
         return;
       }
 
-      if (fileMeta.size > 10 * 1024 * 1024) {
-        reject(new Error("File size exceeds 10MB."));
+      if (fileMeta.size > 2 * 1024 * 1024) {
+        reject(new Error("File size exceeds 2MB."));
         return;
       }
 
@@ -448,6 +488,7 @@ export const useReceiptStore = defineStore("receipts", () => {
     isSaving,
     filters,
     existingHashes,
+    pagination,
     visibleReceipts,
     fetchAll,
     fetchCategories,

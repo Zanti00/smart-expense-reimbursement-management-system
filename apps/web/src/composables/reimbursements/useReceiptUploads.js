@@ -2,11 +2,7 @@ import { ref } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "@/composables/useToast";
 import {
-  tinFor,
-  cleanName,
-  normalizeVatClassification,
-  receiptFinancials,
-  getItems,
+  buildPrefilledReceiptDraft,
 } from "@/utils/receiptUtils";
 
 export function useReceiptUploads() {
@@ -39,32 +35,14 @@ export function useReceiptUploads() {
       }
 
       const tempId = `temp-${Date.now()}`;
-      const receiptObj = {
+      const receiptObj = buildPrefilledReceiptDraft({
         id: tempId,
-        invoiceNumber: tempId,
-        tin: tinFor({ id: tempId }),
-        merchantName: cleanName(file.name),
-        location: "Metro Manila, Philippines",
-        fileName: file.name,
-        fileType: file.type,
+        file,
         thumbnail: file.type.startsWith("image/")
           ? URL.createObjectURL(file)
           : "",
-        amount: 0,
-        subtotal: 0,
-        tax: receiptFinancials({ amount: 0 }, "vat").vat.toFixed(2),
-        vatClassification: "vat",
-        date: new Date().toISOString().slice(0, 10),
-        category: "",
-        categoryId: null,
-        items: getItems("Expense").map((name) => ({
-          name,
-          qty: 1,
-          price: 0,
-        })),
-        isUploading: true,
-        sourceFile: file,
-      };
+      });
+      receiptObj.isUploading = true;
       localReceipts.value.push(receiptObj);
 
       try {
@@ -85,36 +63,15 @@ export function useReceiptUploads() {
 
         const index = localReceipts.value.findIndex((r) => r.id === tempId);
         if (index !== -1) {
-          const amount = data.data.total_amount || 0;
-          const vatClassification = normalizeVatClassification(
-            data.data.vat_classification,
-          );
-          const amounts = receiptFinancials(
-            { amount },
-            vatClassification,
-          );
-
           localReceipts.value[index] = {
-            ...localReceipts.value[index],
-            id: data.data.id,
-            invoiceNumber: data.data.id,
-            amount: amount,
-            subtotal: amounts.subtotal.toFixed(2),
-            tax: amounts.vat.toFixed(2),
-            vatClassification: amounts.vatClassification,
-            date: data.data.transaction_date || receiptObj.date,
-            category: data.data.category?.name || "",
-            categoryId: data.data.expense_category_id || null,
+            ...buildPrefilledReceiptDraft({
+              id: data.data.id,
+              file,
+              receiptData: data.data,
+              thumbnail: localReceipts.value[index].thumbnail,
+            }),
             isUploading: false,
           };
-          // Recalculate item prices based on total amount
-          const currentItems = localReceipts.value[index].items;
-          if (currentItems.length > 0) {
-            const splitPrice = (amount / currentItems.length).toFixed(2);
-            currentItems.forEach((item) => {
-              item.price = splitPrice;
-            });
-          }
         }
       } catch (e) {
         console.error(e);

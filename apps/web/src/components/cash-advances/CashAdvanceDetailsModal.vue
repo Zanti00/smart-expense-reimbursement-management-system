@@ -68,6 +68,17 @@ const isOwnSubmission = computed(() => {
   );
 });
 
+const showSignatureSection = computed(
+  () => Boolean(props.record?.signatureImage) || isOwnSubmission.value,
+);
+
+const canAcknowledgeFromCurrentView = computed(
+  () =>
+    isOwnSubmission.value &&
+    props.record?.status === "disbursed" &&
+    !props.record?.acknowledgedAt,
+);
+
 watch(
   () => props.isOpen,
   async (newVal) => {
@@ -460,23 +471,82 @@ async function confirmAcknowledge() {
             </ul>
           </section>
 
-          <section class="space-y-2" v-if="record.signatureImage">
-            <p class="section-label">Employee Signature Verification Pad</p>
+          <section class="space-y-4" v-if="showSignatureSection">
             <div
-              class="relative flex h-32 w-full items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-slate-200 bg-white"
+              v-if="record.status === 'disbursed'"
+              class="flex items-start gap-3 rounded-lg border border-accent/20 bg-accent-50 p-4"
             >
-              <img
-                :src="record.signatureImage"
-                class="max-h-full max-w-full"
-                alt="Signature"
-              />
+              <ShieldCheck class="mt-0.5 h-5 w-5 flex-shrink-0 text-accent" />
+              <p class="text-sm leading-relaxed text-slate-800">
+                This certifies that I received the cash advance with amount of
+                <span class="font-bold text-primary">{{
+                  formatPeso(record.amount)
+                }}</span
+                >.
+              </p>
+            </div>
+
+            <div>
+              <p class="section-label">Employee Signature Verification Pad</p>
               <div
-                class="absolute bottom-2 right-3 flex items-center gap-1 text-accent bg-white/80 px-2 py-1 rounded"
+                v-if="record.acknowledgedAt || record.signatureImage"
+                class="relative mt-2 flex h-36 w-full items-center justify-center overflow-hidden rounded-lg border border-slate-300 bg-white"
               >
-                <ShieldCheck class="h-4 w-4" />
-                <span class="text-[10px] font-bold uppercase tracking-widest"
-                  >Digitally Verified</span
+                <img
+                  :src="record.signatureImage"
+                  class="max-h-full max-w-full"
+                  alt="Signature"
+                />
+                <div
+                  class="absolute bottom-2 right-3 flex items-center gap-1 rounded bg-white/80 px-2 py-1 text-accent"
                 >
+                  <ShieldCheck class="h-4 w-4" />
+                  <span class="text-[10px] font-bold uppercase tracking-widest"
+                    >Digitally Verified</span
+                  >
+                </div>
+              </div>
+              <div
+                v-else-if="canAcknowledgeFromCurrentView"
+                class="relative mt-2 h-36 overflow-hidden rounded-lg border border-slate-300 bg-white"
+              >
+                <canvas
+                  ref="signatureCanvas"
+                  class="h-full w-full touch-none"
+                  @pointerdown="startSignature"
+                  @pointermove="drawSignature"
+                  @pointerup="stopSignature"
+                  @pointerleave="stopSignature"
+                  @pointercancel="stopSignature"
+                />
+                <span
+                  v-if="!signatureStarted"
+                  class="pointer-events-none absolute inset-0 flex items-center justify-center text-xs font-semibold text-slate-400"
+                >
+                  Draw your signature here using your mouse
+                </span>
+              </div>
+
+              <div
+                v-if="canAcknowledgeFromCurrentView"
+                class="mt-2 flex justify-end gap-3"
+              >
+                <button
+                  class="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-600 transition-colors hover:bg-slate-100"
+                  type="button"
+                  @click="clearSignature"
+                >
+                  <RotateCcw class="h-4 w-4" />
+                  Clear Signature
+                </button>
+                <button
+                  class="btn btn-primary px-4 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+                  type="button"
+                  :disabled="!signatureStarted"
+                  @click="showAcknowledgeModal = true"
+                >
+                  I acknowledge
+                </button>
               </div>
             </div>
           </section>

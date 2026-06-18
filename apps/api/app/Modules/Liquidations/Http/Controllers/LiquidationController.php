@@ -270,7 +270,7 @@ class LiquidationController extends Controller
         $validated = $request->validate([
             'status' => 'required|in:approved,rejected',
             'password' => 'required|string',
-            'admin_note' => 'required_if:status,rejected|nullable|string|min:10',
+            'admin_note' => 'nullable|string|min:10|required_if:status,rejected',
         ]);
 
         return DB::transaction(function () use ($user, $id, $validated, $request) {
@@ -283,6 +283,7 @@ class LiquidationController extends Controller
 
             $liquidation = Liquidation::findOrFail($id);
             $advance = CashAdvance::findOrFail($liquidation->cash_advance_id);
+            $receiptIds = is_array($liquidation->reimbursement_ids) ? $liquidation->reimbursement_ids : [];
 
             // Self-approval/self-rejection check
             if ($liquidation->user_id === $user->id) {
@@ -305,6 +306,13 @@ class LiquidationController extends Controller
                     'outstanding_balance' => $newBalance,
                 ]);
 
+                if (!empty($receiptIds)) {
+                    Receipt::whereIn('id', $receiptIds)->update([
+                        'status' => 'approved',
+                        'admin_notes' => $validated['admin_note'] ?? null,
+                    ]);
+                }
+
                 $advance->update([
                     'status'              => $newAdvanceStatus,
                     'outstanding_balance' => $newBalance,
@@ -316,6 +324,13 @@ class LiquidationController extends Controller
                     'status'     => 'rejected',
                     'admin_note' => $validated['admin_note'],
                 ]);
+
+                if (!empty($receiptIds)) {
+                    Receipt::whereIn('id', $receiptIds)->update([
+                        'status' => 'rejected',
+                        'admin_notes' => $validated['admin_note'],
+                    ]);
+                }
 
                 // Balance unchanged on rejection — no payment was accepted.
                 // The cash advance returns to incomplete state.

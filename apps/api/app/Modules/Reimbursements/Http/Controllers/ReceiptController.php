@@ -27,10 +27,23 @@ class ReceiptController extends Controller
     public function index(Request $request)
     {
         $canManage = $request->user()->can('serms.reimbursements.manage');
-        $receipts = $this->service->listReceipts($request->user(), $canManage);
+        $receipts = $this->service->listReceipts($request->user(), $canManage, [
+            'search' => $request->query('search'),
+            'status' => $request->query('status'),
+            'category' => $request->query('category'),
+            'per_page' => $request->query('per_page', 10),
+        ]);
 
         return response()->json([
-            'data' => $receipts,
+            'data' => $receipts->items(),
+            'meta' => [
+                'current_page' => $receipts->currentPage(),
+                'last_page' => $receipts->lastPage(),
+                'per_page' => $receipts->perPage(),
+                'total' => $receipts->total(),
+                'from' => $receipts->firstItem(),
+                'to' => $receipts->lastItem(),
+            ],
         ]);
     }
 
