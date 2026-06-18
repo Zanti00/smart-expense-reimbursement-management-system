@@ -110,10 +110,16 @@ const employeeSearchQuery = ref("");
 const employeeActiveStatus = ref("All");
 const employeeSortKey = ref("status");
 const employeeSortDirection = ref("asc");
+const VALID_REPORT_ATTACHMENT_MIME_TYPES = [
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+];
+const VALID_REPORT_ATTACHMENT_EXTENSIONS = [".pdf", ".docx"];
 
 const statusFilters = [
   "All",
   "Pending",
+  "Rejected",
   "Incomplete",
   "Overpayment",
   "Liquidated",
@@ -122,6 +128,7 @@ const statusFilters = [
 const employeeStatusFilters = [
   "All",
   "Pending",
+  "Rejected",
   "Approved",
   "Disbursed",
   "Signed",
@@ -780,7 +787,10 @@ function cancelReject() {
 
 async function confirmApprove() {
   if (!approvingId.value || !confirmPassword.value) return;
-  if (rejectionComment.value.trim() && rejectionComment.value.trim().length < 10) {
+  if (
+    rejectionComment.value.trim() &&
+    rejectionComment.value.trim().length < 10
+  ) {
     addToast({
       title: "Validation Error",
       message: "Admin note must be at least 10 characters.",
@@ -905,7 +915,7 @@ async function confirmDeleteLiquidation(password) {
 function getActions(row) {
   return [
     {
-      label: "Review",
+      label: "View",
       icon: Eye,
       visible: true,
       handler: () => openReview(row),
@@ -983,9 +993,33 @@ function closeAdminRequestForm() {
   });
 }
 
+function isValidReportAttachment(file) {
+  if (!file) return false;
+
+  const normalizedName = String(file.name || "").toLowerCase();
+  const isValidImage = String(file.type || "").startsWith("image/");
+  const hasValidMimeType = VALID_REPORT_ATTACHMENT_MIME_TYPES.includes(
+    file.type,
+  );
+  const hasValidExtension = VALID_REPORT_ATTACHMENT_EXTENSIONS.some((ext) =>
+    normalizedName.endsWith(ext),
+  );
+
+  if (isValidImage || hasValidMimeType || hasValidExtension) {
+    return true;
+  }
+
+  addToast({
+    message:
+      "Invalid file type. Only image files, PDF, and DOCX are allowed for the report attachment.",
+    type: "error",
+  });
+  return false;
+}
+
 function selectReportAttachment(event) {
   const file = event.target.files?.[0];
-  if (file) reportAttachment.value = file;
+  if (file && isValidReportAttachment(file)) reportAttachment.value = file;
   event.target.value = "";
 }
 
@@ -2212,9 +2246,7 @@ function finalizeLiquidation() {
                   {{ adv.purpose }}
                 </p>
               </div>
-              <StatusBadge
-                :status="employeeAdvanceBadgeStatus(adv)"
-              />
+              <StatusBadge :status="employeeAdvanceBadgeStatus(adv)" />
             </div>
 
             <div class="flex items-end justify-between mt-4">
@@ -2531,7 +2563,7 @@ function finalizeLiquidation() {
             <input
               ref="reportAttachmentInput"
               type="file"
-              accept="image/*,.pdf,.doc,.docx"
+              accept="image/*,.pdf,.docx"
               class="hidden"
               @change="selectReportAttachment"
             />
@@ -2574,14 +2606,18 @@ function finalizeLiquidation() {
           </section>
 
           <section
-            v-if="existingLiquidation?.admin_note || existingLiquidation?.adminNote"
+            v-if="
+              existingLiquidation?.admin_note || existingLiquidation?.adminNote
+            "
             class="p-4 bg-white border rounded-xl border-slate-200"
           >
             <p class="text-base font-bold font-heading text-primary">
               Admin Notes / Rejection Feedback
             </p>
             <p class="mt-2 text-sm leading-relaxed text-slate-600">
-              {{ existingLiquidation.admin_note || existingLiquidation.adminNote }}
+              {{
+                existingLiquidation.admin_note || existingLiquidation.adminNote
+              }}
             </p>
           </section>
 

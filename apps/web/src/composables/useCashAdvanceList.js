@@ -5,7 +5,19 @@ export function useCashAdvanceList(store, auth) {
   const activeStatus = ref("All");
 
   const statusTabs = computed(() => {
-    const baseTabs = ["All", "Pending", "Approved", "Rejected", "Disbursed"];
+    const baseTabs = [
+      "All",
+      "Pending",
+      "Approved",
+      "Disbursed",
+      "Signed",
+      "Under Review",
+      "Incomplete",
+      "Overdue",
+      "Liquidated",
+      "Settled",
+      "Rejected",
+    ];
     return auth.isAdmin ? [...baseTabs, "Me"] : baseTabs;
   });
 

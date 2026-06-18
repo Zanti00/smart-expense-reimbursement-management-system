@@ -23,6 +23,16 @@ function getActions(row) {
   ];
 }
 
+function displayStatus(status) {
+  const normalized = String(status || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ");
+
+  return normalized === "under review" ? "under review" : status;
+}
+
 
 
 function statusClass(status) {
@@ -34,6 +44,8 @@ function statusClass(status) {
     approved: "bg-success text-white border border-success",
     disbursed: "bg-[#F0FDFA] text-[#0D9488] border border-teal-100",
     rejected: "bg-[#FEF2F2] text-[#B91C1C] border border-red-200",
+    "under review": "bg-violet-50 text-violet-700 border border-violet-200",
+    "under-review": "bg-violet-50 text-violet-700 border border-violet-200",
   };
   return classes[status] || "bg-slate-100 text-slate-600";
 }
@@ -78,7 +90,7 @@ function statusClass(status) {
               </div>
             </td>
             <td class="px-5 py-5 text-center">
-              <span :class="['inline-flex rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide', statusClass(row.status)]">{{ row.status }}</span>
+              <span :class="['inline-flex rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide', statusClass(row.status)]">{{ displayStatus(row.status) }}</span>
             </td>
             <td class="px-5 py-5 text-center">
               <ActionDropdownMenu :actions="getActions(row)" />

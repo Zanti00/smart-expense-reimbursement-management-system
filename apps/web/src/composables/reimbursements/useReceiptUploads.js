@@ -24,9 +24,18 @@ export function useReceiptUploads() {
   }
 
   async function addReceiptFiles(fileList) {
-    const accepted = Array.from(fileList || []).filter((file) =>
-      ["image/jpeg", "image/png", "application/pdf"].includes(file.type),
-    );
+    const allowedMimeTypes = ["image/jpeg", "image/png", "application/pdf"];
+    const files = Array.from(fileList || []);
+    const accepted = files.filter((file) => allowedMimeTypes.includes(file.type));
+
+    files
+      .filter((file) => !allowedMimeTypes.includes(file.type))
+      .forEach((file) => {
+        addToast({
+          message: `${file.name} has an invalid file type. Only JPEG, PNG, or PDF files are allowed.`,
+          type: "error",
+        });
+      });
 
     for (const file of accepted) {
       if (file.size > 2 * 1024 * 1024) {

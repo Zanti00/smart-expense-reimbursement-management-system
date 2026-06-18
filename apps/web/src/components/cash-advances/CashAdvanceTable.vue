@@ -140,6 +140,11 @@ function statusClass(status) {
     approved: "bg-success text-white border border-success",
     disbursed: "bg-[#F0FDFA] text-[#0D9488] border border-teal-100",
     rejected: "bg-[#FEF2F2] text-[#B91C1C] border border-red-200",
+    signed: "bg-sky-50 text-sky-700 border border-sky-200",
+    overdue: "bg-red-50 text-red-700 border border-red-200",
+    incomplete: "bg-amber-50 text-amber-800 border border-amber-200",
+    "under-review": "bg-violet-50 text-violet-700 border border-violet-200",
+    settled: "bg-emerald-50 text-emerald-700 border border-emerald-200",
   };
   return classes[status] || "bg-slate-100 text-slate-600";
 }
