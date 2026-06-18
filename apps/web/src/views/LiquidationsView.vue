@@ -124,6 +124,11 @@ const employeeSortOptions = [
   { value: "amount", label: "Total Amount" },
 ];
 
+function numberOrZero(value) {
+  const amount = Number(value);
+  return Number.isFinite(amount) ? amount : 0;
+}
+
 const totalExpenseAmount = computed(() =>
   receipts.value.reduce(
     (sum, receipt) => sum + (Number(receipt.ocrData?.amount) || 0),
@@ -138,7 +143,9 @@ const agingInfo = computed(() => {
 
 const variance = computed(() => {
   if (!selectedAdvance.value) return 0;
-  const currentBalance = Number(selectedAdvance.value.balance ?? selectedAdvance.value.amount ?? 0);
+  const currentBalance = numberOrZero(
+    selectedAdvance.value.balance ?? selectedAdvance.value.amount,
+  );
   return currentBalance - totalExpenseAmount.value;
 });
 
@@ -152,11 +159,11 @@ const liquidationStatus = computed(() => {
   return "Liquidated";
 });
 const calculatedOutstandingBalance = computed(() => {
-  const currentBalance = Number(selectedAdvance.value?.balance ?? 0);
+  const currentBalance = numberOrZero(selectedAdvance.value?.balance);
   return Math.max(totalExpenseAmount.value - currentBalance, 0);
 });
 const overpaymentAmount = computed(() =>
-  Math.max(totalExpenseAmount.value - (Number(selectedAdvance.value?.balance ?? 0)), 0),
+  Math.max(totalExpenseAmount.value - numberOrZero(selectedAdvance.value?.balance), 0),
 );
 const needsReportAttachmentReminder = computed(
   () =>
@@ -217,9 +224,7 @@ const employeeFilteredAdvances = computed(() => {
 });
 
 const tableColumns = [
-  { key: "id", label: "ID" },
   { key: "requestorName", label: "Requestor Name" },
-  { key: "dateOfAdvances", label: "Date of Advances" },
   { key: "dueDate", label: "Due Date" },
   { key: "cashAdvanceAmount", label: "Cash Advance Amount", align: "right" },
   { key: "outstandingBalance", label: "Outstanding Balance", align: "right" },
@@ -227,94 +232,8 @@ const tableColumns = [
   { key: "actions", label: "Actions", align: "center" },
 ];
 
-const receiptTemplates = [
-  {
-    merchantName: "Vikings Luxury Buffet",
-    location: "SM Megamall, Mandaluyong City",
-    category: "Meals",
-    invoicePrefix: "VIK",
-    transactionDate: "January 5, 2026",
-    tinNumber: "009-872-551-000",
-    items: [
-      { name: "Buffet Dinner - 2 pax", quantity: 1, price: 2816 },
-      { name: "Beverages", quantity: 2, price: 384 },
-    ],
-  },
-  {
-    merchantName: "Grab Transport",
-    location: "Makati City",
-    category: "Transportation",
-    invoicePrefix: "GRB",
-    transactionDate: "January 6, 2026",
-    tinNumber: "214-583-097-000",
-    items: [
-      { name: "Ride fare", quantity: 1, price: 640 },
-      { name: "Platform fee", quantity: 1, price: 25 },
-    ],
-  },
-  {
-    merchantName: "National Book Store",
-    location: "BGC, Taguig City",
-    category: "Office Supplies",
-    invoicePrefix: "NBS",
-    transactionDate: "January 7, 2026",
-    tinNumber: "000-421-190-000",
-    items: [
-      { name: "Paper ream", quantity: 3, price: 780 },
-      { name: "Pens and markers", quantity: 1, price: 420 },
-    ],
-  },
-  {
-    merchantName: "Ace Hardware",
-    location: "Pasig City",
-    category: "Equipment",
-    invoicePrefix: "ACE",
-    transactionDate: "January 8, 2026",
-    tinNumber: "104-774-203-000",
-    items: [
-      { name: "Tool kit", quantity: 1, price: 1850 },
-      { name: "Safety gloves", quantity: 2, price: 520 },
-    ],
-  },
-];
-
-const fallbackCases = [
-  makeCase({
-    id: "LIQ-001",
-    requestorName: "Ana Reyes",
-    dateOfAdvances: "2026-05-28",
-    dueDate: "2026-06-04",
-    cashAdvanceAmount: 8000,
-    receiptAmounts: [3500, 1500],
-  }),
-  makeCase({
-    id: "LIQ-002",
-    requestorName: "Marco Santos",
-    dateOfAdvances: "2026-05-24",
-    dueDate: "2026-06-02",
-    cashAdvanceAmount: 15000,
-    receiptAmounts: [7200, 5600, 4200],
-  }),
-  makeCase({
-    id: "LIQ-003",
-    requestorName: "Lia Cruz",
-    dateOfAdvances: "2026-05-30",
-    dueDate: "2026-06-06",
-    cashAdvanceAmount: 10000,
-    receiptAmounts: [4200, 3200, 2600],
-  }),
-  makeCase({
-    id: "LIQ-004",
-    requestorName: "Noel Garcia",
-    dateOfAdvances: "2026-05-20",
-    dueDate: "2026-05-27",
-    cashAdvanceAmount: 6000,
-    receiptAmounts: [1800, 1200],
-  }),
-];
-
 const getFileUrl = (filePath) => {
-  if (!filePath) return "/mock_receipt.png";
+  if (!filePath) return "";
   if (filePath.startsWith("http://") || filePath.startsWith("https://"))
     return filePath;
   return `https://vbabvrcfqcmvvjwmzuwx.supabase.co/storage/v1/object/public/cash_advances/${filePath}`;
@@ -356,7 +275,7 @@ const sourceCases = computed(() => {
       };
     });
 
-    const mockRow = {
+    const statusContext = {
       cashAdvanceAmount: Number(item.cash_advance?.amount || 0),
       dueDate:
         item.cash_advance?.expected_liquidation_date ||
@@ -365,7 +284,7 @@ const sourceCases = computed(() => {
 
     const displayStatus = mapBackendStatusToDisplayStatus(
       item.status,
-      mockRow,
+      statusContext,
       Number(item.total_expense_amount || 0),
     );
 
@@ -379,13 +298,14 @@ const sourceCases = computed(() => {
         item.user_id ??
         item.cash_advance?.user_id ??
         item.cash_advance?.userId,
-      requestorName: item.user?.name || "Employee",
-      dateOfAdvances: item.cash_advance?.date || item.created_at,
+      requestorName: item.user?.name || item.cash_advance?.user?.name || "",
       dueDate:
         item.cash_advance?.expected_liquidation_date ||
         item.cash_advance?.dueDate,
       cashAdvanceAmount: Number(item.cash_advance?.amount || 0),
-      outstandingBalance: Number(item.outstanding_balance ?? (item.cash_advance?.amount || 0)),
+      outstandingBalance: numberOrZero(
+        item.outstanding_balance ?? item.cash_advance?.amount,
+      ),
       receipts: mappedReceipts,
       submittedReceiptTotal: Number(item.total_expense_amount || 0),
       shortfallExplanation: item.shortfall_explanation || "",
@@ -395,7 +315,7 @@ const sourceCases = computed(() => {
     };
   });
 
-  return rows.length ? rows : fallbackCases;
+  return rows;
 });
 
 const liquidationRows = computed(() =>
@@ -418,7 +338,7 @@ const liquidationRows = computed(() =>
 
     // Outstanding balance reflects the snapshot balance of the cash advance
     // at the time the liquidation was submitted.
-    const outstandingBalance = row.outstandingBalance;
+    const outstandingBalance = numberOrZero(row.outstandingBalance);
 
     return {
       ...row,
@@ -437,13 +357,10 @@ const filteredRows = computed(() => {
     const matchesSearch =
       !query ||
       [
-        row.id,
         row.advanceId,
         row.requestorName,
-        row.dateOfAdvances,
         row.dueDate,
         row.status,
-        formatDateOnly(row.dateOfAdvances),
         formatDateOnly(row.dueDate),
         formatPeso(row.cashAdvanceAmount),
         formatPeso(row.outstandingBalance),
@@ -499,7 +416,8 @@ const acceptedReviewTotal = computed(() =>
 const reviewOutstandingBalance = computed(() =>
   reviewingCase.value
     ? Math.max(
-        reviewingCase.value.outstandingBalance - acceptedReviewTotal.value,
+        numberOrZero(reviewingCase.value.outstandingBalance) -
+          numberOrZero(acceptedReviewTotal.value),
         0,
       )
     : 0,
@@ -531,7 +449,7 @@ const liquidationKpis = computed(() => {
   const incomplete = rows.filter((item) => item.status === "Incomplete").length;
   const liquidated = rows.filter((item) => item.status === "Liquidated").length;
   const outstanding = rows.reduce(
-    (sum, item) => sum + item.outstandingBalance,
+    (sum, item) => sum + numberOrZero(item.outstandingBalance),
     0,
   );
 
@@ -584,7 +502,7 @@ const employeeLiquidationKpis = computed(() => {
     ["Approved", "Signed"].includes(employeeAdvanceStatus(item)),
   ).length;
   const outstanding = rows.reduce(
-    (sum, item) => sum + Number(item.balance || 0),
+    (sum, item) => sum + numberOrZero(item.balance),
     0,
   );
 
@@ -969,67 +887,6 @@ function forwardOverpaymentToReimbursement() {
   router.push("/reimbursements/new");
 }
 
-function makeCase({
-  id,
-  advanceId,
-  requestorName,
-  dateOfAdvances,
-  dueDate,
-  cashAdvanceAmount,
-  receiptAmounts,
-}) {
-  const receipts = receiptAmounts.map((amount, index) =>
-    makeReceipt(id, amount, index),
-  );
-  return {
-    id,
-    advanceId: advanceId || id.replace("LIQ", "CA"),
-    requestorName,
-    dateOfAdvances,
-    dueDate,
-    cashAdvanceAmount,
-    receipts,
-    submittedReceiptTotal: receiptAmounts.reduce(
-      (sum, amount) => sum + amount,
-      0,
-    ),
-  };
-}
-
-function makeReceipt(caseId, amount, index) {
-  const template = receiptTemplates[index % receiptTemplates.length];
-  const subtotal = amount * 0.88;
-  const vat = amount * 0.12;
-
-  return {
-    id: `${caseId}-R${index + 1}`,
-    fileName: `liquidation_receipt_${index + 1}.jpg`,
-    merchantName: template.merchantName,
-    location: template.location,
-    category: template.category,
-    invoiceNumber: `${template.invoicePrefix}-2026-${String(index + 2381).padStart(6, "0")}`,
-    transactionDate: template.transactionDate,
-    tinNumber: template.tinNumber,
-    items: template.items,
-    amount,
-    subtotal,
-    vat,
-  };
-}
-
-function seededReceiptAmounts(amount, index) {
-  if (!amount) return [0];
-  const patterns = [
-    [0.45, 0.35],
-    [0.5, 0.35, 0.25],
-    [0.4, 0.34, 0.26],
-    [0.35, 0.2],
-  ];
-  return patterns[index % patterns.length].map((ratio) =>
-    Math.round(amount * ratio),
-  );
-}
-
 function acceptedReceiptTotal(row, receipts) {
   return receipts.reduce((sum, receipt) => {
     if (receipt.decision !== "accepted") return sum;
@@ -1092,7 +949,7 @@ function toggleSort(column) {
 function getSortValue(row, key) {
   if (["cashAdvanceAmount", "outstandingBalance"].includes(key))
     return Number(row[key] || 0);
-  if (["dateOfAdvances", "dueDate"].includes(key))
+  if (["dueDate"].includes(key))
     return new Date(row[key] || 0).getTime();
   if (key === "actions") return row.id;
   return String(row[key] || "").toLowerCase();
@@ -1205,12 +1062,12 @@ function finalizeLiquidation() {
       :skeletonCount="4"
     />
 
-    <BaseUtilityToolbar
-      v-model:search="searchQuery"
-      v-model:status-value="activeStatus"
-      :statuses="statusFilters"
-      searchPlaceholder="Search liquidation ID, employee, status, or amount..."
-    />
+      <BaseUtilityToolbar
+        v-model:search="searchQuery"
+        v-model:status-value="activeStatus"
+        :statuses="statusFilters"
+        searchPlaceholder="Search employee, status, or amount..."
+      />
 
     <section
       class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
@@ -1235,7 +1092,7 @@ function finalizeLiquidation() {
       </div>
 
       <div class="overflow-x-auto">
-        <table class="w-full min-w-[1180px] border-collapse text-left">
+        <table class="w-full min-w-[980px] border-collapse text-left">
           <thead>
             <tr class="border-b border-slate-200 bg-slate-50">
               <th
@@ -1301,11 +1158,11 @@ function finalizeLiquidation() {
                     v-else
                     class="h-3.5 max-w-full animate-pulse rounded bg-slate-200"
                     :class="[
-                      col === 7 ? 'mx-auto h-5 w-20 rounded-full sm:w-24' : '',
-                      col === 1 ? 'w-12 sm:w-16' : '',
+                      col === 5 ? 'mx-auto h-5 w-20 rounded-full sm:w-24' : '',
+                      col === 1 ? 'w-24 sm:w-32' : '',
                       col === 2 ? 'w-24 sm:w-32' : '',
-                      [5, 6].includes(col) ? 'ml-auto w-20 sm:w-24' : '',
-                      ![1, 2, 5, 6, 7, tableColumns.length].includes(col)
+                      [3, 4].includes(col) ? 'ml-auto w-20 sm:w-24' : '',
+                      ![1, 2, 3, 4, 5, 6].includes(col)
                         ? 'w-20 sm:w-28'
                         : '',
                     ]"
@@ -1327,16 +1184,8 @@ function finalizeLiquidation() {
                 :key="row.id"
                 class="whitespace-nowrap transition-colors duration-200 ease-out hover:bg-slate-50/80"
               >
-                <td
-                  class="px-5 py-5 font-mono text-sm font-bold text-slate-900"
-                >
-                  {{ row.id }}
-                </td>
                 <td class="px-5 py-5 text-sm font-semibold text-slate-700">
                   {{ row.requestorName }}
-                </td>
-                <td class="px-5 py-5 text-sm text-slate-500">
-                  {{ formatDateOnly(row.dateOfAdvances) }}
                 </td>
                 <td class="px-5 py-5 text-sm text-slate-500">
                   {{ formatDateOnly(row.dueDate) }}
@@ -2019,12 +1868,12 @@ function finalizeLiquidation() {
       :skeletonCount="4"
     />
 
-    <BaseUtilityToolbar
-      v-model:search="employeeSearchQuery"
-      v-model:status-value="employeeActiveStatus"
-      :statuses="employeeStatusFilters"
-      searchPlaceholder="Search advance ID, purpose, status, or amount..."
-    />
+      <BaseUtilityToolbar
+        v-model:search="employeeSearchQuery"
+        v-model:status-value="employeeActiveStatus"
+        :statuses="employeeStatusFilters"
+        searchPlaceholder="Search purpose, status, or amount..."
+      />
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-5">
       <div class="flex flex-col gap-4 lg:col-span-2">
@@ -2116,11 +1965,6 @@ function finalizeLiquidation() {
           >
             <div class="flex items-start justify-between">
               <div class="min-w-0 flex-1">
-                <p
-                  class="mb-0.5 text-[9px] font-bold uppercase tracking-tighter text-slate-700"
-                >
-                  REF: {{ adv.id }}
-                </p>
                 <p
                   class="truncate text-xs font-bold uppercase tracking-tight text-slate-900"
                 >
