@@ -119,6 +119,7 @@ export const useLiquidationStore = defineStore('liquidation', () => {
         vat_amount: r.ocrData?.vat || r.vat,
         tin: r.ocrData?.tin || r.tinNumber,
         invoice_number: r.ocrData?.invoiceNumber || r.invoiceNumber,
+        expense_category_id: r.categoryId ?? null,
       }));
       formData.append('receipts', JSON.stringify(formattedReceipts));
 
@@ -191,6 +192,7 @@ export const useLiquidationStore = defineStore('liquidation', () => {
         vat_amount: r.ocrData?.vat || r.vat,
         tin: r.ocrData?.tin || r.tinNumber,
         invoice_number: r.ocrData?.invoiceNumber || r.invoiceNumber,
+        expense_category_id: r.categoryId ?? null,
       }));
       formData.append('receipts', JSON.stringify(formattedReceipts));
 

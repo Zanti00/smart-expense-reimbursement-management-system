@@ -162,6 +162,7 @@ class LiquidationController extends Controller
                     'vat_amount' => $receiptData['vat_amount'] ?? $receipt->vat_amount,
                     'tin' => $receiptData['tin'] ?? $receipt->tin,
                     'invoice_number' => $receiptData['invoice_number'] ?? $receipt->invoice_number,
+                    'expense_category_id' => $receiptData['expense_category_id'] ?? $receipt->expense_category_id ?? null,
                     'status' => 'pending', // Awaiting admin audit
                 ]);
                 $receiptIds[] = $receipt->id;
@@ -408,6 +409,7 @@ class LiquidationController extends Controller
                             'vat_amount' => $receiptData['vat_amount'] ?? $receipt->vat_amount,
                             'tin' => $receiptData['tin'] ?? $receipt->tin,
                             'invoice_number' => $receiptData['invoice_number'] ?? $receipt->invoice_number,
+                            'expense_category_id' => $receiptData['expense_category_id'] ?? $receipt->expense_category_id ?? null,
                             'status' => 'pending',
                         ]);
                         $receiptIds[] = $receipt->id;

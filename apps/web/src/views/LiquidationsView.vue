@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useCashAdvanceStore } from "@/stores/cashAdvance";
 import { useLiquidationStore } from "@/stores/liquidation";
+import { useReceiptStore } from "@/stores/receipts";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "@/composables/useToast";
 import StatusBadge from "@/components/base/StatusBadge.vue";
@@ -46,13 +47,18 @@ import {
 
 const store = useCashAdvanceStore();
 const liqStore = useLiquidationStore();
+const receiptStore = useReceiptStore();
 const auth = useAuthStore();
 const router = useRouter();
 const { addToast } = useToast();
 
 /** Refresh both stores in parallel — balance is now authoritative in the DB */
 async function refreshAll() {
-  await Promise.all([liqStore.fetchSettlements(), store.fetchAll()]);
+  await Promise.all([
+    liqStore.fetchSettlements(),
+    store.fetchAll(),
+    receiptStore.fetchCategories(),
+  ]);
 }
 
 onMounted(() => refreshAll());
@@ -128,6 +134,21 @@ const employeeSortOptions = [
   { value: "date", label: "Date" },
   { value: "amount", label: "Total Amount" },
 ];
+const receiptCategoryOptions = computed(() => receiptStore.categories || []);
+
+const defaultReceiptCategoryId = computed(() => {
+  const categories = receiptCategoryOptions.value;
+  if (categories.length === 0) return null;
+
+  const preferredCategory = categories.find(
+    (category) =>
+      String(category.name || "")
+        .trim()
+        .toLowerCase() === "meals",
+  );
+
+  return Number(preferredCategory?.id ?? categories[0]?.id ?? null) || null;
+});
 
 function numberOrZero(value) {
   const amount = Number(value);
@@ -139,6 +160,23 @@ const totalExpenseAmount = computed(() =>
     (sum, receipt) => sum + (Number(receipt.ocrData?.amount) || 0),
     0,
   ),
+);
+
+const hasIncompleteReceiptFields = computed(() =>
+  receipts.value.some((receipt) => {
+    const ocrData = receipt.ocrData || {};
+    const amount = Number(ocrData.amount);
+
+    return (
+      !String(ocrData.vendor || "").trim() ||
+      !String(ocrData.date || "").trim() ||
+      !String(ocrData.tin || "").trim() ||
+      !String(ocrData.invoiceNumber || "").trim() ||
+      !receipt.categoryId ||
+      !Number.isFinite(amount) ||
+      amount <= 0
+    );
+  }),
 );
 
 const agingInfo = computed(() => {
@@ -301,7 +339,9 @@ const sourceCases = computed(() => {
         merchantName: r.vendor_name || "Unknown Vendor",
         location: r.location || "N/A",
         category: categoryName(r),
-        categoryId: r.expense_category_id || null,
+        categoryId:
+          Number(r.expense_category_id ?? defaultReceiptCategoryId.value) ||
+          null,
         invoiceNumber: r.invoice_number || "N/A",
         transactionDate: r.transaction_date || r.created_at,
         tinNumber: r.tin || "N/A",
@@ -473,6 +513,19 @@ const reviewStatus = computed(() =>
         )
     : "Incomplete",
 );
+
+watch(
+  receipts,
+  (items) => {
+    items.forEach((item) => {
+      if (!item.categoryId && defaultReceiptCategoryId.value) {
+        item.categoryId = defaultReceiptCategoryId.value;
+      }
+    });
+  },
+  { deep: true },
+);
+
 const isReviewingOwnLiquidation = computed(() => {
   const currentUserId = auth.user?.id;
   const ownerId =
@@ -883,7 +936,9 @@ function selectAdvance(adv) {
           name: r.vendor_name || `Receipt-${r.id}`,
           ocrStatus: "done",
           category: categoryName(r, "General"),
-          categoryId: r.expense_category_id || null,
+          categoryId:
+            Number(r.expense_category_id ?? defaultReceiptCategoryId.value) ||
+            null,
           amount: r.total_amount,
           ocrData: {
             id: r.id,
@@ -1000,7 +1055,7 @@ function forwardOverpaymentToReimbursement() {
       amount: -cashAdvanceAmount,
       date: new Date().toISOString().slice(0, 10),
       category: "Other",
-      categoryId: null,
+      categoryId: defaultReceiptCategoryId.value,
       source: "liquidation-deduction",
       cashAdvanceId: selectedAdvance.value.id,
       vatClassification: "non-vat",
@@ -2403,6 +2458,21 @@ function finalizeLiquidation() {
                       />
                     </label>
                     <label class="space-y-1">
+                      <span class="input-label">Expense Category</span>
+                      <select
+                        v-model.number="receipt.categoryId"
+                        class="bg-white input"
+                      >
+                        <option
+                          v-for="category in receiptCategoryOptions"
+                          :key="category.id"
+                          :value="Number(category.id)"
+                        >
+                          {{ category.name }}
+                        </option>
+                      </select>
+                    </label>
+                    <label class="space-y-1">
                       <span class="input-label">Invoice Number</span>
                       <input
                         class="bg-white input"
@@ -2649,6 +2719,7 @@ function finalizeLiquidation() {
               class="w-fit px-4 py-2.5"
               :disabled="
                 receipts.length === 0 ||
+                hasIncompleteReceiptFields ||
                 receipts.some((r) => r.ocrStatus === 'processing') ||
                 totalExpenseAmount === 0 ||
                 submitting ||

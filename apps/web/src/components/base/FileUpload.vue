@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import {
   Activity,
   AlertTriangle,
@@ -27,6 +27,14 @@ const isDragging = ref(false)
 const files = ref([...props.modelValue])
 const localError = ref(null)
 const fileInput = ref(null)
+
+watch(
+  () => props.modelValue,
+  (newValue) => {
+    files.value = [...(newValue || [])]
+  },
+  { deep: true },
+)
 
 function formatTinValue(value, { padLastBlock = false } = {}) {
   let digits = String(value || '').replace(/\D/g, '').slice(0, 12)
@@ -78,7 +86,11 @@ function addFiles(fileList) {
     }
 
     const signature = `${file.name}-${file.size}`
-    const isDuplicate = files.value.some((entry) => `${entry.file.name}-${entry.size}` === signature)
+    const isDuplicate = files.value.some((entry) => {
+      const existingName = entry.file?.name || entry.name
+      const existingSize = entry.file?.size || entry.size
+      return `${existingName}-${existingSize}` === signature
+    })
 
     if (isDuplicate) {
       localError.value = `Duplicate file skipped: ${file.name}`
