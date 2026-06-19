@@ -39,7 +39,9 @@ export const useAuthStore = defineStore("auth", () => {
    * @param {string} [errorMessage] — an optional error message to show on the login page
    */
   function redirectToLogin(redirectPath = "/dashboard", errorMessage = null) {
-    const callbackUrl = `${window.location.origin}/serms/auth/callback`;
+    const baseUrl = import.meta.env.BASE_URL || "/";
+    const callbackPath = `${baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl}/auth/callback`;
+    const callbackUrl = `${window.location.origin}${callbackPath}`;
     let loginUrl = `${AUTH_MODULE_URL}/login?redirect_uri=${encodeURIComponent(callbackUrl)}&state=${encodeURIComponent(redirectPath)}`;
 
     if (errorMessage) {
@@ -82,7 +84,13 @@ export const useAuthStore = defineStore("auth", () => {
     if (!response.ok) {
       // Token is invalid or expired — clear session
       clearSession();
-      redirectToLogin(window.location.pathname + window.location.search, "Session expired. Please log in again.");
+      // Ensure redirect path is relative to the router base
+      const baseUrl = import.meta.env.BASE_URL || "/";
+      let currentPath = window.location.pathname;
+      if (baseUrl !== "/" && currentPath.startsWith(baseUrl)) {
+        currentPath = "/" + currentPath.slice(baseUrl.length);
+      }
+      redirectToLogin(currentPath + window.location.search, "Session expired. Please log in again.");
       throw new Error(
         "Failed to fetch user profile. Session may have expired.",
       );

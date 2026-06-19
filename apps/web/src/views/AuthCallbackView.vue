@@ -20,6 +20,10 @@ const route = useRoute()
 
 onMounted(async () => {
   let redirectPath = route.query.state || '/dashboard'
+  const baseUrl = import.meta.env.BASE_URL || '/';
+  if (baseUrl !== '/' && redirectPath.startsWith(baseUrl)) {
+    redirectPath = '/' + redirectPath.slice(baseUrl.length);
+  }
   const message = route.query.message
 
   if (message) {
