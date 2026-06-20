@@ -412,7 +412,7 @@ const kpis = computed(() => [
               </div>
               <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <button
-                  class="btn btn-primary !py-2"
+                  class="btn btn-cta"
                   @click="finalizeReceiptReview(receipt, 'approve')"
                 >
                   <ShieldCheck class="w-4 h-4" />

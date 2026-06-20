@@ -1062,6 +1062,17 @@ function clearReportAttachment() {
   reportAttachment.value = null;
 }
 
+function attachmentFileName(file) {
+  if (!file) return "";
+  if (typeof file === "string") return file.split("/").pop() || "Attached Report";
+  return file.name || "Attached Report";
+}
+
+function attachmentFileSize(file) {
+  if (!file || typeof file === "string" || !file.size) return "";
+  return `${(file.size / 1024 / 1024).toFixed(2)} MB`;
+}
+
 function forwardOverpaymentToReimbursement() {
   if (!selectedAdvance.value || overpaymentAmount.value <= 0) return;
 
@@ -1318,8 +1329,10 @@ function finalizeLiquidation() {
       :skeletonCount="4"
     />
 
-    <div class="grid justify-between grid-cols-3">
-      <div class="col-span-2">
+    <div
+      class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
+    >
+      <div class="min-w-0 flex-1">
         <BaseUtilityToolbar
           v-if="auth.isAdmin && !showAdminRequestForm"
           v-model:search="searchQuery"
@@ -1328,11 +1341,11 @@ function finalizeLiquidation() {
           searchPlaceholder="Search employee, status, or amount..."
         />
       </div>
-      <div v-if="auth.isAdmin" class="flex justify-end col-span-1">
+      <div v-if="auth.isAdmin" class="flex w-full justify-end lg:w-auto">
         <button
           v-if="!showAdminRequestForm"
           id="admin-new-liquidation-request-btn"
-          class="inline-flex min-h-[42px] w-full items-center justify-center gap-2 rounded-lg bg-accent px-5 font-heading text-sm font-bold text-white shadow-sm transition-all duration-200 ease-out hover:bg-accent-600 hover:shadow-xl hover:scale-[1.01] active:scale-[0.98] sm:w-fit"
+          class="btn btn-cta min-h-[42px] w-full sm:w-fit"
           type="button"
           @click="openAdminRequestForm"
         >
@@ -1508,13 +1521,13 @@ function finalizeLiquidation() {
 
     <div
       v-if="auth.isAdmin && !showAdminRequestForm && reviewingCase"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-[1px]"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-2 backdrop-blur-[1px] sm:p-4"
     >
       <div
-        class="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl"
+        class="flex max-h-[calc(100dvh-1rem)] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl sm:max-h-[90vh]"
       >
         <header
-          class="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50/80"
+          class="flex items-center justify-between px-4 py-4 border-b border-slate-200 bg-slate-50/80 sm:px-6"
         >
           <div class="min-w-0">
             <div class="flex items-center gap-2 mb-1">
@@ -1535,7 +1548,9 @@ function finalizeLiquidation() {
           </button>
         </header>
 
-        <div class="flex-1 px-6 py-5 space-y-5 overflow-y-auto bg-slate-50/40">
+        <div
+          class="flex-1 space-y-5 overflow-y-auto bg-slate-50/40 px-4 py-5 sm:px-6"
+        >
           <section
             class="grid grid-cols-1 gap-4 p-4 bg-white border rounded-lg border-slate-200 md:grid-cols-4"
           >
@@ -1737,7 +1752,7 @@ function finalizeLiquidation() {
                 Reject Settlement
               </button>
               <button
-                class="inline-flex items-center justify-center gap-2 px-5 text-sm font-bold text-white transition-colors rounded-lg shadow-sm min-h-11 bg-emerald-800 hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-60"
+                class="btn btn-cta min-h-[42px] disabled:cursor-not-allowed disabled:opacity-60"
                 type="button"
                 :disabled="isReviewingOwnLiquidation"
                 @click="openApproveModal"
@@ -1775,10 +1790,10 @@ function finalizeLiquidation() {
 
     <div
       v-if="reviewingCase && receiptDetailsOpen && selectedReceipt"
-      class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-[1px]"
+      class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/40 p-2 backdrop-blur-[1px] sm:p-4"
     >
       <div
-        class="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl"
+        class="flex max-h-[calc(100dvh-1rem)] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl sm:max-h-[92vh]"
       >
         <header
           class="flex items-center justify-between px-5 py-4 text-white border-b border-primary/10 bg-primary"
@@ -1819,7 +1834,7 @@ function finalizeLiquidation() {
           </button>
         </header>
 
-        <div class="flex-1 p-5 overflow-y-auto bg-slate-50 scrollbar-thin">
+        <div class="flex-1 overflow-y-auto bg-slate-50 p-3 scrollbar-thin sm:p-5">
           <div
             class="flex flex-col gap-3 px-4 py-3 mb-4 border rounded-lg border-accent/20 bg-accent-50 sm:flex-row sm:items-center sm:justify-between"
           >
@@ -1852,9 +1867,9 @@ function finalizeLiquidation() {
           <div
             class="overflow-hidden bg-white border shadow-sm rounded-xl border-slate-200"
           >
-            <div class="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)]">
+            <div class="grid grid-cols-1 xl:grid-cols-[320px_minmax(0,1fr)]">
               <aside
-                class="p-5 border-b border-slate-200 bg-slate-100/70 lg:border-b-0 lg:border-r"
+                class="p-4 border-b border-slate-200 bg-slate-100/70 sm:p-5 xl:border-b-0 xl:border-r"
               >
                 <div class="flex items-center justify-between gap-3 mb-4">
                   <div class="min-w-0">
@@ -1906,9 +1921,6 @@ function finalizeLiquidation() {
                         class="pr-10 input"
                         readonly
                         :value="selectedReceipt.transactionDate"
-                      />
-                      <CalendarDays
-                        class="absolute w-4 h-4 -translate-y-1/2 pointer-events-none right-3 top-1/2 text-slate-400"
                       />
                     </span>
                   </label>
@@ -1968,7 +1980,7 @@ function finalizeLiquidation() {
                 </div>
 
                 <div
-                  class="overflow-hidden bg-white border rounded-lg border-slate-200"
+                  class="overflow-x-auto overflow-y-hidden bg-white border rounded-lg border-slate-200"
                 >
                   <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
                     <h4
@@ -2009,7 +2021,7 @@ function finalizeLiquidation() {
                 </div>
 
                 <div
-                  class="grid grid-cols-1 gap-3 pt-4 border-t border-slate-200 sm:grid-cols-3"
+                  class="grid grid-cols-1 gap-3 pt-4 border-t border-slate-200 md:grid-cols-2 xl:grid-cols-3"
                 >
                   <label class="space-y-1">
                     <span class="input-label">Subtotal</span>
@@ -2028,7 +2040,7 @@ function finalizeLiquidation() {
                     />
                   </label>
                   <div
-                    class="p-3 border rounded-lg border-accent/20 bg-accent-50"
+                    class="p-3 border rounded-lg border-accent/20 bg-accent-50 md:col-span-2 xl:col-span-1"
                   >
                     <p class="input-label text-accent">Orders Total</p>
                     <p class="mt-1 text-xl font-bold font-heading text-primary">
@@ -2081,7 +2093,7 @@ function finalizeLiquidation() {
                 Cancel
               </button>
               <button
-                class="inline-flex items-center justify-center px-4 text-xs font-bold text-white transition-colors rounded-lg min-h-9 bg-accent hover:bg-accent/90"
+                class="btn btn-cta min-h-[42px]"
                 type="button"
                 @click="confirmReceiptDecision"
               >
@@ -2100,7 +2112,7 @@ function finalizeLiquidation() {
               Reject
             </button>
             <button
-              class="inline-flex items-center justify-center gap-2 px-4 text-sm font-bold text-white transition-colors rounded-lg min-h-10 bg-accent hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-60"
+              class="btn btn-cta min-h-[42px] disabled:cursor-not-allowed disabled:opacity-60"
               type="button"
               :disabled="isReviewingOwnLiquidation"
               @click="requestReceiptDecision('accepted')"
@@ -2149,9 +2161,9 @@ function finalizeLiquidation() {
 
     <div
       v-if="!auth.isAdmin || showAdminRequestForm"
-      class="grid grid-cols-1 gap-6 lg:grid-cols-5"
+      class="grid grid-cols-1 gap-6 xl:grid-cols-5"
     >
-      <div class="flex flex-col gap-4 lg:col-span-2">
+      <div class="flex flex-col gap-4 xl:col-span-2">
         <h3
           class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400"
         >
@@ -2238,7 +2250,7 @@ function finalizeLiquidation() {
             ]"
             @click="selectAdvance(adv)"
           >
-            <div class="flex items-start justify-between">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div class="flex-1 min-w-0">
                 <p
                   class="text-xs font-bold tracking-tight uppercase truncate text-slate-900"
@@ -2249,7 +2261,7 @@ function finalizeLiquidation() {
               <StatusBadge :status="employeeAdvanceBadgeStatus(adv)" />
             </div>
 
-            <div class="flex items-end justify-between mt-4">
+            <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p
                   class="mb-1 text-[9px] font-bold uppercase tracking-widest text-slate-400"
@@ -2262,13 +2274,13 @@ function finalizeLiquidation() {
                   {{ formatPeso(adv.balance || 0) }}
                 </p>
               </div>
-              <div class="text-right">
+              <div class="sm:text-right">
                 <p
                   class="mb-1 text-[9px] font-bold uppercase tracking-widest text-slate-400"
                 >
                   AGE STATUS
                 </p>
-                <div class="flex flex-col items-end">
+                <div class="flex flex-col sm:items-end">
                   <span
                     :class="[
                       'text-[10px] font-bold uppercase',
@@ -2293,10 +2305,10 @@ function finalizeLiquidation() {
         </template>
       </div>
 
-      <div class="lg:col-span-3">
+      <div class="xl:col-span-3">
         <div
           v-if="!selectedAdvance"
-          class="flex flex-col items-center justify-center h-full gap-4 p-16 text-center border-2 border-dashed card bg-clinical/20"
+          class="flex min-h-64 flex-col items-center justify-center gap-4 border-2 border-dashed bg-clinical/20 p-8 text-center card sm:p-16 xl:h-full"
         >
           <FilePieChart class="w-10 h-10 text-slate-200" />
           <p
@@ -2308,7 +2320,7 @@ function finalizeLiquidation() {
 
         <div
           v-else-if="submitted"
-          class="flex flex-col items-center gap-6 p-12 text-center border-t-2 card border-t-emerald-600"
+          class="flex flex-col items-center gap-6 p-8 text-center border-t-2 card border-t-emerald-600 sm:p-12"
         >
           <CheckCircle class="w-12 h-12 text-emerald-600" />
           <h3 class="text-xs font-bold uppercase tracking-[0.2em] text-primary">
@@ -2332,12 +2344,12 @@ function finalizeLiquidation() {
 
         <div
           v-else
-          class="flex flex-col gap-6 p-6 border-t-2 shadow-sm card border-t-primary"
+          class="flex flex-col gap-6 p-4 border-t-2 shadow-sm card border-t-primary sm:p-6"
         >
           <div
-            class="flex items-start justify-between pb-4 border-b border-slate-100"
+            class="flex flex-col gap-3 pb-4 border-b border-slate-100 sm:flex-row sm:items-start sm:justify-between"
           >
-            <div>
+            <div class="min-w-0">
               <p
                 class="mb-1 text-[9px] font-bold uppercase tracking-tighter text-slate-700"
               >
@@ -2349,7 +2361,7 @@ function finalizeLiquidation() {
                 {{ selectedAdvance.purpose }}
               </h3>
             </div>
-            <div class="text-right">
+            <div class="sm:text-right">
               <p
                 class="mb-1 text-[9px] font-bold uppercase tracking-widest text-slate-400"
               >
@@ -2408,9 +2420,9 @@ function finalizeLiquidation() {
               :key="receipt.name + index"
               class="overflow-hidden border rounded-xl border-slate-200 bg-slate-50"
             >
-              <div class="grid grid-cols-1 lg:grid-cols-[180px_minmax(0,1fr)]">
+              <div class="grid grid-cols-1 xl:grid-cols-[180px_minmax(0,1fr)]">
                 <aside
-                  class="p-4 border-b border-slate-200 bg-slate-100/70 lg:border-b-0 lg:border-r"
+                  class="p-4 border-b border-slate-200 bg-slate-100/70 xl:border-b-0 xl:border-r"
                 >
                   <p class="kpi-label text-slate-400">Receipt Preview</p>
                   <div
@@ -2472,9 +2484,6 @@ function finalizeLiquidation() {
                           class="pr-10 bg-white input"
                           v-model="receipt.ocrData.date"
                         />
-                        <CalendarDays
-                          class="absolute w-4 h-4 -translate-y-1/2 pointer-events-none right-3 top-1/2 text-slate-400"
-                        />
                       </span>
                     </label>
                     <label class="space-y-1">
@@ -2513,11 +2522,11 @@ function finalizeLiquidation() {
                     </label>
                   </div>
 
-                  <div
-                    class="grid grid-cols-1 gap-3 pt-4 border-t border-slate-200 sm:grid-cols-3"
-                  >
+                <div
+                  class="grid grid-cols-1 gap-3 pt-4 border-t border-slate-200 md:grid-cols-2 xl:grid-cols-3"
+                >
                     <label class="space-y-1">
-                      <span class="input-label">Subtotal (Auto-Calc)</span>
+                      <span class="input-label">Subtotal</span>
                       <input
                         class="font-semibold cursor-not-allowed input bg-slate-100 text-slate-500"
                         disabled
@@ -2542,13 +2551,13 @@ function finalizeLiquidation() {
                       />
                     </label>
                     <div
-                      class="p-3 border rounded-lg border-accent/20 bg-accent-50"
+                      class="p-3 border rounded-lg border-accent/20 bg-accent-50 md:col-span-2 xl:col-span-1"
                     >
                       <p class="input-label text-accent">Receipt Total</p>
                       <input
                         type="number"
                         step="0.01"
-                        class="input font-semibold !bg-white !text-primary font-heading text-lg"
+                        class="input font-semibold !bg-white !text-primary font-heading text-lg sm:text-xl"
                         v-model.number="receipt.ocrData.amount"
                         @input="handleAmountChange(receipt)"
                       />
@@ -2567,9 +2576,7 @@ function finalizeLiquidation() {
               class="hidden"
               @change="selectReportAttachment"
             />
-            <div
-              class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-            >
+            <div class="flex flex-col gap-4">
               <div class="min-w-0">
                 <p class="text-base font-bold font-heading text-primary">
                   Cash Advance Report Letter
@@ -2577,29 +2584,63 @@ function finalizeLiquidation() {
                 <p class="mt-1 text-sm text-slate-500">
                   Attach your report letter for liquidation documentation.
                 </p>
-                <p
-                  v-if="reportAttachment"
-                  class="mt-2 text-xs font-bold truncate text-accent"
-                >
-                  Attached: {{ reportAttachment.name }}
-                </p>
               </div>
-              <div class="flex gap-2 shrink-0">
-                <button
-                  v-if="reportAttachment"
-                  class="inline-flex items-center justify-center px-4 text-xs font-bold transition-colors bg-white border rounded-lg min-h-10 border-slate-200 text-slate-600 hover:bg-slate-50"
-                  type="button"
-                  @click="clearReportAttachment"
+
+              <div v-if="reportAttachment" class="flex flex-col gap-3">
+                <div
+                  class="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3"
                 >
-                  Clear
-                </button>
+                  <div class="flex min-w-0 items-center gap-3">
+                    <div
+                      class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-400"
+                    >
+                      <FileText class="h-5 w-5" />
+                    </div>
+                    <div class="min-w-0">
+                      <p class="truncate text-sm font-bold text-slate-800">
+                        {{ attachmentFileName(reportAttachment) }}
+                      </p>
+                      <p
+                        v-if="attachmentFileSize(reportAttachment)"
+                        class="text-xs font-semibold text-slate-400"
+                      >
+                        {{ attachmentFileSize(reportAttachment) }}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    class="rounded-full p-2 text-danger transition-colors hover:bg-red-50"
+                    type="button"
+                    aria-label="Remove report attachment"
+                    @click="clearReportAttachment"
+                  >
+                    <X class="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div
+                class="flex flex-col gap-4 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/60 p-5 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div class="flex min-w-0 items-center gap-4">
+                  <div
+                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-accent shadow-sm"
+                  >
+                    <Upload class="h-5 w-5" />
+                  </div>
+                  <div class="min-w-0">
+                    <p class="text-sm font-bold text-slate-800">Select file</p>
+                    <p class="text-xs text-slate-500">
+                      Upload report letter (Images, PDF, DOCX)
+                    </p>
+                  </div>
+                </div>
                 <button
-                  class="inline-flex items-center justify-center gap-2 px-4 text-xs font-bold text-white transition-colors rounded-lg min-h-10 bg-accent hover:bg-accent/90"
+                  class="btn btn-cta min-h-[42px] w-full sm:w-fit"
                   type="button"
                   @click="reportAttachmentInput?.click()"
                 >
-                  <Upload class="w-4 h-4" />
-                  Attachment
+                  Browse
                 </button>
               </div>
             </div>
@@ -2651,7 +2692,7 @@ function finalizeLiquidation() {
             </label>
           </section>
 
-          <div class="p-5 mt-2 border border-slate-200 bg-clinical/20">
+          <div class="p-4 mt-2 border border-slate-200 bg-clinical/20 sm:p-5">
             <div class="flex items-center gap-2 mb-4">
               <Calculator class="w-4 h-4 opacity-50 text-primary" />
               <h4
@@ -2663,7 +2704,7 @@ function finalizeLiquidation() {
 
             <div class="flex">
               <div class="w-full space-y-4">
-                <div class="flex items-center justify-between text-[11px]">
+                <div class="flex items-center justify-between gap-3 text-[11px]">
                   <span
                     class="font-bold tracking-tight uppercase text-slate-400"
                     >Total Balance:</span
@@ -2674,7 +2715,7 @@ function finalizeLiquidation() {
                     )
                   }}</span>
                 </div>
-                <div class="flex items-center justify-between text-[11px]">
+                <div class="flex items-center justify-between gap-3 text-[11px]">
                   <span class="font-bold tracking-tight uppercase text-danger"
                     >Total Expenses:</span
                   >
@@ -2683,7 +2724,7 @@ function finalizeLiquidation() {
                   >
                 </div>
                 <div
-                  class="flex items-center justify-between pt-2 border-t border-slate-200"
+                  class="flex items-center justify-between gap-3 pt-2 border-t border-slate-200"
                 >
                   <span
                     class="text-[10px] font-black uppercase tracking-widest text-slate-600"
@@ -2725,7 +2766,7 @@ function finalizeLiquidation() {
                 </p>
               </div>
               <button
-                class="inline-flex items-center justify-center gap-2 px-4 text-xs font-bold text-white transition-colors rounded-lg min-h-10 w-fit shrink-0 bg-accent hover:bg-accent/90"
+                class="btn btn-cta min-h-[42px] w-full shrink-0 sm:w-fit"
                 type="button"
                 @click="forwardOverpaymentToReimbursement"
               >
@@ -2735,14 +2776,14 @@ function finalizeLiquidation() {
             </div>
           </section>
 
-          <div class="flex justify-end gap-3 mt-4">
+          <div class="mt-4 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <BaseButton
               v-if="
                 existingLiquidation && existingLiquidation.status === 'pending'
               "
               id="delete-liquidation-btn"
               variant="danger"
-              class="w-fit px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white"
+              class="w-full px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white sm:w-fit"
               :disabled="submitting"
               @click="handleDeleteLiquidation"
             >
@@ -2751,8 +2792,8 @@ function finalizeLiquidation() {
 
             <BaseButton
               id="submit-liquidation-btn"
-              variant="primary"
-              class="w-fit px-4 py-2.5"
+              variant="cta"
+              class="min-h-[42px] w-full sm:w-fit"
               :disabled="
                 receipts.length === 0 ||
                 hasIncompleteReceiptFields ||
@@ -2764,7 +2805,10 @@ function finalizeLiquidation() {
               @click="submitLiquidation"
             >
               <div v-if="submitting" class="flex items-center gap-2">
-                <Activity class="w-4 h-4 animate-spin" />
+                <span
+                  class="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin"
+                  aria-hidden="true"
+                />
                 <span>{{
                   existingLiquidation
                     ? "UPDATING SETTLEMENT..."

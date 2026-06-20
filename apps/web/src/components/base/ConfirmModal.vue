@@ -53,12 +53,12 @@ const emit = defineEmits(["close", "confirm"]);
         </div>
       </div>
       <div class="flex gap-3 mt-8">
-        <button class="btn btn-secondary flex-1" @click="$emit('close')">
+        <button class="btn btn-secondary flex-1 min-h-10 px-4" @click="$emit('close')">
           {{ cancelText }}
         </button>
         <button
-          class="btn flex-1"
-          :class="danger ? 'bg-danger text-white hover:bg-red-700 border border-transparent' : 'btn-primary'"
+          class="btn flex-1 min-h-10 px-4"
+          :class="danger ? 'btn-danger' : 'btn-primary'"
           @click="$emit('confirm')"
         >
           {{ confirmText }}

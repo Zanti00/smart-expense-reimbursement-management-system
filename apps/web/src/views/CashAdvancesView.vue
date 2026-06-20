@@ -249,7 +249,7 @@ async function confirmDelete(password) {
       <template #actions>
         <button
           id="request-advance-btn"
-          class="inline-flex min-h-[42px] w-full items-center justify-center gap-2 rounded-lg bg-accent px-5 font-heading text-sm font-bold text-white shadow-sm transition-all duration-200 ease-out hover:bg-accent-600 hover:shadow-xl hover:scale-[1.01] active:scale-[0.98] sm:w-fit"
+          class="btn btn-cta min-h-[42px] w-full sm:w-fit"
           @click="$router.push('/cash-advances/new')"
         >
           <Plus class="w-4 h-4" />
