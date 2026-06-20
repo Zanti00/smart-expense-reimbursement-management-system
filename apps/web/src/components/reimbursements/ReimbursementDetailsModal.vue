@@ -4,7 +4,6 @@ import { useAuthStore } from "@/stores/auth";
 import { formatPeso } from "@/utils/formatters";
 import {
   X,
-  Activity,
   FileText,
   Download,
   Eye,
@@ -142,7 +141,6 @@ function categoryName(record) {
             v-if="modalLoading"
             class="flex flex-col items-center justify-center py-20"
           >
-            <Activity class="w-8 h-8 animate-spin text-accent" />
             <p class="text-xs text-slate-400 mt-2">Loading details...</p>
           </div>
           <div v-else>
@@ -333,8 +331,7 @@ function categoryName(record) {
                       :disabled="receipt.status === 'processing'"
                       @click="emit('view-receipt-details', receipt)"
                     >
-                      <Activity v-if="receipt.status === 'processing'" class="h-3.5 w-3.5 animate-spin" />
-                      <Eye v-else class="h-3.5 w-3.5" />
+                      <Eye v-if="receipt.status !== 'processing'" class="h-3.5 w-3.5" />
                       {{ receipt.status === 'processing' ? 'Processing...' : 'Details' }}
                     </button>
                   </div>
@@ -368,7 +365,7 @@ function categoryName(record) {
             <XCircle class="w-4 h-4" /> Reject Claim
           </button>
           <button
-            class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-bold text-white transition-colors hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-60"
+            class="btn btn-cta min-h-[42px] disabled:cursor-not-allowed disabled:opacity-60"
             type="button"
             :disabled="isOwnSubmission"
             @click="emit('approve', viewingRecord.id)"

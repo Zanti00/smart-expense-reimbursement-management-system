@@ -508,7 +508,7 @@ watch(
                 Cancel
               </button>
               <button
-                class="inline-flex min-h-9 items-center justify-center rounded-lg bg-accent px-4 text-xs font-bold text-white transition-colors hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-60"
+                class="btn btn-cta min-h-[42px] disabled:cursor-not-allowed disabled:opacity-60"
                 type="button"
                 :disabled="isConfirmDecisionDisabled"
                 @click="
@@ -519,7 +519,12 @@ watch(
                   })
                 "
               >
-                Confirm
+                <span
+                  v-if="isSubmitting"
+                  class="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin"
+                  aria-hidden="true"
+                />
+                {{ isSubmitting ? "Processing..." : "Confirm" }}
               </button>
             </div>
           </div>
@@ -534,13 +539,18 @@ watch(
               Reject
             </button>
             <button
-              class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-bold text-white transition-colors hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-60 disabled:bg-slate-300"
+              class="btn btn-cta min-h-[42px] disabled:cursor-not-allowed disabled:opacity-60"
               type="button"
               :disabled="isApproveDisabled"
               @click="emit('request-decision', 'Approve')"
             >
-              <CheckCircle class="h-4 w-4" />
-              Approve
+              <span
+                v-if="isSubmitting"
+                class="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin"
+                aria-hidden="true"
+              />
+              <CheckCircle v-else class="h-4 w-4" />
+              {{ isSubmitting ? "Processing..." : "Approve" }}
             </button>
           </div>
         </div>

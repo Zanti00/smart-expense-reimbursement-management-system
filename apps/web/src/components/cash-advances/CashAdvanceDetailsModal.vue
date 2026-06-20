@@ -46,6 +46,7 @@ const isSigning = ref(false);
 const signatureStarted = ref(false);
 const adminReviewNotes = ref("");
 const confirmationAction = ref("");
+const isAdminDecisionSubmitting = ref(false);
 const showAcknowledgeModal = ref(false);
 const adminPassword = ref("");
 
@@ -193,6 +194,7 @@ async function confirmAdminDecision() {
   const id = props.record.id;
 
   try {
+    isAdminDecisionSubmitting.value = true;
     if (confirmationAction.value === "approve") {
       await store.approveRequest(id, adminReviewNotes.value);
     } else if (confirmationAction.value === "reject") {
@@ -213,6 +215,8 @@ async function confirmAdminDecision() {
     closeDetails();
   } catch (error) {
     addToast({ message: error.message || "Action failed", type: "error" });
+  } finally {
+    isAdminDecisionSubmitting.value = false;
   }
 }
 
@@ -540,7 +544,7 @@ async function confirmAcknowledge() {
                   Clear Signature
                 </button>
                 <button
-                  class="btn btn-primary px-4 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+                  class="btn btn-cta min-h-[42px] disabled:cursor-not-allowed disabled:opacity-50"
                   type="button"
                   :disabled="!signatureStarted"
                   @click="showAcknowledgeModal = true"
@@ -605,7 +609,7 @@ async function confirmAcknowledge() {
                 Reject
               </button>
               <button
-                class="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-bold text-white transition-colors hover:bg-accent/90 sm:w-auto disabled:cursor-not-allowed disabled:opacity-50"
+                class="btn btn-cta min-h-[42px] w-full sm:w-auto disabled:cursor-not-allowed disabled:opacity-50"
                 type="button"
                 :disabled="isOwnSubmission"
                 @click="requestConfirmation('approve')"
@@ -616,7 +620,7 @@ async function confirmAcknowledge() {
             </template>
             <template v-if="record.status === 'approved'">
               <button
-                class="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-bold text-white transition-colors hover:bg-accent/90 sm:w-auto disabled:cursor-not-allowed disabled:opacity-50"
+                class="btn btn-cta min-h-[42px] w-full sm:w-auto disabled:cursor-not-allowed disabled:opacity-50"
                 type="button"
                 :disabled="isOwnSubmission"
                 @click="requestConfirmation('disburse')"
@@ -874,7 +878,7 @@ async function confirmAcknowledge() {
                   Clear Signature
                 </button>
                 <button
-                  class="btn btn-primary text-xs px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  class="btn btn-cta min-h-[42px] disabled:opacity-50 disabled:cursor-not-allowed"
                   type="button"
                   :disabled="!signatureStarted"
                   @click="showAcknowledgeModal = true"
@@ -939,7 +943,7 @@ async function confirmAcknowledge() {
           Cancel
         </button>
         <button
-          class="btn btn-primary flex-1 text-white"
+          class="btn btn-cta flex-1"
           type="button"
           @click="confirmAcknowledge"
         >
@@ -952,6 +956,7 @@ async function confirmAcknowledge() {
     <DecisionConfirmationModal
       :is-open="!!confirmationAction"
       :mode="confirmationAction || 'approve'"
+      :is-submitting="isAdminDecisionSubmitting"
       v-model:password="adminPassword"
       v-model:comment="adminReviewNotes"
       @close="cancelConfirmation"

@@ -1,7 +1,6 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import {
-  Activity,
   AlertTriangle,
   CheckCircle,
   FileText,
@@ -27,6 +26,10 @@ const isDragging = ref(false)
 const files = ref([...props.modelValue])
 const localError = ref(null)
 const fileInput = ref(null)
+
+const isProcessingAnyReceipt = computed(() =>
+  files.value.some((entry) => entry.ocrStatus === 'processing'),
+)
 
 watch(
   () => props.modelValue,
@@ -233,7 +236,12 @@ function onFileInput(event) {
         <div>
           <h3 class="font-heading text-base font-bold text-primary">Scanned Receipts</h3>
           <p class="mt-0.5 text-xs font-semibold text-accent">
-            {{ files.length }} uploaded - ready for audit
+            <template v-if="isProcessingAnyReceipt">
+              Reading receipt data. Please wait...
+            </template>
+            <template v-else>
+              {{ files.length }} uploaded - ready for audit
+            </template>
           </p>
         </div>
         <button
@@ -300,8 +308,11 @@ function onFileInput(event) {
             v-if="entry.ocrStatus === 'processing'"
             class="mt-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-accent animate-pulse"
           >
-            <Activity class="h-2.5 w-2.5" />
-            Scanning receipt...
+            <span
+              class="h-2.5 w-2.5 rounded-full border-2 border-current border-t-transparent animate-spin"
+              aria-hidden="true"
+            />
+            Reading receipt...
           </div>
           <div v-else-if="entry.ocrStatus === 'done' && entry.ocrData" class="mt-1 flex flex-wrap gap-2">
             <span class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-accent">

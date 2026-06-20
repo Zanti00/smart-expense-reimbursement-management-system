@@ -148,7 +148,7 @@ const canDelete = computed(() =>
       <!-- Action Buttons -->
       <div class="flex gap-2">
         <button
-          class="btn btn-primary flex-1 !py-2 !text-xs"
+          class="btn btn-cta flex-1"
           @click.stop="$emit('view', expense)"
         >
           <Eye class="w-3.5 h-3.5" /> View

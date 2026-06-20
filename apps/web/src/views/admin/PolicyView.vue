@@ -172,7 +172,7 @@ function formatDate(ds) {
               </div>
             </div>
             <div class="flex justify-end mt-4">
-              <BaseButton variant="primary" :disabled="!newPolicy.limit || !newPolicy.effectiveDate" @click="submitLimit">
+              <BaseButton variant="cta" class="min-h-[42px] w-full sm:w-fit" :disabled="!newPolicy.limit || !newPolicy.effectiveDate" @click="submitLimit">
                 <Save class="w-3.5 h-3.5 mr-2" /> DEPLOY LIMIT RULE
               </BaseButton>
             </div>
@@ -265,7 +265,7 @@ function formatDate(ds) {
               </div>
             </div>
             <div class="flex justify-end mt-4">
-              <BaseButton variant="primary" class="!bg-danger !border-danger" :disabled="!newPenalty.dailyRate || !newPenalty.maxCap" @click="submitPenalty">
+              <BaseButton variant="danger" class="px-4 py-2.5" :disabled="!newPenalty.dailyRate || !newPenalty.maxCap" @click="submitPenalty">
                 <Save class="w-3.5 h-3.5 mr-2" /> ENFORCE RULE
               </BaseButton>
             </div>

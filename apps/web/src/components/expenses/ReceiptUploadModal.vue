@@ -284,6 +284,7 @@ function formatTIN(event) {
 }
 
 function triggerFileUpload() {
+  if (receiptsStore.isSaving) return;
   if (uploadFileInput.value) {
     uploadFileInput.value.click();
   }
@@ -408,6 +409,7 @@ function formatCurrency(amount) {
           <button
             @click="close"
             class="p-2 text-slate-400 hover:text-primary transition-colors"
+            :disabled="receiptsStore.isSaving"
           >
             <X class="w-5 h-5" />
           </button>
@@ -467,6 +469,18 @@ function formatCurrency(amount) {
                 class="absolute inset-0 bg-primary/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
               >
                 <UploadCloud class="w-10 h-10 text-primary" />
+              </div>
+              <div
+                v-if="receiptsStore.isSaving"
+                class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-white/85 text-accent backdrop-blur-[1px]"
+              >
+                <span
+                  class="h-9 w-9 rounded-full border-2 border-current border-t-transparent animate-spin"
+                  aria-hidden="true"
+                />
+                <span class="text-[10px] font-bold uppercase tracking-widest">
+                  {{ receiptToEdit ? "Updating receipt..." : "Uploading receipt..." }}
+                </span>
               </div>
             </div>
             <input
@@ -735,16 +749,31 @@ function formatCurrency(amount) {
         <div
           class="px-6 py-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3 sticky bottom-0"
         >
-          <button @click="close" class="btn btn-secondary !px-8">
+          <button
+            @click="close"
+            class="btn btn-secondary !px-8"
+            :disabled="receiptsStore.isSaving"
+          >
             Discard All
           </button>
           <button
             @click="saveReceipt"
-            class="btn btn-primary !px-8"
+            class="btn btn-cta min-h-[42px] w-full sm:w-fit"
             :disabled="receiptsStore.isSaving || !isFormValid"
           >
-            <Save class="w-4 h-4" />
-            {{ receiptsStore.isSaving ? "Saving..." : "Save Receipt" }}
+            <span
+              v-if="receiptsStore.isSaving"
+              class="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin"
+              aria-hidden="true"
+            />
+            <Save v-else class="w-4 h-4" />
+            {{
+              receiptsStore.isSaving
+                ? receiptToEdit
+                  ? "Updating..."
+                  : "Uploading..."
+                : "Save Receipt"
+            }}
           </button>
         </div>
       </div>
