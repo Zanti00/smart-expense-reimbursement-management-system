@@ -159,15 +159,15 @@ const kpis = computed(() => {
     accent: "bg-red-500",
   });
 
-  cards.push({
-    label: admin ? "Total Outstanding Balance" : "Outstanding Balance",
-    value: formatPeso(m.outstanding || 0),
-    sub: admin ? "Total" : "To be settled",
-    icon: Wallet,
-    iconBg: "bg-blue-900/10",
-    iconColor: "text-blue-900",
-    accent: "bg-blue-900",
-  });
+  // cards.push({
+  //   label: admin ? "Total Outstanding Balance" : "Outstanding Balance",
+  //   value: formatPeso(m.outstanding || 0),
+  //   sub: admin ? "Total" : "To be settled",
+  //   icon: Wallet,
+  //   iconBg: "bg-blue-900/10",
+  //   iconColor: "text-blue-900",
+  //   accent: "bg-blue-900",
+  // });
 
   return cards;
 });
@@ -235,8 +235,8 @@ async function confirmDelete(password) {
       :kpis="kpis"
       :gridClasses="
         auth.isAdmin
-          ? 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4'
-          : 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4'
+          ? 'grid-cols-1 sm:grid-cols-3 xl:grid-cols-3 gap-4'
+          : 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4'
       "
       :isLoading="store.isLoading"
     />
