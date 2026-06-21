@@ -30,6 +30,13 @@ services:
     networks:
       - serms_network
 
+  redis:
+    image: redis:alpine
+    container_name: serms_redis_internal
+    restart: unless-stopped
+    networks:
+      - serms_network
+
   php:
     build:
       context: ./apps/api
@@ -51,7 +58,7 @@ services:
       - DB_DATABASE=serms
       - DB_USERNAME=root
       - DB_PASSWORD=secret
-      - REDIS_HOST=auth-redis
+      - REDIS_HOST=redis
       - CACHE_STORE=redis
       - SERMS_SERVICE_ROLE=api
       - JWT_PUBLIC_KEY_PATH=/var/www/storage/oauth-public.key
@@ -96,7 +103,7 @@ services:
       - DB_DATABASE=serms
       - DB_USERNAME=root
       - DB_PASSWORD=secret
-      - REDIS_HOST=auth-redis
+      - REDIS_HOST=redis
       - CACHE_STORE=redis
       - SERMS_SERVICE_ROLE=worker
       - JWT_PUBLIC_KEY_PATH=/var/www/storage/oauth-public.key
