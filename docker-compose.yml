@@ -137,6 +137,18 @@ services:
     networks:
       - serms_network
 
+  nginx-proxy:
+    image: nginx:alpine
+    container_name: serms-nginx-prod
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx-proxy.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - serms_network
+      - shared-capstone-network
+
 networks:
   serms_network:
     driver: bridge
