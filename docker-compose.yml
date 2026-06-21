@@ -64,6 +64,8 @@ services:
     image: nginx:alpine
     container_name: serms_api
     restart: unless-stopped
+    ports:
+      - "8000:8000"
     volumes:
       - ./apps/api:/var/www
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
@@ -110,6 +112,8 @@ services:
       dockerfile: Dockerfile
     container_name: serms_web
     restart: unless-stopped
+    ports:
+      - "5002:5002"
     volumes:
       - ./apps/web:/app
       - /app/node_modules
