@@ -3,6 +3,7 @@ import { ref, computed } from "vue";
 import { useAuthStore } from "./auth";
 import { useNotificationStore } from "./notification";
 import { apiFetch } from "../utils/apiFetch";
+import { getFileUrl } from "../utils/fileUtils";
 
 export const useReceiptStore = defineStore("receipts", () => {
   const auth = useAuthStore();
@@ -148,7 +149,7 @@ export const useReceiptStore = defineStore("receipts", () => {
       modifiedAfterSystemRejection: !!r.modified_after_system_rejection,
       adminNotes: r.admin_notes || "",
       hash: r.file_hash,
-      thumbnail: r.file_url || (r.file_path ? `https://vbabvrcfqcmvvjwmzuwx.supabase.co/storage/v1/object/public/cash_advances/${r.file_path}` : null),
+      thumbnail: getFileUrl(r.file_url || r.file_path) || null,
       isDeleted: !!r.deleted_at,
       reimbursementCount,
       isReimbursed: reimbursementCount > 0,

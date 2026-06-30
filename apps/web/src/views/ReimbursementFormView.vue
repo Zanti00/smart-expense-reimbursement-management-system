@@ -21,7 +21,6 @@ import { useReceiptUploads } from "@/composables/reimbursements/useReceiptUpload
 import { useReimbursementSubmit } from "@/composables/reimbursements/useReimbursementSubmit";
 import { useUnsavedChanges } from "@/composables/useUnsavedChanges";
 
-// Utils
 import {
   tinFor,
   cleanName,
@@ -29,6 +28,7 @@ import {
   receiptFinancials,
   getItems,
 } from "@/utils/receiptUtils";
+import { getFileUrl } from "@/utils/fileUtils";
 
 const props = defineProps({
   forwardedReceipts: {
@@ -56,8 +56,6 @@ const storedForwardedReceipts = ref([]);
 const forwardedSource = ref("My Expense");
 const FORWARDED_RECEIPTS_KEY = "serms_forwarded_reimbursement_receipts";
 const LEGACY_LIQUIDATION_RECEIPTS_KEY = "serms_forwarded_liquidation_receipts";
-const SUPABASE_RECEIPT_BASE_URL =
-  "https://vbabvrcfqcmvvjwmzuwx.supabase.co/storage/v1/object/public/cash_advances/";
 
 // Form uploads and file management
 const {
@@ -112,20 +110,6 @@ const forwardedReceiptCount = computed(
 );
 const isForwardedMode = computed(() => forwardedReceiptCount.value > 0);
 const isEmbeddedForwardedMode = computed(() => props.forwardedReceipts.length > 0);
-
-function resolveReceiptPreviewUrl(fileUrl, filePath) {
-  if (fileUrl) return fileUrl;
-  if (!filePath) return null;
-  if (
-    String(filePath).startsWith("http://") ||
-    String(filePath).startsWith("https://") ||
-    String(filePath).startsWith("blob:")
-  ) {
-    return filePath;
-  }
-
-  return `${SUPABASE_RECEIPT_BASE_URL}${String(filePath).replace(/^\/+/, "")}`;
-}
 
 // Form submission
 const { submitting, submitReimbursement, updateReimbursement } = useReimbursementSubmit(
@@ -203,7 +187,7 @@ onMounted(async () => {
             invoiceNumber: r.invoice_number,
             category: r.category?.name || data.expense_category?.name || "",
             categoryId: r.expense_category_id || data.expense_category_id || null,
-            thumbnail: resolveReceiptPreviewUrl(r.file_url, r.file_path),
+            thumbnail: getFileUrl(r.file_url || r.file_path) || null,
             items,
             isUploading: false,
           };
