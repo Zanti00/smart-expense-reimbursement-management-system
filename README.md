@@ -20,7 +20,7 @@ SERMS solves the operational challenges of managing distributed financial transa
 ## Features
 
 ### Reimbursement Module
-- **AI-Powered OCR**: Integrated Tesseract OCR scanning for automated extraction of vendor, date, and amount.
+- **AI-Powered OCR**: Asynchronous external AI service for automated extraction of vendor, date, and amount via webhook.
 - **VAT Classification**: Automated classification of receipts into VAT and NON-VAT categories.
 - **Duplicate Detection**: 90-day lookup for duplicate receipt submissions based on vendor, date, and amount.
 - **Submission Guardrails**: Mandatory receipt attachments and active cutoff period validation.
@@ -56,7 +56,7 @@ SERMS solves the operational challenges of managing distributed financial transa
 ### Infrastructure & Services
 - **Database**: PostgreSQL / MySQL (Relational Schema)
 - **Storage**: Supabase Bucket (Receipt Storage)
-- **AI/ML**: Tesseract OCR (Server-side processing)
+- **AI/ML**: External AI Service (Webhook-based asynchronous processing)
 
 ## System Architecture
 
@@ -71,7 +71,7 @@ SERMS follows a **Modular Monolith** architectural pattern, ensuring high cohesi
 ### Data Flow Overview
 1. **Input**: User uploads a receipt image via the Client App.
 2. **Async Processing**: The API stores the file in Supabase and dispatches an OCR Job.
-3. **Extraction**: The Worker runs Tesseract, extracts data, and updates the record with a confidence score.
+3. **Extraction**: The Worker dispatches the receipt to an external AI service, which processes it and calls back to a webhook with extracted data and a confidence score.
 4. **Validation**: The system performs duplicate checks and VAT classification.
 5. **Finalization**: User confirms extracted data, and the record enters the approval workflow.
 
@@ -82,7 +82,6 @@ SERMS follows a **Modular Monolith** architectural pattern, ensuring high cohesi
 - Node.js 18.x or higher
 - Composer 2.x
 - PostgreSQL/MySQL
-- Tesseract OCR (installed on the host system)
 
 ### Backend Setup (apps/api)
 When running via Docker (e.g., `docker compose up`), the backend setup is completely automated. The entrypoint script will:
@@ -160,6 +159,8 @@ php artisan optimize
 | `SUPABASE_KEY` | Secret key for object storage |
 | `SUPABASE_BUCKET` | Destination bucket for receipt uploads |
 | `OCR_CONFIDENCE_THRESHOLD` | Threshold for flagging manual review (Default: 0.80) |
+| `AI_SERVICE_URL` | Base URL of the external AI service |
+| `AI_SERVICE_API_KEY` | Shared secret for webhook authentication |
 | `DAILY_PENALTY_AMOUNT` | PHP amount applied to overdue liquidations |
 
 ## Database Design
