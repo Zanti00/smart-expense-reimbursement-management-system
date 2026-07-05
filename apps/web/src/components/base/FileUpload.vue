@@ -54,16 +54,14 @@ function formatTinValue(value, { padLastBlock = false } = {}) {
 }
 
 function buildPrefilledOcrData(file) {
-  const fallbackTin = tinFor({ fileName: file.name })
-
   return {
     id: null,
-    amount: '0.00',
-    vat: '0.00',
-    tin: formatTinValue(fallbackTin, { padLastBlock: true }),
-    vendor: cleanName(file.name) || 'Unknown Vendor',
-    invoiceNumber: `INV-${Date.now().toString().slice(-6)}`,
-    date: new Date().toISOString().split('T')[0],
+    amount: '',
+    vat: '',
+    tin: '',
+    vendor: '',
+    invoiceNumber: '',
+    date: '',
     confidence: 0,
   }
 }
@@ -139,12 +137,12 @@ async function simulateOCR(entry) {
     entry.ocrStatus = 'done'
     entry.ocrData = {
       id: ocrData.id,
-      amount: ocrData.total_amount || entry.ocrData.amount || '0.00',
-      vat: ocrData.vat_amount || entry.ocrData.vat || '0.00',
-      tin: formatTinValue(ocrData.tin || entry.ocrData.tin, { padLastBlock: true }),
+      amount: ocrData.total_amount || entry.ocrData.amount || '',
+      vat: ocrData.vat_amount || entry.ocrData.vat || '',
+      tin: ocrData.tin || entry.ocrData.tin || '',
       vendor: ocrData.vendor_name || entry.ocrData.vendor || '',
       invoiceNumber: ocrData.invoice_number || entry.ocrData.invoiceNumber || '',
-      date: ocrData.transaction_date || new Date().toISOString().split('T')[0],
+      date: ocrData.transaction_date || entry.ocrData.date || '',
       confidence: Math.round(ocrData.ocr_confidence_score || 85),
       file_path: ocrData.file_path,
       file_hash: ocrData.file_hash,

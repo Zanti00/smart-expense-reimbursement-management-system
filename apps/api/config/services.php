@@ -53,10 +53,28 @@ return [
     ],
 
     'prs' => [
-        'reimbursement_api_key' => env('PRS_REIMBURSEMENT_API_KEY'),
-        'reimbursement_status_api_url' => env('PRS_REIMBURSEMENT_STATUS_API_URL'),
-        'reimbursement_status_api_key' => env('PRS_REIMBURSEMENT_STATUS_API_KEY'),
+        'reimbursement_api_key'            => env('PRS_REIMBURSEMENT_API_KEY'),
+        'reimbursement_status_api_url'     => env('PRS_REIMBURSEMENT_STATUS_API_URL'),
+        'reimbursement_status_api_key'     => env('PRS_REIMBURSEMENT_STATUS_API_KEY'),
         'reimbursement_status_api_timeout' => env('PRS_REIMBURSEMENT_STATUS_API_TIMEOUT', 10),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | AI OCR + Categorization Service
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for the external AI service that handles receipt OCR
+    | and expense categorization. SERMS dispatches receipts to this service
+    | and receives results asynchronously via the OCR callback endpoint.
+    |
+    */
+
+    'ai_service' => [
+        'url'     => env('AI_SERVICE_URL'),
+        'api_key' => env('AI_SERVICE_API_KEY'),
+        'timeout' => env('AI_SERVICE_TIMEOUT', 10),
+    ],
+
 ];
+

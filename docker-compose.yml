@@ -66,6 +66,9 @@ services:
       - PRS_REIMBURSEMENT_STATUS_API_URL=http://prs_api:8000/api/integrations/serms/reimbursement-status
       - PRS_REIMBURSEMENT_STATUS_API_KEY=serms-prs-local-service-key
       - PRS_REIMBURSEMENT_STATUS_API_TIMEOUT=10
+      - AI_SERVICE_URL=http://localhost:8000
+      - AI_SERVICE_API_KEY=my-test-secret-123
+      - AI_SERVICE_TIMEOUT=10
 
   api:
     image: nginx:alpine
@@ -111,6 +114,9 @@ services:
       - PRS_REIMBURSEMENT_STATUS_API_URL=http://prs_api:8000/api/integrations/serms/reimbursement-status
       - PRS_REIMBURSEMENT_STATUS_API_KEY=serms-prs-local-service-key
       - PRS_REIMBURSEMENT_STATUS_API_TIMEOUT=10
+      - AI_SERVICE_URL=http://localhost:8000
+      - AI_SERVICE_API_KEY=my-test-secret-123
+      - AI_SERVICE_TIMEOUT=10
     command: php artisan queue:work --sleep=3 --tries=3
 
   web:

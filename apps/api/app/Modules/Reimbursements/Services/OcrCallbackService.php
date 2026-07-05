@@ -1,0 +1,98 @@
+<?php
+
+namespace App\Modules\Reimbursements\Services;
+
+use App\Modules\AuditLogs\Services\AuditLogService;
+use App\Modules\Reimbursements\Models\ExpenseCategory;
+use App\Modules\Reimbursements\Models\Receipt;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
+class OcrCallbackService
+{
+    /**
+     * Apply AI-extracted OCR + categorization results to an existing receipt.
+     *
+     * Rules enforced:
+     * - Idempotent: receipts already in 'pending' or 'processed' are skipped (replay guard).
+     * - Low confidence (score < 0.80): receipt is set to 'flagged' and ocr_flagged = true.
+     * - Items: existing items are deleted and replaced with the AI-returned list.
+     * - expense_category string: resolved to an ExpenseCategory record (created if missing).
+     * - Audit log: RECEIPT_OCR_COMPLETED is appended regardless of confidence level.
+     *
+     * @param  int   $receiptId  Route-bound receipt ID.
+     * @param  array $data       Validated payload from OcrCallbackRequest.
+     * @return Receipt           The freshly updated receipt with loaded relations.
+     */
+    public function handle(int $receiptId, array $data): Receipt
+    {
+        return DB::transaction(function () use ($receiptId, $data) {
+            $receipt = Receipt::with('items')->findOrFail($receiptId);
+
+            $beforeState = $receipt->toArray();
+
+            // Replay guard — do not overwrite already-confirmed receipts.
+            if (in_array($receipt->status, ['pending', 'processed'], true)) {
+                Log::info('OcrCallbackService: skipping replay for already-confirmed receipt.', [
+                    'receipt_id' => $receiptId,
+                    'status'     => $receipt->status,
+                ]);
+                return $receipt->load('category', 'items', 'uploader');
+            }
+
+            // Resolve AI-suggested expense category string → category ID.
+            $expenseCategoryId = $receipt->expense_category_id;
+            if (!empty($data['expense_category'])) {
+                $expenseCategoryId = ExpenseCategory::firstOrCreate(
+                    ['name' => $data['expense_category']]
+                )->id;
+            }
+
+            $confidenceScore = (float) $data['ocr_confidence_score'];
+            $isLowConfidence = $confidenceScore < 0.80;
+
+            // Update OCR fields on the receipt.
+            $receipt->update([
+                'vendor_name'          => $data['vendor_name']       ?? $receipt->vendor_name,
+                'transaction_date'     => $data['transaction_date']  ?? $receipt->transaction_date,
+                'total_amount'         => $data['total_amount']       ?? $receipt->total_amount,
+                'vat_amount'           => $data['vat_amount']         ?? $receipt->vat_amount,
+                'tin'                  => $data['tin']                ?? $receipt->tin,
+                'invoice_number'       => $data['invoice_number']     ?? $receipt->invoice_number,
+                'vat_classification'   => $data['vat_classification'] ?? $receipt->vat_classification,
+                'expense_category_id'  => $expenseCategoryId,
+                'ocr_confidence_score' => $confidenceScore,
+                'ocr_flagged'          => $isLowConfidence,
+                // Low confidence → 'flagged' (requires manual confirmation).
+                // Good confidence → 'pending' (ready for user review/submission).
+                'status'               => $isLowConfidence ? 'flagged' : 'pending',
+            ]);
+
+            // Sync receipt items — delete old, insert AI-extracted ones.
+            $receipt->items()->delete();
+            if (!empty($data['items'])) {
+                $receipt->items()->createMany($data['items']);
+            }
+
+            AuditLogService::log(
+                actorId:    0, // System-generated event — no human actor.
+                actorRole:  'system',
+                actionType: 'RECEIPT_OCR_COMPLETED',
+                entityType: 'receipt',
+                entityId:   $receipt->id,
+                beforeState: $beforeState,
+                afterState:  $receipt->fresh()->toArray(),
+                ipAddress:   request()->ip(),
+            );
+
+            Log::info('OcrCallbackService: OCR results applied.', [
+                'receipt_id'    => $receiptId,
+                'status'        => $receipt->status,
+                'ocr_flagged'   => $isLowConfidence,
+                'confidence'    => $confidenceScore,
+            ]);
+
+            return $receipt->fresh(['category', 'items', 'uploader']);
+        });
+    }
+}
