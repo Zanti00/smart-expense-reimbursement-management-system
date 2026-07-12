@@ -159,15 +159,15 @@ const kpis = computed(() => {
     accent: "bg-red-500",
   });
 
-  cards.push({
-    label: admin ? "Total Outstanding Balance" : "Outstanding Balance",
-    value: formatPeso(m.outstanding || 0),
-    sub: admin ? "Total" : "To be settled",
-    icon: Wallet,
-    iconBg: "bg-blue-900/10",
-    iconColor: "text-blue-900",
-    accent: "bg-blue-900",
-  });
+  // cards.push({
+  //   label: admin ? "Total Outstanding Balance" : "Outstanding Balance",
+  //   value: formatPeso(m.outstanding || 0),
+  //   sub: admin ? "Total" : "To be settled",
+  //   icon: Wallet,
+  //   iconBg: "bg-blue-900/10",
+  //   iconColor: "text-blue-900",
+  //   accent: "bg-blue-900",
+  // });
 
   return cards;
 });
@@ -235,8 +235,8 @@ async function confirmDelete(password) {
       :kpis="kpis"
       :gridClasses="
         auth.isAdmin
-          ? 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4'
-          : 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4'
+          ? 'grid-cols-1 sm:grid-cols-3 xl:grid-cols-3 gap-4'
+          : 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4'
       "
       :isLoading="store.isLoading"
     />
@@ -249,7 +249,7 @@ async function confirmDelete(password) {
       <template #actions>
         <button
           id="request-advance-btn"
-          class="inline-flex min-h-[42px] w-full items-center justify-center gap-2 rounded-lg bg-accent px-5 font-heading text-sm font-bold text-white shadow-sm transition-all duration-200 ease-out hover:bg-accent-600 hover:shadow-xl hover:scale-[1.01] active:scale-[0.98] sm:w-fit"
+          class="btn btn-cta min-h-[42px] w-full sm:w-fit"
           @click="$router.push('/cash-advances/new')"
         >
           <Plus class="w-4 h-4" />

@@ -523,7 +523,7 @@ function goBack() {
         >
           <button
             id="submit-advance-btn"
-            class="btn btn-primary w-full px-8 py-3 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+            class="btn btn-cta min-h-[42px] w-full sm:w-fit disabled:opacity-60 disabled:cursor-not-allowed"
             :disabled="
               submitting ||
               !form.purpose ||
@@ -535,7 +535,12 @@ function goBack() {
             form="cashAdvanceForm"
             type="submit"
           >
-            <Send class="h-4 w-4" />
+            <span
+              v-if="submitting"
+              class="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin"
+              aria-hidden="true"
+            />
+            <Send v-else class="h-4 w-4" />
             {{ submitting ? (isEditMode ? "Updating..." : "Submitting...") : (isEditMode ? "Update Request" : "Submit Request") }}
           </button>
         </footer>

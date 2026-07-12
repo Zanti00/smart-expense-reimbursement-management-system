@@ -11,9 +11,10 @@ class AiServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        // Async AI service engine — used by DispatchReceiptToAiService job.
         $this->app->singleton(
-            \App\Modules\Ai\Contracts\OcrEngineInterface::class,
-            \App\Modules\Ai\Services\TesseractOcrEngine::class
+            \App\Modules\Ai\Contracts\AsyncOcrEngineInterface::class,
+            \App\Modules\Ai\Services\AiServiceOcrEngine::class
         );
     }
 

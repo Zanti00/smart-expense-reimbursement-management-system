@@ -152,7 +152,7 @@ const lineOptions = {
             :disabled="generating === `${report.id}-pdf`"
             @click="generate(report.id, 'pdf')"
           >
-            <Activity v-if="generating === `${report.id}-pdf`" class="w-3.5 h-3.5 animate-spin" />
+            <span v-if="generating === `${report.id}-pdf`">Generating PDF...</span>
             <span v-else class="flex items-center gap-2"><Download class="w-3 h-3" /> PDF</span>
           </BaseButton>
           <BaseButton
@@ -161,7 +161,7 @@ const lineOptions = {
             :disabled="generating === `${report.id}-xlsx`"
             @click="generate(report.id, 'xlsx')"
           >
-            <Activity v-if="generating === `${report.id}-xlsx`" class="w-3.5 h-3.5 animate-spin" />
+            <span v-if="generating === `${report.id}-xlsx`">Generating XLSX...</span>
             <span v-else class="flex items-center gap-2"><Download class="w-3 h-3" /> XLSX</span>
           </BaseButton>
         </div>

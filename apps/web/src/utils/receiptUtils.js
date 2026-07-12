@@ -105,7 +105,7 @@ export function buildPrefilledReceiptDraft({
   const resolvedId = receiptData.id || id || `temp-${Date.now()}`;
   const fileName = file?.name || receiptData.file_name || `Receipt-${resolvedId}`;
   const fileType = file?.type || receiptData.file_type || "";
-  const merchantName = receiptData.vendor_name || cleanName(fileName);
+  const merchantName = receiptData.vendor_name || "";
   const vatClassification = normalizeVatClassification(
     receiptData.vat_classification,
   );
@@ -114,32 +114,30 @@ export function buildPrefilledReceiptDraft({
   const items =
     Array.isArray(receiptData.items) && receiptData.items.length > 0
       ? receiptData.items.map((item) => ({
-          name: item.name || "Item",
+          name: item.name || "",
           qty: Number(item.quantity ?? item.qty) || 1,
           price: Number(item.price) || 0,
         }))
-      : buildDefaultItems(categoryName || "Expense", amount);
+      : [];
   const amounts = receiptFinancials({ amount, items }, vatClassification);
 
   return {
     id: resolvedId,
-    invoiceNumber:
-      receiptData.invoice_number || `INV-${String(resolvedId).replace(/\D/g, "").slice(-6) || "000000"}`,
-    tin: receiptData.tin || tinFor({ id: resolvedId, fileName }),
+    invoiceNumber: receiptData.invoice_number || "",
+    tin: receiptData.tin || "",
     merchantName,
     location: defaultLocation,
     fileName,
     fileType,
     thumbnail,
-    amount: amounts.gross,
-    subtotal: amounts.subtotal.toFixed(2),
+    amount: amount > 0 ? amounts.gross : "",
+    subtotal: amount > 0 ? amounts.subtotal.toFixed(2) : "",
     tax:
       receiptData.vat_amount != null && receiptData.vat_amount !== ""
         ? Number(receiptData.vat_amount).toFixed(2)
-        : amounts.vat.toFixed(2),
+        : "",
     vatClassification: amounts.vatClassification,
-    date:
-      receiptData.transaction_date || new Date().toISOString().slice(0, 10),
+    date: receiptData.transaction_date || "",
     category: categoryName,
     categoryId: receiptData.expense_category_id || null,
     items,

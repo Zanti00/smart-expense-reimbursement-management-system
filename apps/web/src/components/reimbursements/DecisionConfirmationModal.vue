@@ -52,16 +52,14 @@ const localComment = computed({
   set: (val) => emit("update:comment", val),
 });
 
-const isApprove = computed(() => props.mode === "approve");
-
 const config = computed(() => {
   if (props.mode === "approve") {
     return {
       icon: CheckCircle,
-      iconWrapperClass: "bg-emerald-50 text-emerald-600",
+      iconWrapperClass: "bg-accent/10 text-accent",
       title: props.title || "Approve Request",
       description: props.description || "Are you sure you want to approve this request? Please verify your identity by entering your password.",
-      btnClass: "bg-emerald-600 hover:bg-emerald-700",
+      btnClass: "btn-primary",
       btnText: "Confirm Approve",
       isConfirmDisabled: !props.password || props.isSubmitting,
     };
@@ -72,7 +70,7 @@ const config = computed(() => {
       iconWrapperClass: "bg-accent/10 text-accent",
       title: props.title || "Disburse Request",
       description: props.description || "Are you sure you want to disburse this request? Please verify your identity by entering your password.",
-      btnClass: "bg-accent hover:bg-accent/90",
+      btnClass: "btn-primary",
       btnText: "Confirm Disbursement",
       isConfirmDisabled: !props.password || props.isSubmitting,
     };
@@ -82,7 +80,7 @@ const config = computed(() => {
     iconWrapperClass: "bg-red-50 text-red-600",
     title: props.title || "Reject Request",
     description: props.description || "Please provide a reason for rejecting this request and enter your current password to authorize this action.",
-    btnClass: "bg-red-600 hover:bg-red-700",
+    btnClass: "btn-danger",
     btnText: "Confirm Reject",
     isConfirmDisabled: props.comment.length < props.minCommentLength || !props.password || props.isSubmitting,
   };
@@ -167,7 +165,7 @@ function handleConfirm() {
 
       <div class="flex items-center justify-end gap-2 mt-2">
         <button
-          class="inline-flex min-h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          class="btn btn-secondary min-h-9 px-4"
           type="button"
           :disabled="isSubmitting"
           @click="handleClose"
@@ -175,17 +173,18 @@ function handleConfirm() {
           Cancel
         </button>
         <button
-          class="inline-flex min-h-9 items-center justify-center rounded-lg px-4 text-xs font-bold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+          class="btn min-h-9 px-4"
           :class="config.btnClass"
           type="button"
           :disabled="config.isConfirmDisabled"
           @click="handleConfirm"
         >
-          <Activity
+          <span
             v-if="isSubmitting"
-            class="w-3.5 h-3.5 animate-spin mr-1.5"
+            class="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin"
+            aria-hidden="true"
           />
-          {{ config.btnText }}
+          {{ isSubmitting ? "Processing..." : config.btnText }}
         </button>
       </div>
     </div>

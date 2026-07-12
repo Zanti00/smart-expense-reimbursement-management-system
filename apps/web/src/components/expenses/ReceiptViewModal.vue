@@ -306,7 +306,7 @@ function formatDate(dateStr) {
             <div class="flex gap-2">
               <button
                 v-if="canEdit"
-                class="btn btn-primary !py-2 !text-xs"
+                class="btn btn-cta"
                 @click="editReceipt"
               >
                 <Pencil class="w-3.5 h-3.5" /> Edit Receipt

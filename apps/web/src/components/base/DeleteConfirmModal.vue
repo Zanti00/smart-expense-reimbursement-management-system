@@ -88,12 +88,11 @@ function close() {
             </div>
           </div>
           <div class="flex gap-2.5">
-            <button class="btn btn-secondary flex-1" @click="close">
+            <button class="btn btn-secondary flex-1 min-h-10 px-4" @click="close">
               Cancel
             </button>
             <button
-              class="flex-1 px-4 py-2 rounded-lg text-xs font-bold text-white transition-all duration-200"
-              :class="password.length > 0 ? 'bg-danger hover:bg-red-700 shadow-sm' : 'bg-slate-200 text-slate-400 cursor-not-allowed'"
+              class="btn btn-danger flex-1 min-h-10 px-4"
               :disabled="password.length === 0"
               @click="handleConfirm"
             >

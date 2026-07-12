@@ -5,7 +5,7 @@ namespace App\Modules\Reimbursements\Services;
 use App\Modules\Users\Models\User;
 use App\Modules\Reimbursements\Models\Receipt;
 use App\Modules\AuditLogs\Services\AuditLogService;
-use App\Modules\Reimbursements\Jobs\ProcessReceiptOcr;
+use App\Modules\Reimbursements\Jobs\DispatchReceiptToAiService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -60,33 +60,23 @@ class ReceiptService
             $storedFile = $this->storeReceiptFile($file);
 
             $receipt = Receipt::create([
-                'uploaded_by' => $user->id,
-                'file_path' => $storedFile['file_path'],
-                'file_hash' => $storedFile['file_hash'],
-                'file_type' => $storedFile['file_type'],
-                'file_size_bytes' => $storedFile['file_size_bytes'],
-                'expense_category_id' => $validated['expense_category_id'] ?? null,
-                
-                // Static mock data since OCR is disabled
-                'vendor_name' => $validated['vendor_name'] ?? 'Mock Vendor Corp',
-                'transaction_date' => $validated['transaction_date'] ?? now()->toDateString(),
-                'total_amount' => $validated['total_amount'] ?? 1500.00,
-                'vat_amount' => $validated['vat_amount'] ?? 180.00,
-                'tin' => $validated['tin'] ?? '123-456-789-000',
-                'invoice_number' => $validated['invoice_number'] ?? 'INV-' . rand(1000, 9999),
-                'vat_classification' => $validated['vat_classification'] ?? 'VAT',
-                'ocr_confidence_score' => 0.95,
-                
-                'ocr_flagged' => false,
-                'is_archived' => false,
-                'status' => 'processed',
+                'uploaded_by'          => $user->id,
+                'file_path'            => $storedFile['file_path'],
+                'file_hash'            => $storedFile['file_hash'],
+                'file_type'            => $storedFile['file_type'],
+                'file_size_bytes'      => $storedFile['file_size_bytes'],
+                'expense_category_id'  => $validated['expense_category_id'] ?? null,
+                'ocr_flagged'          => false,
+                'is_archived'          => false,
+                'status'               => 'processing',
             ]);
 
             if (!empty($validated['items'])) {
                 $receipt->items()->createMany($validated['items']);
             }
 
-            // Queue disabled temporarily: ProcessReceiptOcr::dispatch($receipt);
+            // Dispatch to the external AI OCR + categorization service.
+            DispatchReceiptToAiService::dispatch($receipt);
 
             $receipt->load('category', 'items', 'uploader');
 

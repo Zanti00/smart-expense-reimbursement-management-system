@@ -5,7 +5,7 @@ import { usePolicyStore } from "@/stores/policy";
 import { useReceiptStore } from "@/stores/receipts";
 import { useReimbursementStore } from "@/stores/reimbursement";
 import { useToast } from "@/composables/useToast";
-import { Activity, Save, Send } from "lucide-vue-next";
+import { Save, Send } from "lucide-vue-next";
 
 // Components
 import ReceiptsManagementHeader from "@/components/reimbursements/ReceiptsManagementHeader.vue";
@@ -21,7 +21,6 @@ import { useReceiptUploads } from "@/composables/reimbursements/useReceiptUpload
 import { useReimbursementSubmit } from "@/composables/reimbursements/useReimbursementSubmit";
 import { useUnsavedChanges } from "@/composables/useUnsavedChanges";
 
-// Utils
 import {
   tinFor,
   cleanName,
@@ -29,6 +28,7 @@ import {
   receiptFinancials,
   getItems,
 } from "@/utils/receiptUtils";
+import { getFileUrl } from "@/utils/fileUtils";
 
 const props = defineProps({
   forwardedReceipts: {
@@ -56,8 +56,6 @@ const storedForwardedReceipts = ref([]);
 const forwardedSource = ref("My Expense");
 const FORWARDED_RECEIPTS_KEY = "serms_forwarded_reimbursement_receipts";
 const LEGACY_LIQUIDATION_RECEIPTS_KEY = "serms_forwarded_liquidation_receipts";
-const SUPABASE_RECEIPT_BASE_URL =
-  "https://vbabvrcfqcmvvjwmzuwx.supabase.co/storage/v1/object/public/cash_advances/";
 
 // Form uploads and file management
 const {
@@ -112,20 +110,6 @@ const forwardedReceiptCount = computed(
 );
 const isForwardedMode = computed(() => forwardedReceiptCount.value > 0);
 const isEmbeddedForwardedMode = computed(() => props.forwardedReceipts.length > 0);
-
-function resolveReceiptPreviewUrl(fileUrl, filePath) {
-  if (fileUrl) return fileUrl;
-  if (!filePath) return null;
-  if (
-    String(filePath).startsWith("http://") ||
-    String(filePath).startsWith("https://") ||
-    String(filePath).startsWith("blob:")
-  ) {
-    return filePath;
-  }
-
-  return `${SUPABASE_RECEIPT_BASE_URL}${String(filePath).replace(/^\/+/, "")}`;
-}
 
 // Form submission
 const { submitting, submitReimbursement, updateReimbursement } = useReimbursementSubmit(
@@ -203,7 +187,7 @@ onMounted(async () => {
             invoiceNumber: r.invoice_number,
             category: r.category?.name || data.expense_category?.name || "",
             categoryId: r.expense_category_id || data.expense_category_id || null,
-            thumbnail: resolveReceiptPreviewUrl(r.file_url, r.file_path),
+            thumbnail: getFileUrl(r.file_url || r.file_path) || null,
             items,
             isUploading: false,
           };
@@ -305,7 +289,6 @@ function dismiss() {
       v-if="fetching"
       class="border border-slate-200 bg-white rounded-xl flex min-h-[400px] flex-col items-center justify-center gap-4 p-16 text-center"
     >
-      <Activity class="h-10 w-10 text-accent animate-spin" />
       <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
         Loading request details...
       </p>
@@ -369,16 +352,15 @@ function dismiss() {
         <!--  Footer Actions  -->
         <div class="flex justify-end gap-4 pb-4">
           <button
-            class="btn p-3 !px-10 transition-all duration-200"
-            :class="
-              canProceed
-                ? 'btn-primary'
-                : 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-70'
-            "
+            class="btn btn-cta min-h-[42px] w-full sm:w-fit disabled:cursor-not-allowed disabled:opacity-60"
             :disabled="!canProceed || submitting"
             @click="handleSubmit"
           >
-            <Activity v-if="submitting" class="w-4 h-4 animate-spin" />
+            <span
+              v-if="submitting"
+              class="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin"
+              aria-hidden="true"
+            />
             <Save v-else class="w-4 h-4" />
             {{ submitting ? (isEditMode ? "Updating..." : "Submitting...") : (isEditMode ? "Update Reimbursement" : "Submit Reimbursement") }}
           </button>

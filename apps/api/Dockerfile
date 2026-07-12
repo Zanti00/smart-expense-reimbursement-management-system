@@ -1,4 +1,4 @@
-FROM php:8.3-cli
+FROM php:8.3-fpm
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -23,9 +23,8 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Set working directory
 WORKDIR /var/www
 
-# We don't copy the code here because we are using a volume in docker-compose for development.
-# But we can expose the port
-EXPOSE 8000
+# Expose port 9000 for PHP-FPM
+EXPOSE 9000
 
 # Copy the entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/
@@ -34,5 +33,5 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 # Set the entrypoint
 ENTRYPOINT ["docker-entrypoint.sh"]
 
-# Start Laravel development server
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+# Start PHP-FPM
+CMD ["php-fpm"]

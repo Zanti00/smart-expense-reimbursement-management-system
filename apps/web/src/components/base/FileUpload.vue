@@ -1,7 +1,6 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import {
-  Activity,
   AlertTriangle,
   CheckCircle,
   FileText,
@@ -28,6 +27,10 @@ const files = ref([...props.modelValue])
 const localError = ref(null)
 const fileInput = ref(null)
 
+const isProcessingAnyReceipt = computed(() =>
+  files.value.some((entry) => entry.ocrStatus === 'processing'),
+)
+
 watch(
   () => props.modelValue,
   (newValue) => {
@@ -51,16 +54,14 @@ function formatTinValue(value, { padLastBlock = false } = {}) {
 }
 
 function buildPrefilledOcrData(file) {
-  const fallbackTin = tinFor({ fileName: file.name })
-
   return {
     id: null,
-    amount: '0.00',
-    vat: '0.00',
-    tin: formatTinValue(fallbackTin, { padLastBlock: true }),
-    vendor: cleanName(file.name) || 'Unknown Vendor',
-    invoiceNumber: `INV-${Date.now().toString().slice(-6)}`,
-    date: new Date().toISOString().split('T')[0],
+    amount: '',
+    vat: '',
+    tin: '',
+    vendor: '',
+    invoiceNumber: '',
+    date: '',
     confidence: 0,
   }
 }
@@ -136,12 +137,12 @@ async function simulateOCR(entry) {
     entry.ocrStatus = 'done'
     entry.ocrData = {
       id: ocrData.id,
-      amount: ocrData.total_amount || entry.ocrData.amount || '0.00',
-      vat: ocrData.vat_amount || entry.ocrData.vat || '0.00',
-      tin: formatTinValue(ocrData.tin || entry.ocrData.tin, { padLastBlock: true }),
+      amount: ocrData.total_amount || entry.ocrData.amount || '',
+      vat: ocrData.vat_amount || entry.ocrData.vat || '',
+      tin: ocrData.tin || entry.ocrData.tin || '',
       vendor: ocrData.vendor_name || entry.ocrData.vendor || '',
       invoiceNumber: ocrData.invoice_number || entry.ocrData.invoiceNumber || '',
-      date: ocrData.transaction_date || new Date().toISOString().split('T')[0],
+      date: ocrData.transaction_date || entry.ocrData.date || '',
       confidence: Math.round(ocrData.ocr_confidence_score || 85),
       file_path: ocrData.file_path,
       file_hash: ocrData.file_hash,
@@ -233,7 +234,12 @@ function onFileInput(event) {
         <div>
           <h3 class="font-heading text-base font-bold text-primary">Scanned Receipts</h3>
           <p class="mt-0.5 text-xs font-semibold text-accent">
-            {{ files.length }} uploaded - ready for audit
+            <template v-if="isProcessingAnyReceipt">
+              Reading receipt data. Please wait...
+            </template>
+            <template v-else>
+              {{ files.length }} uploaded - ready for audit
+            </template>
           </p>
         </div>
         <button
@@ -300,8 +306,11 @@ function onFileInput(event) {
             v-if="entry.ocrStatus === 'processing'"
             class="mt-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-accent animate-pulse"
           >
-            <Activity class="h-2.5 w-2.5" />
-            Scanning receipt...
+            <span
+              class="h-2.5 w-2.5 rounded-full border-2 border-current border-t-transparent animate-spin"
+              aria-hidden="true"
+            />
+            Reading receipt...
           </div>
           <div v-else-if="entry.ocrStatus === 'done' && entry.ocrData" class="mt-1 flex flex-wrap gap-2">
             <span class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-accent">

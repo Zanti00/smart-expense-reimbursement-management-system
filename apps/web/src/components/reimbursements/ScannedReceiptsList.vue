@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from "vue";
 import {
   FileText,
   Image as ImageIcon,
@@ -30,6 +31,10 @@ const props = defineProps({
 });
 
 defineEmits(["remove-receipt"]);
+
+const hasUploadingReceipts = computed(() =>
+  props.receipts.some((receipt) => receipt.isUploading),
+);
 
 function getCategoryOptions() {
   return props.categories;
@@ -102,6 +107,17 @@ function removeReceiptItem(receipt, index) {
       </h2>
     </div>
 
+    <div
+      v-if="hasUploadingReceipts"
+      class="mb-5 flex items-center gap-2 rounded-xl border border-accent/20 bg-accent-50 px-4 py-3 text-xs font-bold uppercase tracking-widest text-accent"
+    >
+      <span
+        class="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin"
+        aria-hidden="true"
+      />
+      Uploading and reading receipt data...
+    </div>
+
     <!-- One block per receipt -->
     <div class="flex flex-col gap-8">
       <div
@@ -126,7 +142,7 @@ function removeReceiptItem(receipt, index) {
           <!-- Left: Image Preview -->
           <div class="lg:col-span-4 flex flex-col gap-4">
             <div
-              class="aspect-[3/4] rounded-xl overflow-hidden border border-slate-200 bg-white shadow-sm flex items-center justify-center"
+              class="relative aspect-[3/4] rounded-xl overflow-hidden border border-slate-200 bg-white shadow-sm flex items-center justify-center"
             >
               <img
                 v-if="receipt.thumbnail"
@@ -152,6 +168,18 @@ function removeReceiptItem(receipt, index) {
                 >
                   No Preview
                 </p>
+              </div>
+              <div
+                v-if="receipt.isUploading"
+                class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white/80 text-accent backdrop-blur-[1px]"
+              >
+                <span
+                  class="h-8 w-8 rounded-full border-2 border-current border-t-transparent animate-spin"
+                  aria-hidden="true"
+                />
+                <span class="text-[10px] font-bold uppercase tracking-widest">
+                  Uploading...
+                </span>
               </div>
             </div>
             <div>

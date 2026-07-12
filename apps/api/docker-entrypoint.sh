@@ -16,8 +16,9 @@ done
 echo "Database is ready!"
 
 # Ensure dependency and cache directories exist inside Docker-managed volumes.
-mkdir -p vendor bootstrap/cache storage/framework/cache/data storage/framework/views storage/framework/sessions
-chmod -R ug+rw bootstrap/cache storage/framework/cache storage/framework/views storage/framework/sessions
+mkdir -p vendor bootstrap/cache storage/framework/cache/data storage/framework/views storage/framework/sessions storage/logs
+chown -R www-data:www-data bootstrap/cache storage
+chmod -R ug+rw bootstrap/cache storage
 
 if [ "$SERMS_SERVICE_ROLE" = "worker" ]; then
   echo "Waiting for API container to prepare Laravel dependencies/caches..."
