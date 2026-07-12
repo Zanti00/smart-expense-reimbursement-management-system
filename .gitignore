@@ -33,6 +33,8 @@ storage/logs/
 !.env.example
 auth.json
 
+docs/
+
 # IDE / Editor
 .vscode/
 .idea/
