@@ -48,6 +48,28 @@ class ReceiptController extends Controller
     }
 
     /**
+     * Get a specific receipt for the authenticated user.
+     */
+    public function show(Request $request, $id)
+    {
+        try {
+            $canManage = $request->user()->can('serms.reimbursements.manage');
+            
+            $receipt = $this->service->getReceipt(
+                $request->user(),
+                (int)$id,
+                $canManage
+            );
+
+            return response()->json([
+                'data' => $receipt,
+            ]);
+        } catch (AuthorizationException $e) {
+            return response()->json(['message' => $e->getMessage()], 403);
+        }
+    }
+
+    /**
      * Store a newly uploaded receipt in the database.
      */
     public function store(StoreReceiptRequest $request)

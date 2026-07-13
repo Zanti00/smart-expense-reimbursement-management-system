@@ -65,6 +65,7 @@ const {
   handleReceiptDrop,
   handleReceiptSelect,
   removeReceipt,
+  clearDraftReceipts,
 } = useReceiptUploads();
 
 const receipts = computed(() => [
@@ -87,7 +88,7 @@ const canProceed = computed(
     cutoffPeriod.value &&
     (isEditMode.value || reportFile.value) &&
     receipts.value.every(
-      (r) => !r.isUploading && (isEditMode.value || r.categoryId),
+      (r) => !r.isUploading && !r.isProcessing && (isEditMode.value || r.categoryId),
     ),
 );
 
@@ -138,6 +139,8 @@ async function handleSubmit() {
     }
     if (!success) {
       isSubmitted.value = false;
+    } else {
+      clearDraftReceipts();
     }
   } catch (error) {
     isSubmitted.value = false;
@@ -254,6 +257,10 @@ onBeforeUnmount(() => {
       URL.revokeObjectURL(receipt.thumbnail);
     }
   });
+  
+  if (!isEditMode.value) {
+    clearDraftReceipts();
+  }
 });
 
 //  Dismiss ─

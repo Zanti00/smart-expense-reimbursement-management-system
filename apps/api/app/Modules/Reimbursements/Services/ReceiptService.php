@@ -52,6 +52,22 @@ class ReceiptService
     }
 
     /**
+     * Get a single receipt by ID, ensuring user owns it unless they can manage.
+     */
+    public function getReceipt(User $user, int $id, bool $canManage)
+    {
+        $receipt = Receipt::with('category', 'uploader', 'items')
+            ->withCount('reimbursements')
+            ->findOrFail($id);
+
+        if (!$canManage && $receipt->uploaded_by !== $user->id) {
+            throw new AuthorizationException('Unauthorized to view this receipt.');
+        }
+
+        return $receipt;
+    }
+
+    /**
      * Store a newly uploaded receipt in the database.
      */
     public function storeReceipt(User $user, array $validated, $file)

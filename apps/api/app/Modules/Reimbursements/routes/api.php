@@ -19,6 +19,7 @@ Route::middleware(['auth.external'])->group(function () {
 
     // Receipts
     Route::get('/receipts', [ReceiptController::class, 'index']);
+    Route::get('/receipts/{id}', [ReceiptController::class, 'show']);
     Route::post('/receipts', [ReceiptController::class, 'store']);
     Route::post('/receipts/{id}/resubmit', [ReceiptController::class, 'resubmit']);
     Route::patch('/receipts/{id}', [ReceiptController::class, 'update']);

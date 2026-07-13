@@ -1,4 +1,4 @@
-import { ref } from "vue";
+import { ref, watch, onMounted, onBeforeUnmount } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "@/composables/useToast";
 import {
@@ -6,9 +6,69 @@ import {
 } from "@/utils/receiptUtils";
 
 export function useReceiptUploads() {
-  const localReceipts = ref([]);
+  const DRAFT_KEY = "serms_draft_receipts";
+  const initialDrafts = sessionStorage.getItem(DRAFT_KEY);
+  const localReceipts = ref(initialDrafts ? JSON.parse(initialDrafts) : []);
+
+  watch(localReceipts, (newVal) => {
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(newVal));
+  }, { deep: true });
+
+  function clearDraftReceipts() {
+    sessionStorage.removeItem(DRAFT_KEY);
+    localReceipts.value = [];
+  }
+
   const receiptDrag = ref(false);
   const receiptInput = ref(null);
+  
+  const pollTimers = {};
+
+  function startPolling(receiptId) {
+    if (pollTimers[receiptId]) return;
+    pollTimers[receiptId] = setInterval(async () => {
+      try {
+        const headers = { Accept: "application/json" };
+        if (authStore.token) headers["Authorization"] = `Bearer ${authStore.token}`;
+        
+        const res = await fetch(`/api/serms/reimbursements/receipts/${receiptId}`, { headers });
+        if (!res.ok) return;
+        
+        const { data } = await res.json();
+        if (data.status !== 'processing') {
+          clearInterval(pollTimers[receiptId]);
+          delete pollTimers[receiptId];
+          
+          const index = localReceipts.value.findIndex((r) => String(r.id) === String(receiptId));
+          if (index !== -1) {
+            const oldThumbnail = localReceipts.value[index].thumbnail;
+            const updatedReceipt = buildPrefilledReceiptDraft({
+              id: data.id,
+              receiptData: data,
+              thumbnail: oldThumbnail,
+            });
+            updatedReceipt.isUploading = false;
+            updatedReceipt.isProcessing = false;
+            localReceipts.value[index] = updatedReceipt;
+          }
+        }
+      } catch (e) {
+        console.error("Polling error for receipt", receiptId, e);
+      }
+    }, 3000);
+  }
+
+  onBeforeUnmount(() => {
+    Object.values(pollTimers).forEach(clearInterval);
+  });
+
+  onMounted(() => {
+    localReceipts.value.forEach(r => {
+      if (r.isProcessing) {
+        startPolling(r.id);
+      }
+    });
+  });
   
   const authStore = useAuthStore();
   const { addToast } = useToast();
@@ -80,7 +140,11 @@ export function useReceiptUploads() {
               thumbnail: localReceipts.value[index].thumbnail,
             }),
             isUploading: false,
+            isProcessing: data.data.status === 'processing',
           };
+          if (data.data.status === 'processing') {
+            startPolling(data.data.id);
+          }
         }
       } catch (e) {
         console.error(e);
@@ -104,5 +168,6 @@ export function useReceiptUploads() {
     handleReceiptDrop,
     handleReceiptSelect,
     removeReceipt,
+    clearDraftReceipts,
   };
 }

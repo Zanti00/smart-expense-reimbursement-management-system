@@ -54,7 +54,8 @@ class DispatchReceiptToAiService implements ShouldQueue
             return;
         }
 
-        $callbackUrl = rtrim((string) config('app.url'), '/')
+        $baseUrl = config('services.ai_service.callback_base_url') ?: config('app.url');
+        $callbackUrl = rtrim((string) $baseUrl, '/')
             . "/api/reimbursements/receipts/{$this->receipt->id}/ocr-callback";
 
         $ocrEngine->sendForProcessing($this->receipt->id, $fileUrl, $callbackUrl);
