@@ -30,6 +30,9 @@ if [ "$SERMS_SERVICE_ROLE" = "worker" ]; then
   exec "$@"
 fi
 
+# Remove any stale startup lock left over from a previous interrupted container run
+rm -rf "$STARTUP_LOCK_DIR" 2>/dev/null || true
+
 echo "Waiting for Laravel startup lock..."
 until mkdir "$STARTUP_LOCK_DIR" 2>/dev/null; do
   echo "Another SERMS container is preparing dependencies/caches - sleeping"
