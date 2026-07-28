@@ -3,6 +3,7 @@ import { ref, computed, watch } from "vue";
 import { useReceiptStore } from "@/stores/receipts";
 import { useToast } from "@/composables/useToast";
 import ConfirmModal from "@/components/base/ConfirmModal.vue";
+import CurrencySelect from "@/components/base/CurrencySelect.vue";
 import { useUnsavedChanges } from "@/composables/useUnsavedChanges";
 import {
   buildReceiptUploadFormPrefill,
@@ -20,21 +21,7 @@ import {
   Trash2,
 } from "lucide-vue-next";
 
-// ISO 4217 codes supported by the OCR pipeline — mirrors locale.py's COUNTRY_CURRENCY
-// plus EUR. Other currencies may be typed in the 'Other' fallback.
-const SUPPORTED_CURRENCIES = [
-  { code: "PHP", label: "PHP — Philippine Peso" },
-  { code: "USD", label: "USD — US Dollar" },
-  { code: "SGD", label: "SGD — Singapore Dollar" },
-  { code: "MYR", label: "MYR — Malaysian Ringgit" },
-  { code: "BND", label: "BND — Brunei Dollar" },
-  { code: "JPY", label: "JPY — Japanese Yen" },
-  { code: "HKD", label: "HKD — Hong Kong Dollar" },
-  { code: "THB", label: "THB — Thai Baht" },
-  { code: "AUD", label: "AUD — Australian Dollar" },
-  { code: "GBP", label: "GBP — British Pound" },
-  { code: "EUR", label: "EUR — Euro" },
-];
+
 
 const props = defineProps({
   modelValue: {
@@ -415,7 +402,7 @@ function formatCurrency(amount) {
           <div class="flex items-center gap-3">
             <h2
               class="text-xl font-bold text-primary"
-              style="font-family: &quot;Poppins&quot;, sans-serif"
+              style="font-family: 'Poppins', sans-serif"
             >
               {{ receiptToEdit ? "Edit Receipt" : "Receipt Scanned" }}
             </h2>
@@ -471,7 +458,7 @@ function formatCurrency(amount) {
                 </div>
                 <p
                   class="text-[10px] text-slate-300 font-semibold uppercase tracking-widest text-center px-4"
-                  style="font-family: &quot;Poppins&quot;, sans-serif"
+                  style="font-family: 'Poppins', sans-serif"
                 >
                   {{
                     uploadFile
@@ -623,23 +610,11 @@ function formatCurrency(amount) {
             <!-- Currency -->
             <div class="input-wrapper">
               <label class="input-label">Currency</label>
-              <div class="flex gap-3">
-                <div class="relative flex-1">
-                  <select
-                    class="input appearance-none cursor-pointer"
+              <div class="flex gap-3 items-center">
+                <div class="flex-1">
+                  <CurrencySelect
                     v-model="uploadForm.currency"
-                  >
-                    <option value="">Select currency (optional)</option>
-                    <option
-                      v-for="c in SUPPORTED_CURRENCIES"
-                      :key="c.code"
-                      :value="c.code"
-                    >
-                      {{ c.label }}
-                    </option>
-                  </select>
-                  <ChevronDown
-                    class="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                    :disabled="receiptsStore.isSaving"
                   />
                 </div>
                 <span

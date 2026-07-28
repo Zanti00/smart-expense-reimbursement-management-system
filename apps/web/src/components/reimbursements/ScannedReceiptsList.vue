@@ -14,6 +14,7 @@ import {
   itemsGrossAmount,
   receiptFinancials,
 } from "@/utils/receiptUtils";
+import CurrencySelect from "@/components/base/CurrencySelect.vue";
 
 const props = defineProps({
   receipts: {
@@ -32,19 +33,6 @@ const props = defineProps({
 
 defineEmits(["remove-receipt"]);
 
-const SUPPORTED_CURRENCIES = [
-  { code: "PHP", label: "PHP — Philippine Peso" },
-  { code: "USD", label: "USD — US Dollar" },
-  { code: "SGD", label: "SGD — Singapore Dollar" },
-  { code: "MYR", label: "MYR — Malaysian Ringgit" },
-  { code: "BND", label: "BND — Brunei Dollar" },
-  { code: "JPY", label: "JPY — Japanese Yen" },
-  { code: "HKD", label: "HKD — Hong Kong Dollar" },
-  { code: "THB", label: "THB — Thai Baht" },
-  { code: "AUD", label: "AUD — Australian Dollar" },
-  { code: "GBP", label: "GBP — British Pound" },
-  { code: "EUR", label: "EUR — Euro" },
-];
 
 const hasUploadingReceipts = computed(() =>
   props.receipts.some((receipt) => receipt.isUploading || receipt.isProcessing),
@@ -390,23 +378,11 @@ function removeReceiptItem(receipt, index) {
                 <div class="flex gap-4 flex-wrap items-end">
                   <div class="input-wrapper">
                     <label class="input-label">Currency</label>
-                    <div class="relative">
-                      <select
-                        class="input !w-36 !bg-white appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                        v-model="receipt.currency"
-                        :disabled="receipt.isUploading || receipt.isProcessing"
-                      >
-                        <option value="">PHP (Default)</option>
-                        <option
-                          v-for="c in SUPPORTED_CURRENCIES"
-                          :key="c.code"
-                          :value="c.code"
-                        >
-                          {{ c.code }}
-                        </option>
-                      </select>
-                      <ChevronDown class="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                    </div>
+                    <CurrencySelect
+                      v-model="receipt.currency"
+                      :disabled="receipt.isUploading || receipt.isProcessing"
+                      select-class="!bg-white"
+                    />
                   </div>
                   <div class="input-wrapper">
                     <label class="input-label">VAT Classification <span class="text-danger">*</span></label>
