@@ -61,6 +61,7 @@ class OcrCallbackService
                 'invoice_number'       => $data['invoice_number']     ?? $receipt->invoice_number,
                 'vat_classification'   => $data['vat_classification'] ?? $receipt->vat_classification,
                 'currency'             => $data['currency']           ?? $receipt->currency,
+                'location'             => $data['location']           ?? $receipt->location,
                 'expense_category_id'  => $expenseCategoryId,
                 'ocr_confidence_score' => $confidenceScore,
                 'ocr_flagged'          => $isLowConfidence,

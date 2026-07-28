@@ -40,6 +40,7 @@ class StoreReceiptRequest extends FormRequest
             'vat_amount' => 'nullable|numeric|min:0',
             'tin' => 'nullable|string|max:255',
             'invoice_number' => 'nullable|string|max:255',
+            'location' => 'nullable|string|max:255',
             'vat_classification' => 'nullable|in:vat,non-vat',
             'items' => 'nullable|array',
             'items.*.name' => 'required_with:items|string|max:255',

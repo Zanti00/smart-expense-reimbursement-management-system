@@ -202,6 +202,7 @@ onMounted(async () => {
             vatClassification: amounts.vatClassification,
             tin: r.tin,
             invoiceNumber: r.invoice_number,
+            location: r.location || "",
             category: r.category?.name || data.expense_category?.name || "",
             categoryId: r.expense_category_id || data.expense_category_id || null,
             thumbnail: getFileUrl(r.file_url || r.file_path) || null,
@@ -247,7 +248,7 @@ onMounted(async () => {
         invoiceNumber: r.invoiceNumber || r.id,
         tin: r.tin || tinFor(r),
         merchantName: r.merchantName || cleanName(r.fileName),
-        location: r.location || "Metro Manila, Philippines",
+        location: r.location || "",
         items:
           r.items ||
           getItems(r.category || "Expense").map((name) => ({

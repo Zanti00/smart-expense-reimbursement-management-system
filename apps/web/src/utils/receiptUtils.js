@@ -123,7 +123,7 @@ export function buildPrefilledReceiptDraft({
   file,
   receiptData = {},
   thumbnail = "",
-  defaultLocation = "Metro Manila, Philippines",
+  defaultLocation = "",
 } = {}) {
   const resolvedId = receiptData.id || id || `temp-${Date.now()}`;
   const fileName = file?.name || receiptData.file_name || `Receipt-${resolvedId}`;
@@ -149,7 +149,7 @@ export function buildPrefilledReceiptDraft({
     invoiceNumber: receiptData.invoice_number || "",
     tin: receiptData.tin || "",
     merchantName,
-    location: defaultLocation,
+    location: receiptData.location || defaultLocation || "",
     fileName,
     fileType,
     thumbnail,

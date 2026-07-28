@@ -24,6 +24,7 @@ class Receipt extends Model
         'invoice_number',
         'vat_classification',
         'currency',
+        'location',
         'ocr_confidence_score',
         'ocr_flagged',
         'is_archived',

@@ -25,6 +25,7 @@ class OcrCallbackRequest extends FormRequest
             'expense_category'    => ['nullable', 'string', 'max:255'],
             'vat_classification'  => ['nullable', 'string', 'in:vat,non-vat'],
             'currency'            => ['nullable', 'string', 'size:3'],
+            'location'            => ['nullable', 'string', 'max:255'],
             'items'               => ['nullable', 'array'],
             'items.*.name'        => ['required_with:items', 'string', 'max:255'],
             'items.*.quantity'    => ['required_with:items', 'integer', 'min:1'],

@@ -249,6 +249,7 @@ function removeReceiptItem(receipt, index) {
                   class="input pr-10 disabled:opacity-50 disabled:cursor-not-allowed"
                   type="text"
                   v-model="receipt.location"
+                  placeholder="Enter location..."
                   :disabled="receipt.isUploading || receipt.isProcessing"
                 />
                 <MapPin
