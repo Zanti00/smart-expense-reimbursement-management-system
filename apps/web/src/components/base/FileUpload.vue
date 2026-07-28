@@ -10,7 +10,7 @@ import {
   X,
 } from 'lucide-vue-next'
 import { apiFetch } from '../../utils/apiFetch'
-import { cleanName, tinFor } from '../../utils/receiptUtils'
+import { cleanName, tinFor, formatDateForInput } from '../../utils/receiptUtils'
 
 const props = defineProps({
   modelValue: { type: Array, default: () => [] },
@@ -142,7 +142,7 @@ async function simulateOCR(entry) {
       tin: ocrData.tin || entry.ocrData.tin || '',
       vendor: ocrData.vendor_name || entry.ocrData.vendor || '',
       invoiceNumber: ocrData.invoice_number || entry.ocrData.invoiceNumber || '',
-      date: ocrData.transaction_date || entry.ocrData.date || '',
+      date: formatDateForInput(ocrData.transaction_date || entry.ocrData.date),
       confidence: Math.round(ocrData.ocr_confidence_score || 85),
       file_path: ocrData.file_path,
       file_hash: ocrData.file_hash,

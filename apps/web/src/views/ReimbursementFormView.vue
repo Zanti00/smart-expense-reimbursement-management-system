@@ -27,6 +27,7 @@ import {
   normalizeVatClassification,
   receiptFinancials,
   getItems,
+  formatDateForInput,
 } from "@/utils/receiptUtils";
 import { getFileUrl } from "@/utils/fileUtils";
 
@@ -101,7 +102,7 @@ const canProceed = computed(
     cutoffPeriod.value &&
     (isEditMode.value || reportFile.value) &&
     receipts.value.every(
-      (r) => !r.isUploading && !r.isProcessing && (isEditMode.value || r.categoryId),
+      (r) => !r.isUploading && !r.isProcessing && r.date && (isEditMode.value || r.categoryId),
     ),
 );
 
@@ -194,7 +195,7 @@ onMounted(async () => {
             fileName: r.vendor_name || `Receipt-${r.id}`,
             fileType: r.file_type,
             merchantName: r.vendor_name,
-            date: r.transaction_date,
+            date: formatDateForInput(r.transaction_date),
             amount: amounts.gross,
             subtotal: amounts.subtotal.toFixed(2),
             tax: amounts.vat.toFixed(2),

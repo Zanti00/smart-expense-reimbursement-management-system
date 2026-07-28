@@ -95,6 +95,29 @@ function buildDefaultItems(categoryLabel, amount) {
   }));
 }
 
+export function formatDateForInput(dateStr) {
+  if (!dateStr) return "";
+  if (typeof dateStr === "string") {
+    const trimmed = dateStr.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+    if (trimmed.includes("T")) return trimmed.split("T")[0];
+    if (trimmed.includes(" ")) return trimmed.split(" ")[0];
+  }
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return "";
+    return (
+      d.getFullYear() +
+      "-" +
+      String(d.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(d.getDate()).padStart(2, "0")
+    );
+  } catch (e) {
+    return "";
+  }
+}
+
 export function buildPrefilledReceiptDraft({
   id,
   file,
@@ -138,7 +161,7 @@ export function buildPrefilledReceiptDraft({
         : "",
     vatClassification: amounts.vatClassification,
     currency: receiptData.currency || "",
-    date: receiptData.transaction_date || "",
+    date: formatDateForInput(receiptData.transaction_date || receiptData.date),
     category: categoryName,
     categoryId: receiptData.expense_category_id || null,
     items,

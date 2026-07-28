@@ -23,6 +23,13 @@ export function useReimbursementSubmit(emit, router) {
 
     for (let idx = 0; idx < receipts.length; idx++) {
       const r = receipts[idx];
+      if (!r.date) {
+        addToast({
+          message: `Date is required for receipt ${idx + 1}`,
+          type: "error",
+        });
+        return false;
+      }
       if (r.items && Array.isArray(r.items)) {
         for (const item of r.items) {
           if (!item.name || !item.name.trim()) {
@@ -136,6 +143,13 @@ export function useReimbursementSubmit(emit, router) {
 
     for (let idx = 0; idx < receipts.length; idx++) {
       const r = receipts[idx];
+      if (!r.date) {
+        addToast({
+          message: `Date is required for receipt ${idx + 1}`,
+          type: "error",
+        });
+        return false;
+      }
       if (r.items && Array.isArray(r.items)) {
         for (const item of r.items) {
           if (!item.name || !item.name.trim()) {
