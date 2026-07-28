@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from "vue";
 import { useAuthStore } from "@/stores/auth";
-import { formatPeso } from "@/utils/formatters";
+import { formatPeso, formatAmount } from "@/utils/formatters";
 import {
   X,
   FileText,
@@ -176,7 +176,7 @@ function categoryName(record) {
               <div class="flex flex-col gap-1">
                 <span class="kpi-label text-slate-400">Total Amount</span>
                 <span class="font-heading text-xl font-bold text-primary">{{
-                  formatPeso(viewingRecord.amount || 0)
+                  formatAmount(viewingRecord.amount || 0, viewingRecord.currency || 'PHP')
                 }}</span>
               </div>
               <div class="flex flex-col gap-1 sm:col-span-2">
@@ -322,7 +322,7 @@ function categoryName(record) {
                       >
                       <span
                         class="font-heading text-sm font-bold text-primary"
-                        >{{ formatPeso(receipt.total_amount || 0) }}</span
+                        >{{ formatAmount(receipt.total_amount || 0, receipt.currency || "PHP") }}</span
                       >
                     </div>
                     <button

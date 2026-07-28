@@ -20,6 +20,22 @@ import {
   Trash2,
 } from "lucide-vue-next";
 
+// ISO 4217 codes supported by the OCR pipeline — mirrors locale.py's COUNTRY_CURRENCY
+// plus EUR. Other currencies may be typed in the 'Other' fallback.
+const SUPPORTED_CURRENCIES = [
+  { code: "PHP", label: "PHP — Philippine Peso" },
+  { code: "USD", label: "USD — US Dollar" },
+  { code: "SGD", label: "SGD — Singapore Dollar" },
+  { code: "MYR", label: "MYR — Malaysian Ringgit" },
+  { code: "BND", label: "BND — Brunei Dollar" },
+  { code: "JPY", label: "JPY — Japanese Yen" },
+  { code: "HKD", label: "HKD — Hong Kong Dollar" },
+  { code: "THB", label: "THB — Thai Baht" },
+  { code: "AUD", label: "AUD — Australian Dollar" },
+  { code: "GBP", label: "GBP — British Pound" },
+  { code: "EUR", label: "EUR — Euro" },
+];
+
 const props = defineProps({
   modelValue: {
     type: Boolean,
@@ -56,6 +72,7 @@ const uploadForm = ref({
   total_amount: "",
   vat_amount: "",
   vat_classification: "vat",
+  currency: "",
   items: [],
 });
 
@@ -202,6 +219,7 @@ watch(
       expense_category_id: props.receiptToEdit.categoryId || "",
       total_amount: props.receiptToEdit.amount || "",
       vat_classification: props.receiptToEdit.vatClassification || "vat",
+      currency: props.receiptToEdit.currency || "",
       vat_amount: receiptFinancials(
         { amount: Number(props.receiptToEdit.amount) || 0 },
         props.receiptToEdit.vatClassification || "vat",
@@ -304,6 +322,7 @@ function resetUploadForm() {
     total_amount: "",
     vat_amount: "",
     vat_classification: "vat",
+    currency: "",
     items: [],
   };
 }
@@ -345,6 +364,7 @@ async function saveReceipt() {
       tin: uploadForm.value.tin || null,
       invoice_number: uploadForm.value.invoice_number || null,
       vat_classification: uploadForm.value.vat_classification || null,
+      currency: uploadForm.value.currency || null,
       items:
         uploadForm.value.items.length > 0 ? uploadForm.value.items : undefined,
     };
@@ -597,6 +617,38 @@ function formatCurrency(amount) {
                 <ChevronDown
                   class="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
                 />
+              </div>
+            </div>
+
+            <!-- Currency -->
+            <div class="input-wrapper">
+              <label class="input-label">Currency</label>
+              <div class="flex gap-3">
+                <div class="relative flex-1">
+                  <select
+                    class="input appearance-none cursor-pointer"
+                    v-model="uploadForm.currency"
+                  >
+                    <option value="">Select currency (optional)</option>
+                    <option
+                      v-for="c in SUPPORTED_CURRENCIES"
+                      :key="c.code"
+                      :value="c.code"
+                    >
+                      {{ c.label }}
+                    </option>
+                  </select>
+                  <ChevronDown
+                    class="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                  />
+                </div>
+                <span
+                  v-if="receiptToEdit?.currency"
+                  class="bg-accent-50 text-accent border border-accent/20 px-4 py-2 rounded-lg flex items-center gap-2 text-[11px] font-bold whitespace-nowrap shadow-sm"
+                >
+                  <Sparkles class="w-3.5 h-3.5 fill-accent" />
+                  [AI-Detected]
+                </span>
               </div>
             </div>
 

@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from "vue";
-import { formatPeso, formatDate } from "@/utils/formatters";
+import { formatPeso, formatAmount, formatDate } from "@/utils/formatters";
 import BasePagination from "@/components/base/BasePagination.vue";
 import {
   ChevronUp,
@@ -230,7 +230,7 @@ const tableMinWidth = computed(() => "min-w-full");
                 </span>
               </td>
               <td class="px-5 py-5 text-sm font-bold text-right text-primary">
-                {{ formatPeso(row.amount) }}
+                {{ formatAmount(row.amount, row.currency || 'PHP') }}
               </td>
               <td class="px-5 py-5 text-sm truncate text-slate-500">
                 {{ formatDate(row.dateSubmitted) }}

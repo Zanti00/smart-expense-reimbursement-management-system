@@ -23,6 +23,7 @@ class Receipt extends Model
         'tin',
         'invoice_number',
         'vat_classification',
+        'currency',
         'ocr_confidence_score',
         'ocr_flagged',
         'is_archived',

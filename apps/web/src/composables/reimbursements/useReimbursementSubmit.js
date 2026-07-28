@@ -85,6 +85,9 @@ export function useReimbursementSubmit(emit, router) {
           `receipts[${index}][vat_classification]`,
           r.vatClassification || "vat",
         );
+        if (r.currency) {
+          formData.append(`receipts[${index}][currency]`, r.currency);
+        }
         formData.append(`receipts[${index}][tin]`, r.tin || "");
         formData.append(
           `receipts[${index}][invoice_number]`,
@@ -197,6 +200,9 @@ export function useReimbursementSubmit(emit, router) {
           `receipts[${index}][vat_classification]`,
           r.vatClassification || "vat",
         );
+        if (r.currency) {
+          formData.append(`receipts[${index}][currency]`, r.currency);
+        }
         formData.append(`receipts[${index}][tin]`, r.tin || "");
         formData.append(
           `receipts[${index}][invoice_number]`,

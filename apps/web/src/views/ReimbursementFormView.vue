@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onBeforeUnmount, onMounted } from "vue";
+import { ref, computed, watch, onBeforeUnmount, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { usePolicyStore } from "@/stores/policy";
 import { useReceiptStore } from "@/stores/receipts";
@@ -56,6 +56,7 @@ const storedForwardedReceipts = ref([]);
 const forwardedSource = ref("My Expense");
 const FORWARDED_RECEIPTS_KEY = "serms_forwarded_reimbursement_receipts";
 const LEGACY_LIQUIDATION_RECEIPTS_KEY = "serms_forwarded_liquidation_receipts";
+const summaryCurrency = ref("PHP");
 
 // Form uploads and file management
 const {
@@ -72,6 +73,18 @@ const receipts = computed(() => [
   ...props.forwardedReceipts,
   ...localReceipts.value,
 ]);
+
+// Auto-sync summary currency if any receipt has a detected/selected currency
+watch(
+  receipts,
+  (newReceipts) => {
+    const foundCurrency = (newReceipts || []).find((r) => r && r.currency)?.currency;
+    if (foundCurrency) {
+      summaryCurrency.value = foundCurrency;
+    }
+  },
+  { immediate: true, deep: true },
+);
 
 // Financials
 const totalAmount = computed(() =>
@@ -354,6 +367,7 @@ function dismiss() {
           :report-file="reportFile"
           :cutoff-period="cutoffPeriod"
           :total-amount="totalAmount"
+          v-model:currency="summaryCurrency"
         />
 
         <!--  Footer Actions  -->

@@ -24,6 +24,7 @@ class OcrCallbackRequest extends FormRequest
             'ocr_confidence_score'=> ['required', 'numeric', 'min:0', 'max:1'],
             'expense_category'    => ['nullable', 'string', 'max:255'],
             'vat_classification'  => ['nullable', 'string', 'in:vat,non-vat'],
+            'currency'            => ['nullable', 'string', 'size:3'],
             'items'               => ['nullable', 'array'],
             'items.*.name'        => ['required_with:items', 'string', 'max:255'],
             'items.*.quantity'    => ['required_with:items', 'integer', 'min:1'],

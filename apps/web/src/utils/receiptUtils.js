@@ -137,6 +137,7 @@ export function buildPrefilledReceiptDraft({
         ? Number(receiptData.vat_amount).toFixed(2)
         : "",
     vatClassification: amounts.vatClassification,
+    currency: receiptData.currency || "",
     date: receiptData.transaction_date || "",
     category: categoryName,
     categoryId: receiptData.expense_category_id || null,
@@ -158,6 +159,7 @@ export function buildReceiptUploadFormPrefill(options = {}) {
     total_amount: receipt.amount > 0 ? Number(receipt.amount.toFixed(2)) : "",
     vat_amount: receipt.tax,
     vat_classification: receipt.vatClassification,
+    currency: receipt.currency,
     items: (receipt.items || []).map((item) => ({
       name: item.name,
       quantity: Number(item.qty ?? item.quantity) || 1,

@@ -1,7 +1,7 @@
 <script setup>
-import { formatPeso } from "@/utils/formatters";
+import { formatAmount } from "@/utils/formatters";
 
-defineProps({
+const props = defineProps({
   receiptCount: {
     type: Number,
     required: true,
@@ -18,19 +18,43 @@ defineProps({
     type: Number,
     required: true,
   },
+  currency: {
+    type: String,
+    default: "PHP",
+  },
 });
+
+const emit = defineEmits(["update:currency"]);
+
+const SUPPORTED_CURRENCIES = [
+  "PHP", "USD", "SGD", "MYR", "BND", "JPY", "HKD", "THB", "AUD", "GBP", "EUR"
+];
 </script>
 
 <template>
   <section
     class="bg-accent-50 border border-accent/15 rounded-xl p-6 space-y-4"
   >
-    <h3
-      class="text-base font-bold text-primary"
-      style="font-family: 'Poppins', sans-serif"
-    >
-      Summary
-    </h3>
+    <div class="flex justify-between items-center">
+      <h3
+        class="text-base font-bold text-primary"
+        style="font-family: 'Poppins', sans-serif"
+      >
+        Summary
+      </h3>
+      <div class="flex items-center gap-2">
+        <label class="text-xs font-semibold text-slate-500">Summary Currency:</label>
+        <select
+          class="select select-xs text-xs font-mono font-bold bg-white border border-accent/20 rounded px-2 py-1"
+          :value="currency || 'PHP'"
+          @change="$emit('update:currency', $event.target.value)"
+        >
+          <option v-for="c in SUPPORTED_CURRENCIES" :key="c" :value="c">
+            {{ c }}
+          </option>
+        </select>
+      </div>
+    </div>
     <div class="space-y-3">
       <div class="flex justify-between items-center text-sm">
         <span class="text-slate-500">Uploaded Receipts</span>
@@ -65,7 +89,7 @@ defineProps({
           >Total Amount</span
         >
         <span class="text-2xl font-black text-accent font-mono">{{
-          formatPeso(totalAmount)
+          formatAmount(totalAmount, currency || "PHP")
         }}</span>
       </div>
     </div>

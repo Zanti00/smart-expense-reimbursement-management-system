@@ -27,6 +27,7 @@ class UpdateReceiptRequest extends FormRequest
             'tin' => 'nullable|string|max:20',
             'invoice_number' => 'nullable|string|max:100',
             'vat_classification' => 'nullable|in:vat,non-vat',
+            'currency' => 'nullable|string|size:3',
             'expense_category_id' => 'nullable|exists:expense_categories,id',
             'category' => 'nullable|string|max:100',
         ];

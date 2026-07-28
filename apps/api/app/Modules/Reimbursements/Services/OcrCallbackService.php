@@ -60,6 +60,7 @@ class OcrCallbackService
                 'tin'                  => $data['tin']                ?? $receipt->tin,
                 'invoice_number'       => $data['invoice_number']     ?? $receipt->invoice_number,
                 'vat_classification'   => $data['vat_classification'] ?? $receipt->vat_classification,
+                'currency'             => $data['currency']           ?? $receipt->currency,
                 'expense_category_id'  => $expenseCategoryId,
                 'ocr_confidence_score' => $confidenceScore,
                 'ocr_flagged'          => $isLowConfidence,

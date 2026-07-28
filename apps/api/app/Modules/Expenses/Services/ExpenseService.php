@@ -98,6 +98,7 @@ class ExpenseService
                 'tin' => $data['tin'] ?? null,
                 'invoice_number' => $data['invoice_number'] ?? null,
                 'vat_classification' => $data['vat_classification'] ?? null,
+                'currency' => $data['currency'] ?? null,
                 'ocr_confidence_score' => $data['ocr_confidence_score'] ?? null,
                 'ocr_flagged' => ($data['ocr_confidence_score'] ?? 100) < 80,
                 'expense_category_id' => $expenseCategoryId,

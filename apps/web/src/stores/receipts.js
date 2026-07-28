@@ -158,6 +158,7 @@ export const useReceiptStore = defineStore("receipts", () => {
       tin: r.tin,
       invoiceNumber: r.invoice_number,
       vatClassification: r.vat_classification,
+      currency: r.currency || null,
       ocrConfidenceScore: r.ocr_confidence_score,
       ocrFlagged: r.ocr_flagged,
       createdAt: r.created_at,
@@ -263,6 +264,8 @@ export const useReceiptStore = defineStore("receipts", () => {
       formData.append("invoice_number", metadata.invoice_number);
     if (metadata.vat_classification)
       formData.append("vat_classification", metadata.vat_classification);
+    if (metadata.currency)
+      formData.append("currency", metadata.currency);
     if (metadata.items && Array.isArray(metadata.items)) {
       formData.append("items", JSON.stringify(metadata.items));
     }
