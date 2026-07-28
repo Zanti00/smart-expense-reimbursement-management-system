@@ -368,7 +368,7 @@ function dismiss() {
           :report-file="reportFile"
           :cutoff-period="cutoffPeriod"
           :total-amount="totalAmount"
-          v-model:currency="summaryCurrency"
+          :currency="summaryCurrency"
         />
 
         <!--  Footer Actions  -->

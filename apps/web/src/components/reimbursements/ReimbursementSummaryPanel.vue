@@ -23,12 +23,6 @@ const props = defineProps({
     default: "PHP",
   },
 });
-
-const emit = defineEmits(["update:currency"]);
-
-const SUPPORTED_CURRENCIES = [
-  "PHP", "USD", "SGD", "MYR", "BND", "JPY", "HKD", "THB", "AUD", "GBP", "EUR"
-];
 </script>
 
 <template>
@@ -42,18 +36,6 @@ const SUPPORTED_CURRENCIES = [
       >
         Summary
       </h3>
-      <div class="flex items-center gap-2">
-        <label class="text-xs font-semibold text-slate-500">Summary Currency:</label>
-        <select
-          class="select select-xs text-xs font-mono font-bold bg-white border border-accent/20 rounded px-2 py-1"
-          :value="currency || 'PHP'"
-          @change="$emit('update:currency', $event.target.value)"
-        >
-          <option v-for="c in SUPPORTED_CURRENCIES" :key="c" :value="c">
-            {{ c }}
-          </option>
-        </select>
-      </div>
     </div>
     <div class="space-y-3">
       <div class="flex justify-between items-center text-sm">
