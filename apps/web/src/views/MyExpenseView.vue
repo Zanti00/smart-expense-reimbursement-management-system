@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useReceiptStore } from "@/stores/receipts";
@@ -225,11 +225,18 @@ async function finalizeReceiptReview(receipt, decision) {
 }
 
 // ── Lifecycle ─────────────────────────────────────────────────────
+const handleOpenReceiptUpload = () => { uploadModalOpen.value = true; };
+
 onMounted(async () => {
   await Promise.all([
     fetchReceipts(1),
     receiptsStore.fetchCategories(),
   ]);
+  window.addEventListener('open-receipt-upload', handleOpenReceiptUpload);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('open-receipt-upload', handleOpenReceiptUpload);
 });
 
 watch([activeCategory, activeStatus], () => {

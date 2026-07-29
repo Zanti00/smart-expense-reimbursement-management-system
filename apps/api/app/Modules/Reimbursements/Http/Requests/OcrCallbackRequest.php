@@ -34,6 +34,8 @@ class OcrCallbackRequest extends FormRequest
             'items.*.name'        => ['required_with:items', 'string', 'max:255'],
             'items.*.quantity'    => ['required_with:items', 'integer', 'min:1'],
             'items.*.price'       => ['required_with:items', 'numeric', 'min:0'],
+            'is_duplicate'         => ['nullable', 'boolean'],
+            'duplicate_similarity' => ['nullable', 'numeric'],
         ];
     }
 

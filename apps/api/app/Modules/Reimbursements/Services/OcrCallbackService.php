@@ -51,10 +51,19 @@ class OcrCallbackService
             $confidenceScore = (float) ($data['ocr_confidence_score'] ?? 0.0);
             $isLowConfidence = $confidenceScore < 0.80;
 
-            $isRejected = ($data['status'] ?? null) === 'rejected' || !empty($data['rejection_code']);
-            $targetStatus = $isRejected ? 'rejected' : ($isLowConfidence ? 'flagged' : 'pending');
-            $rejectionCode = $data['rejection_code'] ?? ($isRejected ? 'blurry' : null);
-            $rejectionReason = $data['rejection_reason'] ?? $data['error'] ?? null;
+            $isDuplicate = !empty($data['is_duplicate']);
+            
+            $isRejected = ($data['status'] ?? null) === 'rejected' || !empty($data['rejection_code']) || $isDuplicate;
+            
+            if ($isDuplicate) {
+                $targetStatus = 'rejected';
+                $rejectionCode = 'duplicate';
+                $rejectionReason = 'Duplicate receipt detected based on semantic similarity.';
+            } else {
+                $targetStatus = $isRejected ? 'rejected' : ($isLowConfidence ? 'flagged' : 'pending');
+                $rejectionCode = $data['rejection_code'] ?? ($isRejected ? 'blurry' : null);
+                $rejectionReason = $data['rejection_reason'] ?? $data['error'] ?? null;
+            }
 
             // Update OCR fields on the receipt.
             $receipt->update([

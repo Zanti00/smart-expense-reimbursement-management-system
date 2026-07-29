@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onBeforeUnmount, onMounted } from "vue";
+import { ref, computed, watch, onBeforeUnmount, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { usePolicyStore } from "@/stores/policy";
 import { useReceiptStore } from "@/stores/receipts";
@@ -181,9 +181,13 @@ async function handleSubmit() {
 }
 
 // Lifecycle
+const handleOpenReceiptUpload = () => { receiptInput.value?.click(); };
+
 onMounted(async () => {
   policyStore.fetchAll();
   receiptsStore.fetchCategories();
+  
+  window.addEventListener('open-receipt-upload', handleOpenReceiptUpload);
 
   if (isEditMode.value) {
     fetching.value = true;
@@ -294,6 +298,8 @@ onBeforeUnmount(() => {
   if (!isEditMode.value) {
     clearDraftReceipts();
   }
+  
+  window.removeEventListener('open-receipt-upload', handleOpenReceiptUpload);
 });
 
 //  Dismiss ─

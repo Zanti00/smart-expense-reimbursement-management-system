@@ -59,6 +59,22 @@ export function useReceiptUploads() {
           if (data.status === "rejected" || data.status === "failed") {
             const rejectedItem = index !== -1 ? localReceipts.value[index] : null;
             const fileObj = rejectedItem?.sourceFile || rejectedItem?.file || null;
+            
+            if (data.rejection_code === "duplicate") {
+                if (index !== -1) {
+                  localReceipts.value[index].isUploading = false;
+                  localReceipts.value[index].isProcessing = false;
+                  localReceipts.value[index].isRejected = true;
+                }
+                window.dispatchEvent(new CustomEvent('receipt-duplicate-detected', { 
+                  detail: { 
+                    similarityScore: data.duplicate_similarity || 1.0,
+                    receiptId: data.id 
+                  } 
+                }));
+                return;
+            }
+
             if (index !== -1) {
               localReceipts.value[index] = {
                 ...localReceipts.value[index],
@@ -106,17 +122,25 @@ export function useReceiptUploads() {
     }, 3000);
   }
 
-  onBeforeUnmount(() => {
-    Object.values(pollTimers).forEach(clearInterval);
-  });
-
   onMounted(() => {
     localReceipts.value.forEach((r) => {
       if (r.isProcessing) {
         startPolling(r.id);
       }
     });
+    window.addEventListener('remove-duplicate-receipt', handleRemoveDuplicateEvent);
   });
+
+  onBeforeUnmount(() => {
+    Object.values(pollTimers).forEach(clearInterval);
+    window.removeEventListener('remove-duplicate-receipt', handleRemoveDuplicateEvent);
+  });
+
+  function handleRemoveDuplicateEvent(e) {
+    if (e.detail?.receiptId) {
+      removeReceipt({ id: e.detail.receiptId });
+    }
+  }
 
   const authStore = useAuthStore();
   const { addToast } = useToast();
@@ -189,6 +213,16 @@ export function useReceiptUploads() {
             localReceipts.value[index].isProcessing = false;
             localReceipts.value[index].isRejected = true;
           }
+          
+          if (errorData.rejection_code === "duplicate") {
+             window.dispatchEvent(new CustomEvent('receipt-duplicate-detected', { 
+               detail: { 
+                 similarityScore: errorData.duplicate_similarity || 1.0,
+                 receiptId: tempId
+               } 
+             }));
+             return;
+          }
           qualityRejection.value = {
             receiptId: tempId,
             file,
@@ -210,6 +244,20 @@ export function useReceiptUploads() {
         const index = localReceipts.value.findIndex((r) => r.id === tempId);
 
         if (data.data?.status === "rejected" || data.data?.status === "failed") {
+          if (data.data?.rejection_code === "duplicate") {
+             if (index !== -1) {
+               localReceipts.value[index].isUploading = false;
+               localReceipts.value[index].isProcessing = false;
+               localReceipts.value[index].isRejected = true;
+             }
+             window.dispatchEvent(new CustomEvent('receipt-duplicate-detected', { 
+               detail: { 
+                 similarityScore: data.data.duplicate_similarity || 1.0,
+                 receiptId: data.data.id
+               } 
+             }));
+             return;
+          }
           if (index !== -1) {
             localReceipts.value[index] = {
               ...buildPrefilledReceiptDraft({
@@ -314,6 +362,16 @@ export function useReceiptUploads() {
           localReceipts.value[index].isProcessing = false;
           localReceipts.value[index].isRejected = true;
         }
+        
+        if (errorData.rejection_code === "duplicate") {
+           window.dispatchEvent(new CustomEvent('receipt-duplicate-detected', { 
+             detail: { 
+               similarityScore: errorData.duplicate_similarity || 1.0,
+               receiptId: tempId
+             } 
+           }));
+           return;
+        }
         qualityRejection.value = {
           receiptId: tempId,
           file: firstFile,
@@ -335,6 +393,20 @@ export function useReceiptUploads() {
       const index = localReceipts.value.findIndex((r) => r.id === tempId);
 
       if (data.data?.status === "rejected" || data.data?.status === "failed") {
+        if (data.data?.rejection_code === "duplicate") {
+           if (index !== -1) {
+             localReceipts.value[index].isUploading = false;
+             localReceipts.value[index].isProcessing = false;
+             localReceipts.value[index].isRejected = true;
+           }
+           window.dispatchEvent(new CustomEvent('receipt-duplicate-detected', { 
+             detail: { 
+               similarityScore: data.data.duplicate_similarity || 1.0,
+               receiptId: data.data.id
+             } 
+           }));
+           return;
+        }
         if (index !== -1) {
           localReceipts.value[index] = {
             ...buildPrefilledReceiptDraft({
