@@ -33,6 +33,8 @@ class Receipt extends Model
         'deletion_warning_sent',
         'admin_notes',
         'status',
+        'rejection_code',
+        'rejection_reason',
     ];
 
     protected $appends = ['file_url'];

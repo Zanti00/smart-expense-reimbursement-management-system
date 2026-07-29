@@ -53,6 +53,25 @@ class AiServiceOcrEngine implements AsyncOcrEngineInterface
         }
 
         if ($response->failed()) {
+            if ($response->status() === 422) {
+                $data = $response->json() ?? [];
+                Log::warning('AiServiceOcrEngine: quality rejection 422 returned from AI service.', [
+                    'receipt_id' => $receiptId,
+                    'response'   => $data,
+                ]);
+                try {
+                    app(\App\Modules\Reimbursements\Services\OcrCallbackService::class)->handle($receiptId, [
+                        'status'           => 'rejected',
+                        'rejection_code'   => $data['rejection_code'] ?? 'blurry',
+                        'rejection_reason' => $data['rejection_reason'] ?? $data['message'] ?? 'Image quality is too low for accurate OCR data extraction.',
+                        'error'            => $data['message'] ?? 'Image quality is too low for accurate OCR data extraction.',
+                    ]);
+                } catch (\Throwable $e) {
+                    Log::error('AiServiceOcrEngine: failed to apply 422 rejection to receipt: ' . $e->getMessage());
+                }
+                return;
+            }
+
             throw new AiServiceException(
                 "AI service responded with HTTP {$response->status()}: {$response->body()}"
             );

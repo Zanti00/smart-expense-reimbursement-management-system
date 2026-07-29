@@ -14,6 +14,8 @@ import MetaAndAttachments from "@/components/reimbursements/MetaAndAttachments.v
 import ReimbursementSummaryPanel from "@/components/reimbursements/ReimbursementSummaryPanel.vue";
 import ReimbursementFormHeader from "@/components/reimbursements/ReimbursementFormHeader.vue";
 import ReimbursementFormEmptyState from "@/components/reimbursements/ReimbursementFormEmptyState.vue";
+import ReceiptQualityRejectionModal from "@/components/reimbursements/ReceiptQualityRejectionModal.vue";
+import SegmentedReceiptUpload from "@/components/reimbursements/SegmentedReceiptUpload.vue";
 import ConfirmModal from "@/components/base/ConfirmModal.vue";
 
 // Composables
@@ -68,7 +70,23 @@ const {
   handleReceiptSelect,
   removeReceipt,
   clearDraftReceipts,
+  qualityRejection,
+  clearQualityRejection,
+  showSegmentedUpload,
+  continueAnyway,
+  submitWithForce,
+  submitSegments,
 } = useReceiptUploads();
+
+function handleRetake() {
+  if (qualityRejection.value?.receiptId) {
+    removeReceipt({ id: qualityRejection.value.receiptId });
+  }
+  clearQualityRejection();
+  setTimeout(() => {
+    receiptInput.value?.click();
+  }, 100);
+}
 
 const receipts = computed(() => [
   ...props.forwardedReceipts,
@@ -348,6 +366,19 @@ function dismiss() {
           v-if="!isForwardedMode"
           :receipt-count="receipts.length"
           @add-receipts="receiptInput?.click()"
+          @open-segmented-upload="showSegmentedUpload = true"
+        />
+
+        <!-- Segmented Upload Panel -->
+        <SegmentedReceiptUpload
+          v-if="showSegmentedUpload"
+          @submit-segments="
+            (files) => {
+              submitSegments(files);
+              showSegmentedUpload = false;
+            }
+          "
+          @cancel="showSegmentedUpload = false"
         />
 
         <!--  CARD 2: One Scanned Receipt Block Per Receipt  -->
@@ -400,6 +431,23 @@ function dismiss() {
       :danger="true"
       @confirm="handleConfirmLeave"
       @close="handleCancelLeave"
+    />
+
+    <ReceiptQualityRejectionModal
+      :is-open="!!qualityRejection"
+      :rejected-file="qualityRejection?.file ?? null"
+      :rejection-code="qualityRejection?.rejectionCode ?? ''"
+      :rejection-reason="qualityRejection?.rejectionReason ?? ''"
+      :show-segmented-option="qualityRejection?.rejectionCode === 'too_small'"
+      @retake="handleRetake"
+      @upload-segmented="
+        showSegmentedUpload = true;
+        clearQualityRejection();
+      "
+      @continue-anyway="
+        continueAnyway(qualityRejection?.file);
+      "
+      @close="clearQualityRejection"
     />
   </div>
 </template>

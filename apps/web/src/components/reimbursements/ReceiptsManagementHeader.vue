@@ -1,5 +1,5 @@
 <script setup>
-import { CheckCircle2, PlusCircle } from "lucide-vue-next";
+import { CheckCircle2, PlusCircle, Layers } from "lucide-vue-next";
 
 defineProps({
   receiptCount: {
@@ -8,7 +8,7 @@ defineProps({
   },
 });
 
-defineEmits(["add-receipts"]);
+defineEmits(["add-receipts", "open-segmented-upload"]);
 </script>
 
 <template>
@@ -41,6 +41,15 @@ defineEmits(["add-receipts"]);
         >
           <CheckCircle2 class="w-4 h-4" /> Ready to submit
         </div>
+
+        <button
+          class="inline-flex h-9 w-fit shrink-0 items-center justify-center gap-2 rounded-lg border border-accent/30 bg-white px-3.5 text-xs font-bold text-accent transition-colors hover:bg-accent-50"
+          type="button"
+          @click="$emit('open-segmented-upload')"
+        >
+          <Layers class="h-3.5 w-3.5" /> Long Receipt (Segments)
+        </button>
+
         <button
           class="inline-flex h-9 w-fit shrink-0 items-center justify-center gap-2 rounded-lg bg-accent px-3.5 text-xs font-bold text-white transition-colors hover:bg-accent-600"
           type="button"
