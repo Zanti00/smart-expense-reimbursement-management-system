@@ -129,13 +129,6 @@ const tips = computed(() => {
               </p>
             </div>
           </div>
-          <button
-            class="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
-            title="Dismiss"
-            @click="emit('close')"
-          >
-            <X class="h-4 w-4" />
-          </button>
         </header>
 
         <!-- Modal Content Grid -->
@@ -175,8 +168,12 @@ const tips = computed(() => {
             <!-- Right: Reason & Recommendation Tips -->
             <div class="md:col-span-7 flex flex-col justify-between space-y-4">
               <div>
-                <div class="rounded-xl border border-red-100 bg-red-50/50 p-4 mb-4">
-                  <p class="text-xs font-bold uppercase tracking-wider text-danger mb-1">
+                <div
+                  class="rounded-xl border border-red-100 bg-red-50/50 p-4 mb-4"
+                >
+                  <p
+                    class="text-xs font-bold uppercase tracking-wider text-danger mb-1"
+                  >
                     Rejection Reason
                   </p>
                   <p class="text-sm font-semibold text-slate-800">
@@ -185,7 +182,9 @@ const tips = computed(() => {
                 </div>
 
                 <div>
-                  <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                  <h4
+                    class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2"
+                  >
                     Tips for a Better Scan
                   </h4>
                   <ul class="space-y-2 text-xs font-medium text-slate-600">
@@ -214,7 +213,8 @@ const tips = computed(() => {
                 <div>
                   <p class="text-xs font-bold text-accent">Long Receipt?</p>
                   <p class="text-[11px] font-medium text-slate-600">
-                    If this receipt is too long or texts are too small, upload it in 2–4 zoomed-in photo segments.
+                    If this receipt is too long or texts are too small, upload
+                    it in 2–4 zoomed-in photo segments.
                   </p>
                 </div>
               </div>
@@ -234,7 +234,9 @@ const tips = computed(() => {
             Continue Anyway (Override Quality)
           </button>
 
-          <div class="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto">
+          <div
+            class="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto"
+          >
             <button
               v-if="showSegmentedOption"
               type="button"
