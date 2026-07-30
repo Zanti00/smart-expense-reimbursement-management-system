@@ -9,9 +9,11 @@ use App\Modules\Reimbursements\Jobs\DispatchReceiptToAiService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Auth\Access\AuthorizationException;
+use App\Modules\Shared\Traits\ValidatesReceiptDuplicates;
 
 class ReceiptService
 {
+    use ValidatesReceiptDuplicates;
     /**
      * List all receipts for the user.
      */
@@ -74,6 +76,8 @@ class ReceiptService
     {
         return DB::transaction(function () use ($user, $validated, $file) {
             $storedFile = $this->storeReceiptFile($file);
+
+            $this->validateDuplicateReceipt($storedFile['file_hash']);
 
             $receipt = Receipt::create([
                 'uploaded_by'          => $user->id,
@@ -142,7 +146,11 @@ class ReceiptService
             }
 
             if ($file) {
-                $updateData = array_merge($updateData, $this->storeReceiptFile($file));
+                $newFile = $this->storeReceiptFile($file);
+                if ($newFile['file_hash'] !== $receipt->file_hash) {
+                    $this->validateDuplicateReceipt($newFile['file_hash']);
+                }
+                $updateData = array_merge($updateData, $newFile);
             }
 
             $updateData['status'] = 'processed';
