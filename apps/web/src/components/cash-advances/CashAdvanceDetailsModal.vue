@@ -353,7 +353,7 @@ async function confirmAcknowledge() {
                 }}
               </div>
               <div>
-                <p class="section-label mb-1">Requestor Name</p>
+                <p class="text-xs font-medium text-slate-500 mb-1">Requestor Name</p>
                 <h3 class="font-heading text-xl font-bold text-primary">
                   {{ record.requestedBy }}
                 </h3>
@@ -361,7 +361,7 @@ async function confirmAcknowledge() {
             </div>
 
             <div class="sm:text-right">
-              <p class="section-label mb-2">Status</p>
+              <p class="text-xs font-medium text-slate-500 mb-2">Status</p>
               <span
                 :class="[
                   'inline-flex items-center rounded-full border px-4 py-1.5 text-xs font-bold uppercase tracking-wide',
@@ -378,7 +378,7 @@ async function confirmAcknowledge() {
           <section
             class="rounded-lg border border-accent/20 bg-primary/5 p-6 text-center"
           >
-            <p class="section-label mb-2">Amount Requested</p>
+            <p class="text-xs font-medium text-slate-500 mb-2">Amount Requested</p>
             <p
               class="font-heading text-[40px] font-extrabold leading-tight text-primary"
             >
@@ -390,19 +390,19 @@ async function confirmAcknowledge() {
             <div
               class="rounded-lg border border-slate-200 bg-white p-4 md:col-span-2"
             >
-              <p class="section-label mb-1">Purpose</p>
+              <p class="text-xs font-medium text-slate-500 mb-1">Purpose</p>
               <p class="text-base leading-relaxed text-slate-800">
                 {{ record.purpose }}
               </p>
             </div>
             <div class="rounded-lg border border-slate-200 bg-white p-4">
-              <p class="section-label mb-1">Date Requested</p>
+              <p class="text-xs font-medium text-slate-500 mb-1">Date Requested</p>
               <p class="text-base font-bold text-slate-800">
                 {{ record.date }}
               </p>
             </div>
             <div class="rounded-lg border border-slate-200 bg-white p-4">
-              <p class="section-label mb-1">Settlement Due Date</p>
+              <p class="text-xs font-medium text-slate-500 mb-1">Settlement Due Date</p>
               <p class="text-base font-bold text-slate-800">
                 {{ record.dueDate }}
               </p>
@@ -491,7 +491,7 @@ async function confirmAcknowledge() {
             </div>
 
             <div>
-              <p class="section-label">Employee Signature Verification Pad</p>
+              <p class="text-xs font-medium text-slate-500">Employee Signature Verification Pad</p>
               <div
                 v-if="record.acknowledgedAt || record.signatureImage"
                 class="relative mt-2 flex h-36 w-full items-center justify-center overflow-hidden rounded-lg border border-slate-300 bg-white"
@@ -556,7 +556,7 @@ async function confirmAcknowledge() {
           </section>
 
           <section class="space-y-2 pb-2" v-if="record.status === 'pending'">
-            <label class="section-label" for="adminReviewNotes"
+            <label class="text-xs font-medium text-slate-500" for="adminReviewNotes"
               >Add Admin Notes / Instructions</label
             >
             <div class="input-wrapper">

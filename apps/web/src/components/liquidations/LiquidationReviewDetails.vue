@@ -44,19 +44,19 @@ defineEmits(["view-receipt"]);
       class="grid grid-cols-1 gap-4 p-4 bg-white border rounded-lg border-slate-200 md:grid-cols-4"
     >
       <div>
-        <p class="mb-1 section-label">Date</p>
+        <p class="text-xs font-medium text-slate-500 mb-1">Date</p>
         <p class="text-sm font-bold text-slate-800">
           {{ formatDateOnly(reviewingCase.dateOfAdvances) }}
         </p>
       </div>
       <div>
-        <p class="mb-1 section-label">Name of Employee</p>
+        <p class="text-xs font-medium text-slate-500 mb-1">Name of Employee</p>
         <p class="text-sm font-bold text-slate-800">
           {{ reviewingCase.requestorName }}
         </p>
       </div>
       <div>
-        <p class="mb-1 section-label">Settlement Due Date</p>
+        <p class="text-xs font-medium text-slate-500 mb-1">Settlement Due Date</p>
         <p class="text-sm font-bold text-slate-800">
           {{ formatDateOnly(reviewingCase.dueDate) }}
         </p>
@@ -65,14 +65,14 @@ defineEmits(["view-receipt"]);
 
     <section class="grid grid-cols-1 gap-4 md:grid-cols-2">
       <div class="p-5 bg-white border rounded-lg border-accent/20">
-        <p class="mb-2 section-label">Original Cash Advance Amount</p>
+        <p class="text-xs font-medium text-slate-500 mb-2">Original Cash Advance Amount</p>
         <p class="text-3xl font-bold font-heading text-primary">
           {{ formatPeso(reviewingCase.cashAdvanceAmount) }}
         </p>
       </div>
       <div class="p-5 bg-white border rounded-lg border-slate-200">
         <div class="flex items-center justify-between gap-3">
-          <p class="section-label">Ending Balance</p>
+          <p class="text-xs font-medium text-slate-500">Ending Balance</p>
           <span
             :class="[
               'rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-wide',
@@ -168,7 +168,7 @@ defineEmits(["view-receipt"]);
       v-if="reviewingCase.adminNote"
       class="p-5 space-y-2 bg-white border rounded-xl border-slate-200"
     >
-      <p class="section-label">Admin Notes</p>
+      <p class="text-xs font-medium text-slate-500">Admin Notes</p>
       <p class="text-sm leading-relaxed text-slate-700">
         {{ reviewingCase.adminNote }}
       </p>

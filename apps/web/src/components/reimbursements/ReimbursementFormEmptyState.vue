@@ -1,5 +1,5 @@
 <script setup>
-import { Sparkles, UploadCloud, AlertTriangle } from "lucide-vue-next";
+import { UploadCloud, AlertTriangle } from "lucide-vue-next";
 
 defineProps({
   receiptDrag: Boolean,
@@ -16,10 +16,6 @@ defineEmits(["drop", "dragover", "dragleave", "click"]);
       <h2 class="text-lg font-bold font-heading text-primary">
         Upload Receipts
       </h2>
-      <div class="flex items-center gap-2 text-xs font-bold text-accent">
-        <Sparkles class="w-4 h-4" />
-        <span>Upload your receipt - AI reads everything automatically</span>
-      </div>
     </div>
     <div
       class="flex min-h-[320px] flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center transition-colors cursor-pointer"

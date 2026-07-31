@@ -4,7 +4,6 @@ import {
   ArrowLeft,
   CalendarDays,
   X,
-  Sparkles,
   CheckCircle,
   Download,
   MapPin,
@@ -95,35 +94,6 @@ defineEmits([
         class="flex-1 overflow-y-auto bg-slate-50 p-3 scrollbar-thin sm:p-5"
       >
         <div
-          class="flex flex-col gap-3 px-4 py-3 mb-4 border rounded-lg border-accent/20 bg-accent-50 sm:flex-row sm:items-center sm:justify-between"
-        >
-          <div class="flex items-center gap-3">
-            <span
-              class="inline-flex items-center justify-center bg-white rounded-lg shadow-sm h-9 w-9 shrink-0 text-accent"
-            >
-              <Sparkles class="w-4 h-4" />
-            </span>
-            <div>
-              <p
-                class="text-xs font-bold uppercase tracking-[0.12em] text-accent"
-              >
-                AI Scanned
-              </p>
-              <p class="text-sm font-semibold text-primary">
-                Details automatically extracted from the submitted liquidation
-                receipt.
-              </p>
-            </div>
-          </div>
-          <span
-            class="inline-flex w-fit items-center gap-1 rounded-full bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-accent shadow-sm"
-          >
-            <CheckCircle class="h-3.5 w-3.5" />
-            Verified fields
-          </span>
-        </div>
-
-        <div
           class="overflow-hidden bg-white border shadow-sm rounded-xl border-slate-200"
         >
           <div class="grid grid-cols-1 xl:grid-cols-[320px_minmax(0,1fr)]">
@@ -187,12 +157,6 @@ defineEmits([
                 <label class="space-y-1">
                   <span class="flex items-center justify-between gap-2">
                     <span class="input-label">TIN Number</span>
-                    <span
-                      class="inline-flex items-center gap-1 rounded-full bg-accent-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent"
-                    >
-                      <Sparkles class="w-3 h-3" />
-                      AI Read
-                    </span>
                   </span>
                   <input
                     class="input"
@@ -226,12 +190,6 @@ defineEmits([
                     <span class="input-label"
                       >Category (AI Auto-Detected)</span
                     >
-                    <span
-                      class="inline-flex items-center gap-1 rounded-full bg-accent-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent"
-                    >
-                      <Sparkles class="w-3 h-3" />
-                      AI Detected
-                    </span>
                   </span>
                   <select class="input" disabled>
                     <option selected>{{ receipt.category }}</option>

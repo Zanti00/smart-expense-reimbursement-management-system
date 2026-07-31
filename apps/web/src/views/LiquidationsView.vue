@@ -32,7 +32,6 @@ import { getFileUrl } from "@/utils/fileUtils";
 import {
   Activity,
   AlertTriangle,
-  ArchiveRestore,
   ArrowLeft,
   CheckCircle,
   Eye,
@@ -1045,21 +1044,6 @@ function finalizeLiquidation() {
       class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"
     >
       <div class="min-w-0">
-        <div class="flex items-center gap-2 mb-2">
-          <component
-            :is="
-              auth.isAdmin && !showAdminRequestForm
-                ? ArchiveRestore
-                : FilePieChart
-            "
-            class="h-3.5 w-3.5 text-accent"
-          />
-          <span class="section-label">{{
-            auth.isAdmin && !showAdminRequestForm
-              ? "Settlement Operations"
-              : "Liquidation Workflow"
-          }}</span>
-        </div>
         <h1
           class="text-2xl font-bold leading-tight font-heading text-slate-800"
         >

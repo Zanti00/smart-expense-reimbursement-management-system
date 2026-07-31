@@ -3,7 +3,6 @@ import { ref } from "vue";
 import {
   FilePieChart,
   CheckCircle,
-  Sparkles,
   FileText,
   X,
   Upload,
@@ -201,12 +200,7 @@ function attachmentFileSize(file) {
         class="flex flex-col gap-2 mb-3 sm:flex-row sm:items-center sm:justify-between"
       >
         <label class="input-label !mb-0">DIGITAL RECEIPT ATTACHMENTS *</label>
-        <span
-          class="inline-flex w-fit items-center gap-1 rounded-full bg-accent-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-accent"
-        >
-          <Sparkles class="h-3.5 w-3.5" />
-          OCR assisted verification
-        </span>
+
       </div>
       <FileUpload
         :model-value="receipts"
