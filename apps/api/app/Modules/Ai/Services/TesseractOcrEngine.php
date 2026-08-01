@@ -9,9 +9,9 @@ use Illuminate\Support\Facades\Log;
 class TesseractOcrEngine implements OcrEngineInterface
 {
     /**
-     * Parse an uploaded receipt image file path and extract relevant financial data.
+     * Parse uploaded receipt image file paths and extract relevant financial data.
      */
-    public function extractReceiptData(string $filePath): array
+    public function extractReceiptData(array $filePaths): array
     {
         // FAKE OCR SCANNING IMPLEMENTATION
         // Return realistic dummy data instead of crashing due to missing Tesseract.

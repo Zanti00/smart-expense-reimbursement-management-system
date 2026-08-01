@@ -14,16 +14,21 @@ trait ValidatesReceiptDuplicates
      * @param string $fileHash
      * @throws ValidationException
      */
-    protected function validateDuplicateReceipt(string $fileHash): void
+    protected function validateDuplicateReceipt(string|array $fileHash): void
     {
-        $existingHash = Receipt::where('file_hash', $fileHash)
-            ->whereNull('deleted_at')
-            ->exists();
+        $hashes = is_array($fileHash) ? $fileHash : [$fileHash];
 
-        if ($existingHash) {
-            throw ValidationException::withMessages([
-                'file_hash' => ['Duplicate detected. A receipt with this file hash already exists.']
-            ]);
+        foreach ($hashes as $hash) {
+            if (empty($hash)) continue;
+            $existingHash = Receipt::where('file_hash', 'like', "%{$hash}%")
+                ->whereNull('deleted_at')
+                ->exists();
+
+            if ($existingHash) {
+                throw ValidationException::withMessages([
+                    'file_hash' => ['Duplicate detected. A receipt with this file hash already exists.']
+                ]);
+            }
         }
     }
 }

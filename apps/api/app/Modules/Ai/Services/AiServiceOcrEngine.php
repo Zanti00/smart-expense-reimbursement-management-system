@@ -18,13 +18,13 @@ class AiServiceOcrEngine implements AsyncOcrEngineInterface
      *   3. POSTing results back to the callback_url when complete.
      *
      * @param  int    $receiptId   SERMS receipt ID — echoed back in the AI callback.
-     * @param  string $fileUrl     Supabase public URL of the uploaded receipt file.
+     * @param  array  $fileUrls    Array of Supabase public URLs of the uploaded receipt files.
      * @param  string $callbackUrl SERMS callback endpoint for OCR results.
      * @return void
      *
      * @throws AiServiceException on HTTP error or connectivity failure.
      */
-    public function sendForProcessing(int $receiptId, string $fileUrl, string $callbackUrl): void
+    public function sendForProcessing(int $receiptId, array $fileUrls, string $callbackUrl): void
     {
         $serviceUrl  = rtrim((string) config('services.ai_service.url'), '/');
         $apiKey      = (string) config('services.ai_service.api_key');
@@ -32,7 +32,7 @@ class AiServiceOcrEngine implements AsyncOcrEngineInterface
 
         Log::info('AiServiceOcrEngine: dispatching receipt to AI service.', [
             'receipt_id'   => $receiptId,
-            'file_url'     => $fileUrl,
+            'file_urls'    => $fileUrls,
             'callback_url' => $callbackUrl,
         ]);
 
@@ -40,9 +40,10 @@ class AiServiceOcrEngine implements AsyncOcrEngineInterface
             $response = Http::withToken($apiKey)
                 ->timeout($timeout)
                 ->post("{$serviceUrl}/api/ocr/process", [
-                    'receipt_id'   => $receiptId,
-                    'file_url'     => $fileUrl,
-                    'callback_url' => $callbackUrl,
+                    'receipt_id'         => $receiptId,
+                    'file_urls'          => $fileUrls,
+                    'callback_url'       => $callbackUrl,
+                    'prompt_instruction' => 'These images are multiple pages of a single receipt. Please analyze them together and extract the total data as one receipt.'
                 ]);
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
             throw new AiServiceException(

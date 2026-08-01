@@ -78,6 +78,8 @@ const {
   submitSegments,
 } = useReceiptUploads();
 
+const uploadMode = ref('single');
+
 function handleRetake() {
   if (qualityRejection.value?.receiptId) {
     removeReceipt({ id: qualityRejection.value.receiptId });
@@ -86,6 +88,23 @@ function handleRetake() {
   setTimeout(() => {
     receiptInput.value?.click();
   }, 100);
+}
+
+function triggerUpload(mode = 'single') {
+  uploadMode.value = mode;
+  receiptInput.value?.click();
+}
+
+function onReceiptSelect(e) {
+  if (uploadMode.value === 'multi') {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      submitSegments(files);
+    }
+    if (e.target) e.target.value = '';
+  } else {
+    handleReceiptSelect(e);
+  }
 }
 
 const receipts = computed(() => [
@@ -320,7 +339,7 @@ function dismiss() {
       class="hidden"
       accept=".jpg,.jpeg,.png,.pdf"
       multiple
-      @change="handleReceiptSelect"
+      @change="onReceiptSelect"
     />
 
     <!--  Page Header (standalone route mode only)  -->
@@ -358,12 +377,12 @@ function dismiss() {
 
       <!--  Empty State (standalone + no upload yet)  -->
       <ReimbursementFormEmptyState
-        v-if="receipts.length === 0 && !isEditMode"
+        v-if="receipts.length === 0 && !isEditMode && !showSegmentedUpload"
         :receiptDrag="receiptDrag"
         @dragover="receiptDrag = true"
         @dragleave="receiptDrag = false"
         @drop="handleReceiptDrop"
-        @click="receiptInput?.click()"
+        @upload="triggerUpload"
       />
 
       <template v-else>
@@ -371,8 +390,8 @@ function dismiss() {
         <ReceiptsManagementHeader
           v-if="!isForwardedMode"
           :receipt-count="receipts.length"
-          @add-receipts="receiptInput?.click()"
-          @open-segmented-upload="showSegmentedUpload = true"
+          @add-receipts="triggerUpload('single')"
+          @open-segmented-upload="triggerUpload('multi')"
         />
 
         <!-- Segmented Upload Panel -->

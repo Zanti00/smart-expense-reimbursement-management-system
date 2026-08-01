@@ -59,33 +59,52 @@ class LiquidationController extends Controller
     public function scan(Request $request)
     {
         $request->validate([
-            'file' => 'required|file|mimes:jpeg,png,pdf|max:2048',
+            'files' => 'required|array',
+            'files.*' => 'required|file|mimes:jpeg,png,pdf|max:2048',
         ]);
 
-        $file = $request->file('file');
+        $files = $request->file('files');
         
-        // Save file to a temp path for Tesseract engine execution
-        $tempPath = tempnam(sys_get_temp_dir(), 'ocr_') . '.' . $file->extension();
-        file_put_contents($tempPath, file_get_contents($file->getRealPath()));
+        $tempPaths = [];
+        $filePaths = [];
+        $fileHashes = [];
+        $fileTypes = [];
+        $fileSizes = [];
 
-        $extractedData = $this->ocrEngine->extractReceiptData($tempPath);
-        @unlink($tempPath);
+        foreach ($files as $file) {
+            // Save file to a temp path for Tesseract engine execution
+            $tempPath = tempnam(sys_get_temp_dir(), 'ocr_') . '.' . $file->extension();
+            file_put_contents($tempPath, file_get_contents($file->getRealPath()));
+            $tempPaths[] = $tempPath;
 
-        // Upload/store in Supabase bucket
-        $path = $file->store('receipts', 'supabase');
-        $fileHash = hash_file('sha256', $file->getRealPath());
-        $fileType = $file->extension();
-        if ($fileType === 'jpg') {
-            $fileType = 'jpeg';
+            // Upload/store in Supabase bucket
+            $path = $file->store('receipts', 'supabase');
+            $filePaths[] = $path;
+            
+            $fileHashes[] = hash_file('sha256', $file->getRealPath());
+            
+            $fileType = $file->extension();
+            if ($fileType === 'jpg') {
+                $fileType = 'jpeg';
+            }
+            $fileTypes[] = $fileType;
+            
+            $fileSizes[] = $file->getSize();
+        }
+
+        $extractedData = $this->ocrEngine->extractReceiptData($tempPaths);
+        
+        foreach ($tempPaths as $tempPath) {
+            @unlink($tempPath);
         }
 
         // Store the receipt in database with temporary "processing" status
         $receipt = Receipt::create([
             'uploaded_by' => $request->user()->id,
-            'file_path' => $path,
-            'file_hash' => $fileHash,
-            'file_type' => $fileType,
-            'file_size_bytes' => $file->getSize(),
+            'file_path' => $filePaths,
+            'file_hash' => $fileHashes,
+            'file_type' => $fileTypes,
+            'file_size_bytes' => $fileSizes,
             'vendor_name' => $extractedData['vendor_name'] ?? null,
             'transaction_date' => $extractedData['transaction_date'] ?? null,
             'total_amount' => $extractedData['total_amount'] ?? null,
@@ -107,10 +126,10 @@ class LiquidationController extends Controller
                 'tin' => $receipt->tin,
                 'invoice_number' => $receipt->invoice_number,
                 'ocr_confidence_score' => $receipt->ocr_confidence_score,
-                'file_path' => $path,
-                'file_hash' => $fileHash,
-                'file_type' => $fileType,
-                'file_size_bytes' => $file->getSize(),
+                'file_path' => $filePaths,
+                'file_hash' => $fileHashes,
+                'file_type' => $fileTypes,
+                'file_size_bytes' => $fileSizes,
             ]
         ]);
     }
