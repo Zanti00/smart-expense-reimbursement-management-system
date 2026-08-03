@@ -33,6 +33,31 @@ export function useReceiptUploads() {
 
   const pollTimers = {};
 
+  function checkIsDuplicateResponse(data) {
+    if (!data) return false;
+    if (
+      data.rejection_code === "duplicate" ||
+      data.rejectionCode === "duplicate" ||
+      data.is_duplicate ||
+      data.isDuplicate
+    ) {
+      return true;
+    }
+    const reason = (
+      data.rejection_reason ||
+      data.rejectionReason ||
+      data.message ||
+      data.error ||
+      ""
+    ).toLowerCase();
+    if (reason.includes("duplicate")) return true;
+    if (data.errors) {
+      const errStr = JSON.stringify(data.errors).toLowerCase();
+      if (errStr.includes("duplicate")) return true;
+    }
+    return false;
+  }
+
   function startPolling(receiptId) {
     if (pollTimers[receiptId]) return;
     pollTimers[receiptId] = setInterval(async () => {
@@ -60,16 +85,18 @@ export function useReceiptUploads() {
             const rejectedItem = index !== -1 ? localReceipts.value[index] : null;
             const fileObj = rejectedItem?.sourceFile || rejectedItem?.file || null;
             
-            if (data.rejection_code === "duplicate") {
+            if (checkIsDuplicateResponse(data)) {
                 if (index !== -1) {
                   localReceipts.value[index].isUploading = false;
                   localReceipts.value[index].isProcessing = false;
                   localReceipts.value[index].isRejected = true;
+                  localReceipts.value[index].rejectionCode = "duplicate";
                 }
                 window.dispatchEvent(new CustomEvent('receipt-duplicate-detected', { 
                   detail: { 
                     similarityScore: data.duplicate_similarity || 1.0,
-                    receiptId: data.id 
+                    receiptId: data.id,
+                    message: data.rejection_reason || data.error || "Duplicate receipt detected."
                   } 
                 }));
                 return;
@@ -214,11 +241,16 @@ export function useReceiptUploads() {
             localReceipts.value[index].isRejected = true;
           }
           
-          if (errorData.rejection_code === "duplicate") {
+          if (checkIsDuplicateResponse(errorData)) {
+             if (index !== -1) {
+               localReceipts.value[index].rejectionCode = "duplicate";
+             }
+             const msg = errorData.rejection_reason || errorData.message || (errorData.errors?.file_hash ? errorData.errors.file_hash[0] : null) || "Duplicate receipt detected.";
              window.dispatchEvent(new CustomEvent('receipt-duplicate-detected', { 
                detail: { 
                  similarityScore: errorData.duplicate_similarity || 1.0,
-                 receiptId: tempId
+                 receiptId: tempId,
+                 message: msg
                } 
              }));
              return;
@@ -244,16 +276,18 @@ export function useReceiptUploads() {
         const index = localReceipts.value.findIndex((r) => r.id === tempId);
 
         if (data.data?.status === "rejected" || data.data?.status === "failed") {
-          if (data.data?.rejection_code === "duplicate") {
+          if (checkIsDuplicateResponse(data.data)) {
              if (index !== -1) {
                localReceipts.value[index].isUploading = false;
                localReceipts.value[index].isProcessing = false;
                localReceipts.value[index].isRejected = true;
+               localReceipts.value[index].rejectionCode = "duplicate";
              }
              window.dispatchEvent(new CustomEvent('receipt-duplicate-detected', { 
                detail: { 
                  similarityScore: data.data.duplicate_similarity || 1.0,
-                 receiptId: data.data.id
+                 receiptId: data.data.id || tempId,
+                 message: data.data.rejection_reason || data.data.error || "Duplicate receipt detected."
                } 
              }));
              return;
@@ -363,11 +397,16 @@ export function useReceiptUploads() {
           localReceipts.value[index].isRejected = true;
         }
         
-        if (errorData.rejection_code === "duplicate") {
+        if (checkIsDuplicateResponse(errorData)) {
+           if (index !== -1) {
+             localReceipts.value[index].rejectionCode = "duplicate";
+           }
+           const msg = errorData.rejection_reason || errorData.message || (errorData.errors?.file_hash ? errorData.errors.file_hash[0] : null) || "Duplicate receipt detected.";
            window.dispatchEvent(new CustomEvent('receipt-duplicate-detected', { 
              detail: { 
                similarityScore: errorData.duplicate_similarity || 1.0,
-               receiptId: tempId
+               receiptId: tempId,
+               message: msg
              } 
            }));
            return;
@@ -393,16 +432,18 @@ export function useReceiptUploads() {
       const index = localReceipts.value.findIndex((r) => r.id === tempId);
 
       if (data.data?.status === "rejected" || data.data?.status === "failed") {
-        if (data.data?.rejection_code === "duplicate") {
+        if (checkIsDuplicateResponse(data.data)) {
            if (index !== -1) {
              localReceipts.value[index].isUploading = false;
              localReceipts.value[index].isProcessing = false;
              localReceipts.value[index].isRejected = true;
+             localReceipts.value[index].rejectionCode = "duplicate";
            }
            window.dispatchEvent(new CustomEvent('receipt-duplicate-detected', { 
              detail: { 
                similarityScore: data.data.duplicate_similarity || 1.0,
-               receiptId: data.data.id
+               receiptId: data.data.id || tempId,
+               message: data.data.rejection_reason || data.data.error || "Duplicate receipt detected."
              } 
            }));
            return;

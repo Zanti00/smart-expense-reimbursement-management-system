@@ -59,6 +59,8 @@ watch(
   { immediate: true },
 );
 
+const isDuplicate = computed(() => props.rejectionCode === "duplicate");
+
 const badgeLabel = computed(() => {
   switch (props.rejectionCode) {
     case "blurry":
@@ -67,6 +69,8 @@ const badgeLabel = computed(() => {
       return "Too Dark";
     case "too_small":
       return "Resolution Too Low";
+    case "duplicate":
+      return "Duplicate Receipt";
     default:
       return "Bad Image Quality";
   }
@@ -91,6 +95,12 @@ const tips = computed(() => {
         "Move closer to capture the receipt full-screen",
         "For very long receipts, try capturing in multiple segments",
         "Avoid zooming in digitally before snapping",
+      ];
+    case "duplicate":
+      return [
+        "Check if you or a team member already uploaded this receipt",
+        "Ensure you are uploading a new, unique receipt",
+        "Contact support if you believe this is a false match",
       ];
     default:
       return [
@@ -122,10 +132,10 @@ const tips = computed(() => {
             </span>
             <div>
               <h3 class="font-heading text-base font-bold text-slate-900">
-                Receipt Image Quality Issue
+                {{ isDuplicate ? "Duplicate Receipt Detected" : "Receipt Image Quality Issue" }}
               </h3>
               <p class="text-xs font-medium text-slate-500">
-                Action required to ensure accurate OCR data extraction
+                {{ isDuplicate ? "This receipt has already been submitted to the system" : "Action required to ensure accurate OCR data extraction" }}
               </p>
             </div>
           </div>
@@ -185,7 +195,7 @@ const tips = computed(() => {
                   <h4
                     class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2"
                   >
-                    Tips for a Better Scan
+                    {{ isDuplicate ? "Recommendations" : "Tips for a Better Scan" }}
                   </h4>
                   <ul class="space-y-2 text-xs font-medium text-slate-600">
                     <li
@@ -206,7 +216,7 @@ const tips = computed(() => {
 
               <!-- Segment suggestion banner if resolution is low/long receipt -->
               <div
-                v-if="rejectionCode === 'too_small' || showSegmentedOption"
+                v-if="(rejectionCode === 'too_small' || showSegmentedOption) && !isDuplicate"
                 class="rounded-xl border border-accent/20 bg-accent-50 p-3 flex items-start gap-3"
               >
                 <Layers class="h-5 w-5 text-accent shrink-0 mt-0.5" />
@@ -227,18 +237,22 @@ const tips = computed(() => {
           class="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-100 bg-slate-50 px-6 py-4"
         >
           <button
+            v-if="!isDuplicate"
             type="button"
             class="text-xs font-semibold text-slate-500 hover:text-slate-800 underline underline-offset-4 transition-colors"
             @click="emit('continue-anyway')"
           >
             Continue Anyway (Override Quality)
           </button>
+          <div v-else class="text-xs text-slate-400 font-medium">
+            Duplicate receipts cannot be overridden.
+          </div>
 
           <div
             class="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto"
           >
             <button
-              v-if="showSegmentedOption"
+              v-if="showSegmentedOption && !isDuplicate"
               type="button"
               class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-accent/30 bg-white px-3.5 text-xs font-bold text-accent shadow-sm hover:bg-accent-50 transition-colors"
               @click="emit('upload-segmented')"
@@ -253,7 +267,7 @@ const tips = computed(() => {
               @click="emit('retake')"
             >
               <RefreshCw class="h-3.5 w-3.5" />
-              Retake & Replace
+              Upload New Receipt
             </button>
           </div>
         </footer>
