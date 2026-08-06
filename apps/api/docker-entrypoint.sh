@@ -21,12 +21,25 @@ chown -R www-data:www-data bootstrap/cache storage
 chmod -R ug+rw bootstrap/cache storage
 
 if [ "$SERMS_SERVICE_ROLE" = "worker" ]; then
-  echo "Waiting for API container to prepare Laravel dependencies/caches..."
-  until [ -f "vendor/autoload.php" ] && [ -f "bootstrap/cache/config.php" ] && [ -f "bootstrap/cache/routes-v7.php" ]; do
-    echo "Laravel dependencies/caches are not ready yet - sleeping"
-    sleep 1
-  done
-
+  echo "Worker preparing its own dependencies/caches..."
+  if [ ! -f "vendor/autoload.php" ]; then
+    echo "Installing dependencies..."
+    composer install --no-interaction --prefer-dist --optimize-autoloader
+  fi
+  if [ ! -f .env ]; then
+    echo "Creating .env from .env.example..."
+    cp .env.example .env
+  fi
+  if ! grep -q "^APP_KEY=base64:" .env; then
+    echo "Generating APP_KEY..."
+    php artisan key:generate --force
+  fi
+  if [ ! -f "bootstrap/cache/config.php" ]; then
+    php artisan config:cache
+  fi
+  if [ ! -f "bootstrap/cache/routes-v7.php" ]; then
+    php artisan route:cache
+  fi
   exec "$@"
 fi
 
