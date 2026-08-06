@@ -1,0 +1,61 @@
+name: deploy-serms
+
+# Builds the SERMS images (api + static web) and rolls them in Azure Container Apps.
+# Requires the infra repo to have been deployed first (ACR + environment + apps).
+# The web build injects VITE_AUTH_MODULE_URL = the live auth-proxy FQDN.
+#
+# Repo secrets: AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID (OIDC).
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+env:
+  RG: rg-capstone
+  LOCATION: eastus
+  ACR: capstoneacr0001
+  IMAGE_TAG: latest
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    concurrency: { group: azure-serms, cancel-in-progress: false }
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Resolve auth-proxy FQDN
+        id: proxy
+        run: |
+          FQDN=$(az containerapp show -n auth-proxy -g "${{ env.RG }}" \
+            --query properties.configuration.ingress.fqdn -o tsv)
+          echo "AUTH_MODULE_URL=https://$FQDN" >> "$GITHUB_ENV"
+
+      - name: Build serms-api
+        run: az acr build --registry ${{ env.ACR }} --image $ACR.azurecr.io/serms-api:$IMAGE_TAG --file Dockerfile --context ./apps/api
+
+      - name: Build serms-web (static, production bundle)
+        run: |
+          az acr build --registry ${{ env.ACR }} \
+            --image $ACR.azurecr.io/serms-web:$IMAGE_TAG \
+            --file Dockerfile.prod --context ./apps/web \
+            --build-arg VITE_AUTH_MODULE_URL=$AUTH_MODULE_URL
+
+      - name: Roll serms-api
+        run: az containerapp update -n serms-api -g "${{ env.RG }}" --image $ACR.azurecr.io/serms-api:$IMAGE_TAG
+
+      - name: Roll serms-worker
+        run: az containerapp update -n serms-worker -g "${{ env.RG }}" --image $ACR.azurecr.io/serms-api:$IMAGE_TAG
+
+      - name: Roll serms-web
+        run: az containerapp update -n serms-web -g "${{ env.RG }}" --image $ACR.azurecr.io/serms-web:$IMAGE_TAG
