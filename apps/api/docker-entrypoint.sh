@@ -30,12 +30,8 @@ if [ "$SERMS_SERVICE_ROLE" = "worker" ]; then
   exec "$@"
 fi
 
-echo "Waiting for Laravel startup lock..."
-until mkdir "$STARTUP_LOCK_DIR" 2>/dev/null; do
-  echo "Another SERMS container is preparing dependencies/caches - sleeping"
-  sleep 1
-done
-trap 'rmdir "$STARTUP_LOCK_DIR" 2>/dev/null || true' EXIT
+# Ensure stale startup locks are cleared
+rm -rf "$STARTUP_LOCK_DIR" 2>/dev/null || true
 
 # Ensure dependencies are installed in the Docker vendor volume.
 if [ ! -f "vendor/autoload.php" ]; then
@@ -70,9 +66,6 @@ echo "Building Laravel boot caches..."
 php artisan config:cache
 php artisan event:cache
 php artisan route:cache
-
-rmdir "$STARTUP_LOCK_DIR" 2>/dev/null || true
-trap - EXIT
 
 # Start the main process (e.g., PHP-FPM or serve command)
 exec "$@"

@@ -8,9 +8,12 @@ import {
   Trash2,
   UploadCloud,
   X,
+  Layers,
+  ChevronDown
 } from 'lucide-vue-next'
 import { apiFetch } from '../../utils/apiFetch'
-import { cleanName, tinFor } from '../../utils/receiptUtils'
+import { cleanName, tinFor, formatDateForInput } from '../../utils/receiptUtils'
+
 
 const props = defineProps({
   modelValue: { type: Array, default: () => [] },
@@ -26,6 +29,11 @@ const isDragging = ref(false)
 const files = ref([...props.modelValue])
 const localError = ref(null)
 const fileInput = ref(null)
+
+const uploadMode = ref('single')
+const showDropConfirmModal = ref(false)
+const pendingDropFiles = ref([])
+const isDropdownOpen = ref(false)
 
 const isProcessingAnyReceipt = computed(() =>
   files.value.some((entry) => entry.ocrStatus === 'processing'),
@@ -72,9 +80,10 @@ function formatSize(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-function addFiles(fileList) {
+function processFiles(fileList, mode) {
   localError.value = null
 
+  const validFiles = []
   for (const file of fileList) {
     if (file.size > props.maxSizeMb * 1024 * 1024) {
       emit('upload-error', {
@@ -85,42 +94,60 @@ function addFiles(fileList) {
       })
       continue
     }
+    validFiles.push(file)
+  }
 
-    const signature = `${file.name}-${file.size}`
-    const isDuplicate = files.value.some((entry) => {
-      const existingName = entry.file?.name || entry.name
-      const existingSize = entry.file?.size || entry.size
-      return `${existingName}-${existingSize}` === signature
-    })
+  if (validFiles.length === 0) return
 
-    if (isDuplicate) {
-      localError.value = `Duplicate file skipped: ${file.name}`
-      continue
-    }
-
+  if (mode === 'multi') {
     const entry = {
-      file,
-      name: file.name,
-      size: file.size,
-      preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
+      pages: validFiles,
+      name: `Multi-page Receipt (${validFiles.length} pages)`,
+      size: validFiles.reduce((acc, f) => acc + f.size, 0),
+      previews: validFiles.map(f => f.type.startsWith('image/') ? URL.createObjectURL(f) : null),
       ocrStatus: 'idle',
-      ocrData: buildPrefilledOcrData(file),
+      ocrData: buildPrefilledOcrData(validFiles[0]),
     }
-
     files.value.push(entry)
     simulateOCR(files.value[files.value.length - 1])
+  } else {
+    for (const file of validFiles) {
+      const entry = {
+        pages: [file],
+        name: file.name,
+        size: file.size,
+        previews: [file.type.startsWith('image/') ? URL.createObjectURL(file) : null],
+        ocrStatus: 'idle',
+        ocrData: buildPrefilledOcrData(file),
+      }
+      files.value.push(entry)
+      simulateOCR(files.value[files.value.length - 1])
+    }
   }
 
   emit('update:modelValue', files.value)
 }
 
-async function simulateOCR(entry) {
-  if (!entry.file.type.startsWith('image/') && entry.file.type !== 'application/pdf') return
+function handleConfirmDrop(mode) {
+  showDropConfirmModal.value = false
+  if (pendingDropFiles.value.length > 0) {
+    processFiles(pendingDropFiles.value, mode)
+  }
+  pendingDropFiles.value = []
+}
 
+function triggerFileInput(mode) {
+  uploadMode.value = mode
+  fileInput.value?.click()
+}
+
+async function simulateOCR(entry) {
   entry.ocrStatus = 'processing'
   try {
     const formData = new FormData()
-    formData.append('file', entry.file)
+    entry.pages.forEach(file => {
+      formData.append('files[]', file)
+    })
 
     const response = await apiFetch('/api/serms/liquidations/scan', {
       method: 'POST',
@@ -142,7 +169,7 @@ async function simulateOCR(entry) {
       tin: ocrData.tin || entry.ocrData.tin || '',
       vendor: ocrData.vendor_name || entry.ocrData.vendor || '',
       invoiceNumber: ocrData.invoice_number || entry.ocrData.invoiceNumber || '',
-      date: ocrData.transaction_date || entry.ocrData.date || '',
+      date: formatDateForInput(ocrData.transaction_date || entry.ocrData.date),
       confidence: Math.round(ocrData.ocr_confidence_score || 85),
       file_path: ocrData.file_path,
       file_hash: ocrData.file_hash,
@@ -154,24 +181,35 @@ async function simulateOCR(entry) {
   } catch (error) {
     console.error('OCR processing failed:', error)
     entry.ocrStatus = 'failed'
-    entry.ocrData = buildPrefilledOcrData(entry.file)
+    entry.ocrData = buildPrefilledOcrData(entry.pages[0])
     emit('update:modelValue', files.value)
   }
 }
 
 function removeFile(index) {
-  if (files.value[index]?.preview) URL.revokeObjectURL(files.value[index].preview)
+  const entry = files.value[index]
+  if (entry?.previews) {
+    entry.previews.forEach(preview => {
+      if (preview) URL.revokeObjectURL(preview)
+    })
+  }
   files.value.splice(index, 1)
   emit('update:modelValue', files.value)
 }
 
 function onDrop(event) {
   isDragging.value = false
-  addFiles(event.dataTransfer.files)
+  const droppedFiles = Array.from(event.dataTransfer.files)
+  if (droppedFiles.length > 1) {
+    pendingDropFiles.value = droppedFiles
+    showDropConfirmModal.value = true
+  } else if (droppedFiles.length === 1) {
+    processFiles(droppedFiles, 'single')
+  }
 }
 
 function onFileInput(event) {
-  addFiles(event.target.files)
+  processFiles(Array.from(event.target.files), uploadMode.value)
   event.target.value = ''
 }
 </script>
@@ -196,15 +234,13 @@ function onFileInput(event) {
         </div>
       </div>
 
-      <button
-        type="button"
+      <div
         :class="[
           'flex min-h-[260px] w-full flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center transition-colors',
           isDragging
             ? 'border-accent bg-accent/5'
-            : 'border-slate-200 bg-slate-50/60 hover:border-accent/50',
+            : 'border-slate-200 bg-slate-50/60',
         ]"
-        @click="fileInput?.click()"
         @dragover.prevent="isDragging = true"
         @dragleave="isDragging = false"
         @drop.prevent="onDrop"
@@ -213,7 +249,7 @@ function onFileInput(event) {
           <UploadCloud class="h-8 w-8" />
         </span>
         <h4 class="font-heading text-base font-bold text-slate-800">
-          Drag and drop receipt images here, or click to browse
+          Drag and drop receipt images here, or choose an option
         </h4>
         <p class="mt-1 text-sm text-slate-400">
           Supports: JPG, PNG, PDF (Max {{ maxSizeMb }}MB per file)
@@ -222,11 +258,52 @@ function onFileInput(event) {
           <AlertTriangle class="h-4 w-4" />
           At least 1 receipt is required to proceed
         </p>
-        <span class="mt-6 inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-accent px-3.5 text-xs font-bold text-white transition-colors hover:bg-accent-600">
-          <UploadCloud class="h-3.5 w-3.5" />
-          {{ emptyActionLabel }}
-        </span>
-      </button>
+        <div class="mt-6">
+          <div class="relative inline-block text-left" @click.stop>
+            <div>
+              <button
+                @click="isDropdownOpen = !isDropdownOpen"
+                class="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-xs font-bold text-white transition-colors hover:bg-accent-600 focus:outline-none"
+              >
+                <UploadCloud class="h-3.5 w-3.5" />
+                Select Files
+                <ChevronDown class="w-3.5 h-3.5 ml-1 -mr-1" aria-hidden="true" />
+              </button>
+            </div>
+
+            <transition
+              enter-active-class="transition duration-100 ease-out"
+              enter-from-class="transform scale-95 opacity-0"
+              enter-to-class="transform scale-100 opacity-100"
+              leave-active-class="transition duration-75 ease-in"
+              leave-from-class="transform scale-100 opacity-100"
+              leave-to-class="transform scale-95 opacity-0"
+            >
+              <div
+                v-if="isDropdownOpen"
+                class="absolute z-10 w-48 mt-2 origin-top right-1/2 translate-x-1/2 bg-white divide-y divide-gray-100 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+              >
+                <div class="px-1 py-1">
+                  <button
+                    class="group flex w-full items-center rounded-md px-2 py-2 text-xs font-bold text-gray-900 hover:bg-accent hover:text-white"
+                    @click="triggerFileInput('single'); isDropdownOpen = false"
+                  >
+                    <UploadCloud class="mr-2 h-4 w-4 text-accent group-hover:text-white" aria-hidden="true" />
+                    Single Upload
+                  </button>
+                  <button
+                    class="group flex w-full items-center rounded-md px-2 py-2 text-xs font-bold text-gray-900 hover:bg-accent hover:text-white"
+                    @click="triggerFileInput('multi'); isDropdownOpen = false"
+                  >
+                    <Layers class="mr-2 h-4 w-4 text-accent group-hover:text-white" aria-hidden="true" />
+                    Multiple Upload
+                  </button>
+                </div>
+              </div>
+            </transition>
+          </div>
+        </div>
+      </div>
     </section>
 
     <section v-else class="rounded-xl border border-slate-200 bg-white p-4">
@@ -242,14 +319,50 @@ function onFileInput(event) {
             </template>
           </p>
         </div>
-        <button
-          type="button"
-          class="inline-flex h-9 w-fit shrink-0 items-center justify-center gap-2 rounded-lg bg-accent px-3.5 text-xs font-bold text-white transition-colors hover:bg-accent-600"
-          @click="fileInput?.click()"
-        >
-          <PlusCircle class="h-3.5 w-3.5" />
-          {{ addActionLabel }}
-        </button>
+        <div class="flex items-center gap-2">
+          <div class="relative inline-block text-left" @click.stop>
+            <div>
+              <button
+                @click="isDropdownOpen = !isDropdownOpen"
+                class="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-white border border-slate-300 px-3.5 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none"
+              >
+                <PlusCircle class="h-3.5 w-3.5" />
+                Add More Receipts
+                <ChevronDown class="w-3.5 h-3.5 ml-1 -mr-1" aria-hidden="true" />
+              </button>
+            </div>
+            <transition
+              enter-active-class="transition duration-100 ease-out"
+              enter-from-class="transform scale-95 opacity-0"
+              enter-to-class="transform scale-100 opacity-100"
+              leave-active-class="transition duration-75 ease-in"
+              leave-from-class="transform scale-100 opacity-100"
+              leave-to-class="transform scale-95 opacity-0"
+            >
+              <div
+                v-if="isDropdownOpen"
+                class="absolute z-10 w-48 mt-2 origin-top-right right-0 bg-white divide-y divide-gray-100 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+              >
+                <div class="px-1 py-1">
+                  <button
+                    class="group flex w-full items-center rounded-md px-2 py-2 text-xs font-bold text-gray-900 hover:bg-accent hover:text-white"
+                    @click="triggerFileInput('single'); isDropdownOpen = false"
+                  >
+                    <UploadCloud class="mr-2 h-4 w-4 text-accent group-hover:text-white" aria-hidden="true" />
+                    Single Upload
+                  </button>
+                  <button
+                    class="group flex w-full items-center rounded-md px-2 py-2 text-xs font-bold text-gray-900 hover:bg-accent hover:text-white"
+                    @click="triggerFileInput('multi'); isDropdownOpen = false"
+                  >
+                    <Layers class="mr-2 h-4 w-4 text-accent group-hover:text-white" aria-hidden="true" />
+                    Multiple Upload
+                  </button>
+                </div>
+              </div>
+            </transition>
+          </div>
+        </div>
       </div>
 
       <div
@@ -286,11 +399,24 @@ function onFileInput(event) {
         :key="entry.name + index"
         class="flex items-center gap-3 rounded-xl border border-accent/15 bg-accent-50/20 p-3"
       >
-        <div class="relative flex h-14 w-14 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white">
-          <img v-if="entry.preview" :src="entry.preview" class="h-full w-full object-cover" alt="" />
+        <div class="relative flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white">
+          <template v-if="entry.previews?.length > 0">
+            <div
+              v-for="(preview, idx) in entry.previews.slice(0, 3)"
+              :key="idx"
+              class="absolute h-full w-full rounded-lg overflow-hidden border border-slate-200 bg-white shadow-sm transition-transform"
+              :style="{ transform: `translate(${idx * 4}px, ${idx * 4}px)`, zIndex: 10 - idx }"
+            >
+              <img v-if="preview" :src="preview" class="h-full w-full object-cover" alt="" />
+              <FileText v-else class="h-5 w-5 text-slate-300 m-auto mt-4" />
+            </div>
+            <div v-if="entry.previews.length > 3" class="absolute -bottom-1 -right-1 z-20 rounded bg-slate-800 px-1 text-[8px] font-bold text-white">
+              +{{ entry.previews.length - 3 }}
+            </div>
+          </template>
           <FileText v-else class="h-5 w-5 text-slate-300" />
 
-          <div v-if="entry.ocrStatus === 'processing'" class="absolute inset-0 z-10 pointer-events-none">
+          <div v-if="entry.ocrStatus === 'processing'" class="absolute inset-0 z-30 pointer-events-none rounded-lg overflow-hidden">
             <div class="h-0.5 w-full bg-accent/80 animate-scan"></div>
             <div class="absolute inset-0 bg-accent/5"></div>
           </div>
@@ -341,6 +467,16 @@ function onFileInput(event) {
         </button>
       </div>
     </TransitionGroup>
+
+    <ConfirmModal
+      :is-open="showDropConfirmModal"
+      title="Multiple Files Dropped"
+      message="You dropped multiple files. Are these separate receipts or pages of a single receipt?"
+      confirm-text="Single Multi-Page Receipt"
+      cancel-text="Separate Receipts"
+      @confirm="handleConfirmDrop('multi')"
+      @close="handleConfirmDrop('single')"
+    />
   </div>
 </template>
 

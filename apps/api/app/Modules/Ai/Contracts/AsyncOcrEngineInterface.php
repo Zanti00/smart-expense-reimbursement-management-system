@@ -12,14 +12,14 @@ interface AsyncOcrEngineInterface
      * callback URL asynchronously.
      *
      * @param  int    $receiptId   The SERMS receipt ID (echoed back in the callback).
-     * @param  string $fileUrl     Publicly accessible Supabase URL of the receipt file.
+     * @param  array  $fileUrls    Array of publicly accessible Supabase URLs of the receipt file(s).
      * @param  string $callbackUrl The SERMS endpoint the AI service must POST results to.
      * @return void
      *
      * @throws \App\Modules\Ai\Exceptions\AiServiceException on HTTP or connectivity failure.
      *
      * Usage example:
-     *   $engine->sendForProcessing(42, 'https://supabase.io/.../receipt.jpg', 'https://serms.app/api/reimbursements/receipts/42/ocr-callback');
+     *   $engine->sendForProcessing(42, ['https://supabase.io/.../receipt.jpg'], 'https://serms.app/api/reimbursements/receipts/42/ocr-callback');
      */
-    public function sendForProcessing(int $receiptId, string $fileUrl, string $callbackUrl): void;
+    public function sendForProcessing(int $receiptId, array $fileUrls, string $callbackUrl): void;
 }

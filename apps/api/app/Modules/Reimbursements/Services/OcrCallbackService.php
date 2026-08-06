@@ -48,8 +48,22 @@ class OcrCallbackService
                 )->id;
             }
 
-            $confidenceScore = (float) $data['ocr_confidence_score'];
+            $confidenceScore = (float) ($data['ocr_confidence_score'] ?? 0.0);
             $isLowConfidence = $confidenceScore < 0.80;
+
+            $isDuplicate = !empty($data['is_duplicate']);
+            
+            $isRejected = ($data['status'] ?? null) === 'rejected' || !empty($data['rejection_code']) || $isDuplicate;
+            
+            if ($isDuplicate) {
+                $targetStatus = 'rejected';
+                $rejectionCode = 'duplicate';
+                $rejectionReason = 'Duplicate receipt detected based on semantic similarity.';
+            } else {
+                $targetStatus = $isRejected ? 'rejected' : ($isLowConfidence ? 'flagged' : 'pending');
+                $rejectionCode = $data['rejection_code'] ?? ($isRejected ? 'blurry' : null);
+                $rejectionReason = $data['rejection_reason'] ?? $data['error'] ?? null;
+            }
 
             // Update OCR fields on the receipt.
             $receipt->update([
@@ -60,12 +74,14 @@ class OcrCallbackService
                 'tin'                  => $data['tin']                ?? $receipt->tin,
                 'invoice_number'       => $data['invoice_number']     ?? $receipt->invoice_number,
                 'vat_classification'   => $data['vat_classification'] ?? $receipt->vat_classification,
+                'currency'             => $data['currency']           ?? $receipt->currency,
+                'location'             => $data['location']           ?? $receipt->location,
                 'expense_category_id'  => $expenseCategoryId,
                 'ocr_confidence_score' => $confidenceScore,
-                'ocr_flagged'          => $isLowConfidence,
-                // Low confidence → 'flagged' (requires manual confirmation).
-                // Good confidence → 'pending' (ready for user review/submission).
-                'status'               => $isLowConfidence ? 'flagged' : 'pending',
+                'ocr_flagged'          => $isLowConfidence || $isRejected,
+                'status'               => $targetStatus,
+                'rejection_code'       => $rejectionCode,
+                'rejection_reason'     => $rejectionReason,
             ]);
 
             // Sync receipt items — delete old, insert AI-extracted ones.
@@ -77,7 +93,7 @@ class OcrCallbackService
             AuditLogService::log(
                 actorId:    0, // System-generated event — no human actor.
                 actorRole:  'system',
-                actionType: 'RECEIPT_OCR_COMPLETED',
+                actionType: $isRejected ? 'RECEIPT_OCR_REJECTED' : 'RECEIPT_OCR_COMPLETED',
                 entityType: 'receipt',
                 entityId:   $receipt->id,
                 beforeState: $beforeState,
@@ -88,7 +104,8 @@ class OcrCallbackService
             Log::info('OcrCallbackService: OCR results applied.', [
                 'receipt_id'    => $receiptId,
                 'status'        => $receipt->status,
-                'ocr_flagged'   => $isLowConfidence,
+                'ocr_flagged'   => $isLowConfidence || $isRejected,
+                'rejection_code' => $rejectionCode,
                 'confidence'    => $confidenceScore,
             ]);
 

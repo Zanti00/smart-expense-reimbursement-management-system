@@ -1,7 +1,7 @@
 <script setup>
-import { formatPeso } from "@/utils/formatters";
+import { formatAmount } from "@/utils/formatters";
 
-defineProps({
+const props = defineProps({
   receiptCount: {
     type: Number,
     required: true,
@@ -18,6 +18,10 @@ defineProps({
     type: Number,
     required: true,
   },
+  currency: {
+    type: String,
+    default: "PHP",
+  },
 });
 </script>
 
@@ -25,12 +29,14 @@ defineProps({
   <section
     class="bg-accent-50 border border-accent/15 rounded-xl p-6 space-y-4"
   >
-    <h3
-      class="text-base font-bold text-primary"
-      style="font-family: 'Poppins', sans-serif"
-    >
-      Summary
-    </h3>
+    <div class="flex justify-between items-center">
+      <h3
+        class="text-base font-bold text-primary"
+        style="font-family: 'Poppins', sans-serif"
+      >
+        Summary
+      </h3>
+    </div>
     <div class="space-y-3">
       <div class="flex justify-between items-center text-sm">
         <span class="text-slate-500">Uploaded Receipts</span>
@@ -65,7 +71,7 @@ defineProps({
           >Total Amount</span
         >
         <span class="text-2xl font-black text-accent font-mono">{{
-          formatPeso(totalAmount)
+          formatAmount(totalAmount, currency || "PHP")
         }}</span>
       </div>
     </div>

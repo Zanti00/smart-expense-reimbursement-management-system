@@ -74,6 +74,7 @@ return [
         'url'     => env('AI_SERVICE_URL'),
         'api_key' => env('AI_SERVICE_API_KEY'),
         'timeout' => env('AI_SERVICE_TIMEOUT', 10),
+        'callback_base_url' => env('AI_SERVICE_CALLBACK_BASE_URL'),
     ],
 
 ];

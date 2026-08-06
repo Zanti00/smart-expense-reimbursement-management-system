@@ -8,9 +8,11 @@ use App\Modules\Reimbursements\Models\ExpenseCategory;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Validation\ValidationException;
+use App\Modules\Shared\Traits\ValidatesReceiptDuplicates;
 
 class ExpenseService
 {
+    use ValidatesReceiptDuplicates;
     /**
      * List all receipts for the user with filters and permission scoping.
      */
@@ -67,15 +69,7 @@ class ExpenseService
     {
         return DB::transaction(function () use ($user, $data) {
             // Duplicate hash check
-            $existingHash = Receipt::where('file_hash', $data['file_hash'])
-                ->whereNull('deleted_at')
-                ->exists();
-
-            if ($existingHash) {
-                throw ValidationException::withMessages([
-                    'file_hash' => ['Duplicate detected. A receipt with this file hash already exists.']
-                ]);
-            }
+            $this->validateDuplicateReceipt($data['file_hash']);
 
             $expenseCategoryId = $data['expense_category_id'] ?? null;
             if (isset($data['category'])) {
@@ -98,6 +92,7 @@ class ExpenseService
                 'tin' => $data['tin'] ?? null,
                 'invoice_number' => $data['invoice_number'] ?? null,
                 'vat_classification' => $data['vat_classification'] ?? null,
+                'currency' => $data['currency'] ?? null,
                 'ocr_confidence_score' => $data['ocr_confidence_score'] ?? null,
                 'ocr_flagged' => ($data['ocr_confidence_score'] ?? 100) < 80,
                 'expense_category_id' => $expenseCategoryId,

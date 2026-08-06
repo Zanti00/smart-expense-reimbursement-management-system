@@ -95,12 +95,35 @@ function buildDefaultItems(categoryLabel, amount) {
   }));
 }
 
+export function formatDateForInput(dateStr) {
+  if (!dateStr) return "";
+  if (typeof dateStr === "string") {
+    const trimmed = dateStr.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+    if (trimmed.includes("T")) return trimmed.split("T")[0];
+    if (trimmed.includes(" ")) return trimmed.split(" ")[0];
+  }
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return "";
+    return (
+      d.getFullYear() +
+      "-" +
+      String(d.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(d.getDate()).padStart(2, "0")
+    );
+  } catch (e) {
+    return "";
+  }
+}
+
 export function buildPrefilledReceiptDraft({
   id,
   file,
   receiptData = {},
   thumbnail = "",
-  defaultLocation = "Metro Manila, Philippines",
+  defaultLocation = "",
 } = {}) {
   const resolvedId = receiptData.id || id || `temp-${Date.now()}`;
   const fileName = file?.name || receiptData.file_name || `Receipt-${resolvedId}`;
@@ -126,7 +149,7 @@ export function buildPrefilledReceiptDraft({
     invoiceNumber: receiptData.invoice_number || "",
     tin: receiptData.tin || "",
     merchantName,
-    location: defaultLocation,
+    location: receiptData.location || defaultLocation || "",
     fileName,
     fileType,
     thumbnail,
@@ -137,7 +160,8 @@ export function buildPrefilledReceiptDraft({
         ? Number(receiptData.vat_amount).toFixed(2)
         : "",
     vatClassification: amounts.vatClassification,
-    date: receiptData.transaction_date || "",
+    currency: receiptData.currency || "",
+    date: formatDateForInput(receiptData.transaction_date || receiptData.date),
     category: categoryName,
     categoryId: receiptData.expense_category_id || null,
     items,
@@ -158,6 +182,7 @@ export function buildReceiptUploadFormPrefill(options = {}) {
     total_amount: receipt.amount > 0 ? Number(receipt.amount.toFixed(2)) : "",
     vat_amount: receipt.tax,
     vat_classification: receipt.vatClassification,
+    currency: receipt.currency,
     items: (receipt.items || []).map((item) => ({
       name: item.name,
       quantity: Number(item.qty ?? item.quantity) || 1,

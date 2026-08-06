@@ -3,6 +3,7 @@ import { ref, computed, watch } from "vue";
 import { useReceiptStore } from "@/stores/receipts";
 import { useToast } from "@/composables/useToast";
 import ConfirmModal from "@/components/base/ConfirmModal.vue";
+import CurrencySelect from "@/components/base/CurrencySelect.vue";
 import { useUnsavedChanges } from "@/composables/useUnsavedChanges";
 import {
   buildReceiptUploadFormPrefill,
@@ -19,6 +20,8 @@ import {
   Plus,
   Trash2,
 } from "lucide-vue-next";
+
+
 
 const props = defineProps({
   modelValue: {
@@ -56,6 +59,7 @@ const uploadForm = ref({
   total_amount: "",
   vat_amount: "",
   vat_classification: "vat",
+  currency: "",
   items: [],
 });
 
@@ -202,6 +206,7 @@ watch(
       expense_category_id: props.receiptToEdit.categoryId || "",
       total_amount: props.receiptToEdit.amount || "",
       vat_classification: props.receiptToEdit.vatClassification || "vat",
+      currency: props.receiptToEdit.currency || "",
       vat_amount: receiptFinancials(
         { amount: Number(props.receiptToEdit.amount) || 0 },
         props.receiptToEdit.vatClassification || "vat",
@@ -304,6 +309,7 @@ function resetUploadForm() {
     total_amount: "",
     vat_amount: "",
     vat_classification: "vat",
+    currency: "",
     items: [],
   };
 }
@@ -345,6 +351,7 @@ async function saveReceipt() {
       tin: uploadForm.value.tin || null,
       invoice_number: uploadForm.value.invoice_number || null,
       vat_classification: uploadForm.value.vat_classification || null,
+      currency: uploadForm.value.currency || null,
       items:
         uploadForm.value.items.length > 0 ? uploadForm.value.items : undefined,
     };
@@ -395,7 +402,7 @@ function formatCurrency(amount) {
           <div class="flex items-center gap-3">
             <h2
               class="text-xl font-bold text-primary"
-              style="font-family: &quot;Poppins&quot;, sans-serif"
+              style="font-family: 'Poppins', sans-serif"
             >
               {{ receiptToEdit ? "Edit Receipt" : "Receipt Scanned" }}
             </h2>
@@ -451,7 +458,7 @@ function formatCurrency(amount) {
                 </div>
                 <p
                   class="text-[10px] text-slate-300 font-semibold uppercase tracking-widest text-center px-4"
-                  style="font-family: &quot;Poppins&quot;, sans-serif"
+                  style="font-family: 'Poppins', sans-serif"
                 >
                   {{
                     uploadFile
@@ -597,6 +604,26 @@ function formatCurrency(amount) {
                 <ChevronDown
                   class="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
                 />
+              </div>
+            </div>
+
+            <!-- Currency -->
+            <div class="input-wrapper">
+              <label class="input-label">Currency</label>
+              <div class="flex gap-3 items-center">
+                <div class="flex-1">
+                  <CurrencySelect
+                    v-model="uploadForm.currency"
+                    :disabled="receiptsStore.isSaving"
+                  />
+                </div>
+                <span
+                  v-if="receiptToEdit?.currency"
+                  class="bg-accent-50 text-accent border border-accent/20 px-4 py-2 rounded-lg flex items-center gap-2 text-[11px] font-bold whitespace-nowrap shadow-sm"
+                >
+                  <Sparkles class="w-3.5 h-3.5 fill-accent" />
+                  [AI-Detected]
+                </span>
               </div>
             </div>
 

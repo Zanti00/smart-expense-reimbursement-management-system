@@ -14,6 +14,7 @@ import {
   itemsGrossAmount,
   receiptFinancials,
 } from "@/utils/receiptUtils";
+import CurrencySelect from "@/components/base/CurrencySelect.vue";
 
 const props = defineProps({
   receipts: {
@@ -32,8 +33,9 @@ const props = defineProps({
 
 defineEmits(["remove-receipt"]);
 
+
 const hasUploadingReceipts = computed(() =>
-  props.receipts.some((receipt) => receipt.isUploading),
+  props.receipts.some((receipt) => receipt.isUploading || receipt.isProcessing),
 );
 
 function getCategoryOptions() {
@@ -115,7 +117,7 @@ function removeReceiptItem(receipt, index) {
         class="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin"
         aria-hidden="true"
       />
-      Uploading and reading receipt data...
+      Uploading and extracting receipt data...
     </div>
 
     <!-- One block per receipt -->
@@ -170,15 +172,15 @@ function removeReceiptItem(receipt, index) {
                 </p>
               </div>
               <div
-                v-if="receipt.isUploading"
+                v-if="receipt.isUploading || receipt.isProcessing"
                 class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white/80 text-accent backdrop-blur-[1px]"
               >
                 <span
                   class="h-8 w-8 rounded-full border-2 border-current border-t-transparent animate-spin"
                   aria-hidden="true"
                 />
-                <span class="text-[10px] font-bold uppercase tracking-widest">
-                  Uploading...
+                <span class="text-[10px] font-bold uppercase tracking-widest text-center">
+                  {{ receipt.isProcessing ? 'Extracting OCR Data...' : 'Uploading...' }}
                 </span>
               </div>
             </div>
@@ -187,7 +189,7 @@ function removeReceiptItem(receipt, index) {
                 v-if="allowRemove"
                 class="inline-flex h-9 w-fit items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3.5 text-xs font-bold text-danger transition-colors hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
                 type="button"
-                :disabled="receipt.isUploading"
+                :disabled="receipt.isUploading || receipt.isProcessing"
                 @click="$emit('remove-receipt', receipt)"
               >
                 <Trash2 class="w-3.5 h-3.5" /> Delete Receipt
@@ -205,7 +207,7 @@ function removeReceiptItem(receipt, index) {
                   class="input disabled:opacity-50 disabled:cursor-not-allowed"
                   type="text"
                   v-model="receipt.invoiceNumber"
-                  :disabled="receipt.isUploading"
+                  :disabled="receipt.isUploading || receipt.isProcessing"
                 />
               </div>
               <div class="input-wrapper">
@@ -215,7 +217,7 @@ function removeReceiptItem(receipt, index) {
                     class="input disabled:opacity-50 disabled:cursor-not-allowed"
                     type="date"
                     v-model="receipt.date"
-                    :disabled="receipt.isUploading"
+                    :disabled="receipt.isUploading || receipt.isProcessing"
                   />
                 </div>
               </div>
@@ -226,7 +228,7 @@ function removeReceiptItem(receipt, index) {
               <div class="flex items-center justify-between">
                 <label class="input-label">TIN Number <span class="text-danger">*</span></label>
               </div>
-              <input class="input disabled:opacity-50 disabled:cursor-not-allowed" type="text" v-model="receipt.tin" :disabled="receipt.isUploading" />
+              <input class="input disabled:opacity-50 disabled:cursor-not-allowed" type="text" v-model="receipt.tin" :disabled="receipt.isUploading || receipt.isProcessing" />
             </div>
 
             <div class="input-wrapper">
@@ -235,7 +237,7 @@ function removeReceiptItem(receipt, index) {
                 class="input disabled:opacity-50 disabled:cursor-not-allowed"
                 type="text"
                 v-model="receipt.merchantName"
-                :disabled="receipt.isUploading"
+                :disabled="receipt.isUploading || receipt.isProcessing"
               />
             </div>
 
@@ -247,7 +249,8 @@ function removeReceiptItem(receipt, index) {
                   class="input pr-10 disabled:opacity-50 disabled:cursor-not-allowed"
                   type="text"
                   v-model="receipt.location"
-                  :disabled="receipt.isUploading"
+                  placeholder="Enter location..."
+                  :disabled="receipt.isUploading || receipt.isProcessing"
                 />
                 <MapPin
                   class="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
@@ -265,7 +268,7 @@ function removeReceiptItem(receipt, index) {
                   <select
                     class="input appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     v-model="receipt.categoryId"
-                    :disabled="receipt.isUploading"
+                    :disabled="receipt.isUploading || receipt.isProcessing"
                     @change="syncCategoryName(receipt)"
                   >
                     <option value="" disabled>Select category</option>
@@ -321,7 +324,7 @@ function removeReceiptItem(receipt, index) {
                           type="text"
                           class="input !py-1 !text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                           v-model="item.name"
-                          :disabled="receipt.isUploading"
+                          :disabled="receipt.isUploading || receipt.isProcessing"
                         />
                       </td>
                       <td class="px-0 py-2 w-20">
@@ -329,7 +332,7 @@ function removeReceiptItem(receipt, index) {
                           type="number"
                           class="input !py-1 !text-sm text-center disabled:opacity-50 disabled:cursor-not-allowed"
                           v-model="item.qty"
-                          :disabled="receipt.isUploading"
+                          :disabled="receipt.isUploading || receipt.isProcessing"
                           @input="recalculateFromItems(receipt)"
                         />
                       </td>
@@ -338,14 +341,14 @@ function removeReceiptItem(receipt, index) {
                           type="number"
                           class="input !py-1 !text-sm text-right font-mono text-primary font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                           v-model.number="item.price"
-                          :disabled="receipt.isUploading"
+                          :disabled="receipt.isUploading || receipt.isProcessing"
                           @input="recalculateFromItems(receipt)"
                         />
                       </td>
                       <td class="pr-4 py-2 w-10 text-right">
                         <button
                           class="text-slate-400 hover:text-danger transition-colors p-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                          :disabled="receipt.isUploading"
+                          :disabled="receipt.isUploading || receipt.isProcessing"
                           @click="removeReceiptItem(receipt, itemIdx)"
                         >
                           <X class="w-4 h-4" />
@@ -359,7 +362,7 @@ function removeReceiptItem(receipt, index) {
                 >
                   <button
                     class="text-xs font-bold text-accent flex items-center gap-1 hover:text-accent-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    :disabled="receipt.isUploading"
+                    :disabled="receipt.isUploading || receipt.isProcessing"
                     @click="addReceiptItem(receipt)"
                   >
                     <PlusCircle class="w-3.5 h-3.5" /> Add Item
@@ -375,12 +378,20 @@ function removeReceiptItem(receipt, index) {
               <div class="flex items-end justify-between gap-4">
                 <div class="flex gap-4 flex-wrap items-end">
                   <div class="input-wrapper">
+                    <label class="input-label">Currency</label>
+                    <CurrencySelect
+                      v-model="receipt.currency"
+                      :disabled="receipt.isUploading || receipt.isProcessing"
+                      select-class="!bg-white"
+                    />
+                  </div>
+                  <div class="input-wrapper">
                     <label class="input-label">VAT Classification <span class="text-danger">*</span></label>
                     <div class="relative">
                       <select
                         class="input !w-32 !bg-white appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         v-model="receipt.vatClassification"
-                        :disabled="receipt.isUploading"
+                        :disabled="receipt.isUploading || receipt.isProcessing"
                         @change="handleVatClassChange(receipt)"
                       >
                         <option value="vat">VAT</option>
@@ -395,7 +406,7 @@ function removeReceiptItem(receipt, index) {
                       class="input !w-32 !bg-white disabled:opacity-50 disabled:cursor-not-allowed"
                       type="number"
                       v-model="receipt.subtotal"
-                      :disabled="receipt.isUploading"
+                      :disabled="receipt.isUploading || receipt.isProcessing"
                       @input="recalculateFromSubtotal(receipt)"
                     />
                   </div>
@@ -405,7 +416,7 @@ function removeReceiptItem(receipt, index) {
                       class="input !w-32 !bg-white disabled:opacity-50 disabled:cursor-not-allowed"
                       type="number"
                       v-model="receipt.tax"
-                      :disabled="receipt.vatClassification === 'non-vat' || receipt.isUploading"
+                      :disabled="receipt.vatClassification === 'non-vat' || receipt.isUploading || receipt.isProcessing"
                       @input="recalculateFromSubtotal(receipt)"
                     />
                   </div>
@@ -421,7 +432,7 @@ function removeReceiptItem(receipt, index) {
                     type="number"
                     class="input !w-36 !bg-white font-mono text-xl font-black text-accent text-right disabled:opacity-50 disabled:cursor-not-allowed"
                     v-model="receipt.amount"
-                    :disabled="receipt.isUploading"
+                    :disabled="receipt.isUploading || receipt.isProcessing"
                     @input="recalculateFinancials(receipt)"
                   />
                 </div>

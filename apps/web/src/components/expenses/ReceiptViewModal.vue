@@ -13,7 +13,7 @@ import {
   Pencil,
   AlertTriangle,
 } from "lucide-vue-next";
-import { formatPeso as formatCurrency, formatDate as formatDateBase } from "@/utils/formatters";
+import { formatPeso as formatCurrency, formatAmount, formatDate as formatDateBase } from "@/utils/formatters";
 
 const props = defineProps({
   modelValue: {
@@ -215,6 +215,13 @@ function formatDate(dateStr) {
                 {{ receipt.vatClassification || "—" }}
               </p>
             </div>
+            <!-- Currency -->
+            <div class="p-4 rounded-xl border border-slate-100 bg-slate-50/30">
+              <p class="section-label mb-1">Currency</p>
+              <p class="text-sm font-bold text-slate-800 uppercase font-mono">
+                {{ receipt.currency || "—" }}
+              </p>
+            </div>
             <!-- Uploader -->
             <div class="p-4 rounded-xl border border-slate-100 bg-slate-50/30">
               <p class="section-label mb-1">Submitted By</p>
@@ -253,7 +260,7 @@ function formatDate(dateStr) {
                 </div>
                 <div class="text-sm text-slate-500 font-mono">
                   {{ item.quantity }} x
-                  {{ formatCurrency(Number(item.price) || 0) }}
+                  {{ formatAmount(Number(item.price) || 0, receipt.currency || "PHP") }}
                 </div>
               </div>
             </div>
@@ -275,7 +282,7 @@ function formatDate(dateStr) {
               <div class="flex justify-between items-center text-slate-500">
                 <span class="text-sm">Items Subtotal</span>
                 <span class="text-sm font-mono">{{
-                  formatCurrency(actualSubtotal)
+                  formatAmount(actualSubtotal, receipt.currency || "PHP")
                 }}</span>
               </div>
               <div
@@ -283,7 +290,7 @@ function formatDate(dateStr) {
               >
                 <span class="text-sm">VAT Amount</span>
                 <span class="text-sm font-mono">{{
-                  formatCurrency(receipt.vatAmount || 0)
+                  formatAmount(receipt.vatAmount || 0, receipt.currency || "PHP")
                 }}</span>
               </div>
               <div class="flex justify-between items-center pt-1">
@@ -293,7 +300,7 @@ function formatDate(dateStr) {
                   >Total Amount</span
                 >
                 <span class="text-xl font-black text-primary font-mono">{{
-                  formatCurrency(receipt.amount)
+                  formatAmount(receipt.amount, receipt.currency || "PHP")
                 }}</span>
               </div>
             </div>

@@ -6,6 +6,7 @@ import { useNotificationStore } from "@/stores/notification";
 import { useToast } from "@/composables/useToast";
 import NotificationPanel from "@/components/base/NotificationPanel.vue";
 import ToastNotification from "@/components/ToastNotification.vue";
+import DuplicateReceiptModal from "@/components/expenses/DuplicateReceiptModal.vue";
 import sbsiLogo from "@/assets/sbsi_logo.png";
 import sbsiLogoShort from "@/assets/sbsi_logo_short.png";
 import {
@@ -262,6 +263,9 @@ async function logout() {
 
     <!-- Global Toast Notifications -->
     <ToastNotification />
+
+    <!-- Global Duplicate Receipt Modal -->
+    <DuplicateReceiptModal />
   </div>
 </template>
 

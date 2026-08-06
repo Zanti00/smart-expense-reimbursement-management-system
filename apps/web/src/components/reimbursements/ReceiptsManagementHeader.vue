@@ -1,5 +1,6 @@
 <script setup>
-import { CheckCircle2, PlusCircle } from "lucide-vue-next";
+import { ref } from 'vue';
+import { CheckCircle2, PlusCircle, Layers, ChevronDown, UploadCloud } from "lucide-vue-next";
 
 defineProps({
   receiptCount: {
@@ -8,7 +9,9 @@ defineProps({
   },
 });
 
-defineEmits(["add-receipts"]);
+defineEmits(["add-receipts", "open-segmented-upload"]);
+
+const isDropdownOpen = ref(false);
 </script>
 
 <template>
@@ -41,13 +44,49 @@ defineEmits(["add-receipts"]);
         >
           <CheckCircle2 class="w-4 h-4" /> Ready to submit
         </div>
-        <button
-          class="inline-flex h-9 w-fit shrink-0 items-center justify-center gap-2 rounded-lg bg-accent px-3.5 text-xs font-bold text-white transition-colors hover:bg-accent-600"
-          type="button"
-          @click="$emit('add-receipts')"
-        >
-          <PlusCircle class="h-3.5 w-3.5" /> Add More Receipts
-        </button>
+
+        <div class="relative inline-block text-left" @click.stop>
+          <div>
+            <button
+              @click="isDropdownOpen = !isDropdownOpen"
+              class="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-accent px-3.5 text-xs font-bold text-white transition-colors hover:bg-accent-600 focus:outline-none"
+            >
+              <PlusCircle class="h-3.5 w-3.5" />
+              Add More Receipts
+              <ChevronDown class="w-3.5 h-3.5 ml-1 -mr-1" aria-hidden="true" />
+            </button>
+          </div>
+          <transition
+            enter-active-class="transition duration-100 ease-out"
+            enter-from-class="transform scale-95 opacity-0"
+            enter-to-class="transform scale-100 opacity-100"
+            leave-active-class="transition duration-75 ease-in"
+            leave-from-class="transform scale-100 opacity-100"
+            leave-to-class="transform scale-95 opacity-0"
+          >
+            <div
+              v-if="isDropdownOpen"
+              class="absolute z-10 w-48 mt-2 origin-top-right right-0 bg-white divide-y divide-gray-100 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+            >
+              <div class="px-1 py-1">
+                <button
+                  class="group flex w-full items-center rounded-md px-2 py-2 text-xs font-bold text-gray-900 hover:bg-accent hover:text-white"
+                  @click="$emit('add-receipts'); isDropdownOpen = false"
+                >
+                  <UploadCloud class="mr-2 h-4 w-4 text-accent group-hover:text-white" aria-hidden="true" />
+                  Single Upload
+                </button>
+                <button
+                  class="group flex w-full items-center rounded-md px-2 py-2 text-xs font-bold text-gray-900 hover:bg-accent hover:text-white"
+                  @click="$emit('open-segmented-upload'); isDropdownOpen = false"
+                >
+                  <Layers class="mr-2 h-4 w-4 text-accent group-hover:text-white" aria-hidden="true" />
+                  Multiple Upload
+                </button>
+              </div>
+            </div>
+          </transition>
+        </div>
       </div>
     </div>
   </section>

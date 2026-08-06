@@ -9,9 +9,11 @@ use App\Modules\Reimbursements\Jobs\DispatchReceiptToAiService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Auth\Access\AuthorizationException;
+use App\Modules\Shared\Traits\ValidatesReceiptDuplicates;
 
 class ReceiptService
 {
+    use ValidatesReceiptDuplicates;
     /**
      * List all receipts for the user.
      */
@@ -52,12 +54,31 @@ class ReceiptService
     }
 
     /**
-     * Store a newly uploaded receipt in the database.
+     * Get a single receipt by ID, ensuring user owns it unless they can manage.
+     */
+    public function getReceipt(User $user, int $id, bool $canManage)
+    {
+        $receipt = Receipt::with('category', 'uploader', 'items')
+            ->withCount('reimbursements')
+            ->findOrFail($id);
+
+        if (!$canManage && $receipt->uploaded_by !== $user->id) {
+            throw new AuthorizationException('Unauthorized to view this receipt.');
+        }
+
+        return $receipt;
+    }
+
+    /**
+     * Store a newly uploaded receipt (single or multi-page) in the database.
      */
     public function storeReceipt(User $user, array $validated, $file)
     {
         return DB::transaction(function () use ($user, $validated, $file) {
-            $storedFile = $this->storeReceiptFile($file);
+            $files = is_array($file) ? $file : [$file];
+            $storedFile = $this->storeReceiptFiles($files);
+
+            $this->validateDuplicateReceipt($storedFile['file_hash']);
 
             $receipt = Receipt::create([
                 'uploaded_by'          => $user->id,
@@ -126,7 +147,11 @@ class ReceiptService
             }
 
             if ($file) {
-                $updateData = array_merge($updateData, $this->storeReceiptFile($file));
+                $newFile = $this->storeReceiptFiles([$file]);
+                if ($newFile['file_hash'] !== $receipt->file_hash) {
+                    $this->validateDuplicateReceipt($newFile['file_hash']);
+                }
+                $updateData = array_merge($updateData, $newFile);
             }
 
             $updateData['status'] = 'processed';
@@ -148,30 +173,34 @@ class ReceiptService
     }
 
     /**
-     * Store the uploaded file on the configured Supabase disk and return DB columns.
+     * Store uploaded files on the configured Supabase disk and return DB column arrays.
      */
-    private function storeReceiptFile($file): array
+    private function storeReceiptFiles(array $files): array
     {
-        if (!$file) {
-            return [
-                'file_path' => null,
-                'file_hash' => null,
-                'file_type' => null,
-                'file_size_bytes' => null,
-            ];
-        }
+        $filePaths = [];
+        $fileHashes = [];
+        $fileTypes = [];
+        $fileSizes = [];
 
-        $fileType = $file->extension();
+        foreach ($files as $file) {
+            if (!$file) continue;
 
-        if ($fileType === 'jpg') {
-            $fileType = 'jpeg';
+            $fileType = $file->extension();
+            if ($fileType === 'jpg') {
+                $fileType = 'jpeg';
+            }
+
+            $filePaths[] = $file->store('receipts', 'supabase');
+            $fileHashes[] = hash_file('sha256', $file->getRealPath());
+            $fileTypes[] = $fileType;
+            $fileSizes[] = $file->getSize();
         }
 
         return [
-            'file_path' => $file->store('receipts', 'supabase'),
-            'file_hash' => hash_file('sha256', $file->getRealPath()),
-            'file_type' => $fileType,
-            'file_size_bytes' => $file->getSize(),
+            'file_path' => count($filePaths) === 1 ? $filePaths[0] : $filePaths,
+            'file_hash' => count($fileHashes) === 1 ? $fileHashes[0] : $fileHashes,
+            'file_type' => count($fileTypes) === 1 ? $fileTypes[0] : $fileTypes,
+            'file_size_bytes' => count($fileSizes) === 1 ? $fileSizes[0] : $fileSizes,
         ];
     }
 

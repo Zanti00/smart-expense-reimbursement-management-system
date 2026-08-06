@@ -57,7 +57,7 @@ export function mapReceiptToReimbursement(receipt) {
     invoiceNumber: receipt.invoiceNumber || receipt.dbId || receipt.id,
     category: receipt.category || "Uncategorized",
     categoryId: receipt.categoryId || null,
-    location: receipt.location || "Metro Manila, Philippines",
+    location: receipt.location || "",
     thumbnail: receipt.thumbnail,
     items,
     isUploading: false,

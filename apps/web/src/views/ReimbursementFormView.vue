@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onBeforeUnmount, onMounted } from "vue";
+import { ref, computed, watch, onBeforeUnmount, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { usePolicyStore } from "@/stores/policy";
 import { useReceiptStore } from "@/stores/receipts";
@@ -14,6 +14,8 @@ import MetaAndAttachments from "@/components/reimbursements/MetaAndAttachments.v
 import ReimbursementSummaryPanel from "@/components/reimbursements/ReimbursementSummaryPanel.vue";
 import ReimbursementFormHeader from "@/components/reimbursements/ReimbursementFormHeader.vue";
 import ReimbursementFormEmptyState from "@/components/reimbursements/ReimbursementFormEmptyState.vue";
+import ReceiptQualityRejectionModal from "@/components/reimbursements/ReceiptQualityRejectionModal.vue";
+import SegmentedReceiptUpload from "@/components/reimbursements/SegmentedReceiptUpload.vue";
 import ConfirmModal from "@/components/base/ConfirmModal.vue";
 
 // Composables
@@ -27,6 +29,7 @@ import {
   normalizeVatClassification,
   receiptFinancials,
   getItems,
+  formatDateForInput,
 } from "@/utils/receiptUtils";
 import { getFileUrl } from "@/utils/fileUtils";
 
@@ -56,6 +59,7 @@ const storedForwardedReceipts = ref([]);
 const forwardedSource = ref("My Expense");
 const FORWARDED_RECEIPTS_KEY = "serms_forwarded_reimbursement_receipts";
 const LEGACY_LIQUIDATION_RECEIPTS_KEY = "serms_forwarded_liquidation_receipts";
+const summaryCurrency = ref("PHP");
 
 // Form uploads and file management
 const {
@@ -65,12 +69,60 @@ const {
   handleReceiptDrop,
   handleReceiptSelect,
   removeReceipt,
+  clearDraftReceipts,
+  qualityRejection,
+  clearQualityRejection,
+  showSegmentedUpload,
+  continueAnyway,
+  submitWithForce,
+  submitSegments,
 } = useReceiptUploads();
+
+const uploadMode = ref('single');
+
+function handleRetake() {
+  if (qualityRejection.value?.receiptId) {
+    removeReceipt({ id: qualityRejection.value.receiptId });
+  }
+  clearQualityRejection();
+  setTimeout(() => {
+    receiptInput.value?.click();
+  }, 100);
+}
+
+function triggerUpload(mode = 'single') {
+  uploadMode.value = mode;
+  receiptInput.value?.click();
+}
+
+function onReceiptSelect(e) {
+  if (uploadMode.value === 'multi') {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      submitSegments(files);
+    }
+    if (e.target) e.target.value = '';
+  } else {
+    handleReceiptSelect(e);
+  }
+}
 
 const receipts = computed(() => [
   ...props.forwardedReceipts,
   ...localReceipts.value,
 ]);
+
+// Auto-sync summary currency if any receipt has a detected/selected currency
+watch(
+  receipts,
+  (newReceipts) => {
+    const foundCurrency = (newReceipts || []).find((r) => r && r.currency)?.currency;
+    if (foundCurrency) {
+      summaryCurrency.value = foundCurrency;
+    }
+  },
+  { immediate: true, deep: true },
+);
 
 // Financials
 const totalAmount = computed(() =>
@@ -87,7 +139,7 @@ const canProceed = computed(
     cutoffPeriod.value &&
     (isEditMode.value || reportFile.value) &&
     receipts.value.every(
-      (r) => !r.isUploading && (isEditMode.value || r.categoryId),
+      (r) => !r.isUploading && !r.isProcessing && r.date && (isEditMode.value || r.categoryId),
     ),
 );
 
@@ -138,6 +190,8 @@ async function handleSubmit() {
     }
     if (!success) {
       isSubmitted.value = false;
+    } else {
+      clearDraftReceipts();
     }
   } catch (error) {
     isSubmitted.value = false;
@@ -146,9 +200,13 @@ async function handleSubmit() {
 }
 
 // Lifecycle
+const handleOpenReceiptUpload = () => { receiptInput.value?.click(); };
+
 onMounted(async () => {
   policyStore.fetchAll();
   receiptsStore.fetchCategories();
+  
+  window.addEventListener('open-receipt-upload', handleOpenReceiptUpload);
 
   if (isEditMode.value) {
     fetching.value = true;
@@ -178,13 +236,14 @@ onMounted(async () => {
             fileName: r.vendor_name || `Receipt-${r.id}`,
             fileType: r.file_type,
             merchantName: r.vendor_name,
-            date: r.transaction_date,
+            date: formatDateForInput(r.transaction_date),
             amount: amounts.gross,
             subtotal: amounts.subtotal.toFixed(2),
             tax: amounts.vat.toFixed(2),
             vatClassification: amounts.vatClassification,
             tin: r.tin,
             invoiceNumber: r.invoice_number,
+            location: r.location || "",
             category: r.category?.name || data.expense_category?.name || "",
             categoryId: r.expense_category_id || data.expense_category_id || null,
             thumbnail: getFileUrl(r.file_url || r.file_path) || null,
@@ -230,7 +289,7 @@ onMounted(async () => {
         invoiceNumber: r.invoiceNumber || r.id,
         tin: r.tin || tinFor(r),
         merchantName: r.merchantName || cleanName(r.fileName),
-        location: r.location || "Metro Manila, Philippines",
+        location: r.location || "",
         items:
           r.items ||
           getItems(r.category || "Expense").map((name) => ({
@@ -254,6 +313,12 @@ onBeforeUnmount(() => {
       URL.revokeObjectURL(receipt.thumbnail);
     }
   });
+  
+  if (!isEditMode.value) {
+    clearDraftReceipts();
+  }
+  
+  window.removeEventListener('open-receipt-upload', handleOpenReceiptUpload);
 });
 
 //  Dismiss ─
@@ -274,7 +339,7 @@ function dismiss() {
       class="hidden"
       accept=".jpg,.jpeg,.png,.pdf"
       multiple
-      @change="handleReceiptSelect"
+      @change="onReceiptSelect"
     />
 
     <!--  Page Header (standalone route mode only)  -->
@@ -312,12 +377,12 @@ function dismiss() {
 
       <!--  Empty State (standalone + no upload yet)  -->
       <ReimbursementFormEmptyState
-        v-if="receipts.length === 0 && !isEditMode"
+        v-if="receipts.length === 0 && !isEditMode && !showSegmentedUpload"
         :receiptDrag="receiptDrag"
         @dragover="receiptDrag = true"
         @dragleave="receiptDrag = false"
         @drop="handleReceiptDrop"
-        @click="receiptInput?.click()"
+        @upload="triggerUpload"
       />
 
       <template v-else>
@@ -325,7 +390,20 @@ function dismiss() {
         <ReceiptsManagementHeader
           v-if="!isForwardedMode"
           :receipt-count="receipts.length"
-          @add-receipts="receiptInput?.click()"
+          @add-receipts="triggerUpload('single')"
+          @open-segmented-upload="triggerUpload('multi')"
+        />
+
+        <!-- Segmented Upload Panel -->
+        <SegmentedReceiptUpload
+          v-if="showSegmentedUpload"
+          @submit-segments="
+            (files) => {
+              submitSegments(files);
+              showSegmentedUpload = false;
+            }
+          "
+          @cancel="showSegmentedUpload = false"
         />
 
         <!--  CARD 2: One Scanned Receipt Block Per Receipt  -->
@@ -347,6 +425,7 @@ function dismiss() {
           :report-file="reportFile"
           :cutoff-period="cutoffPeriod"
           :total-amount="totalAmount"
+          :currency="summaryCurrency"
         />
 
         <!--  Footer Actions  -->
@@ -377,6 +456,23 @@ function dismiss() {
       :danger="true"
       @confirm="handleConfirmLeave"
       @close="handleCancelLeave"
+    />
+
+    <ReceiptQualityRejectionModal
+      :is-open="!!qualityRejection"
+      :rejected-file="qualityRejection?.file ?? null"
+      :rejection-code="qualityRejection?.rejectionCode ?? ''"
+      :rejection-reason="qualityRejection?.rejectionReason ?? ''"
+      :show-segmented-option="qualityRejection?.rejectionCode === 'too_small'"
+      @retake="handleRetake"
+      @upload-segmented="
+        showSegmentedUpload = true;
+        clearQualityRejection();
+      "
+      @continue-anyway="
+        continueAnyway(qualityRejection?.file);
+      "
+      @close="clearQualityRejection"
     />
   </div>
 </template>

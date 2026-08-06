@@ -23,6 +23,13 @@ export function useReimbursementSubmit(emit, router) {
 
     for (let idx = 0; idx < receipts.length; idx++) {
       const r = receipts[idx];
+      if (!r.date) {
+        addToast({
+          message: `Date is required for receipt ${idx + 1}`,
+          type: "error",
+        });
+        return false;
+      }
       if (r.items && Array.isArray(r.items)) {
         for (const item of r.items) {
           if (!item.name || !item.name.trim()) {
@@ -85,6 +92,9 @@ export function useReimbursementSubmit(emit, router) {
           `receipts[${index}][vat_classification]`,
           r.vatClassification || "vat",
         );
+        if (r.currency) {
+          formData.append(`receipts[${index}][currency]`, r.currency);
+        }
         formData.append(`receipts[${index}][tin]`, r.tin || "");
         formData.append(
           `receipts[${index}][invoice_number]`,
@@ -133,6 +143,13 @@ export function useReimbursementSubmit(emit, router) {
 
     for (let idx = 0; idx < receipts.length; idx++) {
       const r = receipts[idx];
+      if (!r.date) {
+        addToast({
+          message: `Date is required for receipt ${idx + 1}`,
+          type: "error",
+        });
+        return false;
+      }
       if (r.items && Array.isArray(r.items)) {
         for (const item of r.items) {
           if (!item.name || !item.name.trim()) {
@@ -197,6 +214,9 @@ export function useReimbursementSubmit(emit, router) {
           `receipts[${index}][vat_classification]`,
           r.vatClassification || "vat",
         );
+        if (r.currency) {
+          formData.append(`receipts[${index}][currency]`, r.currency);
+        }
         formData.append(`receipts[${index}][tin]`, r.tin || "");
         formData.append(
           `receipts[${index}][invoice_number]`,

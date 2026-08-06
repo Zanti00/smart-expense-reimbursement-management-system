@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref, watch } from "vue";
 import { useAuthStore } from "@/stores/auth";
-import { formatPeso } from "@/utils/formatters";
+import { formatPeso, formatAmount } from "@/utils/formatters";
 import {
   normalizeVatClassification,
   receiptFinancials,
@@ -321,11 +321,9 @@ watch(
                       :value="receipt?.vendor_name || '--'"
                     />
                   </label>
-                  <label class="space-y-1 md:col-span-2">
+                  <label class="space-y-1">
                     <span class="flex items-center justify-between gap-2">
-                      <span class="input-label"
-                        >VAT Classification</span
-                      >
+                      <span class="input-label">VAT Classification</span>
                     </span>
                     <div v-if="isProcessing" class="h-10 w-full animate-pulse rounded-lg bg-slate-200"></div>
                     <select
@@ -343,6 +341,16 @@ watch(
                         {{ option.label }}
                       </option>
                     </select>
+                  </label>
+                  <label class="space-y-1">
+                    <span class="input-label">Currency</span>
+                    <div v-if="isProcessing" class="h-10 w-full animate-pulse rounded-lg bg-slate-200"></div>
+                    <input
+                      v-else
+                      class="input bg-slate-50 uppercase font-mono font-bold"
+                      disabled
+                      :value="receipt?.currency || 'PHP'"
+                    />
                   </label>
                 </div>
 
@@ -397,7 +405,7 @@ watch(
                       </div>
                       <div class="text-right">
                         <p class="font-heading text-sm font-bold text-primary">
-                          {{ formatPeso(item.price) }}
+                          {{ formatAmount(item.price, receipt?.currency || "PHP") }}
                         </p>
                       </div>
                     </li>
@@ -416,7 +424,7 @@ watch(
                       disabled
                       :value="
                         hasReceiptGrossAmount
-                          ? formatPeso(receiptSubtotalAmount)
+                          ? formatAmount(receiptSubtotalAmount, receipt?.currency || 'PHP')
                           : '--'
                       "
                     />
@@ -429,7 +437,7 @@ watch(
                       class="input font-semibold bg-slate-50"
                       disabled
                       :value="
-                        hasReceiptGrossAmount ? formatPeso(receiptVatAmount) : '--'
+                        hasReceiptGrossAmount ? formatAmount(receiptVatAmount, receipt?.currency || 'PHP') : '--'
                       "
                     />
                   </label>
@@ -444,7 +452,7 @@ watch(
                     >
                       {{
                         hasReceiptGrossAmount
-                          ? formatPeso(receiptGrossSalesAmount)
+                          ? formatAmount(receiptGrossSalesAmount, receipt?.currency || 'PHP')
                           : "--"
                       }}
                     </p>

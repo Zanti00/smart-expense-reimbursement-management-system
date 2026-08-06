@@ -77,6 +77,7 @@ class ReimbursementService
                             'vat_classification' => $receiptData['vat_classification'] ?? $receipt->vat_classification,
                             'tin' => $receiptData['tin'] ?? $receipt->tin,
                             'invoice_number' => $receiptData['invoice_number'] ?? $receipt->invoice_number,
+                            'location' => $receiptData['location'] ?? $receipt->location,
                         ]);
 
                         if (isset($receiptData['items'])) {
@@ -265,6 +266,7 @@ class ReimbursementService
                             'vat_classification' => $receiptData['vat_classification'] ?? $receipt->vat_classification,
                             'tin' => $receiptData['tin'] ?? $receipt->tin,
                             'invoice_number' => $receiptData['invoice_number'] ?? $receipt->invoice_number,
+                            'location' => $receiptData['location'] ?? $receipt->location,
                         ]);
 
                         if (isset($receiptData['items'])) {
