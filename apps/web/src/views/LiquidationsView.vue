@@ -1047,18 +1047,10 @@ function finalizeLiquidation() {
         <h1
           class="text-2xl font-bold leading-tight font-heading text-slate-800"
         >
-          {{
-            auth.isAdmin && !showAdminRequestForm
-              ? "Liquidation Console"
-              : "Liquidation"
-          }}
+          {{ auth.isAdmin && !showAdminRequestForm ? "Liquidation Console" : "Liquidation" }}
         </h1>
         <p class="mt-1 text-sm text-slate-400">
-          {{
-            auth.isAdmin && !showAdminRequestForm
-              ? "Review employee liquidation reports, receipts, and settlement balances"
-              : "Reconcile outstanding advances and settle balances"
-          }}
+          {{ auth.isAdmin && !showAdminRequestForm ? "Review and manage employee liquidation settlements" : "Settle outstanding cash advance balances" }}
         </p>
       </div>
     </section>
@@ -1113,19 +1105,14 @@ function finalizeLiquidation() {
       <div
         class="flex flex-col gap-1 px-5 py-4 bg-white border-b border-slate-200 sm:flex-row sm:items-center sm:justify-between"
       >
-        <div>
-          <h2
-            class="text-base font-bold leading-tight font-heading text-slate-800"
-          >
-            Liquidation Management
-          </h2>
-          <p class="mt-0.5 text-xs text-slate-400">
-            Administrative audit queue
-          </p>
-        </div>
-        <span class="kpi-label text-slate-400">
-          <template v-if="store.isLoading">Loading reports</template>
-          <template v-else>Showing {{ sortedRows.length }} reports</template>
+        <h2
+          class="text-sm font-semibold text-slate-700"
+        >
+          Liquidation Reports
+        </h2>
+        <span class="text-xs text-slate-400">
+          <template v-if="store.isLoading">Loading...</template>
+          <template v-else>{{ sortedRows.length }} reports</template>
         </span>
       </div>
 

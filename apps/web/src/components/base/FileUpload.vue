@@ -2,7 +2,6 @@
 import { computed, ref, watch } from 'vue'
 import {
   AlertTriangle,
-  CheckCircle,
   FileText,
   PlusCircle,
   Trash2,
@@ -226,12 +225,8 @@ function onFileInput(event) {
     />
 
     <section v-if="files.length === 0" class="rounded-xl border border-slate-200 bg-white p-4">
-      <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <h3 class="font-heading text-base font-bold text-primary">Upload Receipts</h3>
-        <div class="flex items-center gap-2 text-xs font-bold text-accent">
-          <CheckCircle class="h-4 w-4" />
-          <span>Upload your receipt - system reads the file automatically</span>
-        </div>
+      <div class="mb-4">
+        <h3 class="text-sm font-semibold text-slate-700">Upload Receipts</h3>
       </div>
 
       <div
@@ -309,15 +304,7 @@ function onFileInput(event) {
     <section v-else class="rounded-xl border border-slate-200 bg-white p-4">
       <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 class="font-heading text-base font-bold text-primary">Scanned Receipts</h3>
-          <p class="mt-0.5 text-xs font-semibold text-accent">
-            <template v-if="isProcessingAnyReceipt">
-              Reading receipt data. Please wait...
-            </template>
-            <template v-else>
-              {{ files.length }} uploaded - ready for audit
-            </template>
-          </p>
+          <h3 class="text-sm font-semibold text-slate-700">Receipts ({{ files.length }})</h3>
         </div>
         <div class="flex items-center gap-2">
           <div class="relative inline-block text-left" @click.stop>
@@ -384,7 +371,7 @@ function onFileInput(event) {
     <Transition name="fade">
       <div
         v-if="localError"
-        class="flex items-center justify-between rounded-lg border border-danger/30 bg-danger/10 p-2 text-[10px] font-bold uppercase tracking-widest text-danger"
+        class="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700"
       >
         <span>{{ localError }}</span>
         <button class="hover:text-danger-700" type="button" @click="localError = null">
@@ -425,34 +412,22 @@ function onFileInput(event) {
         <div class="min-w-0 flex-1">
           <div class="flex items-center justify-between gap-3">
             <p class="truncate text-xs font-bold text-slate-700">{{ entry.name }}</p>
-            <span class="shrink-0 text-[9px] font-mono uppercase text-slate-400">{{ formatSize(entry.size) }}</span>
+            <span class="shrink-0 text-xs text-slate-400">{{ formatSize(entry.size) }}</span>
           </div>
 
           <div
             v-if="entry.ocrStatus === 'processing'"
-            class="mt-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-accent animate-pulse"
+            class="mt-1 flex items-center gap-1.5 text-xs text-slate-500"
           >
             <span
               class="h-2.5 w-2.5 rounded-full border-2 border-current border-t-transparent animate-spin"
               aria-hidden="true"
             />
-            Reading receipt...
+            Processing...
           </div>
-          <div v-else-if="entry.ocrStatus === 'done' && entry.ocrData" class="mt-1 flex flex-wrap gap-2">
-            <span class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-accent">
-              <CheckCircle class="h-3 w-3" />
+          <div v-else-if="entry.ocrStatus === 'done' && entry.ocrData" class="mt-1 flex flex-wrap items-center gap-2">
+            <span class="text-xs font-medium text-slate-600">
               PHP {{ Number(entry.ocrData.amount).toLocaleString() }}
-            </span>
-            <span
-              :class="[
-                'border px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-widest',
-                entry.ocrData.confidence < 80
-                  ? 'bg-warning/10 border-warning/20 text-amber-700'
-                  : 'bg-slate-50 border-slate-200 text-slate-500',
-              ]"
-            >
-              {{ entry.ocrData.confidence }}% ACCURACY
-              <span v-if="entry.ocrData.confidence < 80" class="ml-1">CHECK DETAILS</span>
             </span>
           </div>
         </div>

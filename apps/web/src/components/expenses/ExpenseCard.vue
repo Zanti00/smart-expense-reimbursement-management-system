@@ -93,7 +93,6 @@ const canDelete = computed(() =>
         </div>
         <p
           class="text-[10px] text-slate-300 font-semibold uppercase tracking-widest"
-          style="font-family: &quot;Poppins&quot;, sans-serif"
         >
           No Preview
         </p>
@@ -121,7 +120,6 @@ const canDelete = computed(() =>
       <div class="mb-3">
         <h3
           class="font-bold text-slate-800 text-[13px] leading-snug truncate"
-          :style="{ fontFamily: '\'Poppins\', sans-serif' }"
         >
           {{ expense.vendorName || "Unknown Vendor" }}
         </h3>
@@ -134,11 +132,10 @@ const canDelete = computed(() =>
       <div class="flex items-center justify-between mt-auto mb-3">
         <span
           class="px-2.5 py-1 bg-primary/5 text-primary-600 rounded-md text-[11px] font-semibold border border-primary/10 truncate max-w-[55%]"
-          style="font-family: &quot;Poppins&quot;, sans-serif"
         >
           {{ expense.category }}
         </span>
-        <span class="font-bold text-[14px] text-success font-mono">
+        <span class="font-bold text-[14px] text-success">
           {{ expense.amount > 0 ? formatCurrency(expense.amount) : "—" }}
         </span>
       </div>

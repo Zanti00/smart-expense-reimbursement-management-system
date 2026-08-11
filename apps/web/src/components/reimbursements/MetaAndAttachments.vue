@@ -84,7 +84,6 @@ function removeReportFile() {
       <div>
         <h3
           class="text-base font-bold text-primary mb-1"
-          style="font-family: &quot;Poppins&quot;, sans-serif"
         >
           Cutoff Period <span class="text-danger">*</span>
         </h3>
@@ -114,7 +113,6 @@ function removeReportFile() {
     <section class="card p-6 flex flex-col gap-4">
       <h3
         class="text-base font-bold text-primary"
-        style="font-family: &quot;Poppins&quot;, sans-serif"
       >
         Report Attachment
         <span class="text-danger">*</span>
@@ -170,7 +168,6 @@ function removeReportFile() {
           <div class="min-w-0 flex-1">
             <p
               class="text-sm truncate font-semibold text-slate-700"
-              style="font-family: &quot;Poppins&quot;, sans-serif"
             >
               Select file
             </p>

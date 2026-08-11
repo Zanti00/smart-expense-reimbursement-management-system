@@ -7,7 +7,6 @@ import {
   X,
   Upload,
   AlertTriangle,
-  Calculator,
 } from "lucide-vue-next";
 import BaseButton from "@/components/base/BaseButton.vue";
 import FileUpload from "@/components/base/FileUpload.vue";
@@ -145,8 +144,8 @@ function attachmentFileSize(file) {
     class="flex min-h-64 flex-col items-center justify-center gap-4 border-2 border-dashed bg-clinical/20 p-8 text-center card sm:p-16 xl:h-full"
   >
     <FilePieChart class="w-10 h-10 text-slate-200" />
-    <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
-      Select an active advance to clear debt
+    <p class="text-sm text-slate-400">
+      Select a cash advance to liquidate
     </p>
   </div>
 
@@ -155,14 +154,14 @@ function attachmentFileSize(file) {
     class="flex flex-col items-center gap-6 p-8 text-center border-t-2 card border-t-emerald-600 sm:p-12"
   >
     <CheckCircle class="w-12 h-12 text-emerald-600" />
-    <h3 class="text-xs font-bold uppercase tracking-[0.2em] text-primary">
-      Submission Received
+    <h3 class="text-lg font-semibold text-primary">
+      Submitted
     </h3>
-    <p class="text-[11px] font-bold uppercase tracking-widest text-slate-500">
-      Technician report for {{ selectedAdvance.id }} sent to audit.
+    <p class="text-sm text-slate-500">
+      Your liquidation has been submitted for review.
     </p>
     <BaseButton variant="secondary" @click="$emit('reload-console')">
-      RELOAD CONSOLE
+      Back to Liquidations
     </BaseButton>
   </div>
 
@@ -174,22 +173,18 @@ function attachmentFileSize(file) {
       class="flex flex-col gap-3 pb-4 border-b border-slate-100 sm:flex-row sm:items-start sm:justify-between"
     >
       <div class="min-w-0">
-        <p
-          class="mb-1 text-[9px] font-bold uppercase tracking-tighter text-slate-700"
-        >
-          RECONCILING REF: {{ selectedAdvance.id }}
-        </p>
-        <h3 class="text-xs font-bold tracking-widest uppercase text-primary">
+        <h3 class="text-base font-bold text-primary">
           {{ selectedAdvance.purpose }}
         </h3>
+        <p class="mt-1 text-sm font-medium text-slate-500">
+          Ref: {{ selectedAdvance.id }}
+        </p>
       </div>
       <div class="sm:text-right">
-        <p
-          class="mb-1 text-[9px] font-bold uppercase tracking-widest text-slate-400"
-        >
-          OUTSTANDING BALANCE
+        <p class="text-xs font-medium text-slate-500 mb-1">
+          Outstanding Balance
         </p>
-        <p class="font-mono text-2xl font-bold tracking-tighter text-primary">
+        <p class="text-xl font-bold text-primary">
           {{ formatPeso(selectedAdvance.balance || 0) }}
         </p>
       </div>
@@ -199,8 +194,7 @@ function attachmentFileSize(file) {
       <div
         class="flex flex-col gap-2 mb-3 sm:flex-row sm:items-center sm:justify-between"
       >
-        <label class="input-label !mb-0">DIGITAL RECEIPT ATTACHMENTS *</label>
-
+        <label class="input-label !mb-0">Receipt Attachments</label>
       </div>
       <FileUpload
         :model-value="receipts"
@@ -221,10 +215,7 @@ function attachmentFileSize(file) {
       >
         <div>
           <p class="text-base font-bold font-heading text-primary">
-            Receipt Scanning & Extraction
-          </p>
-          <p class="mt-0.5 text-xs font-semibold text-slate-400">
-            Verify the scanned receipt text and figures before submitting.
+            Receipts
           </p>
         </div>
       </div>
@@ -266,16 +257,6 @@ function attachmentFileSize(file) {
                   {{ receipt.name }}
                 </p>
               </div>
-              <span
-                :class="[
-                  'w-fit rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-wide',
-                  receipt.ocrStatus === 'done'
-                    ? 'border-accent/20 bg-accent-50 text-accent'
-                    : 'border-amber-200 bg-amber-50 text-amber-700',
-                ]"
-              >
-                {{ receipt.ocrStatus === "done" ? "AI Scanned" : "Scanning" }}
-              </span>
             </div>
 
             <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -375,7 +356,7 @@ function attachmentFileSize(file) {
       </article>
     </section>
 
-    <section class="p-4 bg-white border rounded-xl border-slate-200">
+    <section class="p-4 space-y-3 bg-white border rounded-xl border-slate-200">
       <input
         ref="reportAttachmentInput"
         type="file"
@@ -383,157 +364,112 @@ function attachmentFileSize(file) {
         class="hidden"
         @change="(e) => $emit('file-selected', e)"
       />
-      <div class="flex flex-col gap-4">
-        <div class="min-w-0">
-          <p class="text-base font-bold font-heading text-primary">
-            Cash Advance Report Letter
-          </p>
-          <p class="mt-1 text-sm text-slate-500">
-            Attach your report letter for liquidation documentation.
-          </p>
-        </div>
 
-        <div v-if="reportAttachment" class="flex flex-col gap-3">
-          <div
-            class="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3"
-          >
-            <div class="flex min-w-0 items-center gap-3">
-              <div
-                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-400"
-              >
-                <FileText class="h-5 w-5" />
-              </div>
-              <div class="min-w-0">
-                <p class="truncate text-sm font-bold text-slate-800">
-                  {{ attachmentFileName(reportAttachment) }}
-                </p>
-                <p
-                  v-if="attachmentFileSize(reportAttachment)"
-                  class="text-xs font-semibold text-slate-400"
-                >
-                  {{ attachmentFileSize(reportAttachment) }}
-                </p>
-              </div>
-            </div>
-            <button
-              class="rounded-full p-2 text-danger transition-colors hover:bg-red-50"
-              type="button"
-              aria-label="Remove report attachment"
-              @click="$emit('file-cleared')"
-            >
-              <X class="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-
-        <div
-          class="flex flex-col gap-4 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/60 p-5 sm:flex-row sm:items-center sm:justify-between"
+      <div class="flex items-center justify-between">
+        <label class="input-label !mb-0">Report Letter</label>
+        <button
+          v-if="!reportAttachment"
+          class="btn btn-cta min-h-[36px] text-xs px-4"
+          type="button"
+          @click="reportAttachmentInput?.click()"
         >
-          <div class="flex min-w-0 items-center gap-4">
-            <div
-              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-accent shadow-sm"
-            >
-              <Upload class="h-5 w-5" />
-            </div>
-            <div class="min-w-0">
-              <p class="text-sm font-bold text-slate-800">Select file</p>
-              <p class="text-xs text-slate-500">
-                Upload report letter (Images, PDF, DOCX)
-              </p>
-            </div>
-          </div>
-          <button
-            class="btn btn-cta min-h-[42px] w-full sm:w-fit"
-            type="button"
-            @click="reportAttachmentInput?.click()"
-          >
-            Browse
-          </button>
-        </div>
+          Browse
+        </button>
       </div>
+
+      <div v-if="reportAttachment" class="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-3">
+        <div class="flex min-w-0 items-center gap-3">
+          <FileText class="h-4 w-4 shrink-0 text-slate-400" />
+          <div class="min-w-0">
+            <p class="truncate text-sm text-slate-700">
+              {{ attachmentFileName(reportAttachment) }}
+            </p>
+            <p
+              v-if="attachmentFileSize(reportAttachment)"
+              class="text-xs text-slate-400"
+            >
+              {{ attachmentFileSize(reportAttachment) }}
+            </p>
+          </div>
+        </div>
+        <button
+          class="rounded-full p-1.5 text-slate-400 transition-colors hover:text-danger hover:bg-red-50"
+          type="button"
+          aria-label="Remove report attachment"
+          @click="$emit('file-cleared')"
+        >
+          <X class="h-4 w-4" />
+        </button>
+      </div>
+
+      <p
+        v-if="!reportAttachment && !needsReportAttachmentReminder"
+        class="text-xs text-slate-400"
+      >
+        Images, PDF, or DOCX accepted.
+      </p>
+
+      <!-- Shortfall Explanation -->
+      <div v-if="variance > 0" class="pt-2 border-t border-slate-100">
+        <label class="block space-y-1">
+          <span class="input-label"
+            >Shortfall Explanation <span class="text-danger">*</span></span
+          >
+          <textarea
+            :value="shortfallExplanation"
+            @input="(e) => $emit('update:shortfallExplanation', e.target.value)"
+            rows="2"
+            class="bg-white resize-none input"
+            placeholder="Explain why the total expense is less than the advanced amount..."
+          />
+        </label>
+      </div>
+
+      <p
+        v-if="needsReportAttachmentReminder"
+        class="flex items-center gap-2 text-xs text-amber-600"
+      >
+        <AlertTriangle class="h-3.5 w-3.5 shrink-0" />
+        Please attach a report letter for overpayment.
+      </p>
     </section>
 
     <section
       v-if="existingLiquidation?.admin_note || existingLiquidation?.adminNote"
       class="p-4 bg-white border rounded-xl border-slate-200"
     >
-      <p class="text-base font-bold font-heading text-primary">
-        Admin Notes / Rejection Feedback
+      <p class="text-sm font-semibold text-slate-700">
+        Admin Notes
       </p>
       <p class="mt-2 text-sm leading-relaxed text-slate-600">
         {{ existingLiquidation.admin_note || existingLiquidation.adminNote }}
       </p>
     </section>
 
-    <section
-      v-if="needsReportAttachmentReminder"
-      class="p-4 border rounded-xl border-amber-200 bg-amber-50"
-    >
-      <div class="flex items-start gap-3">
-        <AlertTriangle class="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
-        <p class="text-sm font-semibold text-amber-800">
-          Don't forget to attach your report for overpayment.
-        </p>
-      </div>
-    </section>
-
-    <!-- Shortfall Explanation -->
-    <section
-      v-if="variance > 0"
-      class="p-4 space-y-2 border rounded-xl border-amber-200 bg-amber-50/50"
-    >
-      <label class="block space-y-1">
-        <span class="font-bold input-label text-amber-800"
-          >Shortfall Explanation <span class="text-danger">*</span></span
-        >
-        <textarea
-          :value="shortfallExplanation"
-          @input="(e) => $emit('update:shortfallExplanation', e.target.value)"
-          rows="3"
-          class="bg-white resize-none input"
-          placeholder="Explain why the total expense is less than the advanced amount (required)..."
-        />
-      </label>
-    </section>
-
     <div class="p-4 mt-2 border border-slate-200 bg-clinical/20 sm:p-5">
-      <div class="flex items-center gap-2 mb-4">
-        <Calculator class="w-4 h-4 opacity-50 text-primary" />
-        <h4
-          class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400"
-        >
-          The Reconciliation (Settlement)
-        </h4>
-      </div>
+      <h4 class="text-sm font-semibold text-slate-700 mb-4">Settlement Summary</h4>
 
       <div class="flex">
         <div class="w-full space-y-4">
-          <div class="flex items-center justify-between gap-3 text-[11px]">
-            <span class="font-bold tracking-tight uppercase text-slate-400"
-              >Total Balance:</span
-            >
-            <span class="font-mono font-bold text-primary">{{
+          <div class="flex items-center justify-between gap-3">
+            <span class="text-sm text-slate-600">Total Balance</span>
+            <span class="font-bold text-primary">{{
               formatPeso(selectedAdvance.balance ?? selectedAdvance.amount ?? 0)
             }}</span>
           </div>
-          <div class="flex items-center justify-between gap-3 text-[11px]">
-            <span class="font-bold tracking-tight uppercase text-danger"
-              >Total Expenses:</span
-            >
-            <span class="font-mono font-bold text-danger"
+          <div class="flex items-center justify-between gap-3">
+            <span class="text-sm text-slate-600">Total Expenses</span>
+            <span class="font-bold text-danger"
               >-{{ formatPeso(totalExpenseAmount) }}</span
             >
           </div>
           <div
             class="flex items-center justify-between gap-3 pt-2 border-t border-slate-200"
           >
-            <span
-              class="text-[10px] font-black uppercase tracking-widest text-slate-600"
-              >Outstanding Balance:</span
-            >
+            <span class="text-sm text-slate-600">Outstanding Balance</span>
             <span
               :class="[
-                'font-mono text-lg font-black tracking-tighter',
+                'text-lg font-black',
                 liquidationStatus === 'Liquidated'
                   ? 'text-emerald-600'
                   : 'text-primary',
@@ -572,7 +508,7 @@ function attachmentFileSize(file) {
           @click="$emit('forward-overpayment')"
         >
           <Upload class="w-4 h-4" />
-          Reimbursement Filing
+          File Reimbursement
         </button>
       </div>
     </section>
@@ -586,7 +522,7 @@ function attachmentFileSize(file) {
         :disabled="submitting"
         @click="$emit('delete-liquidation')"
       >
-        DELETE SETTLEMENT
+        Delete
       </BaseButton>
 
       <BaseButton
@@ -610,14 +546,14 @@ function attachmentFileSize(file) {
           />
           <span>{{
             existingLiquidation
-              ? "UPDATING SETTLEMENT..."
-              : "ENCODING SETTLEMENT..."
+              ? "Updating..."
+              : "Submitting..."
           }}</span>
         </div>
         <div v-else class="flex items-center gap-2">
           <Upload class="w-4 h-4" />
           <span>{{
-            existingLiquidation ? "UPDATE SETTLEMENT" : "SUBMIT FOR AUDIT"
+            existingLiquidation ? "Update" : "Submit"
           }}</span>
         </div>
       </BaseButton>

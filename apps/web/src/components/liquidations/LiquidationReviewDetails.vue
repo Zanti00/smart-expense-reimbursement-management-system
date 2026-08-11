@@ -91,13 +91,7 @@ defineEmits(["view-receipt"]);
     <section class="space-y-4">
       <div class="flex items-center justify-between gap-3">
         <div>
-          <h3 class="text-base font-bold font-heading text-slate-800">
-            Submitted Receipt Audit
-          </h3>
-          <p class="text-xs text-slate-400">
-            Accept or reject each receipt before finalizing the liquidation
-            balance.
-          </p>
+          <h3 class="text-sm font-semibold text-slate-700">Receipts</h3>
         </div>
         <span class="kpi-label text-slate-400"
           >{{ reviewReceipts.length }} receipts</span
@@ -188,9 +182,6 @@ defineEmits(["view-receipt"]);
           <h3 class="text-base font-bold font-heading text-slate-800">
             Report Letter Attachment
           </h3>
-          <p class="text-xs text-slate-400">
-            Supporting documentation for this liquidation.
-          </p>
         </div>
       </div>
       <a

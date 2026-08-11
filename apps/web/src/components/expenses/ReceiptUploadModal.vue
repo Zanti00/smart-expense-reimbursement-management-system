@@ -401,7 +401,6 @@ function formatCurrency(amount) {
           <div class="flex items-center gap-3">
             <h2
               class="text-xl font-bold text-primary"
-              style="font-family: 'Poppins', sans-serif"
             >
               {{ receiptToEdit ? "Edit Receipt" : "Receipt Scanned" }}
             </h2>
@@ -451,7 +450,6 @@ function formatCurrency(amount) {
                 </div>
                 <p
                   class="text-[10px] text-slate-300 font-semibold uppercase tracking-widest text-center px-4"
-                  style="font-family: 'Poppins', sans-serif"
                 >
                   {{
                     uploadFile
@@ -490,7 +488,7 @@ function formatCurrency(amount) {
               class="hidden"
               @change="handleUploadFileSelect"
             />
-            <p class="mt-4 text-[11px] font-mono text-slate-400">
+            <p class="mt-4 text-[11px] text-slate-400">
               {{ uploadFile ? uploadFile.name : "No file selected" }}
             </p>
           </div>
@@ -729,13 +727,13 @@ function formatCurrency(amount) {
               >
                 <div class="flex justify-between text-sm">
                   <span class="text-slate-500">VAT-Exclusive Subtotal</span>
-                  <span class="font-mono font-medium text-slate-700">{{
+                  <span class="font-medium text-slate-700">{{
                     formatCurrency(vatExclusiveSubtotal)
                   }}</span>
                 </div>
                 <div class="flex justify-between text-sm">
                   <span class="text-slate-500">Inclusive VAT Amount</span>
-                  <span class="font-mono font-medium text-slate-700">{{
+                  <span class="font-medium text-slate-700">{{
                     formatCurrency(Number(uploadForm.vat_amount) || 0)
                   }}</span>
                 </div>
@@ -743,7 +741,7 @@ function formatCurrency(amount) {
                   class="pt-3 border-t border-slate-200 flex justify-between items-center"
                 >
                   <span class="font-bold text-slate-700">Total Amount</span>
-                  <span class="text-2xl font-black text-primary font-mono">{{
+                  <span class="text-2xl font-black text-primary">{{
                     formatCurrency(Number(uploadForm.total_amount) || 0)
                   }}</span>
                 </div>
