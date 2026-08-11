@@ -5,7 +5,7 @@
 SERMS is a high-precision, Modular Monolith financial compliance application built in Laravel 13 and Vue 3, utilizing automated OCR queues, BIR-compliant VAT logic, and strict append-only audit tracking.
 
 ## Read Order (Every Session)
-1. `docs/index.md` → 2. `docs/PRD.md` → 3. `docs/SAD.md` → 4. `docs/SDD.md` → 5. `docs/DSD.md` → 6. `docs/Build.md` → 7. `docs/AGENTS.md`
+1. `docs/index.md` → 2. `docs/PRD.md` → 3. `docs/SAD.md` → 4. `docs/SDD.md` → 5. `docs/DSD.md` → 6. `docs/Build.md` → 7. `AGENTS.md`
 
 ## Subagents & Roles
 

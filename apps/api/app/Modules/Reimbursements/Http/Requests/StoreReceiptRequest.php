@@ -32,7 +32,9 @@ class StoreReceiptRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'file' => 'required|file|mimes:jpeg,png,pdf|max:2048',
+            'file' => 'nullable|file|mimes:jpeg,png,pdf|max:2048',
+            'files' => 'nullable|array',
+            'files.*' => 'nullable|file|mimes:jpeg,png,pdf|max:2048',
             'expense_category_id' => 'nullable|exists:expense_categories,id',
             'vendor_name' => 'nullable|string|max:255',
             'transaction_date' => 'nullable|date',

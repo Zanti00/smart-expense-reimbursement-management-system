@@ -27,6 +27,7 @@ const props = defineProps({
 defineEmits(["select", "view", "delete", "edit", "forward-reimbursement"]);
 
 const isMenuOpen = ref(false);
+const imageError = ref(false);
 const canEdit = computed(
   () => String(props.expense?.status || "").toLowerCase() === "processed",
 );
@@ -68,10 +69,11 @@ const canDelete = computed(() =>
       class="flex-shrink-0 w-full overflow-hidden border-b aspect-square bg-slate-50 border-slate-100"
     >
       <img
-        v-if="expense.thumbnail"
+        v-if="expense.thumbnail && !imageError"
         :src="expense.thumbnail"
         :alt="expense.fileName"
         class="object-cover w-full h-full transition-transform duration-500 opacity-100 group-hover:scale-105"
+        @error="imageError = true"
       />
       <div
         v-else

@@ -45,11 +45,23 @@ class Receipt extends Model
             return null;
         }
         
+        $baseUrl = config('filesystems.disks.supabase.url');
+
+        // Handle array of file paths
+        if (is_array($this->file_path)) {
+            return array_map(function ($path) use ($baseUrl) {
+                if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+                    return $path;
+                }
+                return $baseUrl ? rtrim($baseUrl, '/') . '/' . ltrim($path, '/') : null;
+            }, $this->file_path);
+        }
+
+        // Handle single string (legacy)
         if (str_starts_with($this->file_path, 'http://') || str_starts_with($this->file_path, 'https://')) {
             return $this->file_path;
         }
 
-        $baseUrl = config('filesystems.disks.supabase.url');
         if ($baseUrl) {
             return rtrim($baseUrl, '/') . '/' . ltrim($this->file_path, '/');
         }
@@ -57,6 +69,10 @@ class Receipt extends Model
     }
 
     protected $casts = [
+        'file_path' => 'array',
+        'file_hash' => 'array',
+        'file_type' => 'array',
+        'file_size_bytes' => 'array',
         'total_amount' => 'decimal:2',
         'vat_amount' => 'decimal:2',
         'ocr_confidence_score' => 'decimal:2',
