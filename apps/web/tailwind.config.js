@@ -67,7 +67,7 @@ export default {
         'slate-600': '#334155', // Match definition
       },
       fontFamily: {
-        sans: ['Open Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        sans: ['Poppins', 'Montserrat', 'Open Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         heading: ['Poppins', 'Montserrat', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         display: ['Montserrat', 'Poppins', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],

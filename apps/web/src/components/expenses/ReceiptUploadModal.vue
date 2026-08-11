@@ -401,7 +401,6 @@ function formatCurrency(amount) {
           <div class="flex items-center gap-3">
             <h2
               class="text-xl font-bold text-primary"
-              style="font-family: 'Poppins', sans-serif"
             >
               {{ receiptToEdit ? "Edit Receipt" : "Receipt Scanned" }}
             </h2>
@@ -451,7 +450,6 @@ function formatCurrency(amount) {
                 </div>
                 <p
                   class="text-[10px] text-slate-300 font-semibold uppercase tracking-widest text-center px-4"
-                  style="font-family: 'Poppins', sans-serif"
                 >
                   {{
                     uploadFile

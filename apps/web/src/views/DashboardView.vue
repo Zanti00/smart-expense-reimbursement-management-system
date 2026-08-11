@@ -199,10 +199,10 @@ function isAmberWarning(dateStr) {
             <Clock class="w-5 h-5 text-warning" />
           </div>
           <div>
-            <h3 class="text-sm font-semibold text-warning" style="font-family: 'Poppins', sans-serif;">
+            <h3 class="text-sm font-semibold text-warning">
               Upcoming Liquidation Deadline
             </h3>
-            <p class="text-white/50 text-xs mt-0.5" style="font-family: 'Open Sans', sans-serif;">
+            <p class="text-white/50 text-xs mt-0.5">
               Next cutoff period is approaching. Submit your liquidations on time.
             </p>
           </div>
@@ -210,14 +210,14 @@ function isAmberWarning(dateStr) {
 
         <div class="flex items-center gap-3 bg-white/10 border border-white/20 rounded-xl px-5 py-3 backdrop-blur-sm self-start sm:self-auto">
           <div class="flex flex-col items-center">
-            <span class="text-2xl font-bold text-white leading-none" style="font-family: 'Poppins', sans-serif;">
+            <span class="text-2xl font-bold text-white leading-none">
               {{ String(cutoffDays).padStart(2, '0') }}
             </span>
             <span class="text-[10px] text-warning/80 font-semibold tracking-widest mt-0.5">DAYS</span>
           </div>
           <span class="text-2xl text-white/30 font-thin">:</span>
           <div class="flex flex-col items-center">
-            <span class="text-2xl font-bold text-white leading-none" style="font-family: 'Poppins', sans-serif;">
+            <span class="text-2xl font-bold text-white leading-none">
               {{ String(cutoffHours).padStart(2, '0') }}
             </span>
             <span class="text-[10px] text-warning/80 font-semibold tracking-widest mt-0.5">HRS</span>
@@ -241,7 +241,7 @@ function isAmberWarning(dateStr) {
       <div class="card p-6 lg:col-span-2">
         <div class="flex items-center justify-between mb-5">
           <div>
-            <h3 class="text-sm font-semibold text-slate-800" style="font-family: 'Poppins', sans-serif;">
+            <h3 class="text-sm font-semibold text-slate-800">
               Monthly Spending Trend
             </h3>
             <p class="text-xs text-slate-400 mt-0.5">January – June 2024</p>
@@ -261,7 +261,7 @@ function isAmberWarning(dateStr) {
       <!-- Doughnut Chart -->
       <div class="card p-6">
         <div class="mb-5">
-          <h3 class="text-sm font-semibold text-slate-800" style="font-family: 'Poppins', sans-serif;">
+          <h3 class="text-sm font-semibold text-slate-800">
             Spend by Category
           </h3>
           <p class="text-xs text-slate-400 mt-0.5">Distribution breakdown</p>
@@ -285,12 +285,11 @@ function isAmberWarning(dateStr) {
     <!-- ── Employee History Table ── -->
     <div v-if="!auth.isAdmin" class="card overflow-hidden">
       <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-        <h3 class="text-sm font-semibold text-slate-800" style="font-family: 'Poppins', sans-serif;">
+        <h3 class="text-sm font-semibold text-slate-800">
           My Recent Submissions
         </h3>
         <button
           class="text-xs font-semibold text-accent hover:text-accent-700 flex items-center gap-1 transition-colors"
-          style="font-family: 'Open Sans', sans-serif;"
           @click="router.push('/reimbursements')"
         >
           View all <ArrowRight class="w-3.5 h-3.5" />
@@ -341,13 +340,12 @@ function isAmberWarning(dateStr) {
       <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
         <div class="flex items-center gap-2">
           <AlertTriangle class="w-4 h-4 text-warning" />
-          <h3 class="text-sm font-semibold text-slate-800" style="font-family: 'Poppins', sans-serif;">
+          <h3 class="text-sm font-semibold text-slate-800">
             Cash Advance Recovery Queue
           </h3>
         </div>
         <button
           class="text-xs font-semibold text-accent hover:text-accent-700 flex items-center gap-1 transition-colors"
-          style="font-family: 'Open Sans', sans-serif;"
           @click="router.push('/cash-advances')"
         >
           View full table <ArrowRight class="w-3.5 h-3.5" />

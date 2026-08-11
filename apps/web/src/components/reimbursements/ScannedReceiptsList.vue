@@ -102,7 +102,6 @@ function removeReceiptItem(receipt, index) {
     <div class="flex items-center justify-between mb-5">
       <h2
         class="text-lg font-bold text-primary"
-        style="font-family: 'Poppins', sans-serif"
       >
         Scanned Receipts
       </h2>
@@ -134,7 +133,6 @@ function removeReceiptItem(receipt, index) {
           >
           <span
             class="text-xs font-bold text-primary"
-            style="font-family: 'Poppins', sans-serif"
             >{{ cleanName(receipt.fileName) }}</span
           >
         </div>
@@ -165,7 +163,6 @@ function removeReceiptItem(receipt, index) {
                 <ImageIcon v-else class="w-12 h-12 opacity-40" />
                 <p
                   class="text-[10px] font-semibold uppercase tracking-widest"
-                  style="font-family: 'Poppins', sans-serif"
                 >
                   No Preview
                 </p>
