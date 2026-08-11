@@ -161,6 +161,21 @@ const {
 
 const isDeleteModalOpen = ref(false);
 const deletingRequestId = ref(null);
+const newRequestFileInput = ref(null);
+
+function handleNewRequest() {
+  newRequestFileInput.value?.click();
+}
+
+function handleNewRequestFiles(e) {
+  const files = e.target.files;
+  if (files && files.length > 0) {
+    // Store File objects in a module-level holder accessible by the form view
+    window.__serms_pending_files = Array.from(files);
+    router.push('/reimbursements/new');
+  }
+  if (e.target) e.target.value = "";
+}
 
 function handleEdit(row) {
   router.push({ name: "ReimbursementEdit", params: { id: row.id } });
@@ -194,6 +209,16 @@ onMounted(() => store.fetchAll());
 
 <template>
   <div class="flex flex-col gap-6 font-sans animate-fade-up">
+    <!-- Hidden file input for New Request -->
+    <input
+      ref="newRequestFileInput"
+      type="file"
+      class="hidden"
+      accept=".jpg,.jpeg,.png,.pdf"
+      multiple
+      @change="handleNewRequestFiles"
+    />
+
     <!-- ── Page Header ── -->
     <div
       class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"
@@ -229,7 +254,7 @@ onMounted(() => store.fetchAll());
           id="new-reimbursement-btn"
           variant="cta"
           class="min-h-[42px] w-full sm:w-fit"
-          @click="router.push('/reimbursements/new')"
+          @click="handleNewRequest"
         >
           <Plus class="w-4 h-4" /> New Request
         </BaseButton>

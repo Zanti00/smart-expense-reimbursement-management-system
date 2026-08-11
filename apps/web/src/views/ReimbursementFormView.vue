@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onBeforeUnmount, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, nextTick, onBeforeUnmount, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { usePolicyStore } from "@/stores/policy";
 import { useReceiptStore } from "@/stores/receipts";
@@ -13,7 +13,6 @@ import ScannedReceiptsList from "@/components/reimbursements/ScannedReceiptsList
 import MetaAndAttachments from "@/components/reimbursements/MetaAndAttachments.vue";
 import ReimbursementSummaryPanel from "@/components/reimbursements/ReimbursementSummaryPanel.vue";
 import ReimbursementFormHeader from "@/components/reimbursements/ReimbursementFormHeader.vue";
-import ReimbursementFormEmptyState from "@/components/reimbursements/ReimbursementFormEmptyState.vue";
 import ReceiptQualityRejectionModal from "@/components/reimbursements/ReceiptQualityRejectionModal.vue";
 import SegmentedReceiptUpload from "@/components/reimbursements/SegmentedReceiptUpload.vue";
 import ConfirmModal from "@/components/base/ConfirmModal.vue";
@@ -68,6 +67,7 @@ const {
   receiptInput,
   handleReceiptDrop,
   handleReceiptSelect,
+  addReceiptFiles,
   removeReceipt,
   clearDraftReceipts,
   qualityRejection,
@@ -78,6 +78,8 @@ const {
   submitSegments,
 } = useReceiptUploads();
 
+const uploadMode = ref('single');
+
 function handleRetake() {
   if (qualityRejection.value?.receiptId) {
     removeReceipt({ id: qualityRejection.value.receiptId });
@@ -86,6 +88,23 @@ function handleRetake() {
   setTimeout(() => {
     receiptInput.value?.click();
   }, 100);
+}
+
+function triggerUpload(mode = 'single') {
+  uploadMode.value = mode;
+  receiptInput.value?.click();
+}
+
+function onReceiptSelect(e) {
+  if (uploadMode.value === 'multi') {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      submitSegments(files);
+    }
+    if (e.target) e.target.value = '';
+  } else {
+    handleReceiptSelect(e);
+  }
 }
 
 const receipts = computed(() => [
@@ -188,6 +207,15 @@ onMounted(async () => {
   receiptsStore.fetchCategories();
   
   window.addEventListener('open-receipt-upload', handleOpenReceiptUpload);
+
+  // Pick up files passed from the Reimbursements page via global
+  if (!props.id && !props.forwardedReceipts.length && window.__serms_pending_files) {
+    const pendingFiles = window.__serms_pending_files;
+    delete window.__serms_pending_files;
+    nextTick(() => {
+      addReceiptFiles(pendingFiles);
+    });
+  }
 
   if (isEditMode.value) {
     fetching.value = true;
@@ -320,7 +348,7 @@ function dismiss() {
       class="hidden"
       accept=".jpg,.jpeg,.png,.pdf"
       multiple
-      @change="handleReceiptSelect"
+      @change="onReceiptSelect"
     />
 
     <!--  Page Header (standalone route mode only)  -->
@@ -356,23 +384,13 @@ function dismiss() {
         </p>
       </div>
 
-      <!--  Empty State (standalone + no upload yet)  -->
-      <ReimbursementFormEmptyState
-        v-if="receipts.length === 0 && !isEditMode"
-        :receiptDrag="receiptDrag"
-        @dragover="receiptDrag = true"
-        @dragleave="receiptDrag = false"
-        @drop="handleReceiptDrop"
-        @click="receiptInput?.click()"
-      />
-
-      <template v-else>
+      <template v-if="receipts.length > 0 || isEditMode">
         <!--  CARD 1: Upload Receipt Management  -->
         <ReceiptsManagementHeader
           v-if="!isForwardedMode"
           :receipt-count="receipts.length"
-          @add-receipts="receiptInput?.click()"
-          @open-segmented-upload="showSegmentedUpload = true"
+          @add-receipts="triggerUpload('single')"
+          @open-segmented-upload="triggerUpload('multi')"
         />
 
         <!-- Segmented Upload Panel -->

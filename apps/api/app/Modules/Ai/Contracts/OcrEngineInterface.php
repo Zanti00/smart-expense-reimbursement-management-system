@@ -5,9 +5,9 @@ namespace App\Modules\Ai\Contracts;
 interface OcrEngineInterface
 {
     /**
-     * Parse an uploaded receipt image file path and extract relevant financial data.
+     * Parse uploaded receipt image file paths and extract relevant financial data.
      *
-     * @param string $filePath
+     * @param array $filePaths
      * @return array{
      *     vendor_name: string|null,
      *     transaction_date: string|null,
@@ -18,5 +18,5 @@ interface OcrEngineInterface
      *     ocr_confidence_score: float
      * }
      */
-    public function extractReceiptData(string $filePath): array;
+    public function extractReceiptData(array $filePaths): array;
 }

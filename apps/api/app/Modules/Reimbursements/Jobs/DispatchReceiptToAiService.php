@@ -45,20 +45,22 @@ class DispatchReceiptToAiService implements ShouldQueue
             'receipt_id' => $this->receipt->id,
         ]);
 
-        $fileUrl = $this->receipt->file_url;
+        $fileUrls = $this->receipt->file_url;
 
-        if (!$fileUrl) {
+        if (empty($fileUrls)) {
             Log::warning('DispatchReceiptToAiService: receipt has no file URL, skipping.', [
                 'receipt_id' => $this->receipt->id,
             ]);
             return;
         }
 
+        $urlsArray = is_array($fileUrls) ? $fileUrls : [$fileUrls];
+
         $baseUrl = config('services.ai_service.callback_base_url') ?: config('app.url');
         $callbackUrl = rtrim((string) $baseUrl, '/')
             . "/api/reimbursements/receipts/{$this->receipt->id}/ocr-callback";
 
-        $ocrEngine->sendForProcessing($this->receipt->id, $fileUrl, $callbackUrl);
+        $ocrEngine->sendForProcessing($this->receipt->id, $urlsArray, $callbackUrl);
 
         Log::info('DispatchReceiptToAiService: dispatch accepted by AI service.', [
             'receipt_id'   => $this->receipt->id,

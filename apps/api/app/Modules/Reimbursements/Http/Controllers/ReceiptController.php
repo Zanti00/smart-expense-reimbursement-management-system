@@ -74,14 +74,38 @@ class ReceiptController extends Controller
      */
     public function store(StoreReceiptRequest $request)
     {
+        $fileInput = $request->file('files') ?: $request->file('file');
+
         $receipt = $this->service->storeReceipt(
             $request->user(),
             $request->validated(),
-            $request->file('file')
+            $fileInput
         );
 
         return response()->json([
             'message' => 'Receipt uploaded and stored successfully.',
+            'data' => $receipt,
+        ], 201);
+    }
+
+    /**
+     * Store a multi-page (segmented) receipt in the database.
+     */
+    public function storeSegmented(Request $request)
+    {
+        $request->validate([
+            'files' => 'required|array|min:1',
+            'files.*' => 'required|file|mimes:jpeg,png,pdf|max:2048',
+        ]);
+
+        $receipt = $this->service->storeReceipt(
+            $request->user(),
+            $request->all(),
+            $request->file('files')
+        );
+
+        return response()->json([
+            'message' => 'Segmented receipt uploaded and stored successfully.',
             'data' => $receipt,
         ], 201);
     }

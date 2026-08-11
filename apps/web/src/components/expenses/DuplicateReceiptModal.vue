@@ -10,6 +10,7 @@ const { addToast } = useToast();
 const showModal = ref(false);
 const similarityScore = ref(0);
 const duplicateReceiptId = ref(null);
+const customMessage = ref('');
 
 const currentUser = computed(() => authStore.user);
 
@@ -24,10 +25,11 @@ onUnmounted(() => {
 function handleDuplicateEvent(e) {
   similarityScore.value = e.detail?.similarityScore || 1.0;
   duplicateReceiptId.value = e.detail?.receiptId || null;
+  customMessage.value = e.detail?.message || '';
   showModal.value = true;
   
   addToast({ 
-    message: 'Duplicate receipt detected based on semantic similarity.', 
+    message: customMessage.value || 'Duplicate receipt detected.', 
     type: 'error' 
   });
 }
@@ -63,9 +65,12 @@ function handleUploadNew() {
         </div>
         
         <div class="p-6 text-slate-600 text-sm">
-          <p class="mb-4">
+          <p class="mb-4" v-if="customMessage">
+            {{ customMessage }}
+          </p>
+          <p class="mb-4" v-else>
             The receipt you just uploaded appears to be a duplicate of an existing record 
-            (Similarity Score: <strong>{{ (similarityScore * 100).toFixed(0) }}%</strong>).
+            <span v-if="similarityScore > 0 && similarityScore < 1.0">(Similarity Score: <strong>{{ (similarityScore * 100).toFixed(0) }}%</strong>)</span>.
           </p>
           <p>
             This receipt has been flagged and rejected. It is strictly prohibited to upload the same receipt twice. You must upload a new receipt.
