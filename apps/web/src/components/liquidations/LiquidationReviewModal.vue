@@ -1,5 +1,5 @@
 <script setup>
-import { FileText, X, XCircle, ShieldCheck } from "lucide-vue-next";
+import { X, XCircle, ShieldCheck } from "lucide-vue-next";
 import { formatPeso } from "@/utils/formatters";
 import LiquidationReviewDetails from "@/components/liquidations/LiquidationReviewDetails.vue";
 
@@ -61,10 +61,7 @@ defineEmits(["close", "view-receipt", "reject", "approve"]);
         class="flex items-center justify-between px-4 py-4 border-b border-slate-200 bg-slate-50/80 sm:px-6"
       >
         <div class="min-w-0">
-          <div class="flex items-center gap-2 mb-1">
-            <FileText class="w-4 h-4 text-accent" />
-            <span class="section-label">Liquidation Review</span>
-          </div>
+          <h2 class="font-heading text-xl font-bold text-primary">Liquidation Review</h2>
         </div>
         <button
           class="inline-flex items-center justify-center w-10 h-10 transition-colors rounded-full text-slate-500 hover:bg-slate-100 hover:text-danger"

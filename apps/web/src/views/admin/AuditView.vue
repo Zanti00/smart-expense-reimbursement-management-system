@@ -1,7 +1,7 @@
 <script setup>
 import BaseTable from '@/components/base/BaseTable.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
-import { Download, Activity, Search, Filter } from 'lucide-vue-next'
+import { Download, Search, Filter } from 'lucide-vue-next'
 
 const MOCK_LOGS = [
   { id: 10, timestamp: '2026-04-06 15:00:00', user: 'System',       action: 'CREATE_PENALTY', entity: 'POL-PENALTY', ip: 'internal',     role: 'system' },
@@ -40,10 +40,7 @@ const ACTION_MAP = {
     <!-- Page Header -->
     <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
       <div class="min-w-0">
-        <div class="mb-2 flex items-center gap-2">
-          <Activity class="h-3.5 w-3.5 text-accent" />
-          <span class="section-label">Oversight & Assurance</span>
-        </div>
+
         <h1 class="font-heading text-2xl font-bold leading-tight text-slate-800">
           Audit & Compliance
         </h1>

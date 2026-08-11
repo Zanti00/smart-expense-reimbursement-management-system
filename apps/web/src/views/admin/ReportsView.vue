@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { Line } from 'vue-chartjs'
 import BaseButton from '@/components/base/BaseButton.vue'
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler } from 'chart.js'
-import { FileBarChart2, Download, FileType2, FileSpreadsheet, Activity, ChevronDown } from 'lucide-vue-next'
+import { FileBarChart2, Download, FileType2, FileSpreadsheet, ChevronDown } from 'lucide-vue-next'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler)
 
@@ -93,10 +93,7 @@ const lineOptions = {
     <!-- Page Header -->
     <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
       <div class="min-w-0">
-        <div class="mb-2 flex items-center gap-2">
-          <Activity class="h-3.5 w-3.5 text-accent" />
-          <span class="section-label">General Reports</span>
-        </div>
+
         <h1 class="font-heading text-2xl font-bold leading-tight text-slate-800">
           Reports
         </h1>

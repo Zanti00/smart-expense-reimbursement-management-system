@@ -4,7 +4,7 @@ import { usePolicyStore } from '@/stores/policy'
 import { useAuthStore } from '@/stores/auth'
 import BaseButton from '@/components/base/BaseButton.vue'
 import SkeletonLoader from '@/components/base/SkeletonLoader.vue'
-import { ShieldCheck, Plus, Trash2, Save, X, Clock } from 'lucide-vue-next'
+import { Plus, Trash2, Save, X, Clock } from 'lucide-vue-next'
 
 const policyStore = usePolicyStore()
 const authStore = useAuthStore()
@@ -75,10 +75,7 @@ function formatDate(ds) {
     <!-- Page Header -->
     <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
       <div class="min-w-0">
-        <div class="mb-2 flex items-center gap-2">
-          <ShieldCheck class="h-3.5 w-3.5 text-accent" />
-          <span class="section-label">Settings Configuration</span>
-        </div>
+
         <h1 class="font-heading text-2xl font-bold leading-tight text-slate-800">
           Policy Engine
         </h1>

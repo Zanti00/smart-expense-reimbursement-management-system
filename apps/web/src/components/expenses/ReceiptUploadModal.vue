@@ -12,7 +12,6 @@ import {
 } from "@/utils/receiptUtils";
 import {
   X,
-  Sparkles,
   UploadCloud,
   FileText,
   ChevronDown,
@@ -406,12 +405,6 @@ function formatCurrency(amount) {
             >
               {{ receiptToEdit ? "Edit Receipt" : "Receipt Scanned" }}
             </h2>
-            <span
-              class="bg-accent-50 text-accent px-3 py-1 rounded-full text-[11px] font-bold flex items-center gap-1.5 border border-accent/20"
-            >
-              <Sparkles class="w-3.5 h-3.5 fill-accent" />
-              AI Read
-            </span>
           </div>
           <button
             @click="close"
@@ -580,12 +573,6 @@ function formatCurrency(amount) {
                     class="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
                   />
                 </div>
-                <span
-                  class="bg-accent-50 text-accent border border-accent/20 px-4 py-2 rounded-lg flex items-center gap-2 text-[11px] font-bold whitespace-nowrap shadow-sm"
-                >
-                  <Sparkles class="w-3.5 h-3.5 fill-accent" />
-                  [AI-Suggested]
-                </span>
               </div>
             </div>
 
@@ -617,13 +604,6 @@ function formatCurrency(amount) {
                     :disabled="receiptsStore.isSaving"
                   />
                 </div>
-                <span
-                  v-if="receiptToEdit?.currency"
-                  class="bg-accent-50 text-accent border border-accent/20 px-4 py-2 rounded-lg flex items-center gap-2 text-[11px] font-bold whitespace-nowrap shadow-sm"
-                >
-                  <Sparkles class="w-3.5 h-3.5 fill-accent" />
-                  [AI-Detected]
-                </span>
               </div>
             </div>
 

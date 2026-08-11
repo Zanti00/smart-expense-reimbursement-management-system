@@ -5,7 +5,6 @@ import {
   Image as ImageIcon,
   Trash2,
   MapPin,
-  Sparkles,
   ChevronDown,
   X,
   PlusCircle,
@@ -284,11 +283,6 @@ function removeReceiptItem(receipt, index) {
                     class="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
                   />
                 </div>
-                <span
-                  class="bg-accent text-white px-3 py-2 rounded-lg text-[11px] font-bold flex items-center gap-1.5 flex-shrink-0"
-                >
-                  <Sparkles class="w-3 h-3 fill-white" /> AI Detected
-                </span>
               </div>
             </div>
 

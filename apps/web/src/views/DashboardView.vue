@@ -175,10 +175,7 @@ function isAmberWarning(dateStr) {
     <!-- ── Page Header ── -->
     <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
       <div class="min-w-0">
-        <div class="mb-2 flex items-center gap-2">
-          <div class="w-1.5 h-1.5 bg-success rounded-full animate-pulse" />
-          <span class="section-label">Financial Overview</span>
-        </div>
+
         <h1 class="font-heading text-2xl font-bold leading-tight text-slate-800">
           Welcome back, <span class="text-primary">{{ auth.user?.name?.split(' ')[0] }}</span> 👋
         </h1>

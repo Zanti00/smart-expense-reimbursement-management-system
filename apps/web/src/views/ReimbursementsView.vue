@@ -21,7 +21,6 @@ import { useReimbursementDetails } from "@/composables/reimbursements/useReimbur
 import { useReimbursementDecisions } from "@/composables/reimbursements/useReimbursementDecisions";
 import {
   Plus,
-  Activity,
   ShieldCheck,
   XCircle,
   Clock,
@@ -225,10 +224,6 @@ onMounted(() => store.fetchAll());
       class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"
     >
       <div class="min-w-0">
-        <div class="flex items-center gap-2 mb-2">
-          <Activity class="w-3.5 h-3.5 text-accent" />
-          <span class="section-label">Claim Records</span>
-        </div>
         <h1
           class="text-2xl font-bold leading-tight font-heading text-slate-800"
         >

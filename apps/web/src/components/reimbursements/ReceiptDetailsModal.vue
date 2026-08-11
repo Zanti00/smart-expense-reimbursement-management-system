@@ -10,7 +10,6 @@ import {
   ArrowLeft,
   CalendarDays,
   X,
-  Sparkles,
   CheckCircle,
   FileText,
   Download,
@@ -181,34 +180,6 @@ watch(
 
         <div class="flex-1 overflow-y-auto bg-slate-50 p-5 scrollbar-thin">
           <div
-            class="mb-4 flex flex-col gap-3 rounded-lg border border-accent/20 bg-accent-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-          >
-            <div class="flex items-center gap-3">
-              <span
-                class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-accent shadow-sm"
-              >
-                <Sparkles class="h-4 w-4" />
-              </span>
-              <div>
-                <p
-                  class="text-xs font-bold uppercase tracking-[0.12em] text-accent"
-                >
-                  AI Scanned
-                </p>
-                <p class="text-sm font-semibold text-primary">
-                  Details automatically extracted from the uploaded receipt.
-                </p>
-              </div>
-            </div>
-            <span
-              class="inline-flex w-fit items-center gap-1 rounded-full bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-accent shadow-sm"
-            >
-              <CheckCircle class="h-3.5 w-3.5" />
-              Verified fields
-            </span>
-          </div>
-
-          <div
             class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
           >
             <div class="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)]">
@@ -296,12 +267,6 @@ watch(
                   <label class="space-y-1">
                     <span class="flex items-center justify-between gap-2">
                       <span class="input-label">TIN Number</span>
-                      <span
-                        class="inline-flex items-center gap-1 rounded-full bg-accent-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent"
-                      >
-                        <Sparkles class="h-3 w-3" />
-                        AI Read
-                      </span>
                     </span>
                     <div v-if="isProcessing" class="h-10 w-full animate-pulse rounded-lg bg-slate-200"></div>
                     <input

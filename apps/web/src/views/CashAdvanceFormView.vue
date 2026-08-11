@@ -298,10 +298,7 @@ function goBack() {
               <ArrowLeft class="h-4 w-4" />
             </button>
             <div class="min-w-0">
-              <div class="mb-2 flex items-center gap-2">
-                <FileText class="h-3.5 w-3.5 text-accent" />
-                <span class="section-label">Advance Request</span>
-              </div>
+
               <h1
                 class="font-heading text-2xl font-bold leading-tight text-slate-800"
               >
