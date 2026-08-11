@@ -60,9 +60,7 @@ defineEmits(["close", "view-receipt", "reject", "approve"]);
       <header
         class="flex items-center justify-between px-4 py-4 border-b border-slate-200 bg-slate-50/80 sm:px-6"
       >
-        <div class="min-w-0">
-          <h2 class="font-heading text-xl font-bold text-primary">Liquidation Review</h2>
-        </div>
+        <h2 class="text-base font-semibold text-slate-800">Liquidation Review</h2>
         <button
           class="inline-flex items-center justify-center w-10 h-10 transition-colors rounded-full text-slate-500 hover:bg-slate-100 hover:text-danger"
           type="button"
@@ -112,7 +110,7 @@ defineEmits(["close", "view-receipt", "reject", "approve"]);
               @click="$emit('reject')"
             >
               <XCircle class="w-4 h-4" />
-              Reject Settlement
+              Reject
             </button>
             <button
               class="btn btn-cta min-h-[42px] disabled:cursor-not-allowed disabled:opacity-60"
@@ -121,7 +119,7 @@ defineEmits(["close", "view-receipt", "reject", "approve"]);
               @click="$emit('approve')"
             >
               <ShieldCheck class="w-4 h-4" />
-              Accept as Liquidation
+              Approve
             </button>
           </div>
         </div>

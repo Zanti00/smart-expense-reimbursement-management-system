@@ -330,7 +330,7 @@ function removeReceiptItem(receipt, index) {
                       <td class="px-4 py-2 w-32">
                         <input
                           type="number"
-                          class="input !py-1 !text-sm text-right font-mono text-primary font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                          class="input !py-1 !text-sm text-right text-primary font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                           v-model.number="item.price"
                           :disabled="receipt.isUploading || receipt.isProcessing"
                           @input="recalculateFromItems(receipt)"
@@ -421,7 +421,7 @@ function removeReceiptItem(receipt, index) {
                   >
                   <input
                     type="number"
-                    class="input !w-36 !bg-white font-mono text-xl font-black text-accent text-right disabled:opacity-50 disabled:cursor-not-allowed"
+                    class="input !w-36 !bg-white text-xl font-black text-accent text-right disabled:opacity-50 disabled:cursor-not-allowed"
                     v-model="receipt.amount"
                     :disabled="receipt.isUploading || receipt.isProcessing"
                     @input="recalculateFinancials(receipt)"

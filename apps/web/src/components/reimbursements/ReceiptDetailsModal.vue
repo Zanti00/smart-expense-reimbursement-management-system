@@ -312,7 +312,7 @@ watch(
                     <div v-if="isProcessing" class="h-10 w-full animate-pulse rounded-lg bg-slate-200"></div>
                     <input
                       v-else
-                      class="input bg-slate-50 uppercase font-mono font-bold"
+                      class="input bg-slate-50 uppercase font-bold"
                       disabled
                       :value="receipt?.currency || 'PHP'"
                     />

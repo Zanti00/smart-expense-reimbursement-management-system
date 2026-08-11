@@ -1,6 +1,5 @@
 <script setup>
 import {
-  ClipboardList,
   ChevronUp,
   ChevronDown,
   ChevronsUpDown,
@@ -60,14 +59,7 @@ function handleSortClick(optionValue) {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 xl:col-span-2">
-    <h3
-      class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400"
-    >
-      <ClipboardList class="h-3.5 w-3.5" />
-      OUTSTANDING ADVANCES
-    </h3>
-
+  <div class="flex flex-col gap-3 xl:col-span-2">
     <div
       class="overflow-hidden bg-white border shadow-sm rounded-xl border-slate-200"
     >
@@ -77,7 +69,7 @@ function handleSortClick(optionValue) {
         <button
           v-for="option in sortOptions"
           :key="option.value"
-          class="flex min-h-11 items-center gap-1.5 px-4 text-[10px] font-bold uppercase tracking-[0.08em] transition-colors hover:text-accent"
+          class="flex min-h-10 items-center gap-1.5 px-4 text-xs font-medium transition-colors hover:text-accent"
           :class="[
             sortKey === option.value ? 'text-accent' : 'text-slate-500',
             option.value === 'amount'
@@ -107,10 +99,8 @@ function handleSortClick(optionValue) {
       v-if="!isLoading && advances.length === 0"
       class="flex items-center justify-center p-6 text-center border-dashed card min-h-32"
     >
-      <p
-        class="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400"
-      >
-        No advances match the current search or filter.
+      <p class="text-sm text-slate-400">
+        No advances found.
       </p>
     </div>
 
@@ -129,10 +119,10 @@ function handleSortClick(optionValue) {
         v-for="adv in advances"
         :key="adv.id"
         :class="[
-          'card p-4 cursor-pointer transition-none group border-2',
+          'card px-4 py-3 cursor-pointer transition-none group border',
           selectedAdvance?.id === adv.id
             ? 'border-primary bg-primary/[0.02]'
-            : 'border-slate-100',
+            : 'border-slate-200',
         ]"
         @click="$emit('select', adv)"
       >
@@ -140,9 +130,7 @@ function handleSortClick(optionValue) {
           class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"
         >
           <div class="flex-1 min-w-0">
-            <p
-              class="text-xs font-bold tracking-tight uppercase truncate text-slate-900"
-            >
+            <p class="text-sm font-medium truncate text-slate-800">
               {{ adv.purpose }}
             </p>
           </div>
@@ -150,32 +138,22 @@ function handleSortClick(optionValue) {
         </div>
 
         <div
-          class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
+          class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between"
         >
           <div>
-            <p
-              class="mb-1 text-[9px] font-bold uppercase tracking-widest text-slate-400"
-            >
-              OUTSTANDING BALANCE
-            </p>
-            <p
-              class="font-mono text-lg font-bold tracking-tighter text-primary"
-            >
+            <p class="text-xs text-slate-400 mb-0.5">Balance</p>
+            <p class="text-base font-semibold text-primary">
               {{ formatPeso(adv.balance || 0) }}
             </p>
           </div>
           <div class="sm:text-right">
-            <p
-              class="mb-1 text-[9px] font-bold uppercase tracking-widest text-slate-400"
-            >
-              AGE STATUS
-            </p>
+            <p class="text-xs text-slate-400 mb-0.5">Aging</p>
             <div class="flex flex-col sm:items-end">
               <span
                 :class="[
-                  'text-[10px] font-bold uppercase',
+                  'text-xs',
                   calculateAging(adv).isOverdue
-                    ? 'text-danger'
+                    ? 'font-medium text-danger'
                     : 'text-slate-500',
                 ]"
               >
@@ -183,10 +161,9 @@ function handleSortClick(optionValue) {
               </span>
               <span
                 v-if="calculateAging(adv).isOverdue"
-                class="font-mono text-[9px] font-bold text-danger"
+                class="text-xs text-danger"
               >
-                PENALTY:
-                {{ formatPeso(calculateAging(adv).penalty) }}
+                Penalty: {{ formatPeso(calculateAging(adv).penalty) }}
               </span>
             </div>
           </div>

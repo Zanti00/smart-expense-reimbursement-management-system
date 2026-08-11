@@ -70,7 +70,7 @@ const props = defineProps({
           style="font-family: 'Poppins', sans-serif"
           >Total Amount</span
         >
-        <span class="text-2xl font-black text-accent font-mono">{{
+        <span class="text-2xl font-bold text-accent">{{
           formatAmount(totalAmount, currency || "PHP")
         }}</span>
       </div>

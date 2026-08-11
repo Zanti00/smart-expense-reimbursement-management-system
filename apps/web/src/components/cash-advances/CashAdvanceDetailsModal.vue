@@ -1015,7 +1015,7 @@ async function confirmAcknowledge() {
                   AMOUNT ISSUED
                 </p>
                 <p
-                  class="text-lg font-bold text-primary font-mono tracking-tighter"
+                  class="text-lg font-bold text-primary"
                 >
                   ₱{{ record.amount?.toLocaleString() }}
                 </p>
@@ -1028,7 +1028,7 @@ async function confirmAcknowledge() {
                 </p>
                 <p
                   :class="[
-                    'text-lg font-bold font-mono tracking-tighter',
+                    'text-lg font-bold',
                     record.balance > 0 ? 'text-danger' : 'text-success',
                   ]"
                 >

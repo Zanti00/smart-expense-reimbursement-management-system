@@ -5,6 +5,7 @@ import {
   X,
   FileText,
   Image as ImageIcon,
+  Sparkles,
   CheckCircle2,
   Clock,
   Download,
@@ -155,25 +156,35 @@ function formatDate(dateStr) {
             </div>
           </div>
 
+          <div
+            class="flex items-center gap-2 px-4 py-2.5 bg-accent-50 border border-accent/20 rounded-xl"
+          >
+            <Sparkles class="w-4 h-4 text-accent fill-accent" />
+            <span
+              class="text-xs font-semibold text-accent"
+              >AI Scanned — Details automatically extracted</span
+            >
+          </div>
+
           <!-- DATA GRID -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <!-- Date -->
             <div class="p-4 rounded-xl border border-slate-100 bg-slate-50/30">
-              <p class="text-xs font-medium text-slate-500 mb-1">Transaction Date</p>
+              <p class="section-label mb-1">Transaction Date</p>
               <p class="text-sm font-bold text-slate-800">
                 {{ formatDate(receipt.date) }}
               </p>
             </div>
             <!-- Vendor Name -->
             <div class="p-4 rounded-xl border border-slate-100 bg-slate-50/30">
-              <p class="text-xs font-medium text-slate-500 mb-1">Vendor Name</p>
+              <p class="section-label mb-1">Vendor Name</p>
               <p class="text-sm font-bold text-slate-800">
                 {{ receipt.vendorName || "—" }}
               </p>
             </div>
             <!-- Category -->
             <div class="p-4 rounded-xl border border-slate-100 bg-slate-50/30">
-              <p class="text-xs font-medium text-slate-500 mb-2">Category</p>
+              <p class="section-label mb-2">Category</p>
               <span
                 class="badge bg-primary-100 border-primary-200 text-primary-700"
               >
@@ -182,35 +193,35 @@ function formatDate(dateStr) {
             </div>
             <!-- TIN -->
             <div class="p-4 rounded-xl border border-slate-100 bg-slate-50/30">
-              <p class="text-xs font-medium text-slate-500 mb-1">TIN</p>
-              <p class="text-sm font-bold text-slate-800 font-mono">
+              <p class="section-label mb-1">TIN</p>
+              <p class="text-sm font-bold text-slate-800">
                 {{ receipt.tin || "—" }}
               </p>
             </div>
             <!-- Invoice Number -->
             <div class="p-4 rounded-xl border border-slate-100 bg-slate-50/30">
-              <p class="text-xs font-medium text-slate-500 mb-1">Invoice Number</p>
-              <p class="text-sm font-bold text-slate-800 font-mono">
+              <p class="section-label mb-1">Invoice Number</p>
+              <p class="text-sm font-bold text-slate-800">
                 {{ receipt.invoiceNumber || "—" }}
               </p>
             </div>
             <!-- VAT Classification -->
             <div class="p-4 rounded-xl border border-slate-100 bg-slate-50/30">
-              <p class="text-xs font-medium text-slate-500 mb-1">VAT Classification</p>
+              <p class="section-label mb-1">VAT Classification</p>
               <p class="text-sm font-bold text-slate-800 uppercase">
                 {{ receipt.vatClassification || "—" }}
               </p>
             </div>
             <!-- Currency -->
             <div class="p-4 rounded-xl border border-slate-100 bg-slate-50/30">
-              <p class="text-xs font-medium text-slate-500 mb-1">Currency</p>
-              <p class="text-sm font-bold text-slate-800 uppercase font-mono">
+              <p class="section-label mb-1">Currency</p>
+              <p class="text-sm font-bold text-slate-800 uppercase">
                 {{ receipt.currency || "—" }}
               </p>
             </div>
             <!-- Uploader -->
             <div class="p-4 rounded-xl border border-slate-100 bg-slate-50/30">
-              <p class="text-xs font-medium text-slate-500 mb-1">Submitted By</p>
+              <p class="section-label mb-1">Submitted By</p>
               <p class="text-sm font-bold text-slate-800">
                 {{ receipt.uploader }}
               </p>
@@ -243,7 +254,7 @@ function formatDate(dateStr) {
                     item.name || "Unnamed Item"
                   }}</span>
                 </div>
-                <div class="text-sm text-slate-500 font-mono">
+                <div class="text-sm text-slate-500">
                   {{ item.quantity }} x
                   {{ formatAmount(Number(item.price) || 0, receipt.currency || "PHP") }}
                 </div>
@@ -265,7 +276,7 @@ function formatDate(dateStr) {
             <div class="p-5 space-y-3">
               <div class="flex justify-between items-center text-slate-500">
                 <span class="text-sm">Items Subtotal</span>
-                <span class="text-sm font-mono">{{
+                <span class="text-sm">{{
                   formatAmount(actualSubtotal, receipt.currency || "PHP")
                 }}</span>
               </div>
@@ -273,7 +284,7 @@ function formatDate(dateStr) {
                 class="flex justify-between items-center text-slate-500 pb-3 border-b border-slate-200"
               >
                 <span class="text-sm">VAT Amount</span>
-                <span class="text-sm font-mono">{{
+                <span class="text-sm">{{
                   formatAmount(receipt.vatAmount || 0, receipt.currency || "PHP")
                 }}</span>
               </div>
@@ -282,7 +293,7 @@ function formatDate(dateStr) {
                   class="text-base font-bold text-primary"
                   >Total Amount</span
                 >
-                <span class="text-xl font-black text-primary font-mono">{{
+                <span class="text-xl font-black text-primary">{{
                   formatAmount(receipt.amount, receipt.currency || "PHP")
                 }}</span>
               </div>

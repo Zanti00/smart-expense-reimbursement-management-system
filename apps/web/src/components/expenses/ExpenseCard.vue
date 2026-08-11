@@ -135,7 +135,7 @@ const canDelete = computed(() =>
         >
           {{ expense.category }}
         </span>
-        <span class="font-bold text-[14px] text-success font-mono">
+        <span class="font-bold text-[14px] text-success">
           {{ expense.amount > 0 ? formatCurrency(expense.amount) : "—" }}
         </span>
       </div>

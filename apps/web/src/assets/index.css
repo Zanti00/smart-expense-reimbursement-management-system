@@ -7,8 +7,7 @@
 /* ═══════════════════════════════════════════════════
    TYPOGRAPHY SYSTEM — Single source of truth
    Font: Poppins (primary), Montserrat, Open Sans (fallbacks)
-   To change the system font, update --font-primary here
-   and font-sans in tailwind.config.js.
+   Adjust sizes/weights here to update globally.
    ═══════════════════════════════════════════════════ */
 
 :root {
@@ -50,7 +49,55 @@
 }
 
 @layer components {
-  /* ---- Cards ---- */
+  /* ═══════════════════════════════════════
+     TEXT UTILITIES — Centralized text roles
+     Use these classes instead of inline Tailwind
+     for labels, headings, and body text.
+     ═══════════════════════════════════════ */
+
+  /* Page title — large heading */
+  .text-page-title {
+    font-family: var(--font-primary);
+    @apply text-2xl font-bold leading-tight text-slate-800;
+  }
+
+  /* Section heading — card/panel titles */
+  .text-section-title {
+    font-family: var(--font-primary);
+    @apply text-sm font-semibold text-slate-700;
+  }
+
+  /* Field/input label */
+  .text-field-label {
+    font-family: var(--font-primary);
+    @apply text-xs font-medium text-slate-500;
+  }
+
+  /* Body text — default readable text */
+  .text-body {
+    font-family: var(--font-primary);
+    @apply text-sm text-slate-600;
+  }
+
+  /* Caption / hint text */
+  .text-caption {
+    font-family: var(--font-primary);
+    @apply text-xs text-slate-400;
+  }
+
+  /* Numeric/monetary values */
+  .text-value {
+    font-family: var(--font-primary);
+    @apply text-base font-semibold text-primary;
+  }
+
+  /* Large numeric display */
+  .text-value-lg {
+    font-family: var(--font-primary);
+    @apply text-xl font-bold text-primary;
+  }
+
+  /* ---- Cards (Instrument Module) ---- */
   .card {
     @apply bg-white/95 border border-black/5 rounded-card shadow-sm backdrop-blur-sm;
   }
@@ -58,7 +105,7 @@
     @apply hover:border-accent/20 hover:shadow-xl hover:scale-[1.01];
   }
 
-  /* ---- Inputs ---- */
+  /* ---- Instrument Inputs ---- */
   .input-wrapper {
     @apply flex flex-col gap-1;
   }

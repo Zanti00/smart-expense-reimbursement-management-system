@@ -319,14 +319,14 @@ function isAmberWarning(dateStr) {
               </tr>
             </template>
             <tr v-for="item in recentItems" v-else :key="item.id">
-              <td class="font-mono text-slate-400 text-xs">#{{ item.id }}</td>
+              <td class="text-slate-400 text-xs">#{{ item.id }}</td>
               <td class="font-semibold text-slate-700">{{ item.description }}</td>
               <td>
                 <span class="text-xs font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
                   {{ item.category }}
                 </span>
               </td>
-              <td class="font-semibold text-primary font-mono">₱{{ item.amount.toLocaleString() }}</td>
+              <td class="font-semibold text-primary">₱{{ item.amount.toLocaleString() }}</td>
               <td class="text-slate-400 text-xs">{{ item.date }}</td>
               <td><StatusBadge :status="item.status" /></td>
             </tr>
@@ -384,8 +384,8 @@ function isAmberWarning(dateStr) {
             >
               <td class="font-semibold text-slate-700">{{ item.requestedBy }}</td>
               <td class="text-slate-500 text-xs">{{ item.purpose }}</td>
-              <td class="font-semibold text-primary font-mono">₱{{ item.amount.toLocaleString() }}</td>
-              <td class="font-mono text-slate-400 text-xs">{{ item.dueDate }}</td>
+              <td class="font-semibold text-primary">₱{{ item.amount.toLocaleString() }}</td>
+              <td class="text-slate-400 text-xs">{{ item.dueDate }}</td>
               <td class="flex items-center gap-2 flex-wrap">
                 <span
                   v-if="isOverdue(item.dueDate)"
