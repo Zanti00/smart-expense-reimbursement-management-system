@@ -10,6 +10,7 @@ export const useReceiptStore = defineStore("receipts", () => {
   const auth = useAuthStore();
 
   const receipts = ref([]);
+  const reReviewReceipts = ref([]);
   const categories = ref([]);
   const isLoading = ref(false);
   const isSaving = ref(false);
@@ -215,6 +216,7 @@ export const useReceiptStore = defineStore("receipts", () => {
       if (params.category && params.category !== "All") {
         query.set("category", params.category);
       }
+      if (params.scope) query.set("scope", params.scope);
 
       const response = await apiFetch(`/api/serms/reimbursements/receipts?${query.toString()}`, {
         credentials: "include",
@@ -237,6 +239,29 @@ export const useReceiptStore = defineStore("receipts", () => {
       console.error("Failed to fetch receipts from database:", e);
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  /**
+   * Fetch receipts awaiting admin re-review (all users), for the admin panel.
+   */
+  async function fetchReReviewReceipts() {
+    try {
+      const query = new URLSearchParams();
+      query.set("page", "1");
+      query.set("per_page", "100");
+      query.set("status", "pending-admin-re-review");
+      query.set("scope", "all");
+
+      const response = await apiFetch(`/api/serms/reimbursements/receipts?${query.toString()}`, {
+        credentials: "include",
+      });
+      if (response.ok) {
+        const data = await response.json();
+        reReviewReceipts.value = (data.data || []).map(mapReceipt);
+      }
+    } catch (e) {
+      console.error("Failed to fetch receipts pending re-review:", e);
     }
   }
 
@@ -377,7 +402,9 @@ export const useReceiptStore = defineStore("receipts", () => {
   }
 
   async function finalizeReReview(id, decision, adminNotes) {
-    const rx = receipts.value.find((r) => r.id === id);
+    const rx =
+      receipts.value.find((r) => r.id === id) ||
+      reReviewReceipts.value.find((r) => r.id === id);
     if (!rx) throw new Error("Receipt not found.");
     if (!adminNotes || adminNotes.trim().length < 10) {
       throw new Error("Admin notes must be at least 10 characters.");
@@ -391,6 +418,7 @@ export const useReceiptStore = defineStore("receipts", () => {
       finalDecision: decision,
       finalDecisionAt: new Date().toISOString(),
     });
+    reReviewReceipts.value = reReviewReceipts.value.filter((r) => r.id !== id);
     return rx;
   }
 
@@ -493,6 +521,7 @@ export const useReceiptStore = defineStore("receipts", () => {
 
   return {
     receipts,
+    reReviewReceipts,
     categories,
     isLoading,
     isSaving,
@@ -501,6 +530,7 @@ export const useReceiptStore = defineStore("receipts", () => {
     pagination,
     visibleReceipts,
     fetchAll,
+    fetchReReviewReceipts,
     fetchCategories,
     uploadReceipt,
     resubmitReceipt,

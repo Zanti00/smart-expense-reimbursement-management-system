@@ -22,7 +22,7 @@ class ReceiptService
         $query = Receipt::with('category', 'uploader', 'items')
             ->withCount('reimbursements');
 
-        if (!$canManage) {
+        if (!$canManage || ($filters['scope'] ?? null) === 'mine') {
             $query->where('uploaded_by', $user->id);
         }
 

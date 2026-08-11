@@ -163,4 +163,55 @@ describe("useReceiptStore", () => {
     expect(store.receipts[0].fileName).toBe("new-upload.pdf");
     expect(saved.fileName).toBe("new-upload.pdf");
   });
+
+  it("passes scope=mine to the receipts API when requested", async () => {
+    apiFetch.mockResolvedValue(okJson([], 0));
+
+    const store = useReceiptStore();
+    await store.fetchAll({ scope: "mine" });
+
+    expect(apiFetch).toHaveBeenCalledTimes(1);
+    const url = apiFetch.mock.calls[0][0];
+    expect(url).toContain("/api/serms/reimbursements/receipts?");
+    expect(url).toContain("scope=mine");
+  });
+
+  it("omits the scope param by default", async () => {
+    apiFetch.mockResolvedValue(okJson([], 0));
+
+    const store = useReceiptStore();
+    await store.fetchAll();
+
+    const url = apiFetch.mock.calls[0][0];
+    expect(url).not.toContain("scope=");
+  });
+
+  it("fetches receipts pending admin re-review into reReviewReceipts", async () => {
+    apiFetch.mockResolvedValue(okJson([arrayFieldsReceipt], 1));
+
+    const store = useReceiptStore();
+    await store.fetchReReviewReceipts();
+
+    const url = apiFetch.mock.calls[0][0];
+    expect(url).toContain("status=pending-admin-re-review");
+    expect(url).toContain("scope=all");
+    expect(store.reReviewReceipts).toHaveLength(1);
+  });
+
+  it("finalizeReReview removes the receipt from the re-review queue", async () => {
+    apiFetch.mockResolvedValue(okJson([arrayFieldsReceipt], 1));
+
+    const store = useReceiptStore();
+    await store.fetchReReviewReceipts();
+
+    const queued = store.reReviewReceipts[0];
+    const result = await store.finalizeReReview(
+      queued.id,
+      "approve",
+      "Sufficient evidence provided.",
+    );
+
+    expect(result.status).toBe("Processed");
+    expect(store.reReviewReceipts).toHaveLength(0);
+  });
 });

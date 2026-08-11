@@ -156,7 +156,12 @@ const doughnutOptions = {
   }
 }
 
-const recentItems = computed(() => rStore.items.slice(0, 5))
+const recentItems = computed(() => {
+  const items = auth.isAdmin
+    ? rStore.items.filter((i) => i.user_id === auth.user?.id)
+    : rStore.items;
+  return items.slice(0, 5);
+})
 const activeAdvances = computed(() => caStore.items.slice(0, 5))
 
 function isOverdue(dateStr) {
@@ -283,7 +288,7 @@ function isAmberWarning(dateStr) {
     </div>
 
     <!-- ── Employee History Table ── -->
-    <div v-if="!auth.isAdmin" class="card overflow-hidden">
+    <div class="card overflow-hidden">
       <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
         <h3 class="text-sm font-semibold text-slate-800">
           My Recent Submissions

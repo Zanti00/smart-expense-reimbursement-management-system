@@ -287,4 +287,54 @@ class ReceiptFilteringTest extends TestCase
         $response->assertStatus(200);
         $response->assertJsonCount(0);
     }
+
+    /**
+     * Verify the scope=mine query restricts even managers (accounting) to their own receipts
+     * on the SPA's receipts endpoint, while leaving the default manage view untouched.
+     */
+    public function test_receipt_list_scope_mine_restricts_manager_to_own_receipts(): void
+    {
+        $adminReceipt = Receipt::create([
+            'uploaded_by' => $this->admin->id,
+            'file_path' => 'receipts/admin_receipt.png',
+            'file_hash' => hash('sha256', 'admin_data'),
+            'file_type' => 'png',
+            'file_size_bytes' => 100000,
+            'vendor_name' => 'Admin Store',
+        ]);
+
+        // Accounting department maps to the admin role and grants manage permission.
+        $adminToken = $this->generateMockToken([
+            'email' => 'admin@serms.com',
+            'role' => 'admin',
+            'department' => 'accounting',
+            'sub' => 9999,
+        ]);
+
+        // Default behavior is unchanged: manager sees all receipts.
+        $responseAll = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $adminToken,
+        ])->getJson('/api/reimbursements/receipts');
+
+        $responseAll->assertStatus(200);
+        $this->assertCount(6, $responseAll->json('data'));
+
+        // With scope=mine the manager sees only their own receipts.
+        $responseMine = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $adminToken,
+        ])->getJson('/api/reimbursements/receipts?scope=mine');
+
+        $responseMine->assertStatus(200);
+        $responseMine->assertJsonCount(1, 'data');
+        $this->assertSame($adminReceipt->id, $responseMine->json('data.0.id'));
+
+        // Employees are unaffected: scope=mine still returns their own receipts only.
+        $employeeToken = $this->generateMockToken(['sub' => 1000]);
+        $responseEmp = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $employeeToken,
+        ])->getJson('/api/reimbursements/receipts?scope=mine');
+
+        $responseEmp->assertStatus(200);
+        $responseEmp->assertJsonCount(3, 'data');
+    }
 }

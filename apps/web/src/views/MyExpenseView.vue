@@ -105,6 +105,7 @@ async function fetchReceipts(page = currentPage.value) {
     search: searchQuery.value.trim(),
     status: normalizeFilterLabel(activeStatus.value),
     category: activeCategory.value,
+    scope: "mine",
   });
 }
 
@@ -181,7 +182,7 @@ const automaticRejectedReceipts = computed(() =>
 );
 
 const pendingReReviewReceipts = computed(() =>
-  receiptsStore.visibleReceipts.filter(
+  receiptsStore.reReviewReceipts.filter(
     (r) => r.status === "pending-admin-re-review",
   ),
 );
@@ -228,10 +229,9 @@ async function finalizeReceiptReview(receipt, decision) {
 const handleOpenReceiptUpload = () => { uploadModalOpen.value = true; };
 
 onMounted(async () => {
-  await Promise.all([
-    fetchReceipts(1),
-    receiptsStore.fetchCategories(),
-  ]);
+  const tasks = [fetchReceipts(1), receiptsStore.fetchCategories()];
+  if (auth.isAdmin) tasks.push(receiptsStore.fetchReReviewReceipts());
+  await Promise.all(tasks);
   window.addEventListener('open-receipt-upload', handleOpenReceiptUpload);
 });
 
