@@ -520,6 +520,7 @@ export function useReceiptUploads() {
     receiptInput,
     handleReceiptDrop,
     handleReceiptSelect,
+    addReceiptFiles,
     removeReceipt,
     clearDraftReceipts,
     qualityRejection,
