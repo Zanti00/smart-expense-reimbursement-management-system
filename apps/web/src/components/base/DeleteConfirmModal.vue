@@ -54,7 +54,7 @@ function close() {
             <Trash2 class="w-4 h-4 text-danger" />
           </div>
           <div>
-            <h3 class="text-sm font-semibold text-slate-800" style="font-family: 'Poppins', sans-serif">
+            <h3 class="text-sm font-semibold text-slate-800">
               {{ title }}
             </h3>
             <p class="text-xs text-slate-400 mt-0.5">
@@ -63,7 +63,7 @@ function close() {
           </div>
         </div>
         <div class="p-6 flex flex-col gap-4">
-          <p class="text-sm text-slate-600" style="font-family: 'Open Sans', sans-serif">
+          <p class="text-sm text-slate-600">
             Please enter your password to confirm this action.
           </p>
           <div class="input-wrapper">

@@ -91,7 +91,6 @@ function formatDate(dateStr) {
             <div>
               <h2
                 class="text-lg font-bold leading-tight"
-                style="font-family: &quot;Poppins&quot;, sans-serif"
               >
                 Receipt Details
               </h2>
@@ -132,7 +131,6 @@ function formatDate(dateStr) {
               <ImageIcon v-else class="w-12 h-12 opacity-50" />
               <p
                 class="text-xs font-semibold uppercase tracking-widest"
-                style="font-family: &quot;Poppins&quot;, sans-serif"
               >
                 No Image Preview
               </p>
@@ -226,7 +224,6 @@ function formatDate(dateStr) {
           >
             <h3
               class="text-sm font-bold text-slate-800 px-1"
-              style="font-family: &quot;Poppins&quot;, sans-serif"
             >
               Expense Breakdown
             </h3>
@@ -261,7 +258,6 @@ function formatDate(dateStr) {
             <div class="bg-primary px-5 py-3">
               <h3
                 class="text-xs font-bold text-white uppercase tracking-widest"
-                style="font-family: &quot;Poppins&quot;, sans-serif"
               >
                 Amount Breakdown
               </h3>
@@ -284,7 +280,6 @@ function formatDate(dateStr) {
               <div class="flex justify-between items-center pt-1">
                 <span
                   class="text-base font-bold text-primary"
-                  :style="{ fontFamily: '\'Poppins\', sans-serif' }"
                   >Total Amount</span
                 >
                 <span class="text-xl font-black text-primary font-mono">{{
