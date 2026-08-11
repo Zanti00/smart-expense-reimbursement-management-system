@@ -43,7 +43,6 @@
     @apply font-bold text-primary;
   }
 
-  /* Transition for state changes */
   * {
     @apply transition-colors duration-200 ease-out;
   }
