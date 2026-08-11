@@ -190,3 +190,7 @@ export function buildReceiptUploadFormPrefill(options = {}) {
     })),
   };
 }
+
+export function firstFilePathField(value) {
+  return Array.isArray(value) ? (value[0] ?? value) : value;
+}

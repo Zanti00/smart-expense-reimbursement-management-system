@@ -87,6 +87,15 @@ class ReceiptService
                 'file_type'            => $storedFile['file_type'],
                 'file_size_bytes'      => $storedFile['file_size_bytes'],
                 'expense_category_id'  => $validated['expense_category_id'] ?? null,
+                'vendor_name'          => $validated['vendor_name'] ?? null,
+                'transaction_date'     => $validated['transaction_date'] ?? null,
+                'total_amount'         => $validated['total_amount'] ?? null,
+                'vat_amount'           => $validated['vat_amount'] ?? null,
+                'tin'                  => $validated['tin'] ?? null,
+                'invoice_number'       => $validated['invoice_number'] ?? null,
+                'vat_classification'   => $validated['vat_classification'] ?? null,
+                'currency'             => $validated['currency'] ?? null,
+                'location'             => $validated['location'] ?? null,
                 'ocr_flagged'          => false,
                 'is_archived'          => false,
                 'status'               => 'processing',
@@ -100,6 +109,18 @@ class ReceiptService
             DispatchReceiptToAiService::dispatch($receipt);
 
             $receipt->load('category', 'items', 'uploader');
+
+            // Audit Log
+            AuditLogService::log(
+                actorId: $user->id,
+                actorRole: $user->role,
+                actionType: 'RECEIPT_CREATED',
+                entityType: 'receipt',
+                entityId: $receipt->id,
+                beforeState: null,
+                afterState: $receipt->toArray(),
+                ipAddress: request()->ip(),
+            );
 
             return $receipt;
         });
@@ -197,10 +218,10 @@ class ReceiptService
         }
 
         return [
-            'file_path' => count($filePaths) === 1 ? $filePaths[0] : $filePaths,
-            'file_hash' => count($fileHashes) === 1 ? $fileHashes[0] : $fileHashes,
-            'file_type' => count($fileTypes) === 1 ? $fileTypes[0] : $fileTypes,
-            'file_size_bytes' => count($fileSizes) === 1 ? $fileSizes[0] : $fileSizes,
+            'file_path'       => $filePaths,
+            'file_hash'       => $fileHashes,
+            'file_type'       => $fileTypes,
+            'file_size_bytes' => $fileSizes,
         ];
     }
 

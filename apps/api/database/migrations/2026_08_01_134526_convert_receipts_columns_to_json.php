@@ -12,10 +12,26 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            // SQLite (test runner) does not support ALTER TABLE ... MODIFY.
+            // TEXT columns already store the JSON-encoded arrays produced by the
+            // model's array casts, so only normalize any legacy scalar values.
+            $this->normalizeLegacyScalarValues();
+            return;
+        }
+
         // 1. Temporarily widen columns to TEXT to prevent truncation during JSON string conversion
         DB::statement("ALTER TABLE receipts MODIFY file_path TEXT NULL, MODIFY file_hash TEXT NULL, MODIFY file_type TEXT NULL, MODIFY file_size_bytes TEXT NULL");
 
         // 2. Format any existing plain string data to valid JSON arrays
+        $this->normalizeLegacyScalarValues();
+
+        // 3. Convert column types to JSON
+        DB::statement("ALTER TABLE receipts MODIFY file_path JSON NULL, MODIFY file_hash JSON NULL, MODIFY file_type JSON NULL, MODIFY file_size_bytes JSON NULL");
+    }
+
+    private function normalizeLegacyScalarValues(): void
+    {
         $receipts = DB::table('receipts')->get();
         foreach ($receipts as $receipt) {
             $updates = [];
@@ -32,9 +48,6 @@ return new class extends Migration
                 DB::table('receipts')->where('id', $receipt->id)->update($updates);
             }
         }
-
-        // 3. Convert column types to JSON
-        DB::statement("ALTER TABLE receipts MODIFY file_path JSON NULL, MODIFY file_hash JSON NULL, MODIFY file_type JSON NULL, MODIFY file_size_bytes JSON NULL");
     }
 
     /**

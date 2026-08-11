@@ -4,6 +4,7 @@ import { useAuthStore } from "./auth";
 import { useNotificationStore } from "./notification";
 import { apiFetch } from "../utils/apiFetch";
 import { getFileUrl } from "../utils/fileUtils";
+import { firstFilePathField } from "../utils/receiptUtils";
 
 export const useReceiptStore = defineStore("receipts", () => {
   const auth = useAuthStore();
@@ -124,14 +125,17 @@ export const useReceiptStore = defineStore("receipts", () => {
     const reimbursementCount = Number(
       r.reimbursements_count ?? r.reimbursements?.length ?? 0,
     );
+    const fileUrl =
+      firstFilePathField(r.file_url) || firstFilePathField(r.file_path) || "";
 
     return {
       id: `RCPT-2026-${String(r.id).padStart(3, "0")}`,
       dbId: r.id,
       uploader: r.uploader?.name || auth.user?.name || "Unknown",
-      fileName: (r.file_path || "").split("/").pop() || "N/A",
-      fileType: r.file_type,
-      fileSize: r.file_size_bytes,
+      fileName:
+        String(firstFilePathField(r.file_path) || "").split("/").pop() || "N/A",
+      fileType: firstFilePathField(r.file_type),
+      fileSize: Number(firstFilePathField(r.file_size_bytes)) || 0,
       date: r.transaction_date || r.created_at,
       amount: Number(r.total_amount) || 0,
       category: r.category?.name || "Uncategorized",
@@ -148,8 +152,8 @@ export const useReceiptStore = defineStore("receipts", () => {
           : r.system_rejected_at || null,
       modifiedAfterSystemRejection: !!r.modified_after_system_rejection,
       adminNotes: r.admin_notes || "",
-      hash: r.file_hash,
-      thumbnail: getFileUrl(r.file_url || r.file_path) || null,
+      hash: firstFilePathField(r.file_hash),
+      thumbnail: getFileUrl(fileUrl) || null,
       isDeleted: !!r.deleted_at,
       reimbursementCount,
       isReimbursed: reimbursementCount > 0,
