@@ -1,6 +1,7 @@
 <script setup>
 import { Eye, FileText, Download } from "lucide-vue-next";
 import { formatPeso } from "@/utils/formatters";
+import StatusBadge from "@/components/base/StatusBadge.vue";
 
 defineProps({
   reviewingCase: {
@@ -24,10 +25,6 @@ defineProps({
     required: true,
   },
   formatDateOnly: {
-    type: Function,
-    required: true,
-  },
-  statusBadgeClass: {
     type: Function,
     required: true,
   },
@@ -73,14 +70,7 @@ defineEmits(["view-receipt"]);
       <div class="p-5 bg-white border rounded-lg border-slate-200">
         <div class="flex items-center justify-between gap-3">
           <p class="text-xs font-medium text-slate-500">Ending Balance</p>
-          <span
-            :class="[
-              'rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-wide',
-              statusBadgeClass(reviewStatus),
-            ]"
-          >
-            {{ reviewStatus }}
-          </span>
+          <StatusBadge :status="reviewStatus" />
         </div>
         <p class="mt-2 text-3xl font-bold font-heading text-primary">
           {{ formatPeso(reviewOutstandingBalance) }}
@@ -123,18 +113,7 @@ defineEmits(["view-receipt"]);
                   {{ receipt.location }}
                 </p>
               </div>
-              <span
-                :class="[
-                  'shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide',
-                  receipt.decision === 'accepted'
-                    ? 'border-accent/20 bg-accent-50 text-accent'
-                    : receipt.decision === 'rejected'
-                      ? 'border-red-200 bg-red-50 text-red-700'
-                      : 'border-slate-200 bg-slate-50 text-slate-500',
-                ]"
-              >
-                {{ receipt.decision }}
-              </span>
+              <StatusBadge :status="receipt.decision === 'accepted' ? 'approved' : receipt.decision" />
             </div>
             <div class="flex items-center justify-between gap-3">
               <span

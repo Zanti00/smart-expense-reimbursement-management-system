@@ -98,20 +98,6 @@ function closeDetails() {
   emit("close");
 }
 
-function statusPillClass(status) {
-  const classes = {
-    unliquidated: "bg-amber-50 text-amber-700 border-amber-200",
-    liquidated: "bg-blue-50 text-blue-700 border-blue-200",
-    granted: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    approved: "bg-[#DCFCE7] text-[#166534] border-[#BBF7D0]",
-    disbursed: "bg-[#DCFCE7] text-[#166534] border-[#BBF7D0]",
-    signed: "bg-[#E0F2FE] text-[#075985] border-[#BAE6FD]",
-    pending: "bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]",
-    rejected: "bg-[#FEE2E2] text-[#991B1B] border-[#FECACA]",
-  };
-  return classes[status] || "bg-slate-100 text-slate-600 border-slate-200";
-}
-
 function outstandingBalance(record) {
   if (!record) return 0;
   // balance is mapped from outstanding_balance (DB-authoritative).
@@ -362,16 +348,7 @@ async function confirmAcknowledge() {
 
             <div class="sm:text-right">
               <p class="text-xs font-medium text-slate-500 mb-2">Status</p>
-              <span
-                :class="[
-                  'inline-flex items-center rounded-full border px-4 py-1.5 text-xs font-bold uppercase tracking-wide',
-                  statusPillClass(record.status),
-                ]"
-              >
-                {{
-                  record.status === "pending" ? "Pending Review" : record.status
-                }}
-              </span>
+              <StatusBadge :status="record.status" />
             </div>
           </section>
 
@@ -686,14 +663,7 @@ async function confirmAcknowledge() {
               >
                 Status
               </p>
-              <span
-                :class="[
-                  'inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide',
-                  statusPillClass(record.status),
-                ]"
-              >
-                {{ record.status }}
-              </span>
+              <StatusBadge :status="record.status" />
             </div>
           </section>
 

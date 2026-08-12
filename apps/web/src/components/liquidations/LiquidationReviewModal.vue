@@ -1,6 +1,7 @@
 <script setup>
 import { X, XCircle, ShieldCheck } from "lucide-vue-next";
 import { formatPeso } from "@/utils/formatters";
+import StatusBadge from "@/components/base/StatusBadge.vue";
 import LiquidationReviewDetails from "@/components/liquidations/LiquidationReviewDetails.vue";
 
 defineProps({
@@ -40,10 +41,6 @@ defineProps({
     type: Function,
     required: true,
   },
-  statusBadgeClass: {
-    type: Function,
-    required: true,
-  },
 });
 
 defineEmits(["close", "view-receipt", "reject", "approve"]);
@@ -78,7 +75,6 @@ defineEmits(["close", "view-receipt", "reject", "approve"]);
         :review-receipts="reviewReceipts"
         :get-file-url="getFileUrl"
         :format-date-only="formatDateOnly"
-        :status-badge-class="statusBadgeClass"
         @view-receipt="$emit('view-receipt', $event)"
       />
 
@@ -129,14 +125,7 @@ defineEmits(["close", "view-receipt", "reject", "approve"]);
         >
           <div class="text-sm font-semibold text-slate-500">
             Liquidation status:
-            <span
-              :class="[
-                'inline-flex rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide',
-                statusBadgeClass(reviewingCase.status),
-              ]"
-            >
-              {{ reviewingCase.status }}
-            </span>
+            <StatusBadge :status="reviewingCase.status" />
           </div>
           <div
             v-if="reviewingCase.adminNote"

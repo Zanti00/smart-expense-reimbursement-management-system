@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from "vue";
 import { formatPeso, formatAmount, formatDate } from "@/utils/formatters";
+import StatusBadge from "@/components/base/StatusBadge.vue";
 import BasePagination from "@/components/base/BasePagination.vue";
 import {
   ChevronUp,
@@ -83,19 +84,6 @@ function getActions(row) {
       handler: () => emit("delete-request", row),
     },
   ];
-}
-
-function statusClass(status) {
-  const classes = {
-    approved: "bg-success text-white border border-success",
-    pending: "bg-yellow-100 text-yellow-800 border border-yellow-200",
-    rejected: "bg-[#FEF2F2] text-[#B91C1C] border border-red-200",
-    granted: "bg-[#F0FDFA] text-[#0D9488] border border-teal-100",
-  };
-  return (
-    classes[normalizeStatus(status)] ||
-    "bg-slate-100 text-slate-600 border border-slate-200"
-  );
 }
 
 const tableMinWidth = computed(() => "min-w-full");
@@ -242,14 +230,7 @@ const tableMinWidth = computed(() => "min-w-full");
                 {{ row.submittedBy }}
               </td>
               <td class="px-5 py-5 text-center">
-                <span
-                  :class="[
-                    'inline-flex rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide',
-                    statusClass(row.displayStatus),
-                  ]"
-                >
-                  {{ row.displayStatusLabel }}
-                </span>
+                <StatusBadge :status="row.displayStatus" />
               </td>
               <td class="px-5 py-5 text-center">
                 <ActionDropdownMenu :actions="getActions(row)" />

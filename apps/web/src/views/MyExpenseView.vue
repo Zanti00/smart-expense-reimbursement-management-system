@@ -386,11 +386,7 @@ const kpis = computed(() => [
             <div class="space-y-2">
               <div class="flex flex-wrap items-center gap-2">
                 <StatusBadge status="pending-admin-re-review" />
-                <span
-                  class="rounded-full border border-danger/20 bg-danger/5 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-danger"
-                >
-                  Previously System Rejected
-                </span>
+                <StatusBadge status="automatic-rejected" />
               </div>
               <h3 class="text-sm font-bold font-heading text-slate-900">
                 {{ receipt.vendorName || "Unknown Vendor" }}
