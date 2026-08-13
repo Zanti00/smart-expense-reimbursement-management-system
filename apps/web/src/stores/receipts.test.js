@@ -214,4 +214,67 @@ describe("useReceiptStore", () => {
     expect(result.status).toBe("Processed");
     expect(store.reReviewReceipts).toHaveLength(0);
   });
+
+  it("patches and upserts the receipt returned by updateReceipt", async () => {
+    const updated = {
+      id: 5,
+      file_path: "uploads/2026/upd.pdf",
+      file_type: "application/pdf",
+      file_size_bytes: 1024,
+      file_hash: "upd-hash",
+      transaction_date: "2026-04-01",
+      total_amount: 500,
+      vat_amount: 53.57,
+      status: "processed",
+      vendor_name: "Updated Vendor",
+      invoice_number: "INV-005",
+      category: { name: "Meals" },
+      expense_category_id: 9,
+      uploader: { name: "John Doe" },
+      items: [],
+    };
+
+    apiFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: updated }),
+    });
+
+    const store = useReceiptStore();
+    store.receipts = [
+      {
+        id: "RCPT-2026-005",
+        dbId: 5,
+        amount: 0,
+        categoryId: 1,
+        vendorName: "Old Vendor",
+      },
+    ];
+
+    const result = await store.updateReceipt(5, {
+      vendor_name: "Updated Vendor",
+      total_amount: 500,
+    });
+
+    expect(apiFetch).toHaveBeenCalledTimes(1);
+    const [url, opts] = apiFetch.mock.calls[0];
+    expect(url).toBe("/api/serms/reimbursements/receipts/5");
+    expect(opts.method).toBe("PATCH");
+    expect(result.dbId).toBe(5);
+    // Upsert replaced the existing receipt (same dbId) rather than unshifting.
+    expect(store.receipts).toHaveLength(1);
+    expect(store.receipts[0].vendorName).toBe("Updated Vendor");
+  });
+
+  it("throws a descriptive error when updateReceipt PATCH fails", async () => {
+    apiFetch.mockResolvedValue({
+      ok: false,
+      status: 422,
+      json: async () => ({ message: "Validation failed" }),
+    });
+
+    const store = useReceiptStore();
+    await expect(
+      store.updateReceipt(1, { vendor_name: "X" }),
+    ).rejects.toThrow("Validation failed");
+  });
 });

@@ -401,6 +401,80 @@ export const useReceiptStore = defineStore("receipts", () => {
     }
   }
 
+  /**
+   * Update an existing receipt's editable fields via PATCH.
+   * Used by the OCR-driven expense upload flow to persist user corrections
+   * after the backend has extracted the initial data.
+   *
+   * @param {number|string} id - The receipt's backend (db) id
+   * @param {object} payload - Editable fields (snake_case backend names)
+   * @returns {Promise<object>} The updated mapped receipt
+   */
+  async function updateReceipt(id, payload) {
+    isSaving.value = true;
+
+    const formData = new FormData();
+    // Skip null/undefined AND empty strings: the backend's `numeric`/`date`/
+    // `exists` rules reject "" (e.g. an unextracted total_amount), and we want
+    // to leave those columns untouched rather than overwrite them with blanks.
+    const shouldAppend = (v) => v != null && v !== "";
+    if (shouldAppend(payload.expense_category_id))
+      formData.append("expense_category_id", payload.expense_category_id);
+    if (shouldAppend(payload.vendor_name))
+      formData.append("vendor_name", payload.vendor_name);
+    if (shouldAppend(payload.transaction_date))
+      formData.append("transaction_date", payload.transaction_date);
+    if (shouldAppend(payload.total_amount))
+      formData.append("total_amount", payload.total_amount);
+    if (shouldAppend(payload.vat_amount))
+      formData.append("vat_amount", payload.vat_amount);
+    if (shouldAppend(payload.tin)) formData.append("tin", payload.tin);
+    if (shouldAppend(payload.invoice_number))
+      formData.append("invoice_number", payload.invoice_number);
+    if (shouldAppend(payload.vat_classification))
+      formData.append("vat_classification", payload.vat_classification);
+    if (shouldAppend(payload.currency))
+      formData.append("currency", payload.currency);
+    if (shouldAppend(payload.location))
+      formData.append("location", payload.location);
+    if (payload.items && Array.isArray(payload.items)) {
+      formData.append("items", JSON.stringify(payload.items));
+    }
+
+    try {
+      const response = await apiFetch(
+        `/api/serms/reimbursements/receipts/${id}`,
+        {
+          method: "PATCH",
+          credentials: "include",
+          body: formData,
+        },
+      );
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.message || "Failed to update receipt.");
+      }
+
+      const res = await response.json();
+      const mapped = mapReceipt(res.data);
+
+      const index = receipts.value.findIndex((r) => r.dbId === mapped.dbId);
+      if (index !== -1) {
+        receipts.value[index] = mapped;
+      } else {
+        receipts.value.unshift(mapped);
+      }
+
+      return mapped;
+    } catch (error) {
+      console.error("Receipt update failed:", error);
+      throw error;
+    } finally {
+      isSaving.value = false;
+    }
+  }
+
   async function finalizeReReview(id, decision, adminNotes) {
     const rx =
       receipts.value.find((r) => r.id === id) ||
@@ -534,6 +608,7 @@ export const useReceiptStore = defineStore("receipts", () => {
     fetchCategories,
     uploadReceipt,
     resubmitReceipt,
+    updateReceipt,
     finalizeReReview,
     simulateUpload,
     softDelete,

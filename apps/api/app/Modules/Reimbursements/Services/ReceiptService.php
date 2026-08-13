@@ -127,18 +127,63 @@ class ReceiptService
     }
 
     /**
-     * Update receipt (admin notes, status).
+     * Update a receipt.
+     *
+     * Admins may edit any receipt (including status / admin_notes).
+     * The receipt owner (uploader) may correct the OCR-extracted fields of
+     * their own receipt after the OCR pipeline has processed it, but may NOT
+     * set status or admin_notes.
      */
     public function updateReceipt(User $user, int $id, array $data, bool $canManage)
     {
-        if (!$canManage) {
-            throw new AuthorizationException('Unauthorized.');
-        }
+        return DB::transaction(function () use ($user, $id, $data, $canManage) {
+            $receipt = Receipt::with('items')->findOrFail($id);
 
-        $receipt = Receipt::findOrFail($id);
-        $receipt->update($data);
+            // Authorization: admin OR the uploader (owner) of the receipt.
+            if (!$canManage && $receipt->uploaded_by !== $user->id) {
+                throw new AuthorizationException('Unauthorized.');
+            }
 
-        return $receipt;
+            // Admin-only fields: status and admin_notes may only be set by admins.
+            $updateData = collect($data);
+            if (!$canManage) {
+                $updateData = $updateData->except(['status', 'admin_notes']);
+            }
+            $updateData = $updateData->toArray();
+
+            // Normalize vat_classification to lowercase when present.
+            if (array_key_exists('vat_classification', $updateData)) {
+                $updateData['vat_classification'] = strtolower((string) $updateData['vat_classification']);
+            }
+
+            $beforeState = $receipt->toArray();
+
+            $receipt->update($updateData);
+
+            // Items sync: replace existing line items when `items` is supplied.
+            if (array_key_exists('items', $data)) {
+                $receipt->items()->delete();
+
+                if (!empty($data['items'])) {
+                    $receipt->items()->createMany($data['items']);
+                }
+            }
+
+            // Audit Log (required by AGENTS.md for every DB mutation).
+            AuditLogService::log(
+                actorId: $user->id,
+                actorRole: $user->role,
+                actionType: 'RECEIPT_UPDATED',
+                entityType: 'receipt',
+                entityId: $receipt->id,
+                beforeState: $beforeState,
+                afterState: $receipt->fresh()->toArray(),
+                ipAddress: request()->ip(),
+            );
+
+            return $receipt->fresh(['category', 'items', 'uploader'])
+                ->loadCount('reimbursements');
+        });
     }
 
     /**

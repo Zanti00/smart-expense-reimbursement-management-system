@@ -3,8 +3,8 @@ import { useAuthStore } from "@/stores/auth";
 import { useToast } from "@/composables/useToast";
 import { buildPrefilledReceiptDraft } from "@/utils/receiptUtils";
 
-export function useReceiptUploads() {
-  const DRAFT_KEY = "serms_draft_receipts";
+export function useReceiptUploads(options = {}) {
+  const DRAFT_KEY = options.draftKey || "serms_draft_receipts";
   const initialDrafts = sessionStorage.getItem(DRAFT_KEY);
   const localReceipts = ref(initialDrafts ? JSON.parse(initialDrafts) : []);
 

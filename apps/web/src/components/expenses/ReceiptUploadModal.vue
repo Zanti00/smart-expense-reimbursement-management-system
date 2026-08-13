@@ -18,9 +18,14 @@ import {
   Save,
   Plus,
   Trash2,
+  Layers,
 } from "lucide-vue-next";
 
-
+// OCR-driven upload pipeline (reused from the Reimbursement feature)
+import { useReceiptUploads } from "@/composables/reimbursements/useReceiptUploads";
+import ScannedReceiptsList from "@/components/reimbursements/ScannedReceiptsList.vue";
+import SegmentedReceiptUpload from "@/components/reimbursements/SegmentedReceiptUpload.vue";
+import ReceiptQualityRejectionModal from "@/components/reimbursements/ReceiptQualityRejectionModal.vue";
 
 const props = defineProps({
   modelValue: {
@@ -37,7 +42,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["update:modelValue"]);
+const emit = defineEmits(["update:modelValue", "saved"]);
 
 const receiptsStore = useReceiptStore();
 const { addToast } = useToast();
@@ -46,6 +51,98 @@ function notify(message, type = "info") {
   addToast({ message, type });
 }
 
+const isEditMode = computed(() => !!props.receiptToEdit);
+
+/* ──────────────────────────────────────────────────────────────
+ * NEW UPLOAD MODE — OCR pipeline (mirrors the Reimbursement feature)
+ * ────────────────────────────────────────────────────────────── */
+const {
+  localReceipts,
+  receiptDrag,
+  receiptInput,
+  handleReceiptDrop,
+  handleReceiptSelect,
+  addReceiptFiles,
+  removeReceipt,
+  clearDraftReceipts,
+  qualityRejection,
+  clearQualityRejection,
+  showSegmentedUpload,
+  continueAnyway,
+  submitSegments,
+} = useReceiptUploads({ draftKey: "serms_expense_draft_receipts" });
+
+function handleRetake() {
+  if (qualityRejection.value?.receiptId) {
+    removeReceipt({ id: qualityRejection.value.receiptId });
+  }
+  clearQualityRejection();
+  setTimeout(() => receiptInput.value?.click(), 100);
+}
+
+const allOcrComplete = computed(
+  () =>
+    localReceipts.value.length > 0 &&
+    localReceipts.value.every((r) => !r.isUploading && !r.isProcessing),
+);
+
+const requiredFieldsComplete = computed(
+  () =>
+    localReceipts.value.length > 0 &&
+    localReceipts.value.every((r) => r.date && r.categoryId),
+);
+
+const canSaveNew = computed(
+  () =>
+    localReceipts.value.length > 0 &&
+    allOcrComplete.value &&
+    requiredFieldsComplete.value,
+);
+
+// Map the camelCase OCR draft into the snake_case shape the util expects,
+// then reuse buildReceiptUploadFormPrefill to build the PATCH payload.
+function buildUpdatePayload(receipt) {
+  const prefill = buildReceiptUploadFormPrefill({
+    id: receipt.id,
+    receiptData: {
+      invoice_number: receipt.invoiceNumber,
+      transaction_date: receipt.date,
+      tin: receipt.tin,
+      vendor_name: receipt.merchantName,
+      expense_category_id: receipt.categoryId,
+      total_amount: receipt.amount,
+      vat_amount: receipt.tax,
+      vat_classification: receipt.vatClassification,
+      currency: receipt.currency,
+      location: receipt.location,
+      items: receipt.items,
+    },
+  });
+  prefill.location = receipt.location || null;
+  return prefill;
+}
+
+async function saveNewReceipt() {
+  if (!canSaveNew.value) return;
+  try {
+    for (const receipt of localReceipts.value) {
+      // Skip receipts that never got a real backend id (e.g. failed uploads).
+      if (String(receipt.id).startsWith("temp-")) continue;
+      const payload = buildUpdatePayload(receipt);
+      await receiptsStore.updateReceipt(receipt.dbId ?? receipt.id, payload);
+    }
+    notify("Receipt saved.", "success");
+    isSubmitted.value = true;
+    emit("saved");
+    close();
+  } catch (e) {
+    notify(e.message || "Failed to save receipt.", "error");
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────
+ * EDIT MODE — existing manual form + resubmitReceipt (unchanged)
+ * ────────────────────────────────────────────────────────────── */
 const uploadFileInput = ref(null);
 const uploadFile = ref(null);
 const uploadFilePreview = ref("");
@@ -126,16 +223,19 @@ const validationErrors = computed(() => {
 });
 
 const isDirty = computed(() => {
-  return (
-    uploadFile.value !== null ||
-    uploadForm.value.invoice_number !== "" ||
-    uploadForm.value.transaction_date !== "" ||
-    uploadForm.value.tin !== "" ||
-    uploadForm.value.vendor_name !== "" ||
-    uploadForm.value.expense_category_id !== "" ||
-    uploadForm.value.total_amount !== "" ||
-    uploadForm.value.items.length > 0
-  );
+  if (isEditMode.value) {
+    return (
+      uploadFile.value !== null ||
+      uploadForm.value.invoice_number !== "" ||
+      uploadForm.value.transaction_date !== "" ||
+      uploadForm.value.tin !== "" ||
+      uploadForm.value.vendor_name !== "" ||
+      uploadForm.value.expense_category_id !== "" ||
+      uploadForm.value.total_amount !== "" ||
+      uploadForm.value.items.length > 0
+    );
+  }
+  return localReceipts.value.length > 0;
 });
 
 const isSubmitted = ref(false);
@@ -193,27 +293,30 @@ watch(
       await receiptsStore.fetchCategories();
     }
 
-    if (!props.receiptToEdit) return;
-
-    uploadFile.value = null;
-    uploadFilePreview.value = props.receiptToEdit.thumbnail || "";
-    uploadForm.value = {
-      invoice_number: props.receiptToEdit.invoiceNumber || "",
-      transaction_date: formatDateForInput(props.receiptToEdit.date),
-      tin: props.receiptToEdit.tin || "",
-      vendor_name: props.receiptToEdit.vendorName || "",
-      expense_category_id: props.receiptToEdit.categoryId || "",
-      total_amount: props.receiptToEdit.amount || "",
-      vat_classification: props.receiptToEdit.vatClassification || "vat",
-      currency: props.receiptToEdit.currency || "",
-      vat_amount: receiptFinancials(
-        { amount: Number(props.receiptToEdit.amount) || 0 },
-        props.receiptToEdit.vatClassification || "vat",
-      ).vat.toFixed(2),
-      items: props.receiptToEdit.items?.length
-        ? props.receiptToEdit.items.map((item) => ({ ...item }))
-        : [],
-    };
+    if (isEditMode.value) {
+      uploadFile.value = null;
+      uploadFilePreview.value = props.receiptToEdit.thumbnail || "";
+      uploadForm.value = {
+        invoice_number: props.receiptToEdit.invoiceNumber || "",
+        transaction_date: formatDateForInput(props.receiptToEdit.date),
+        tin: props.receiptToEdit.tin || "",
+        vendor_name: props.receiptToEdit.vendorName || "",
+        expense_category_id: props.receiptToEdit.categoryId || "",
+        total_amount: props.receiptToEdit.amount || "",
+        vat_classification: props.receiptToEdit.vatClassification || "vat",
+        currency: props.receiptToEdit.currency || "",
+        vat_amount: receiptFinancials(
+          { amount: Number(props.receiptToEdit.amount) || 0 },
+          props.receiptToEdit.vatClassification || "vat",
+        ).vat.toFixed(2),
+        items: props.receiptToEdit.items?.length
+          ? props.receiptToEdit.items.map((item) => ({ ...item }))
+          : [],
+      };
+    } else {
+      // Start each NEW upload session with a clean OCR draft list.
+      clearDraftReceipts();
+    }
   },
 );
 
@@ -315,7 +418,12 @@ function resetUploadForm() {
 
 function close() {
   dismissWithConfirm(() => {
-    resetUploadForm();
+    if (isEditMode.value) {
+      resetUploadForm();
+    } else {
+      clearDraftReceipts();
+      clearQualityRejection();
+    }
     emit("update:modelValue", false);
   });
 }
@@ -402,7 +510,7 @@ function formatCurrency(amount) {
             <h2
               class="text-xl font-bold text-primary"
             >
-              {{ receiptToEdit ? "Edit Receipt" : "Receipt Scanned" }}
+              {{ isEditMode ? "Edit Receipt" : "Upload Receipt" }}
             </h2>
           </div>
           <button
@@ -414,341 +522,423 @@ function formatCurrency(amount) {
           </button>
         </div>
 
-        <!-- Modal Content (Two Columns) -->
-        <div
-          class="flex flex-col md:flex-row flex-1 overflow-y-auto max-h-[75vh] md:max-h-[80vh]"
-        >
-          <!-- Left Column: File Upload Area -->
+        <!-- ───────── NEW UPLOAD MODE (OCR pipeline) ───────── -->
+        <template v-if="!isEditMode">
           <div
-            class="w-full md:w-[340px] p-6 bg-slate-50 border-r border-slate-100 flex flex-col items-center"
+            class="flex flex-col overflow-y-auto max-h-[75vh] md:max-h-[80vh]"
           >
+            <!-- Upload actions -->
             <div
-              class="w-full aspect-[3/4] bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden group relative cursor-pointer"
-              @click="triggerFileUpload"
+              class="px-6 py-4 flex flex-wrap items-center gap-3 border-b border-slate-100 bg-slate-50"
             >
-              <!-- Preview if image file selected -->
-              <div v-if="uploadFile && uploadFilePreview" class="w-full h-full">
-                <img
-                  :src="uploadFilePreview"
-                  alt="Receipt preview"
-                  class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
-                />
-              </div>
-              <!-- PDF or no-file placeholder -->
-              <div
-                v-else
-                class="w-full h-full flex flex-col items-center justify-center gap-3 text-slate-400"
+              <input
+                ref="receiptInput"
+                type="file"
+                class="hidden"
+                accept=".jpeg,.jpg,.png,.pdf"
+                @change="handleReceiptSelect"
+              />
+              <button
+                type="button"
+                class="btn btn-cta min-h-[42px]"
+                :disabled="receiptsStore.isSaving"
+                @click="receiptInput?.click()"
               >
-                <div
-                  class="w-16 h-16 rounded-2xl bg-primary/5 flex items-center justify-center"
-                >
-                  <UploadCloud
-                    v-if="!uploadFile"
-                    class="w-7 h-7 text-primary/40"
-                  />
-                  <FileText v-else class="w-7 h-7 text-primary/40" />
-                </div>
-                <p
-                  class="text-[10px] text-slate-300 font-semibold uppercase tracking-widest text-center px-4"
-                >
-                  {{
-                    uploadFile
-                      ? uploadFile.name
-                      : receiptToEdit
-                        ? "Click to replace file"
-                        : "Click to select file"
-                  }}
-                </p>
-                <p v-if="!uploadFile" class="text-[10px] text-slate-300">
-                  JPEG, PNG, or PDF (max 2MB)
-                </p>
-              </div>
-              <div
-                class="absolute inset-0 bg-primary/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+                <UploadCloud class="w-4 h-4" />
+                Select Receipt
+              </button>
+              <button
+                type="button"
+                class="btn btn-secondary min-h-[42px]"
+                :disabled="receiptsStore.isSaving"
+                @click="showSegmentedUpload = true"
               >
-                <UploadCloud class="w-10 h-10 text-primary" />
-              </div>
-              <div
-                v-if="receiptsStore.isSaving"
-                class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-white/85 text-accent backdrop-blur-[1px]"
-              >
-                <span
-                  class="h-9 w-9 rounded-full border-2 border-current border-t-transparent animate-spin"
-                  aria-hidden="true"
-                />
-                <span class="text-[10px] font-bold uppercase tracking-widest">
-                  {{ receiptToEdit ? "Updating receipt..." : "Uploading receipt..." }}
-                </span>
-              </div>
+                <Layers class="w-4 h-4" />
+                Upload in Segments
+              </button>
+              <p class="text-xs text-slate-400">
+                JPEG, PNG, or PDF (max 2MB). Receipt data is extracted
+                automatically.
+              </p>
             </div>
-            <input
-              ref="uploadFileInput"
-              type="file"
-              accept=".jpeg,.jpg,.png,.pdf"
-              class="hidden"
-              @change="handleUploadFileSelect"
-            />
-            <p class="mt-4 text-[11px] text-slate-400">
-              {{ uploadFile ? uploadFile.name : "No file selected" }}
-            </p>
-          </div>
 
-          <!-- Right Column: Form Data -->
-          <div class="flex-1 p-6 space-y-6">
-            <!-- Form Grid -->
-            <div class="grid grid-cols-2 gap-4">
+            <!-- Segmented Upload Panel -->
+            <SegmentedReceiptUpload
+              v-if="showSegmentedUpload"
+              class="m-6"
+              @submit-segments="
+                (files) => {
+                  submitSegments(files);
+                  showSegmentedUpload = false;
+                }
+              "
+              @cancel="showSegmentedUpload = false"
+            />
+
+            <!-- Scanned Receipts review surface -->
+            <ScannedReceiptsList
+              v-if="localReceipts.length"
+              :receipts="localReceipts"
+              :categories="categories"
+              :allow-remove="true"
+              class="m-6"
+              @remove-receipt="removeReceipt"
+            />
+
+            <!-- Empty state -->
+            <div
+              v-else
+              class="px-6 py-16 flex flex-col items-center text-center text-slate-400"
+            >
+              <UploadCloud class="w-10 h-10 mx-auto opacity-30 mb-3" />
+              <p class="text-sm font-semibold text-slate-500">
+                No receipt selected yet
+              </p>
+              <p class="text-xs mt-1">
+                Select a file above to start automatic OCR extraction.
+              </p>
+            </div>
+          </div>
+        </template>
+
+        <!-- ───────── EDIT MODE (manual form, unchanged) ───────── -->
+        <template v-else>
+          <!-- Modal Content (Two Columns) -->
+          <div
+            class="flex flex-col md:flex-row flex-1 overflow-y-auto max-h-[75vh] md:max-h-[80vh]"
+          >
+            <!-- Left Column: File Upload Area -->
+            <div
+              class="w-full md:w-[340px] p-6 bg-slate-50 border-r border-slate-100 flex flex-col items-center"
+            >
+              <div
+                class="w-full aspect-[3/4] bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden group relative cursor-pointer"
+                @click="triggerFileUpload"
+              >
+                <!-- Preview if image file selected -->
+                <div v-if="uploadFile && uploadFilePreview" class="w-full h-full">
+                  <img
+                    :src="uploadFilePreview"
+                    alt="Receipt preview"
+                    class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                  />
+                </div>
+                <!-- PDF or no-file placeholder -->
+                <div
+                  v-else
+                  class="w-full h-full flex flex-col items-center justify-center gap-3 text-slate-400"
+                >
+                  <div
+                    class="w-16 h-16 rounded-2xl bg-primary/5 flex items-center justify-center"
+                  >
+                    <UploadCloud
+                      v-if="!uploadFile"
+                      class="w-7 h-7 text-primary/40"
+                    />
+                    <FileText v-else class="w-7 h-7 text-primary/40" />
+                  </div>
+                  <p
+                    class="text-[10px] text-slate-300 font-semibold uppercase tracking-widest text-center px-4"
+                  >
+                    {{
+                      uploadFile
+                        ? uploadFile.name
+                        : receiptToEdit
+                          ? "Click to replace file"
+                          : "Click to select file"
+                    }}
+                  </p>
+                  <p v-if="!uploadFile" class="text-[10px] text-slate-300">
+                    JPEG, PNG, or PDF (max 2MB)
+                  </p>
+                </div>
+                <div
+                  class="absolute inset-0 bg-primary/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+                >
+                  <UploadCloud class="w-10 h-10 text-primary" />
+                </div>
+                <div
+                  v-if="receiptsStore.isSaving"
+                  class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-white/85 text-accent backdrop-blur-[1px]"
+                >
+                  <span
+                    class="h-9 w-9 rounded-full border-2 border-current border-t-transparent animate-spin"
+                    aria-hidden="true"
+                  />
+                  <span class="text-[10px] font-bold uppercase tracking-widest">
+                    {{ receiptToEdit ? "Updating receipt..." : "Uploading receipt..." }}
+                  </span>
+                </div>
+              </div>
+              <input
+                ref="uploadFileInput"
+                type="file"
+                accept=".jpeg,.jpg,.png,.pdf"
+                class="hidden"
+                @change="handleUploadFileSelect"
+              />
+              <p class="mt-4 text-[11px] text-slate-400">
+                {{ uploadFile ? uploadFile.name : "No file selected" }}
+              </p>
+            </div>
+
+            <!-- Right Column: Form Data -->
+            <div class="flex-1 p-6 space-y-6">
+              <!-- Form Grid -->
+              <div class="grid grid-cols-2 gap-4">
+                <div class="input-wrapper">
+                  <label class="input-label"
+                    >Invoice Number <span class="text-danger">*</span></label
+                  >
+                  <input
+                    class="input"
+                    type="text"
+                    v-model="uploadForm.invoice_number"
+                    placeholder="INV-2026-00001"
+                  />
+                </div>
+                <div class="input-wrapper">
+                  <label class="input-label"
+                    >Date <span class="text-danger">*</span></label
+                  >
+                  <div class="relative">
+                    <input
+                      class="input"
+                      type="date"
+                      v-model="uploadForm.transaction_date"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div class="input-wrapper">
                 <label class="input-label"
-                  >Invoice Number <span class="text-danger">*</span></label
+                  >TIN Number <span class="text-danger">*</span></label
                 >
                 <input
                   class="input"
                   type="text"
-                  v-model="uploadForm.invoice_number"
-                  placeholder="INV-2026-00001"
+                  v-model="uploadForm.tin"
+                  @input="formatTIN"
+                  placeholder="000-000-000-000"
+                  maxlength="15"
                 />
               </div>
+
               <div class="input-wrapper">
                 <label class="input-label"
-                  >Date <span class="text-danger">*</span></label
+                  >Vendor Name <span class="text-danger">*</span></label
                 >
-                <div class="relative">
-                  <input
-                    class="input"
-                    type="date"
-                    v-model="uploadForm.transaction_date"
-                  />
+                <input
+                  class="input"
+                  type="text"
+                  v-model="uploadForm.vendor_name"
+                  placeholder="Enter vendor name"
+                />
+              </div>
+
+              <div class="input-wrapper">
+                <label class="input-label"
+                  >Category <span class="text-danger">*</span></label
+                >
+                <div class="flex gap-3">
+                  <div class="relative flex-1">
+                    <select
+                      class="input appearance-none cursor-pointer"
+                      v-model="uploadForm.expense_category_id"
+                    >
+                      <option value="" disabled>Select category</option>
+                      <option
+                        v-for="cat in categories"
+                        :key="cat.id"
+                        :value="cat.id"
+                      >
+                        {{ cat.name }}
+                      </option>
+                    </select>
+                    <ChevronDown
+                      class="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div class="input-wrapper">
-              <label class="input-label"
-                >TIN Number <span class="text-danger">*</span></label
-              >
-              <input
-                class="input"
-                type="text"
-                v-model="uploadForm.tin"
-                @input="formatTIN"
-                placeholder="000-000-000-000"
-                maxlength="15"
-              />
-            </div>
-
-            <div class="input-wrapper">
-              <label class="input-label"
-                >Vendor Name <span class="text-danger">*</span></label
-              >
-              <input
-                class="input"
-                type="text"
-                v-model="uploadForm.vendor_name"
-                placeholder="Enter vendor name"
-              />
-            </div>
-
-            <div class="input-wrapper">
-              <label class="input-label"
-                >Category <span class="text-danger">*</span></label
-              >
-              <div class="flex gap-3">
-                <div class="relative flex-1">
+              <div class="input-wrapper">
+                <label class="input-label"
+                  >VAT Classification <span class="text-danger">*</span></label
+                >
+                <div class="relative">
                   <select
                     class="input appearance-none cursor-pointer"
-                    v-model="uploadForm.expense_category_id"
+                    v-model="uploadForm.vat_classification"
                   >
-                    <option value="" disabled>Select category</option>
-                    <option
-                      v-for="cat in categories"
-                      :key="cat.id"
-                      :value="cat.id"
-                    >
-                      {{ cat.name }}
-                    </option>
+                    <option value="vat">VAT</option>
+                    <option value="non-vat">Non-VAT</option>
                   </select>
                   <ChevronDown
                     class="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
                   />
                 </div>
               </div>
-            </div>
 
-            <div class="input-wrapper">
-              <label class="input-label"
-                >VAT Classification <span class="text-danger">*</span></label
-              >
-              <div class="relative">
-                <select
-                  class="input appearance-none cursor-pointer"
-                  v-model="uploadForm.vat_classification"
-                >
-                  <option value="vat">VAT</option>
-                  <option value="non-vat">Non-VAT</option>
-                </select>
-                <ChevronDown
-                  class="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-                />
+              <!-- Currency -->
+              <div class="input-wrapper">
+                <label class="input-label">Currency</label>
+                <div class="flex gap-3 items-center">
+                  <div class="flex-1">
+                    <CurrencySelect
+                      v-model="uploadForm.currency"
+                      :disabled="receiptsStore.isSaving"
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
 
-            <!-- Currency -->
-            <div class="input-wrapper">
-              <label class="input-label">Currency</label>
-              <div class="flex gap-3 items-center">
-                <div class="flex-1">
-                  <CurrencySelect
-                    v-model="uploadForm.currency"
-                    :disabled="receiptsStore.isSaving"
+              <!-- Totals Inputs Section -->
+              <div class="grid grid-cols-2 gap-4">
+                <div class="input-wrapper">
+                  <label class="input-label"
+                    >Total Amount (VAT-Inclusive)
+                    <span class="text-danger">*</span></label
+                  >
+                  <input
+                    class="input"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    v-model="uploadForm.total_amount"
+                    placeholder="0.00"
+                  />
+                </div>
+                <div class="input-wrapper">
+                  <label
+                    class="input-label"
+                    :class="{
+                      'opacity-50': uploadForm.vat_classification === 'non-vat',
+                    }"
+                    >VAT Amount (Inclusive)
+                    <span
+                      v-if="uploadForm.vat_classification === 'vat'"
+                      class="text-danger"
+                      >*</span
+                    ></label
+                  >
+                  <input
+                    class="input disabled:opacity-70 disabled:cursor-not-allowed disabled:bg-slate-50"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    v-model="uploadForm.vat_amount"
+                    placeholder="0.00"
+                    disabled
                   />
                 </div>
               </div>
-            </div>
 
-            <!-- Totals Inputs Section -->
-            <div class="grid grid-cols-2 gap-4">
-              <div class="input-wrapper">
-                <label class="input-label"
-                  >Total Amount (VAT-Inclusive)
-                  <span class="text-danger">*</span></label
-                >
-                <input
-                  class="input"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  v-model="uploadForm.total_amount"
-                  placeholder="0.00"
-                />
-              </div>
-              <div class="input-wrapper">
-                <label
-                  class="input-label"
-                  :class="{
-                    'opacity-50': uploadForm.vat_classification === 'non-vat',
-                  }"
-                  >VAT Amount (Inclusive)
-                  <span
-                    v-if="uploadForm.vat_classification === 'vat'"
-                    class="text-danger"
-                    >*</span
-                  ></label
-                >
-                <input
-                  class="input disabled:opacity-70 disabled:cursor-not-allowed disabled:bg-slate-50"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  v-model="uploadForm.vat_amount"
-                  placeholder="0.00"
-                  disabled
-                />
-              </div>
-            </div>
-
-            <!-- Items Section -->
-            <div class="pt-4 border-t border-slate-100">
-              <div class="flex items-center justify-between mb-4">
-                <label class="input-label !mb-0">Expense Items</label>
-                <button
-                  type="button"
-                  @click="addItem"
-                  class="btn btn-secondary !py-1.5 !px-3 !text-xs flex items-center gap-1.5"
-                >
-                  <Plus class="w-3.5 h-3.5" />
-                  Add Item
-                </button>
-              </div>
-
-              <div class="space-y-3">
-                <div
-                  v-for="(item, index) in uploadForm.items"
-                  :key="index"
-                  class="flex gap-3 items-end bg-slate-50 p-3 rounded-lg border border-slate-100"
-                >
-                  <div class="flex-1 input-wrapper !mb-0">
-                    <label class="input-label !text-[10px]"
-                      >Item Name <span class="text-danger">*</span></label
-                    >
-                    <input
-                      class="input !py-1.5 !text-sm"
-                      type="text"
-                      v-model="item.name"
-                      placeholder="e.g. Office Supplies"
-                    />
-                  </div>
-                  <div class="w-20 input-wrapper !mb-0">
-                    <label class="input-label !text-[10px]"
-                      >Qty <span class="text-danger">*</span></label
-                    >
-                    <input
-                      class="input !py-1.5 !text-sm"
-                      type="number"
-                      min="1"
-                      v-model="item.quantity"
-                    />
-                  </div>
-                  <div class="w-28 input-wrapper !mb-0">
-                    <label class="input-label !text-[10px]"
-                      >Price (Incl. VAT)
-                      <span class="text-danger">*</span></label
-                    >
-                    <input
-                      class="input !py-1.5 !text-sm"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      v-model="item.price"
-                      placeholder="0.00"
-                    />
-                  </div>
+              <!-- Items Section -->
+              <div class="pt-4 border-t border-slate-100">
+                <div class="flex items-center justify-between mb-4">
+                  <label class="input-label !mb-0">Expense Items</label>
                   <button
                     type="button"
-                    @click="removeItem(index)"
-                    class="p-2 text-slate-400 hover:text-danger hover:bg-danger/10 rounded-lg transition-colors mb-[2px]"
+                    @click="addItem"
+                    class="btn btn-secondary !py-1.5 !px-3 !text-xs flex items-center gap-1.5"
                   >
-                    <Trash2 class="w-4 h-4" />
+                    <Plus class="w-3.5 h-3.5" />
+                    Add Item
                   </button>
                 </div>
-                <div
-                  v-if="uploadForm.items.length === 0"
-                  class="text-center py-6 border border-dashed border-slate-200 rounded-lg text-slate-400 text-sm"
-                >
-                  No items added yet.
+
+                <div class="space-y-3">
+                  <div
+                    v-for="(item, index) in uploadForm.items"
+                    :key="index"
+                    class="flex gap-3 items-end bg-slate-50 p-3 rounded-lg border border-slate-100"
+                  >
+                    <div class="flex-1 input-wrapper !mb-0">
+                      <label class="input-label !text-[10px]"
+                        >Item Name <span class="text-danger">*</span></label
+                      >
+                      <input
+                        class="input !py-1.5 !text-sm"
+                        type="text"
+                        v-model="item.name"
+                        placeholder="e.g. Office Supplies"
+                      />
+                    </div>
+                    <div class="w-20 input-wrapper !mb-0">
+                      <label class="input-label !text-[10px]"
+                        >Qty <span class="text-danger">*</span></label
+                      >
+                      <input
+                        class="input !py-1.5 !text-sm"
+                        type="number"
+                        min="1"
+                        v-model="item.quantity"
+                      />
+                    </div>
+                    <div class="w-28 input-wrapper !mb-0">
+                      <label class="input-label !text-[10px]"
+                        >Price (Incl. VAT)
+                        <span class="text-danger">*</span></label
+                      >
+                      <input
+                        class="input !py-1.5 !text-sm"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        v-model="item.price"
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      @click="removeItem(index)"
+                      class="p-2 text-slate-400 hover:text-danger hover:bg-danger/10 rounded-lg transition-colors mb-[2px]"
+                    >
+                      <Trash2 class="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div
+                    v-if="uploadForm.items.length === 0"
+                    class="text-center py-6 border border-dashed border-slate-200 rounded-lg text-slate-400 text-sm"
+                  >
+                    No items added yet.
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <!-- Expense Breakdown / Summary -->
-            <div class="pt-4 border-t border-slate-100">
-              <label class="input-label mb-4">Expense Summary</label>
-              <div
-                class="bg-slate-50 rounded-xl p-5 border border-slate-100 space-y-3"
-              >
-                <div class="flex justify-between text-sm">
-                  <span class="text-slate-500">VAT-Exclusive Subtotal</span>
-                  <span class="font-medium text-slate-700">{{
-                    formatCurrency(vatExclusiveSubtotal)
-                  }}</span>
-                </div>
-                <div class="flex justify-between text-sm">
-                  <span class="text-slate-500">Inclusive VAT Amount</span>
-                  <span class="font-medium text-slate-700">{{
-                    formatCurrency(Number(uploadForm.vat_amount) || 0)
-                  }}</span>
-                </div>
+              <!-- Expense Breakdown / Summary -->
+              <div class="pt-4 border-t border-slate-100">
+                <label class="input-label mb-4">Expense Summary</label>
                 <div
-                  class="pt-3 border-t border-slate-200 flex justify-between items-center"
+                  class="bg-slate-50 rounded-xl p-5 border border-slate-100 space-y-3"
                 >
-                  <span class="font-bold text-slate-700">Total Amount</span>
-                  <span class="text-2xl font-black text-primary">{{
-                    formatCurrency(Number(uploadForm.total_amount) || 0)
-                  }}</span>
+                  <div class="flex justify-between text-sm">
+                    <span class="text-slate-500">VAT-Exclusive Subtotal</span>
+                    <span class="font-medium text-slate-700">{{
+                      formatCurrency(vatExclusiveSubtotal)
+                    }}</span>
+                  </div>
+                  <div class="flex justify-between text-sm">
+                    <span class="text-slate-500">Inclusive VAT Amount</span>
+                    <span class="font-medium text-slate-700">{{
+                      formatCurrency(Number(uploadForm.vat_amount) || 0)
+                    }}</span>
+                  </div>
+                  <div
+                    class="pt-3 border-t border-slate-200 flex justify-between items-center"
+                  >
+                    <span class="font-bold text-slate-700">Total Amount</span>
+                    <span class="text-2xl font-black text-primary">{{
+                      formatCurrency(Number(uploadForm.total_amount) || 0)
+                    }}</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        </template>
 
         <!-- Modal Footer -->
         <div
@@ -762,6 +952,21 @@ function formatCurrency(amount) {
             Discard All
           </button>
           <button
+            v-if="!isEditMode"
+            @click="saveNewReceipt"
+            class="btn btn-cta min-h-[42px] w-full sm:w-fit"
+            :disabled="receiptsStore.isSaving || !canSaveNew"
+          >
+            <span
+              v-if="receiptsStore.isSaving"
+              class="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin"
+              aria-hidden="true"
+            />
+            <Save v-else class="w-4 h-4" />
+            {{ receiptsStore.isSaving ? "Saving..." : "Save Receipt" }}
+          </button>
+          <button
+            v-else
             @click="saveReceipt"
             class="btn btn-cta min-h-[42px] w-full sm:w-fit"
             :disabled="receiptsStore.isSaving || !isFormValid"
@@ -794,5 +999,22 @@ function formatCurrency(amount) {
     :danger="true"
     @confirm="handleConfirmLeave"
     @close="handleCancelLeave"
+  />
+
+  <!-- Quality rejection handling (NEW upload mode only) -->
+  <ReceiptQualityRejectionModal
+    v-if="!isEditMode"
+    :is-open="!!qualityRejection"
+    :rejected-file="qualityRejection?.file ?? null"
+    :rejection-code="qualityRejection?.rejectionCode ?? ''"
+    :rejection-reason="qualityRejection?.rejectionReason ?? ''"
+    :show-segmented-option="qualityRejection?.rejectionCode === 'too_small'"
+    @retake="handleRetake"
+    @upload-segmented="
+      showSegmentedUpload = true;
+      clearQualityRejection();
+    "
+    @continue-anyway="continueAnyway()"
+    @close="clearQualityRejection"
   />
 </template>

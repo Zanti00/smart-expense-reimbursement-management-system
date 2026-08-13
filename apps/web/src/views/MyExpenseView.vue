@@ -205,6 +205,11 @@ function closeUploadModal(value) {
   if (!value) receiptBeingEdited.value = null;
 }
 
+// Refresh the card grid after a new OCR'd receipt is saved.
+function onExpenseSaved() {
+  fetchReceipts(currentPage.value);
+}
+
 async function finalizeReceiptReview(receipt, decision) {
   const notes = adminNotesByReceipt.value[receipt.id] || "";
   if (notes.trim().length < 10) {
@@ -514,6 +519,7 @@ const kpis = computed(() => [
       :categories="receiptsStore.categories"
       :receipt-to-edit="receiptBeingEdited"
       @update:model-value="closeUploadModal"
+      @saved="onExpenseSaved"
     />
 
     <!-- ── Delete Confirmation Modal ── -->
