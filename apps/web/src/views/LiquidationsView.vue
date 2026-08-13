@@ -907,17 +907,7 @@ function isPastDue(value) {
   return dueDate < today;
 }
 
-function statusBadgeClass(status) {
-  const classes = {
-    Pending: "bg-purple-50 text-purple-700 border-purple-200",
-    Incomplete: "bg-amber-50 text-amber-700 border-amber-200",
-    Overpayment: "bg-blue-50 text-blue-700 border-blue-200",
-    Liquidated: "bg-emerald-600 text-white border-emerald-600",
-    Overdue: "bg-red-50 text-red-700 border-red-200",
-    Rejected: "bg-rose-50 text-rose-700 border-rose-200",
-  };
-  return classes[status] || "bg-slate-100 text-slate-600 border-slate-200";
-}
+
 
 
 
@@ -1146,14 +1136,7 @@ function finalizeLiquidation() {
           }}</span>
         </template>
         <template #cell-status="{ row }">
-          <span
-            :class="[
-              'inline-flex rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-wide',
-              statusBadgeClass(row.status),
-            ]"
-          >
-            {{ row.status }}
-          </span>
+          <StatusBadge :status="row.status" />
         </template>
         <template #cell-actions="{ row }">
           <ActionDropdownMenu :actions="getActions(row)" />
@@ -1178,7 +1161,7 @@ function finalizeLiquidation() {
       :is-reviewing-own-liquidation="isReviewingOwnLiquidation"
       :get-file-url="getFileUrl"
       :format-date-only="formatDate"
-      :status-badge-class="statusBadgeClass"
+
       @close="closeReview"
       @view-receipt="viewReceiptDetails"
       @reject="openRejectModal"

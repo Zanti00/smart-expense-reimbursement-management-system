@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { formatPeso, formatAmount } from "@/utils/formatters";
+import StatusBadge from "@/components/base/StatusBadge.vue";
 import {
   X,
   FileText,
@@ -88,20 +89,6 @@ function getCutoffPeriod(date) {
   });
 }
 
-function statusClass(status) {
-  const classes = {
-    approved: "bg-success text-white border border-success",
-    pending: "bg-yellow-100 text-yellow-800 border border-yellow-200",
-    rejected: "bg-[#FEF2F2] text-[#B91C1C] border border-red-200",
-    granted: "bg-[#F0FDFA] text-[#0D9488] border border-teal-100",
-    processing: "bg-blue-100 text-blue-800 border border-blue-200",
-  };
-  return (
-    classes[normalizeStatus(status)] ||
-    "bg-slate-100 text-slate-600 border border-slate-200"
-  );
-}
-
 function categoryName(record) {
   return record?.expense_category?.name || record?.category?.name || record?.category || "Uncategorized";
 }
@@ -148,14 +135,7 @@ function categoryName(record) {
               <div class="flex flex-col gap-1">
                 <span class="kpi-label text-slate-400">Status</span>
                 <div>
-                  <span
-                    :class="[
-                      'inline-flex rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide',
-                      statusClass(viewingRecord.status),
-                    ]"
-                  >
-                    {{ statusLabel(viewingRecord.status).toUpperCase() }}
-                  </span>
+                  <StatusBadge :status="viewingRecord.status" />
                 </div>
               </div>
               <div class="flex flex-col gap-1">
@@ -296,14 +276,7 @@ function categoryName(record) {
                         >
                           {{ receipt.vendor_name || "Receipt" }}
                         </h5>
-                        <span
-                          :class="[
-                            'shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide',
-                            statusClass(receipt.status),
-                          ]"
-                        >
-                          {{ statusLabel(receipt.status) }}
-                        </span>
+                        <StatusBadge :status="receipt.status" />
                       </div>
                       <div
                         class="flex items-center gap-1.5 text-xs text-slate-400 mb-2"

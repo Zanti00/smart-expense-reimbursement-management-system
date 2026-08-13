@@ -1,6 +1,7 @@
 <script setup>
 import { Eye } from "lucide-vue-next";
 import { formatPeso } from "@/utils/formatters";
+import StatusBadge from "@/components/base/StatusBadge.vue";
 import ActionDropdownMenu from "@/components/base/ActionDropdownMenu.vue";
 
 defineProps({
@@ -31,21 +32,6 @@ function displayStatus(status) {
     .replace(/\s+/g, " ");
 
   return normalized === "under review" ? "under review" : status;
-}
-
-function statusClass(status) {
-  const classes = {
-    unliquidated: "bg-amber-50 text-amber-700 border border-amber-200",
-    liquidated: "bg-blue-50 text-blue-700 border border-blue-200",
-    pending: "bg-yellow-100 text-yellow-800 border border-yellow-200",
-    granted: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-    approved: "bg-success text-white border border-success",
-    disbursed: "bg-[#F0FDFA] text-[#0D9488] border border-teal-100",
-    rejected: "bg-[#FEF2F2] text-[#B91C1C] border border-red-200",
-    "under review": "bg-violet-50 text-violet-700 border border-violet-200",
-    "under-review": "bg-violet-50 text-violet-700 border border-violet-200",
-  };
-  return classes[status] || "bg-slate-100 text-slate-600";
 }
 </script>
 
@@ -139,13 +125,7 @@ function statusClass(status) {
               </div>
             </td>
             <td class="px-5 py-5 text-center">
-              <span
-                :class="[
-                  'inline-flex rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide',
-                  statusClass(row.status),
-                ]"
-                >{{ displayStatus(row.status) }}</span
-              >
+              <StatusBadge :status="row.status" />
             </td>
             <td class="px-5 py-5 text-center">
               <ActionDropdownMenu :actions="getActions(row)" />
