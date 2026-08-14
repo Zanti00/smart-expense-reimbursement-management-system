@@ -297,9 +297,9 @@ class ReceiptService
                 throw new AuthorizationException('Unauthorized. You can only delete your own receipts.');
             }
 
-            if (!$canManage && !in_array($receipt->status, ['processed', 'rejected'])) {
+            if (!$canManage && in_array($receipt->status, ['approved', 'pending', 'pending-admin-re-review', 'final-rejected'])) {
                 throw ValidationException::withMessages([
-                    'receipt' => ['Only processed or rejected receipts can be deleted.']
+                    'receipt' => ['Receipts with status approved, pending, pending-admin-re-review, or final-rejected cannot be deleted.']
                 ]);
             }
 

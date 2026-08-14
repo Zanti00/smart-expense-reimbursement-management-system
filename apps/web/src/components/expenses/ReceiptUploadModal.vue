@@ -616,8 +616,8 @@ function formatCurrency(amount) {
                 class="w-full aspect-[3/4] bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden group relative cursor-pointer"
                 @click="triggerFileUpload"
               >
-                <!-- Preview if image file selected -->
-                <div v-if="uploadFile && uploadFilePreview" class="w-full h-full">
+                <!-- Preview if a receipt image/preview URL is available (edit mode or new selection) -->
+                <div v-if="uploadFilePreview" class="w-full h-full">
                   <img
                     :src="uploadFilePreview"
                     alt="Receipt preview"

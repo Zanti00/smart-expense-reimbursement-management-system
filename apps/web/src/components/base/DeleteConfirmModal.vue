@@ -1,6 +1,7 @@
 <script setup>
 import { ref, watch } from 'vue';
 import { Trash2, Eye, EyeOff } from 'lucide-vue-next';
+import { useAuthStore } from "@/stores/auth";
 
 const props = defineProps({
   modelValue: {
@@ -19,6 +20,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'confirm']);
 
+const auth = useAuthStore();
 const password = ref("");
 const showPassword = ref(false);
 
@@ -66,6 +68,14 @@ function close() {
           <p class="text-sm text-slate-600">
             Please enter your password to confirm this action.
           </p>
+          <input
+            type="text"
+            :value="auth.user?.email"
+            autocomplete="username"
+            tabindex="-1"
+            aria-hidden="true"
+            class="sr-only"
+          />
           <div class="input-wrapper">
             <label class="input-label">Password</label>
             <div class="relative">
@@ -74,6 +84,7 @@ function close() {
                 class="input w-full pr-10"
                 v-model="password"
                 placeholder="Enter your password"
+                autocomplete="current-password"
                 @keyup.enter="handleConfirm"
               />
               <button

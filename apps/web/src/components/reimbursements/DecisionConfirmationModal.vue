@@ -2,6 +2,7 @@
 import { ref, computed } from "vue";
 import BaseModal from "@/components/base/BaseModal.vue";
 import { Activity, CheckCircle, XCircle, Eye, EyeOff } from "lucide-vue-next";
+import { useAuthStore } from "@/stores/auth";
 
 const props = defineProps({
   isOpen: {
@@ -40,6 +41,7 @@ const props = defineProps({
 
 const emit = defineEmits(["update:password", "update:comment", "close", "confirm"]);
 
+const auth = useAuthStore();
 const showConfirmPassword = ref(false);
 
 const localPassword = computed({
@@ -139,6 +141,14 @@ function handleConfirm() {
         </div>
       </div>
 
+      <input
+        type="text"
+        :value="auth.user?.email"
+        autocomplete="username"
+        tabindex="-1"
+        aria-hidden="true"
+        class="sr-only"
+      />
       <div class="input-wrapper">
         <label class="input-label mb-1 block"
           >Password <span class="text-danger">*</span></label
@@ -149,6 +159,7 @@ function handleConfirm() {
             class="input w-full pr-10"
             v-model="localPassword"
             placeholder="Enter your current password"
+            autocomplete="current-password"
             @keyup.enter="handleConfirm"
           />
           <button

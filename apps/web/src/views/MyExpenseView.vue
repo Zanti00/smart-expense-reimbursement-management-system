@@ -6,7 +6,7 @@ import { useReceiptStore } from "@/stores/receipts";
 import { useToast } from "@/composables/useToast";
 import { formatPeso } from "@/utils/formatters";
 import { EXPENSE_CATEGORIES } from "@/utils/constants";
-import { canEditReceipt } from "@/utils/receiptUtils";
+import { canEditReceipt, canDeleteReceipt } from "@/utils/receiptUtils";
 import {
   getForwardingBlockReason,
   mapReceiptToReimbursement,
@@ -129,14 +129,9 @@ async function confirmDelete(password) {
     (item) => item.id === selectedReceiptId.value,
   );
 
-  if (
-    receipt &&
-    !["processed", "rejected"].includes(
-      String(receipt.status || "").toLowerCase(),
-    )
-  ) {
+  if (receipt && !canDeleteReceipt(receipt)) {
     addToast({
-      message: "Only processed or rejected receipts can be deleted.",
+      message: "This receipt's current status does not allow deletion.",
       type: "error",
     });
     deleteModalOpen.value = false;

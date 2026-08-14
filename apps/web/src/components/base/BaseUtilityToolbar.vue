@@ -58,6 +58,7 @@ onBeforeUnmount(() => document.removeEventListener("click", onDocumentClick));
         :value="search"
         class="input min-h-[42px] pl-9"
         :placeholder="searchPlaceholder"
+        autocomplete="off"
         @input="emit('update:search', $event.target.value)"
       />
     </div>

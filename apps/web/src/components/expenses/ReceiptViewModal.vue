@@ -14,7 +14,7 @@ import {
   AlertTriangle,
 } from "lucide-vue-next";
 import { formatPeso as formatCurrency, formatAmount, formatDate as formatDateBase } from "@/utils/formatters";
-import { canEditReceipt } from "@/utils/receiptUtils";
+import { canEditReceipt, canDeleteReceipt } from "@/utils/receiptUtils";
 
 const props = defineProps({
   modelValue: {
@@ -30,11 +30,7 @@ const props = defineProps({
 const emit = defineEmits(["update:modelValue", "delete", "edit"]);
 
 const canEdit = computed(() => canEditReceipt(props.receipt));
-const canDelete = computed(() =>
-  ["processed", "rejected"].includes(
-    String(props.receipt?.status || "").toLowerCase(),
-  ),
-);
+const canDelete = computed(() => canDeleteReceipt(props.receipt));
 
 function close() {
   emit("update:modelValue", false);
