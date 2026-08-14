@@ -84,8 +84,16 @@ export const useReceiptStore = defineStore("receipts", () => {
       });
     }
 
-    // Sorting by newest
-    return filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+    // Sorting by newest uploaded first (created_at), newest at the top.
+    // Uses the already-mapped `createdAt` field (upload time) rather than the
+    // receipt's transaction_date so the grid reflects upload order, matching the
+    // backend's `orderByDesc('created_at')`.
+    return filtered.sort((a, b) => {
+      const byCreated = new Date(b.createdAt) - new Date(a.createdAt);
+      if (byCreated !== 0) return byCreated;
+      // Deterministic tiebreaker for receipts uploaded in the same second.
+      return Number(b.dbId) - Number(a.dbId);
+    });
   });
 
   /**
@@ -335,9 +343,10 @@ export const useReceiptStore = defineStore("receipts", () => {
       throw new Error("Receipt not found.");
     }
 
-    if (String(rx.status || "").toLowerCase() !== "processed") {
+    const rxStatus = String(rx.status || "").toLowerCase();
+    if (!["processed", "flagged", "rejected"].includes(rxStatus)) {
       isSaving.value = false;
-      throw new Error("Only receipts with processed status can be edited.");
+      throw new Error("Only receipts with processed, flagged, or rejected status can be edited.");
     }
 
     const previousStatus = rx.status;
@@ -437,6 +446,8 @@ export const useReceiptStore = defineStore("receipts", () => {
       formData.append("currency", payload.currency);
     if (shouldAppend(payload.location))
       formData.append("location", payload.location);
+    if (shouldAppend(payload.status))
+      formData.append("status", payload.status);
     if (payload.items && Array.isArray(payload.items)) {
       formData.append("items", JSON.stringify(payload.items));
     }

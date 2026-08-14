@@ -144,10 +144,23 @@ class ReceiptService
                 throw new AuthorizationException('Unauthorized.');
             }
 
-            // Admin-only fields: status and admin_notes may only be set by admins.
+            // Admin-only fields: admin_notes may only be set by admins.
+            // A non-admin owner may promote their own (non-attached) receipt to
+            // 'processed' to correct a poor OCR result, but no other status change
+            // is permitted. An attached receipt must keep mirroring its
+            // reimbursement, so the promotion is ignored for attached receipts.
             $updateData = collect($data);
             if (!$canManage) {
-                $updateData = $updateData->except(['status', 'admin_notes']);
+                $updateData = $updateData->except(['admin_notes']);
+                if ($updateData->has('status')) {
+                    $canPromote = $updateData->get('status') === 'processed'
+                        && !$receipt->reimbursements()->exists();
+                    if ($canPromote) {
+                        $updateData['ocr_flagged'] = false;
+                    } else {
+                        $updateData = $updateData->except(['status']);
+                    }
+                }
             }
             $updateData = $updateData->toArray();
 
@@ -198,9 +211,9 @@ class ReceiptService
                 throw new AuthorizationException('Unauthorized. You can only resubmit your own receipts.');
             }
 
-            if ($receipt->status !== 'processed') {
+            if (!in_array($receipt->status, ['processed', 'flagged', 'rejected'])) {
                 throw ValidationException::withMessages([
-                    'status' => ['Only receipts with processed status can be edited.'],
+                    'status' => ['Only processed, flagged, or rejected receipts can be edited.'],
                 ]);
             }
 

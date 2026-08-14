@@ -157,6 +157,37 @@ class ReimbursementLogicTest extends TestCase
         $response->assertJsonPath('data.0.reimbursements_count', 1);
     }
 
+    public function test_fresh_unattached_receipt_reports_zero_reimbursement_count(): void
+    {
+        // A freshly uploaded receipt that has NOT been forwarded to any
+        // reimbursement must report reimbursements_count === 0, so the frontend
+        // never treats it as "already attached".
+        $receipt = Receipt::create([
+            'uploaded_by' => $this->employee->id,
+            'file_path' => 'receipts/rcpt_fresh.png',
+            'file_hash' => str_repeat('f', 64),
+            'file_type' => 'png',
+            'file_size_bytes' => 1024,
+            'vendor_name' => 'Fresh Vendor',
+            'transaction_date' => '2026-06-10',
+            'total_amount' => 100.00,
+            'invoice_number' => 'INV-FRESH',
+            'status' => 'pending',
+        ]);
+
+        $response = $this
+            ->withoutMiddleware(\App\Modules\Shared\Http\Middleware\AuthenticateWithExternalService::class)
+            ->actingAs($this->employee)
+            ->getJson('/api/reimbursements/receipts');
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('data.0.reimbursements_count', 0);
+        $this->assertDatabaseHas('receipts', [
+            'id' => $receipt->id,
+            'status' => 'pending',
+        ]);
+    }
+
     public function test_reimbursement_cannot_reuse_claimed_receipt(): void
     {
         $receipt = Receipt::create([

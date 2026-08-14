@@ -8,6 +8,7 @@ use App\Modules\Shared\Http\Middleware\AuthenticateWithExternalService;
 use App\Modules\Users\Models\User;
 use App\Modules\Reimbursements\Models\Receipt;
 use App\Modules\Reimbursements\Models\ReceiptItem;
+use App\Modules\Reimbursements\Models\Reimbursement;
 use App\Modules\Reimbursements\Models\ExpenseCategory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -196,6 +197,160 @@ class ReceiptOwnerUpdateTest extends TestCase
             'status' => 'pending',
             'admin_notes' => null,
             'vendor_name' => 'Still Allowed',
+        ]);
+    }
+
+    /**
+     * A non-admin owner MAY promote their own (non-attached) poor-OCR receipt to
+     * `processed` and clear the `ocr_flagged` flag, without admin intervention.
+     */
+    public function test_owner_can_promote_non_attached_receipt_to_processed(): void
+    {
+        $receipt = Receipt::create([
+            'uploaded_by' => $this->employee->id,
+            'file_path' => ['receipts/owner_promote.png'],
+            'file_hash' => [str_repeat('f', 64)],
+            'file_type' => ['png'],
+            'file_size_bytes' => [1024],
+            'vendor_name' => 'Flagged Vendor',
+            'status' => 'flagged',
+            'ocr_flagged' => true,
+        ]);
+
+        $response = $this->patchAs($this->employee, $receipt->id, [
+            'status' => 'processed',
+            'vendor_name' => 'Corrected Vendor',
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('data.status', 'processed');
+        $response->assertJsonPath('data.ocr_flagged', false);
+
+        $this->assertDatabaseHas('receipts', [
+            'id' => $receipt->id,
+            'status' => 'processed',
+            'ocr_flagged' => false,
+            'vendor_name' => 'Corrected Vendor',
+        ]);
+    }
+
+    /**
+     * The mirroring invariant: a non-admin owner must NOT be able to flip the
+     * status of a receipt that is already attached to a reimbursement. The
+     * promotion request is ignored; OCR fields remain editable.
+     */
+    public function test_owner_cannot_promote_attached_receipt_to_processed(): void
+    {
+        $receipt = Receipt::create([
+            'uploaded_by' => $this->employee->id,
+            'file_path' => ['receipts/owner_attached.png'],
+            'file_hash' => [str_repeat('g', 64)],
+            'file_type' => ['png'],
+            'file_size_bytes' => [1024],
+            'vendor_name' => 'Attached Vendor',
+            'status' => 'flagged',
+            'ocr_flagged' => true,
+        ]);
+
+        $reimbursement = Reimbursement::create([
+            'user_id' => $this->employee->id,
+            'description' => 'Linked request',
+            'amount' => 100.00,
+            'date' => '2026-06-20',
+            'status' => 'pending',
+        ]);
+        $receipt->reimbursements()->attach($reimbursement->id);
+
+        $response = $this->patchAs($this->employee, $receipt->id, [
+            'status' => 'processed',
+            'vendor_name' => 'Should Not Apply Status',
+        ]);
+
+        $response->assertStatus(200);
+
+        // Status + ocr_flagged stay untouched (mirroring protected); OCR field
+        // correction is still applied.
+        $this->assertDatabaseHas('receipts', [
+            'id' => $receipt->id,
+            'status' => 'flagged',
+            'ocr_flagged' => true,
+            'vendor_name' => 'Should Not Apply Status',
+        ]);
+    }
+
+    /**
+     * Helper: POST a resubmit through the route without the JWT middleware.
+     */
+    private function resubmitAs(User $user, int $receiptId, array $payload)
+    {
+        return $this->withoutMiddleware(AuthenticateWithExternalService::class)
+            ->actingAs($user)
+            ->postJson("/api/reimbursements/receipts/{$receiptId}/resubmit", $payload);
+    }
+
+    /**
+     * A non-admin owner can resubmit a `flagged` (poor-OCR) receipt; it becomes
+     * `processed` with `ocr_flagged` cleared.
+     */
+    public function test_owner_can_resubmit_flagged_receipt(): void
+    {
+        $receipt = Receipt::create([
+            'uploaded_by' => $this->employee->id,
+            'file_path' => ['receipts/owner_resubmit_flagged.png'],
+            'file_hash' => [str_repeat('h', 64)],
+            'file_type' => ['png'],
+            'file_size_bytes' => [1024],
+            'vendor_name' => 'Blurry Vendor',
+            'status' => 'flagged',
+            'ocr_flagged' => true,
+        ]);
+
+        $response = $this->resubmitAs($this->employee, $receipt->id, [
+            'vendor_name' => 'Corrected Vendor',
+            'total_amount' => 300.00,
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('data.status', 'processed');
+        $response->assertJsonPath('data.ocr_flagged', false);
+        $response->assertJsonPath('data.vendor_name', 'Corrected Vendor');
+
+        $this->assertDatabaseHas('receipts', [
+            'id' => $receipt->id,
+            'status' => 'processed',
+            'ocr_flagged' => false,
+            'vendor_name' => 'Corrected Vendor',
+        ]);
+    }
+
+    /**
+     * A non-admin owner can also resubmit a `rejected` (duplicate/blurry) receipt.
+     */
+    public function test_owner_can_resubmit_rejected_receipt(): void
+    {
+        $receipt = Receipt::create([
+            'uploaded_by' => $this->employee->id,
+            'file_path' => ['receipts/owner_resubmit_rejected.png'],
+            'file_hash' => [str_repeat('i', 64)],
+            'file_type' => ['png'],
+            'file_size_bytes' => [1024],
+            'vendor_name' => 'Rejected Vendor',
+            'status' => 'rejected',
+            'ocr_flagged' => true,
+        ]);
+
+        $response = $this->resubmitAs($this->employee, $receipt->id, [
+            'vendor_name' => 'Rejected Corrected Vendor',
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('data.status', 'processed');
+        $response->assertJsonPath('data.ocr_flagged', false);
+
+        $this->assertDatabaseHas('receipts', [
+            'id' => $receipt->id,
+            'status' => 'processed',
+            'ocr_flagged' => false,
         ]);
     }
 

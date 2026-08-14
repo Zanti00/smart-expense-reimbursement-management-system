@@ -34,6 +34,7 @@ SERMS is a high-precision, Modular Monolith financial compliance application bui
 - **Errors:** All authorization violations must return `403 Forbidden`, authentication failures must return `401 Unauthorized`, and duplicate conflicts must return `409 Conflict`.
 - **Git Operations (AI Rule):** AI agents and subagents must never push to Git or alter Git history without explicit user permission, even if technically capable. Always ask the user before pushing unless permission was granted on the spot.
 - **Context Gathering (AI Rule):** If you think a user's prompt or task lacks sufficient context, details, or information, AI agents and subagents must ask questions or interview the user via the `/grill-me` skill interface about the given task/prompt to deepen understanding and avoid hallucinations before proceeding.
+- **Reusability Check (AI Rule):** AI agents and subagents must search for pre-existing reusable components, composables, utils, functions, etc. before creating new ones. If an equivalent or near-equivalent implementation already exists, it must be reused or extended rather than duplicated.
 
 ## Definition of Done
 

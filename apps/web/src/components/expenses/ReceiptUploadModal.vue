@@ -119,6 +119,9 @@ function buildUpdatePayload(receipt) {
     },
   });
   prefill.location = receipt.location || null;
+  // A corrected/flagged just-scanned receipt becomes `processed` on save so the
+  // owner can forward it to reimbursement without admin intervention.
+  prefill.status = "processed";
   return prefill;
 }
 
@@ -429,11 +432,9 @@ function close() {
 }
 
 async function saveReceipt() {
-  if (
-    props.receiptToEdit &&
-    String(props.receiptToEdit.status || "").toLowerCase() !== "processed"
-  ) {
-    notify("Only receipts with processed status can be edited.", "error");
+  const s = String(props.receiptToEdit?.status || "").toLowerCase();
+  if (props.receiptToEdit && !["processed", "flagged", "rejected"].includes(s)) {
+    notify("Only receipts with processed, flagged, or rejected status can be edited.", "error");
     return;
   }
 

@@ -60,7 +60,7 @@ class OcrCallbackService
                 $rejectionCode = 'duplicate';
                 $rejectionReason = 'Duplicate receipt detected based on semantic similarity.';
             } else {
-                $targetStatus = $isRejected ? 'rejected' : ($isLowConfidence ? 'flagged' : 'pending');
+                $targetStatus = $isRejected ? 'rejected' : ($isLowConfidence ? 'flagged' : 'processed');
                 $rejectionCode = $data['rejection_code'] ?? ($isRejected ? 'blurry' : null);
                 $rejectionReason = $data['rejection_reason'] ?? $data['error'] ?? null;
             }

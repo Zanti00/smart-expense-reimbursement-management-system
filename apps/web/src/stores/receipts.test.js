@@ -277,4 +277,38 @@ describe("useReceiptStore", () => {
       store.updateReceipt(1, { vendor_name: "X" }),
     ).rejects.toThrow("Validation failed");
   });
+
+  it("appends status to the FormData when present in updateReceipt payload", async () => {
+    apiFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: {
+          id: 7,
+          file_path: "uploads/2026/upd.pdf",
+          file_type: "application/pdf",
+          file_size_bytes: 1024,
+          file_hash: "upd-hash",
+          status: "processed",
+          vendor_name: "Updated Vendor",
+          category: { name: "Meals" },
+          expense_category_id: 9,
+          uploader: { name: "John Doe" },
+          items: [],
+        },
+      }),
+    });
+
+    const store = useReceiptStore();
+    await store.updateReceipt(7, {
+      vendor_name: "Updated Vendor",
+      status: "processed",
+    });
+
+    expect(apiFetch).toHaveBeenCalledTimes(1);
+    const [, opts] = apiFetch.mock.calls[0];
+    expect(opts.method).toBe("PATCH");
+    expect(opts.body).toBeInstanceOf(FormData);
+    expect(opts.body.get("status")).toBe("processed");
+    expect(opts.body.get("vendor_name")).toBe("Updated Vendor");
+  });
 });

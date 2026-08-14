@@ -35,7 +35,7 @@ class UpdateReceiptRequest extends FormRequest
         return [
             // Admin-only fields (enforced in the service layer).
             'admin_notes' => 'nullable|string',
-            'status' => 'nullable|string|in:pending,approved,rejected',
+            'status' => 'nullable|string|in:pending,approved,rejected,processed',
 
             // Owner-editable OCR correction fields.
             'expense_category_id' => 'nullable|exists:expense_categories,id',
