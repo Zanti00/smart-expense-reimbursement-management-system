@@ -311,4 +311,71 @@ describe("useReceiptStore", () => {
     expect(opts.body.get("status")).toBe("processed");
     expect(opts.body.get("vendor_name")).toBe("Updated Vendor");
   });
+
+  it("orders visibleReceipts newest-uploaded-first (created_at desc)", async () => {
+    // transaction_date and created_at deliberately disagree so a sort by
+    // transaction_date would produce the WRONG order. The grid must follow
+    // upload time (created_at), newest at the top.
+    const oldestUpload = {
+      id: 10,
+      file_path: "receipts/old.pdf",
+      file_type: "application/pdf",
+      file_size_bytes: 100,
+      file_hash: "old-hash",
+      transaction_date: "2026-06-01", // newest transaction date
+      created_at: "2026-01-01T00:00:00.000Z", // oldest upload
+      total_amount: 100,
+      category: { name: "Meals" },
+      expense_category_id: 1,
+      status: "processed",
+      vendor_name: "Old Vendor",
+      invoice_number: "INV-OLD",
+      uploader: { name: "John Doe" },
+      items: [],
+    };
+    const newestUpload = {
+      id: 11,
+      file_path: "receipts/new.pdf",
+      file_type: "application/pdf",
+      file_size_bytes: 100,
+      file_hash: "new-hash",
+      transaction_date: "2026-01-01", // oldest transaction date
+      created_at: "2026-06-01T00:00:00.000Z", // newest upload
+      total_amount: 200,
+      category: { name: "Meals" },
+      expense_category_id: 1,
+      status: "processed",
+      vendor_name: "New Vendor",
+      invoice_number: "INV-NEW",
+      uploader: { name: "John Doe" },
+      items: [],
+    };
+    const middleUpload = {
+      id: 12,
+      file_path: "receipts/mid.pdf",
+      file_type: "application/pdf",
+      file_size_bytes: 100,
+      file_hash: "mid-hash",
+      transaction_date: "2026-03-01",
+      created_at: "2026-03-01T00:00:00.000Z",
+      total_amount: 150,
+      category: { name: "Meals" },
+      expense_category_id: 1,
+      status: "processed",
+      vendor_name: "Mid Vendor",
+      invoice_number: "INV-MID",
+      uploader: { name: "John Doe" },
+      items: [],
+    };
+
+    apiFetch.mockResolvedValue(
+      okJson([oldestUpload, newestUpload, middleUpload], 3),
+    );
+
+    const store = useReceiptStore();
+    await store.fetchAll();
+
+    const orderedDbIds = store.visibleReceipts.map((r) => r.dbId);
+    expect(orderedDbIds).toEqual([11, 12, 10]);
+  });
 });

@@ -6,6 +6,7 @@ import { useReceiptStore } from "@/stores/receipts";
 import { useToast } from "@/composables/useToast";
 import { formatPeso } from "@/utils/formatters";
 import { EXPENSE_CATEGORIES } from "@/utils/constants";
+import { canEditReceipt } from "@/utils/receiptUtils";
 import {
   getForwardingBlockReason,
   mapReceiptToReimbursement,
@@ -188,9 +189,9 @@ const pendingReReviewReceipts = computed(() =>
 );
 
 function openEditReceipt(receipt) {
-  if (String(receipt?.status || "").toLowerCase() !== "processed") {
+  if (!canEditReceipt(receipt)) {
     addToast({
-      message: "Only receipts with processed status can be edited.",
+      message: "This receipt's current status does not allow editing.",
       type: "error",
     });
     return;

@@ -7,6 +7,7 @@ import CurrencySelect from "@/components/base/CurrencySelect.vue";
 import { useUnsavedChanges } from "@/composables/useUnsavedChanges";
 import {
   buildReceiptUploadFormPrefill,
+  canEditReceipt,
   itemsGrossAmount,
   receiptFinancials,
 } from "@/utils/receiptUtils";
@@ -432,9 +433,8 @@ function close() {
 }
 
 async function saveReceipt() {
-  const s = String(props.receiptToEdit?.status || "").toLowerCase();
-  if (props.receiptToEdit && !["processed", "flagged", "rejected"].includes(s)) {
-    notify("Only receipts with processed, flagged, or rejected status can be edited.", "error");
+  if (props.receiptToEdit && !canEditReceipt(props.receiptToEdit)) {
+    notify("This receipt's current status does not allow editing.", "error");
     return;
   }
 

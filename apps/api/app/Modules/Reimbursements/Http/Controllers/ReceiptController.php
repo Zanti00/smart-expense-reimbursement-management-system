@@ -165,7 +165,7 @@ class ReceiptController extends Controller
     }
 
     /**
-     * Edit a processed receipt while keeping it processed.
+     * Edit a receipt (unless forbidden status) and set it back to processed.
      */
     public function resubmit(ResubmitReceiptRequest $request, $id)
     {

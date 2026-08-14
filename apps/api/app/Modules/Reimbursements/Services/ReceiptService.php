@@ -200,7 +200,8 @@ class ReceiptService
     }
 
     /**
-     * Let the uploader edit a processed receipt while keeping it processed.
+     * Let the uploader edit a receipt unless its status is approved, pending,
+     * pending-admin-re-review, or final-rejected. Editing keeps it processed.
      */
     public function resubmitReceipt(User $user, int $id, array $data, $file = null)
     {
@@ -211,9 +212,9 @@ class ReceiptService
                 throw new AuthorizationException('Unauthorized. You can only resubmit your own receipts.');
             }
 
-            if (!in_array($receipt->status, ['processed', 'flagged', 'rejected'])) {
+            if (in_array($receipt->status, ['approved', 'pending', 'pending-admin-re-review', 'final-rejected'], true)) {
                 throw ValidationException::withMessages([
-                    'status' => ['Only processed, flagged, or rejected receipts can be edited.'],
+                    'status' => ['Receipts with status approved, pending, pending-admin-re-review, or final-rejected cannot be edited.'],
                 ]);
             }
 

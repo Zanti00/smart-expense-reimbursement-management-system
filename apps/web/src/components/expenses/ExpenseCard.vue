@@ -11,6 +11,7 @@ import {
   MoreVertical,
 } from "lucide-vue-next";
 import { formatPeso as formatCurrency, formatDate } from "@/utils/formatters";
+import { canEditReceipt } from "@/utils/receiptUtils";
 import StatusBadge from "@/components/base/StatusBadge.vue";
 
 const props = defineProps({
@@ -28,9 +29,7 @@ defineEmits(["select", "view", "delete", "edit", "forward-reimbursement"]);
 
 const isMenuOpen = ref(false);
 const imageError = ref(false);
-const canEdit = computed(
-  () => String(props.expense?.status || "").toLowerCase() === "processed",
-);
+const canEdit = computed(() => canEditReceipt(props.expense));
 const canDelete = computed(() =>
   ["processed", "rejected"].includes(
     String(props.expense?.status || "").toLowerCase(),

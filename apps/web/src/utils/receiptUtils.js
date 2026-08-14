@@ -194,3 +194,37 @@ export function buildReceiptUploadFormPrefill(options = {}) {
 export function firstFilePathField(value) {
   return Array.isArray(value) ? (value[0] ?? value) : value;
 }
+
+/**
+ * Statuses for which a receipt may NOT be edited by its owner on the
+ * "My Expense" page. This is the single source of truth for edit gating.
+ * Any status not in this list is editable (e.g. processing, processed,
+ * flagged, rejected, failed, automatic-rejected).
+ */
+export const EDIT_FORBIDDEN_STATUSES = [
+  "approved",
+  "pending",
+  "pending-admin-re-review",
+  "final-rejected",
+];
+
+/**
+ * Returns true when the receipt's effective status is NOT in the
+ * EDIT_FORBIDDEN_STATUSES set, i.e. the receipt can be edited.
+ *
+ * Reads `status` first and falls back to `complianceStatus` (both are
+ * populated by the store's mapReceipt), so callers can pass either shape.
+ *
+ * @param {object|null|undefined} receipt
+ * @returns {boolean}
+ */
+export function canEditReceipt(receipt) {
+  if (!receipt) return false;
+  const status = String(
+    receipt.status ?? receipt.complianceStatus ?? "",
+  ).trim().toLowerCase();
+  // Unknown/empty status is treated as not editable (fail-safe default-deny),
+  // consistent with the prior exact-match ("processed") behavior.
+  if (!status) return false;
+  return !EDIT_FORBIDDEN_STATUSES.includes(status);
+}

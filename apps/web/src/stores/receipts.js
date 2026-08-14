@@ -4,7 +4,7 @@ import { useAuthStore } from "./auth";
 import { useNotificationStore } from "./notification";
 import { apiFetch } from "../utils/apiFetch";
 import { getFileUrl } from "../utils/fileUtils";
-import { firstFilePathField } from "../utils/receiptUtils";
+import { canEditReceipt, firstFilePathField } from "../utils/receiptUtils";
 
 export const useReceiptStore = defineStore("receipts", () => {
   const auth = useAuthStore();
@@ -343,10 +343,9 @@ export const useReceiptStore = defineStore("receipts", () => {
       throw new Error("Receipt not found.");
     }
 
-    const rxStatus = String(rx.status || "").toLowerCase();
-    if (!["processed", "flagged", "rejected"].includes(rxStatus)) {
+    if (!canEditReceipt(rx)) {
       isSaving.value = false;
-      throw new Error("Only receipts with processed, flagged, or rejected status can be edited.");
+      throw new Error("This receipt's current status does not allow editing.");
     }
 
     const previousStatus = rx.status;
