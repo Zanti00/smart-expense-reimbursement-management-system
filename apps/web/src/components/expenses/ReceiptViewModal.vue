@@ -12,6 +12,7 @@ import {
 import { formatAmount, formatDate as formatDateBase } from "@/utils/formatters";
 import { canEditReceipt, canDeleteReceipt } from "@/utils/receiptUtils";
 import StatusBadge from "@/components/base/StatusBadge.vue";
+import ImagePreviewModal from "@/components/base/ImagePreviewModal.vue";
 
 const props = defineProps({
   modelValue: {
@@ -29,6 +30,7 @@ const emit = defineEmits(["update:modelValue", "delete", "edit"]);
 const canEdit = computed(() => canEditReceipt(props.receipt));
 const canDelete = computed(() => canDeleteReceipt(props.receipt));
 const imageError = ref(false);
+const isImagePreviewOpen = ref(false);
 
 function close() {
   emit("update:modelValue", false);
@@ -80,20 +82,43 @@ function formatDate(dateStr) {
         </button>
 
         <!-- Left Column: Image -->
-        <div class="w-full md:w-5/12 bg-gradient-to-b from-slate-100 to-slate-50 rounded-2xl flex items-center justify-center p-4 shrink-0 relative overflow-hidden min-h-[400px]">
-          <img
-            v-if="receipt.thumbnail && receipt.fileType !== 'application/pdf' && !imageError"
-            :src="receipt.thumbnail"
-            class="w-full h-full object-contain rounded-md"
-            alt="Receipt"
-            @error="imageError = true"
-          />
+        <div
+          class="w-full md:w-5/12 bg-gradient-to-b from-slate-100 to-slate-50 rounded-2xl flex items-center justify-center p-4 shrink-0 relative overflow-hidden min-h-[400px]"
+        >
           <div
-            v-else
-            class="flex flex-col items-center gap-2 text-slate-300"
+            v-if="
+              receipt.thumbnail &&
+              receipt.fileType !== 'application/pdf' &&
+              !imageError
+            "
+            class="relative w-full h-full flex items-center justify-center group cursor-zoom-in"
+            title="Click to zoom and preview image"
+            @click="isImagePreviewOpen = true"
           >
+            <img
+              :src="receipt.thumbnail"
+              class="w-full h-full object-contain rounded-md transition-transform duration-200 group-hover:scale-[1.02]"
+              alt="Receipt"
+              @error="imageError = true"
+            />
+            <!-- Hover Preview Overlay Badge -->
+            <div
+              class="absolute inset-0 bg-slate-950/0 group-hover:bg-slate-950/15 transition-all duration-200 rounded-md flex items-center justify-center pointer-events-none"
+            >
+              <span
+                class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-slate-900/80 backdrop-blur-sm text-white text-[11px] font-medium px-3 py-1.5 rounded-full shadow-md flex items-center gap-1.5"
+              >
+                <ImageIcon class="w-3.5 h-3.5" />
+                Click to preview
+              </span>
+            </div>
+          </div>
+          <div v-else class="flex flex-col items-center gap-2 text-slate-300">
             <FileText
-              v-if="receipt.fileType === 'application/pdf' || receipt.fileType === 'pdf'"
+              v-if="
+                receipt.fileType === 'application/pdf' ||
+                receipt.fileType === 'pdf'
+              "
               class="w-12 h-12"
             />
             <ImageIcon v-else class="w-12 h-12" />
@@ -102,7 +127,9 @@ function formatDate(dateStr) {
         </div>
 
         <!-- Right Column: Content -->
-        <div class="w-full md:w-7/12 flex flex-col pt-4 pb-2 pr-2 overflow-y-auto">
+        <div
+          class="w-full md:w-7/12 flex flex-col pt-4 pb-2 pr-2 overflow-y-auto"
+        >
           <!-- Rejection Alert -->
           <div
             v-if="receipt.status === 'automatic-rejected'"
@@ -112,36 +139,48 @@ function formatDate(dateStr) {
             <div>
               <p class="text-xs font-medium text-red-700">Automatic Rejected</p>
               <p class="text-xs text-red-500 mt-0.5">
-                {{ receipt.complianceReason || "System validation could not approve this receipt." }}
+                {{
+                  receipt.complianceReason ||
+                  "System validation could not approve this receipt."
+                }}
               </p>
             </div>
           </div>
 
           <!-- Order Info -->
-          <div class="flex justify-between items-end border-b border-slate-100 pb-4 mb-5">
+          <div
+            class="flex justify-between items-end border-b border-slate-100 pb-4 mb-5"
+          >
             <div class="flex flex-col gap-0.5">
-              <span class="text-[11px] text-slate-400 uppercase tracking-wide">Confirmation</span>
-              <span class="text-sm text-slate-700">{{ receipt.invoiceNumber || receipt.fileName }}</span>
+              <span class="text-[11px] text-slate-400 uppercase tracking-wide"
+                >Confirmation</span
+              >
+              <span class="text-sm text-slate-700">{{
+                receipt.invoiceNumber || receipt.fileName
+              }}</span>
             </div>
             <div class="flex flex-col gap-0.5 items-end">
-              <span class="text-sm text-slate-500">{{ formatDate(receipt.date) }}</span>
+              <span class="text-sm text-slate-500">{{
+                formatDate(receipt.date)
+              }}</span>
             </div>
           </div>
 
           <!-- Vendor -->
           <div class="mb-5">
-            <span class="text-[11px] text-slate-400 uppercase tracking-wide">Vendor</span>
+            <span class="text-[11px] text-slate-400 uppercase tracking-wide"
+              >Vendor</span
+            >
             <p class="text-base font-medium text-slate-800 mt-0.5">
               {{ receipt.vendorName || "Unknown Vendor" }}
             </p>
           </div>
 
           <!-- Items List -->
-          <div
-            v-if="receipt.items && receipt.items.length > 0"
-            class="mb-5"
-          >
-            <h3 class="text-[11px] text-slate-400 uppercase tracking-wide mb-3">Items</h3>
+          <div v-if="receipt.items && receipt.items.length > 0" class="mb-5">
+            <h3 class="text-[11px] text-slate-400 uppercase tracking-wide mb-3">
+              Items
+            </h3>
             <div class="flex flex-col gap-3">
               <div
                 v-for="(item, index) in receipt.items"
@@ -149,13 +188,22 @@ function formatDate(dateStr) {
                 class="flex justify-between items-center"
               >
                 <div class="flex items-center gap-3">
-                  <span class="w-6 h-6 rounded-full bg-slate-100 text-accent flex items-center justify-center text-xs font-medium shrink-0">
+                  <span
+                    class="w-6 h-6 rounded-full bg-slate-100 text-accent flex items-center justify-center text-xs font-medium shrink-0"
+                  >
                     {{ index + 1 }}
                   </span>
-                  <span class="text-sm text-slate-700">{{ item.name || "Item" }} ({{ item.quantity }}x)</span>
+                  <span class="text-sm text-slate-700"
+                    >{{ item.name || "Item" }} ({{ item.quantity }}x)</span
+                  >
                 </div>
                 <span class="text-sm text-slate-700">
-                  {{ formatAmount(Number(item.price) * Number(item.quantity) || 0, receipt.currency || "PHP") }}
+                  {{
+                    formatAmount(
+                      Number(item.price) * Number(item.quantity) || 0,
+                      receipt.currency || "PHP",
+                    )
+                  }}
                 </span>
               </div>
             </div>
@@ -165,13 +213,19 @@ function formatDate(dateStr) {
           <div class="flex flex-col gap-2 pt-4 border-t border-slate-100 mb-5">
             <div class="flex justify-between items-center text-sm">
               <span class="text-slate-400">Subtotal</span>
-              <span class="text-slate-600">{{ formatAmount(actualSubtotal, receipt.currency || "PHP") }}</span>
+              <span class="text-slate-600">{{
+                formatAmount(actualSubtotal, receipt.currency || "PHP")
+              }}</span>
             </div>
             <div class="flex justify-between items-center text-sm">
               <span class="text-slate-400">VAT</span>
-              <span class="text-slate-600">{{ formatAmount(receipt.vatAmount || 0, receipt.currency || "PHP") }}</span>
+              <span class="text-slate-600">{{
+                formatAmount(receipt.vatAmount || 0, receipt.currency || "PHP")
+              }}</span>
             </div>
-            <div class="flex justify-between items-center pt-2 mt-1 border-t border-slate-100">
+            <div
+              class="flex justify-between items-center pt-2 mt-1 border-t border-slate-100"
+            >
               <span class="text-sm text-slate-700">Total</span>
               <span class="text-base font-semibold text-primary">
                 {{ formatAmount(receipt.amount, receipt.currency || "PHP") }}
@@ -180,22 +234,40 @@ function formatDate(dateStr) {
           </div>
 
           <!-- Metadata -->
-          <div class="grid grid-cols-2 gap-x-6 gap-y-3 mb-5 pb-5 border-b border-slate-100">
+          <div
+            class="grid grid-cols-2 gap-x-6 gap-y-3 mb-5 pb-5 border-b border-slate-100"
+          >
             <div>
-              <span class="text-[11px] text-slate-400 uppercase tracking-wide">Category</span>
-              <p class="text-sm text-slate-700 mt-0.5">{{ receipt.category || "—" }}</p>
+              <span class="text-[11px] text-slate-400 uppercase tracking-wide"
+                >Category</span
+              >
+              <p class="text-sm text-slate-700 mt-0.5">
+                {{ receipt.category || "—" }}
+              </p>
             </div>
             <div>
-              <span class="text-[11px] text-slate-400 uppercase tracking-wide">TIN</span>
-              <p class="text-sm text-slate-700 mt-0.5">{{ receipt.tin || "—" }}</p>
+              <span class="text-[11px] text-slate-400 uppercase tracking-wide"
+                >TIN</span
+              >
+              <p class="text-sm text-slate-700 mt-0.5">
+                {{ receipt.tin || "—" }}
+              </p>
             </div>
             <div>
-              <span class="text-[11px] text-slate-400 uppercase tracking-wide">VAT Type</span>
-              <p class="text-sm text-slate-700 mt-0.5 uppercase">{{ receipt.vatClassification || "—" }}</p>
+              <span class="text-[11px] text-slate-400 uppercase tracking-wide"
+                >VAT Type</span
+              >
+              <p class="text-sm text-slate-700 mt-0.5 uppercase">
+                {{ receipt.vatClassification || "—" }}
+              </p>
             </div>
             <div>
-              <span class="text-[11px] text-slate-400 uppercase tracking-wide">Currency</span>
-              <p class="text-sm text-slate-700 mt-0.5">{{ receipt.currency || "PHP" }}</p>
+              <span class="text-[11px] text-slate-400 uppercase tracking-wide"
+                >Currency</span
+              >
+              <p class="text-sm text-slate-700 mt-0.5">
+                {{ receipt.currency || "PHP" }}
+              </p>
             </div>
           </div>
 
@@ -215,13 +287,11 @@ function formatDate(dateStr) {
               <Pencil class="w-4 h-4" /> Edit
             </button>
             <button
-              class="btn btn-cta flex-1"
-            >
-              <Download class="w-4 h-4" /> Download
-            </button>
-            <button
               v-if="canDelete"
-              @click="emit('delete', receipt.id); close();"
+              @click="
+                emit('delete', receipt.id);
+                close();
+              "
               class="btn btn-danger !px-3"
             >
               <Trash2 class="w-4 h-4" />
@@ -231,4 +301,12 @@ function formatDate(dateStr) {
       </div>
     </div>
   </Transition>
+
+  <!-- Reusable Fullscreen Image Preview Modal with Zoom & Controls -->
+  <ImagePreviewModal
+    v-model="isImagePreviewOpen"
+    :src="receipt?.thumbnail || ''"
+    :alt="receipt?.vendorName || 'Receipt'"
+    :title="receipt?.invoiceNumber ? `Invoice #${receipt.invoiceNumber}` : (receipt?.fileName || receipt?.vendorName || 'Receipt Image')"
+  />
 </template>
