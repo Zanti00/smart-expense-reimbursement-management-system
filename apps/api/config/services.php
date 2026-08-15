@@ -52,6 +52,23 @@ return [
         'jwt_secret' => env('JWT_SECRET'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Payload Crypto (Client-Side Encryption)
+    |--------------------------------------------------------------------------
+    |
+    | RSA key pair used to decrypt client-side encrypted payloads (SDD §5).
+    | The public key is served at GET /api/crypto/key; the private key MUST
+    | stay server-side only. Keys are generated automatically on first use if
+    | the files are missing.
+    |
+    */
+
+    'crypto' => [
+        'private_key_path' => env('CRYPTO_PRIVATE_KEY_PATH', storage_path('crypto/private.pem')),
+        'public_key_path'  => env('CRYPTO_PUBLIC_KEY_PATH', storage_path('crypto/public.pem')),
+    ],
+
     'prs' => [
         'reimbursement_api_key'            => env('PRS_REIMBURSEMENT_API_KEY'),
         'reimbursement_status_api_url'     => env('PRS_REIMBURSEMENT_STATUS_API_URL'),

@@ -22,7 +22,9 @@ chmod -R ug+rw bootstrap/cache storage
 
 if [ "$SERMS_SERVICE_ROLE" = "worker" ]; then
   echo "Waiting for API container to prepare Laravel dependencies/caches..."
-  until [ -f "vendor/autoload.php" ] && [ -f "bootstrap/cache/config.php" ] && [ -f "bootstrap/cache/routes-v7.php" ]; do
+  # NOTE: routes-v7.php is no longer generated (route caching is disabled in
+  # this compose deployment), so the worker must not wait on it.
+  until [ -f "vendor/autoload.php" ] && [ -f "bootstrap/cache/config.php" ]; do
     echo "Laravel dependencies/caches are not ready yet - sleeping"
     sleep 1
   done
@@ -65,7 +67,13 @@ php artisan migrate --force
 echo "Building Laravel boot caches..."
 php artisan config:cache
 php artisan event:cache
-php artisan route:cache
+# NOTE: Route caching is intentionally avoided here. Source is bind-mounted
+# (./apps/api:/var/www) and the compiled route cache lives in a shared volume
+# (serms_api_bootstrap_cache). A code-only deploy without a container restart
+# would otherwise serve a STALE routes-v7.php and 404 new routes (e.g. the
+# crypto/key route). Clearing (instead of caching) forces Laravel to resolve
+# routes directly from the route files on every request.
+php artisan route:clear
 
 # Start the main process (e.g., PHP-FPM or serve command)
 exec "$@"
