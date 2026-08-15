@@ -9,7 +9,6 @@ describe("buildNavLinks", () => {
 
   it("includes the base operator links first", () => {
     const links = buildNavLinks();
-    expect(links[0].header).toBe("OPERATOR");
     expect(links.map((l) => l.name).filter(Boolean)).toEqual([
       "Dashboard",
       "Reimbursements",

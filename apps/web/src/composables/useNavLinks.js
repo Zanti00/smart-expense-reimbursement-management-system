@@ -7,7 +7,6 @@ import {
 } from "lucide-vue-next";
 
 const base = [
-  { header: "OPERATOR" },
   { name: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
   { name: "Reimbursements", to: "/reimbursements", icon: Receipt },
   { name: "Cash Advances", to: "/cash-advances", icon: Wallet },
