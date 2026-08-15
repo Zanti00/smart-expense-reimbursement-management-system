@@ -23,6 +23,7 @@ Route::middleware(['auth.external'])->group(function () {
     Route::post('/receipts', [ReceiptController::class, 'store']);
     Route::post('/receipts/segmented', [ReceiptController::class, 'storeSegmented']);
     Route::post('/receipts/{id}/resubmit', [ReceiptController::class, 'resubmit']);
+    Route::post('/receipts/{id}/retry-ocr', [ReceiptController::class, 'retryOcr']);
     Route::patch('/receipts/{id}', [ReceiptController::class, 'update']);
     Route::delete('/receipts/{id}', [ReceiptController::class, 'destroy']);
 

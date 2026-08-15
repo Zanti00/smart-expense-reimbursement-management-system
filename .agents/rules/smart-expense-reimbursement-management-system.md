@@ -324,6 +324,13 @@ Antigravity must:
 
 Validation, notification, and audit logic must be centralized and reusable.
 
+## Error Handling & Exception Management
+
+- **Boundary Try-Catching:** Explicit `try-catch` blocks must be used at all system execution & integration boundaries (Supabase object storage, Tesseract OCR queue tasks, external HTTP API calls, filesystem I/O, background jobs).
+- **Zero Error Swallowing:** Catch blocks must never be left empty or silently swallow exceptions. Caught errors must log actionable context and rethrow, map to structured domain exceptions, or return formatted HTTP 4xx/5xx responses.
+- **Transaction Integrity:** Never catch and swallow exceptions inside `DB::transaction()` blocks without rethrowing to guarantee atomic database rollbacks.
+- **Centralized Exception Delegation:** Uncaught internal runtime exceptions must bubble up to Laravel's centralized Exception Handler (`bootstrap/app.php`) or Vue's global error handler.
+
 ## Performance
 
 - Avoid full-table scans on `audit_logs`

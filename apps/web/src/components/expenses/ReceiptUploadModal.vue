@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onBeforeUnmount } from "vue";
 import { useReceiptStore } from "@/stores/receipts";
 import { useToast } from "@/composables/useToast";
 import ConfirmModal from "@/components/base/ConfirmModal.vue";
@@ -20,6 +20,7 @@ import {
   Plus,
   Trash2,
   Layers,
+  RefreshCw,
 } from "lucide-vue-next";
 
 // OCR-driven upload pipeline (reused from the Reimbursement feature)
@@ -53,6 +54,56 @@ function notify(message, type = "info") {
 }
 
 const isEditMode = computed(() => !!props.receiptToEdit);
+const isRetryingOcr = ref(false);
+
+// Timer handle for the post-Retry-OCR status poll. Guarded so we never stack
+// duplicate intervals if Retry OCR is clicked more than once.
+const ocrPollTimer = ref(null);
+
+// How often we re-GET the receipt while it is reprocessing. The external AI
+// service genuinely takes time, so we poll rather than block the click.
+const OCR_POLL_INTERVAL = 2500;
+
+function stopOcrPolling() {
+  if (ocrPollTimer.value !== null) {
+    clearInterval(ocrPollTimer.value);
+    ocrPollTimer.value = null;
+  }
+}
+
+function startOcrPolling(id) {
+  if (ocrPollTimer.value !== null) return; // already polling
+
+  ocrPollTimer.value = setInterval(async () => {
+    try {
+      await receiptsStore.refreshReceipt(id);
+      // The store mutates the same object referenced by props.receiptToEdit,
+      // so its status is reactive. Stop as soon as the AI callback has flipped
+      // it out of "processing" — fields unlock and the banner hides.
+      if (props.receiptToEdit?.status !== "processing") {
+        if (props.receiptToEdit?.status === "failed") {
+          notify(
+            props.receiptToEdit?.rejectionReason ||
+              "OCR processing failed. You can retry OCR.",
+            "error",
+          );
+        }
+        stopOcrPolling();
+      }
+    } catch (e) {
+      // Stop on error to avoid hammering the API; the user can retry OCR.
+      stopOcrPolling();
+      notify(e.message || "Failed to refresh receipt status.", "error");
+    }
+  }, OCR_POLL_INTERVAL);
+}
+
+// True when editing an existing receipt whose OCR is currently (re)processing.
+// Reactively tracks props.receiptToEdit.status (the store mutates the same
+// mapped object via Object.assign, so this stays in sync after Retry OCR).
+const isOcrProcessing = computed(
+  () => isEditMode.value && props.receiptToEdit?.status === "processing",
+);
 
 /* ──────────────────────────────────────────────────────────────
  * NEW UPLOAD MODE — OCR pipeline (mirrors the Reimbursement feature)
@@ -120,9 +171,13 @@ function buildUpdatePayload(receipt) {
     },
   });
   prefill.location = receipt.location || null;
-  // A corrected/flagged just-scanned receipt becomes `processed` on save so the
-  // owner can forward it to reimbursement without admin intervention.
-  prefill.status = "processed";
+  // NOTE: We deliberately do NOT force `status = "processed"` here. The receipt
+  // was created by ReceiptService::storeReceipt() with status `processing` and OCR
+  // was already dispatched. Forcing `processed` would make the async AI OCR callback
+  // hit OcrCallbackService's replay guard (which skips already-`processed` receipts)
+  // and silently discard the extracted data, forcing a manual Retry OCR. Leaving the
+  // status untouched lets updateReceipt keep it `processing` until the callback lands
+  // and flips it to `processed`/applies the OCR data (BUG 2 fix).
   return prefill;
 }
 
@@ -147,7 +202,6 @@ async function saveNewReceipt() {
 /* ──────────────────────────────────────────────────────────────
  * EDIT MODE — existing manual form + resubmitReceipt (unchanged)
  * ────────────────────────────────────────────────────────────── */
-const uploadFileInput = ref(null);
 const uploadFile = ref(null);
 const uploadFilePreview = ref("");
 const uploadForm = ref({
@@ -291,7 +345,11 @@ function formatDateForInput(dateStr) {
 watch(
   () => props.modelValue,
   async (open) => {
-    if (!open) return;
+    if (!open) {
+      // Modal is closing — stop any in-flight OCR poll to avoid leaks.
+      stopOcrPolling();
+      return;
+    }
 
     if (!props.categories.length) {
       await receiptsStore.fetchCategories();
@@ -338,51 +396,6 @@ function removeItem(index) {
   uploadForm.value.items.splice(index, 1);
 }
 
-function handleUploadFileSelect(event) {
-  const file = event.target.files[0];
-  if (file) {
-    const validTypes = ["image/jpeg", "image/png", "application/pdf"];
-    const ext = file.name.split(".").pop().toLowerCase();
-    const validExts = ["jpg", "jpeg", "png", "pdf"];
-
-    if (!validTypes.includes(file.type) && !validExts.includes(ext)) {
-      notify("Invalid file type. Only JPEG, PNG, or PDF allowed.", "error");
-      event.target.value = "";
-      return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      notify("File size exceeds 2MB.", "error");
-      event.target.value = "";
-      return;
-    }
-    uploadFile.value = file;
-    if (
-      file.type.startsWith("image/") ||
-      ["jpg", "jpeg", "png"].includes(ext)
-    ) {
-      uploadFilePreview.value = URL.createObjectURL(file);
-    } else {
-      uploadFilePreview.value = "";
-    }
-
-    const prefill = buildReceiptUploadFormPrefill({
-      id: props.receiptToEdit?.id,
-      file,
-      receiptData: {
-        expense_category_id: uploadForm.value.expense_category_id || null,
-      },
-      thumbnail: uploadFilePreview.value,
-    });
-
-    uploadForm.value = {
-      ...uploadForm.value,
-      ...prefill,
-      expense_category_id:
-        prefill.expense_category_id || uploadForm.value.expense_category_id,
-    };
-  }
-}
-
 function formatTIN(event) {
   let value = event.target.value.replace(/\D/g, "");
   let formatted = "";
@@ -394,17 +407,9 @@ function formatTIN(event) {
   event.target.value = formatted;
 }
 
-function triggerFileUpload() {
-  if (receiptsStore.isSaving) return;
-  if (uploadFileInput.value) {
-    uploadFileInput.value.click();
-  }
-}
-
 function resetUploadForm() {
   uploadFile.value = null;
   uploadFilePreview.value = "";
-  if (uploadFileInput.value) uploadFileInput.value.value = "";
 
   uploadForm.value = {
     invoice_number: "",
@@ -430,6 +435,28 @@ function close() {
     }
     emit("update:modelValue", false);
   });
+}
+
+async function handleRetryOcr() {
+  if (!props.receiptToEdit) return;
+  const id = props.receiptToEdit.dbId;
+  if (!id) return;
+
+  isRetryingOcr.value = true;
+  try {
+    await receiptsStore.retryOcr(id);
+    notify(
+      "OCR reprocessing started and will continue in the background. You may close this dialog.",
+      "success",
+    );
+    // Poll the receipt status so the modal reflects completion (fields unlock,
+    // banner hides) as soon as the external AI callback lands.
+    startOcrPolling(id);
+  } catch (e) {
+    notify(e.message || "Failed to retry OCR.", "error");
+  } finally {
+    isRetryingOcr.value = false;
+  }
 }
 
 async function saveReceipt() {
@@ -466,12 +493,72 @@ async function saveReceipt() {
 
     if (props.receiptToEdit) {
       notify("Saving...");
-      await receiptsStore.resubmitReceipt(
+      const updated = await receiptsStore.resubmitReceipt(
         props.receiptToEdit.id,
         payload,
         uploadFile.value,
       );
-      notify("Receipt updated.", "success");
+
+      // New-file resubmit that re-ran OCR → keep the modal open (mirrors the
+      // Retry OCR flow) so isOcrProcessing locks the fields and the existing
+      // poll + global toast reflect completion. Metadata-only edits and the
+      // duplicate-flagged case fall through and close normally.
+      if (uploadFile.value !== null && updated?.status === "processing") {
+        notify(
+          "OCR reprocessing started and will continue in the background.",
+          "success",
+        );
+        startOcrPolling(props.receiptToEdit.dbId);
+        return;
+      }
+
+      if (uploadFile.value !== null && updated?.status === "failed") {
+        // OCR pipeline errored after the resubmit dispatch (AI service
+        // unreachable, etc.). Surface it clearly and keep the modal open so the
+        // user can click Retry OCR — rather than silently swallowing it.
+        notify(
+          updated?.rejectionReason ||
+            "OCR processing failed. You can retry OCR.",
+          "error",
+        );
+        return;
+      }
+
+      if (uploadFile.value !== null && updated?.status === "rejected") {
+        // A resubmit that returns `rejected` is, by ReceiptService::resubmitReceipt,
+        // always a duplicate (the only other rejection path is the async OCR callback,
+        // which happens after this response). Surface it through the SAME unmistakable
+        // DuplicateReceiptModal the new-upload flow uses, instead of only a silent
+        // toast (BUG 1 fix). Keep the modal open so the user sees the flagged state.
+        const isDuplicate =
+          updated?.rejectionCode === "duplicate" || updated?.ocrFlagged === true;
+
+        if (isDuplicate) {
+          window.dispatchEvent(
+            new CustomEvent("receipt-duplicate-detected", {
+              detail: {
+                similarityScore: updated?.duplicateSimilarity || 1.0,
+                receiptId: props.receiptToEdit?.dbId ?? props.receiptToEdit?.id,
+                message:
+                  updated?.rejectionReason ||
+                  "This receipt was flagged as a duplicate and was not sent for OCR.",
+              },
+            }),
+          );
+          notify(
+            "This receipt was flagged as a duplicate and was not sent for OCR.",
+            "warning",
+          );
+          return;
+        }
+
+        notify(
+          "This receipt was flagged and was not sent for OCR.",
+          "warning",
+        );
+      } else {
+        notify("Receipt updated.", "success");
+      }
     } else {
       notify("Uploading receipt...");
       await receiptsStore.uploadReceipt(uploadFile.value, payload);
@@ -490,6 +577,13 @@ function formatCurrency(amount) {
     currency: "PHP",
   }).format(amount);
 }
+
+  // Safety net: clear the poll timer if the component is destroyed while open.
+  onBeforeUnmount(stopOcrPolling);
+
+  // Exposed for unit testing (buildUpdatePayload / saveReceipt) without
+  // changing runtime behavior.
+  defineExpose({ buildUpdatePayload, saveReceipt });
 </script>
 
 <template>
@@ -604,6 +698,17 @@ function formatCurrency(amount) {
 
         <!-- ───────── EDIT MODE (manual form, unchanged) ───────── -->
         <template v-else>
+          <!-- OCR reprocessing lock banner -->
+          <div
+            v-if="isOcrProcessing"
+            class="px-6 py-3 flex items-center gap-2 border-b border-accent/20 bg-accent-50 text-xs font-bold uppercase tracking-widest text-accent"
+          >
+            <span
+              class="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin"
+              aria-hidden="true"
+            />
+            OCR is reprocessing this receipt. Fields are locked until it finishes.
+          </div>
           <!-- Modal Content (Two Columns) -->
           <div
             class="flex flex-col md:flex-row flex-1 overflow-y-auto max-h-[75vh] md:max-h-[80vh]"
@@ -613,15 +718,14 @@ function formatCurrency(amount) {
               class="w-full md:w-[340px] p-6 bg-slate-50 border-r border-slate-100 flex flex-col items-center"
             >
               <div
-                class="w-full aspect-[3/4] bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden group relative cursor-pointer"
-                @click="triggerFileUpload"
+                class="w-full aspect-[3/4] bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden relative"
               >
-                <!-- Preview if a receipt image/preview URL is available (edit mode or new selection) -->
+                <!-- Preview of the existing on-file receipt image (read-only) -->
                 <div v-if="uploadFilePreview" class="w-full h-full">
                   <img
                     :src="uploadFilePreview"
                     alt="Receipt preview"
-                    class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                    class="w-full h-full object-cover"
                   />
                 </div>
                 <!-- PDF or no-file placeholder -->
@@ -632,31 +736,13 @@ function formatCurrency(amount) {
                   <div
                     class="w-16 h-16 rounded-2xl bg-primary/5 flex items-center justify-center"
                   >
-                    <UploadCloud
-                      v-if="!uploadFile"
-                      class="w-7 h-7 text-primary/40"
-                    />
-                    <FileText v-else class="w-7 h-7 text-primary/40" />
+                    <FileText class="w-7 h-7 text-primary/40" />
                   </div>
                   <p
                     class="text-[10px] text-slate-300 font-semibold uppercase tracking-widest text-center px-4"
                   >
-                    {{
-                      uploadFile
-                        ? uploadFile.name
-                        : receiptToEdit
-                          ? "Click to replace file"
-                          : "Click to select file"
-                    }}
+                    {{ receiptToEdit ? "Receipt on file" : "No file" }}
                   </p>
-                  <p v-if="!uploadFile" class="text-[10px] text-slate-300">
-                    JPEG, PNG, or PDF (max 2MB)
-                  </p>
-                </div>
-                <div
-                  class="absolute inset-0 bg-primary/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-                >
-                  <UploadCloud class="w-10 h-10 text-primary" />
                 </div>
                 <div
                   v-if="receiptsStore.isSaving"
@@ -671,20 +757,16 @@ function formatCurrency(amount) {
                   </span>
                 </div>
               </div>
-              <input
-                ref="uploadFileInput"
-                type="file"
-                accept=".jpeg,.jpg,.png,.pdf"
-                class="hidden"
-                @change="handleUploadFileSelect"
-              />
               <p class="mt-4 text-[11px] text-slate-400">
-                {{ uploadFile ? uploadFile.name : "No file selected" }}
+                Receipt image is read-only and cannot be replaced.
               </p>
             </div>
 
             <!-- Right Column: Form Data -->
-            <div class="flex-1 p-6 space-y-6">
+            <fieldset
+              class="flex-1 p-6 space-y-6 border-0 min-w-0"
+              :disabled="isOcrProcessing"
+            >
               <!-- Form Grid -->
               <div class="grid grid-cols-2 gap-4">
                 <div class="input-wrapper">
@@ -787,10 +869,10 @@ function formatCurrency(amount) {
                 <label class="input-label">Currency</label>
                 <div class="flex gap-3 items-center">
                   <div class="flex-1">
-                    <CurrencySelect
-                      v-model="uploadForm.currency"
-                      :disabled="receiptsStore.isSaving"
-                    />
+                  <CurrencySelect
+                    v-model="uploadForm.currency"
+                    :disabled="receiptsStore.isSaving || isOcrProcessing"
+                  />
                   </div>
                 </div>
               </div>
@@ -937,7 +1019,7 @@ function formatCurrency(amount) {
                   </div>
                 </div>
               </div>
-            </div>
+            </fieldset>
           </div>
         </template>
 
@@ -945,6 +1027,20 @@ function formatCurrency(amount) {
         <div
           class="px-6 py-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3 sticky bottom-0"
         >
+          <button
+            v-if="isEditMode"
+            @click="handleRetryOcr"
+            class="btn btn-secondary min-h-[42px] mr-auto"
+            :disabled="isRetryingOcr || receiptsStore.isSaving || props.receiptToEdit?.status === 'processing'"
+          >
+            <RefreshCw v-if="!isRetryingOcr" class="w-4 h-4" />
+            <span
+              v-else
+              class="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin"
+              aria-hidden="true"
+            />
+            {{ isRetryingOcr ? "Retrying..." : "Retry OCR" }}
+          </button>
           <button
             @click="close"
             class="btn btn-secondary !px-8"
@@ -970,7 +1066,7 @@ function formatCurrency(amount) {
             v-else
             @click="saveReceipt"
             class="btn btn-cta min-h-[42px] w-full sm:w-fit"
-            :disabled="receiptsStore.isSaving || !isFormValid"
+            :disabled="receiptsStore.isSaving || !isFormValid || isOcrProcessing"
           >
             <span
               v-if="receiptsStore.isSaving"

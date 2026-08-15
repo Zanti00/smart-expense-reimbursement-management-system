@@ -81,11 +81,37 @@ export function useReceiptUploads(options = {}) {
             (r) => String(r.id) === String(receiptId),
           );
 
-          if (data.status === "rejected" || data.status === "failed") {
-            const rejectedItem = index !== -1 ? localReceipts.value[index] : null;
-            const fileObj = rejectedItem?.sourceFile || rejectedItem?.file || null;
-            
-            if (checkIsDuplicateResponse(data)) {
+           if (data.status === "rejected" || data.status === "failed") {
+             const rejectedItem = index !== -1 ? localReceipts.value[index] : null;
+             const fileObj = rejectedItem?.sourceFile || rejectedItem?.file || null;
+
+             // A `failed` receipt means the OCR pipeline errored (AI service
+             // unreachable / dispatch failed), NOT a quality rejection. Surface a
+             // clear error and leave Retry OCR available instead of opening the
+             // quality-rejection modal.
+             if (data.status === "failed") {
+               if (index !== -1) {
+                 localReceipts.value[index] = {
+                   ...localReceipts.value[index],
+                   isUploading: false,
+                   isProcessing: false,
+                   isRejected: true,
+                   rejectionCode: data.rejection_code || "ocr_failed",
+                   rejectionReason:
+                     data.rejection_reason ||
+                     "OCR processing failed. You can retry OCR.",
+                 };
+               }
+               addToast({
+                 message:
+                   data.rejection_reason ||
+                   "OCR processing failed. You can retry OCR.",
+                 type: "error",
+               });
+               return;
+             }
+
+             if (checkIsDuplicateResponse(data)) {
                 if (index !== -1) {
                   localReceipts.value[index].isUploading = false;
                   localReceipts.value[index].isProcessing = false;

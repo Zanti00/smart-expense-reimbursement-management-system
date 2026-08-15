@@ -6,7 +6,9 @@ use App\Modules\Users\Models\User;
 use App\Modules\Reimbursements\Models\Receipt;
 use App\Modules\AuditLogs\Services\AuditLogService;
 use App\Modules\Reimbursements\Jobs\DispatchReceiptToAiService;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Auth\Access\AuthorizationException;
 use App\Modules\Shared\Traits\ValidatesReceiptDuplicates;
@@ -105,8 +107,9 @@ class ReceiptService
                 $receipt->items()->createMany($validated['items']);
             }
 
-            // Dispatch to the external AI OCR + categorization service.
-            DispatchReceiptToAiService::dispatch($receipt);
+            // Dispatch to the external AI OCR + categorization service (callback-based;
+            // runs inline by default so it works without a dedicated queue worker).
+            $this->dispatchOcrJob($receipt);
 
             $receipt->load('category', 'items', 'uploader');
 
@@ -200,8 +203,21 @@ class ReceiptService
     }
 
     /**
-     * Let the uploader edit a receipt unless its status is approved, pending,
-     * pending-admin-re-review, or final-rejected. Editing keeps it processed.
+     * Let the uploader re-submit a receipt with corrected metadata, or replace
+     * the image and re-run the OCR pipeline.
+     *
+     * Behavior:
+     *  - New file whose hash collides with a DIFFERENT, non-deleted receipt →
+     *    flag the receipt as a duplicate (status rejected, rejection_code
+     *    'duplicate', ocr_flagged true) and do NOT run OCR.
+     *  - New file that is the same image re-uploaded for this very receipt, or a
+     *    brand-new image with no collision → silently re-run OCR (status
+     *    processing, ocr_flagged false, dispatch the OCR job).
+     *  - No new file (metadata-only edit) → preserve the legacy behavior
+     *    (status processed, no OCR dispatch) so manual-entry corrections stay.
+     *
+     * This flow is intentionally separate from retryOcrReceipt(), which keeps
+     * its own duplicate semantics untouched (see lines 258-290).
      */
     public function resubmitReceipt(User $user, int $id, array $data, $file = null)
     {
@@ -218,6 +234,16 @@ class ReceiptService
                 ]);
             }
 
+            // Receipt image re-upload / replacement is disabled. The on-file image
+            // must be preserved, so any supplied file is rejected outright and the
+            // existing receipt image is never overwritten. Metadata-only edits
+            // (no file) remain fully supported below.
+            if ($file !== null) {
+                throw ValidationException::withMessages([
+                    'file' => ['Receipt image re-upload is not permitted. Existing receipt images cannot be replaced.'],
+                ]);
+            }
+
             $updateData = collect($data)
                 ->except(['file', 'items'])
                 ->toArray();
@@ -226,15 +252,97 @@ class ReceiptService
                 $updateData['vat_classification'] = strtolower((string)$updateData['vat_classification']);
             }
 
-            if ($file) {
-                $newFile = $this->storeReceiptFiles([$file]);
-                if ($newFile['file_hash'] !== $receipt->file_hash) {
-                    $this->validateDuplicateReceipt($newFile['file_hash']);
+            // Metadata-only edit (no replacement file): preserve legacy behavior.
+            if (!$file) {
+                $updateData['status'] = 'processed';
+                $updateData['ocr_flagged'] = false;
+
+                $beforeState = $receipt->toArray();
+
+                $receipt->update($updateData);
+
+                if (array_key_exists('items', $data)) {
+                    $receipt->items()->delete();
+
+                    if (!empty($data['items'])) {
+                        $receipt->items()->createMany($data['items']);
+                    }
                 }
-                $updateData = array_merge($updateData, $newFile);
+
+                AuditLogService::log(
+                    actorId: $user->id,
+                    actorRole: $user->role,
+                    actionType: 'RECEIPT_UPDATED',
+                    entityType: 'receipt',
+                    entityId: $receipt->id,
+                    beforeState: $beforeState,
+                    afterState: $receipt->fresh()->toArray(),
+                    ipAddress: request()->ip(),
+                );
+
+                return $receipt->fresh(['category', 'items', 'uploader'])
+                    ->loadCount('reimbursements');
             }
 
-            $updateData['status'] = 'processed';
+            // New file supplied → decide duplicate vs. OCR re-run.
+            //
+            // We compute the file hash FIRST and short-circuit duplicates
+            // before persisting the uploaded file to storage. This avoids
+            // leaving orphan files on the storage disk for receipts that are
+            // rejected as duplicates (the previous code stored the file and
+            // only then detected the collision).
+            $beforeState = $receipt->toArray();
+
+            $fileHash = hash_file('sha256', $file->getRealPath());
+
+            // Collision with a DIFFERENT, non-deleted receipt → flag as duplicate.
+            if ($this->duplicateReceiptExists($fileHash, $receipt->id)) {
+                $updateData['status'] = 'rejected';
+                $updateData['rejection_code'] = 'duplicate';
+                $updateData['rejection_reason'] = 'Duplicate receipt detected based on file hash.';
+                $updateData['ocr_flagged'] = true;
+
+                $receipt->update($updateData);
+
+                if (array_key_exists('items', $data)) {
+                    $receipt->items()->delete();
+
+                    if (!empty($data['items'])) {
+                        $receipt->items()->createMany($data['items']);
+                    }
+                }
+
+                AuditLogService::log(
+                    actorId: $user->id,
+                    actorRole: $user->role,
+                    actionType: 'RECEIPT_OCR_REJECTED',
+                    entityType: 'receipt',
+                    entityId: $receipt->id,
+                    beforeState: $beforeState,
+                    afterState: $receipt->fresh()->toArray(),
+                    ipAddress: request()->ip(),
+                );
+
+                return $receipt->fresh(['category', 'items', 'uploader'])
+                    ->loadCount('reimbursements');
+            }
+
+            // Not a duplicate → persist the file, then re-run OCR.
+            try {
+                $newFile = $this->storeReceiptFiles([$file]);
+            } catch (\Throwable $e) {
+                Log::error('resubmitReceipt: failed to persist uploaded file to storage.', [
+                    'receipt_id' => $receipt->id,
+                    'error' => $e->getMessage(),
+                ]);
+                throw $e;
+            }
+
+            $updateData = array_merge($updateData, $newFile);
+
+            // Same image re-uploaded for this receipt, or a brand-new image →
+            // silently re-run OCR.
+            $updateData['status'] = 'processing';
             $updateData['ocr_flagged'] = false;
 
             $receipt->update($updateData);
@@ -246,6 +354,57 @@ class ReceiptService
                     $receipt->items()->createMany($data['items']);
                 }
             }
+
+            // Dispatch OCR (runs inline by default — no dedicated worker required).
+            $this->dispatchOcrJob($receipt);
+
+            AuditLogService::log(
+                actorId: $user->id,
+                actorRole: $user->role,
+                actionType: 'RECEIPT_OCR_RETRY',
+                entityType: 'receipt',
+                entityId: $receipt->id,
+                beforeState: $beforeState,
+                afterState: $receipt->fresh()->toArray(),
+                ipAddress: request()->ip(),
+            );
+
+            return $receipt->fresh(['category', 'items', 'uploader'])
+                ->loadCount('reimbursements');
+        });
+    }
+
+    /**
+     * Re-run the OCR pipeline for an existing receipt.
+     */
+    public function retryOcrReceipt(User $user, int $id)
+    {
+        return DB::transaction(function () use ($user, $id) {
+            $receipt = Receipt::with('items')->findOrFail($id);
+
+            if ($receipt->uploaded_by !== $user->id) {
+                throw new AuthorizationException('Unauthorized. You can only retry OCR for your own receipts.');
+            }
+
+            $beforeState = $receipt->toArray();
+
+            $receipt->update([
+                'status' => 'processing',
+                'ocr_flagged' => false,
+            ]);
+
+            DispatchReceiptToAiService::dispatch($receipt);
+
+            AuditLogService::log(
+                actorId: $user->id,
+                actorRole: $user->role,
+                actionType: 'RECEIPT_OCR_RETRY',
+                entityType: 'receipt',
+                entityId: $receipt->id,
+                beforeState: $beforeState,
+                afterState: $receipt->fresh()->toArray(),
+                ipAddress: request()->ip(),
+            );
 
             return $receipt->fresh(['category', 'items', 'uploader'])
                 ->loadCount('reimbursements');
@@ -282,6 +441,48 @@ class ReceiptService
             'file_type'       => $fileTypes,
             'file_size_bytes' => $fileSizes,
         ];
+    }
+
+    /**
+     * Dispatch the OCR pipeline job for a receipt.
+     *
+     * The OCR job is callback-based: the external AI service accepts the file
+     * synchronously and POSTs results back via the ocr-callback endpoint. To keep
+     * the feature working in single-instance deployments that do NOT run a
+     * dedicated queue worker (e.g. Azure App Service, local `php artisan serve`),
+     * it defaults to the `sync` connection so it runs inline within the request.
+     * Deployments that DO run a worker can set AI_SERVICE_OCR_QUEUE_CONNECTION
+     * (e.g. "database") to offload it.
+     *
+     * Failures are caught here so a dispatch / OCR-start error never rolls back the
+     * surrounding DB transaction or leaves the user guessing — the receipt is left
+     * in a clear `failed` state (surfaced by the UI) instead of silently stalling.
+     */
+    private function dispatchOcrJob(Receipt $receipt): void
+    {
+        $connection = config('services.ai_service.ocr_queue_connection', 'sync');
+
+        try {
+            // Build the job, set its connection, then dispatch the instance.
+            // (Calling ->dispatch() on an already-built job hits the trait's
+            // static dispatch() which re-instantiates with no args — so we use
+            // Bus::dispatch on the instance instead.) `sync` runs the job inline.
+            $job = (new DispatchReceiptToAiService($receipt))->onConnection($connection);
+            Bus::dispatch($job);
+        } catch (\Throwable $e) {
+            Log::error('ReceiptService: failed to dispatch OCR job.', [
+                'receipt_id' => $receipt->id,
+                'connection' => $connection,
+                'error'      => $e->getMessage(),
+            ]);
+
+            $receipt->update([
+                'status'           => 'failed',
+                'ocr_flagged'      => true,
+                'rejection_code'   => 'ocr_failed',
+                'rejection_reason' => 'OCR could not be started. Please retry OCR.',
+            ]);
+        }
     }
 
     /**

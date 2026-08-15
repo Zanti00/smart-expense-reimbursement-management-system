@@ -75,6 +75,13 @@ return [
         'api_key' => env('AI_SERVICE_API_KEY'),
         'timeout' => env('AI_SERVICE_TIMEOUT', 10),
         'callback_base_url' => env('AI_SERVICE_CALLBACK_BASE_URL'),
+        // Connection used to dispatch the OCR job. Defaults to "sync" so the
+        // callback-based OCR pipeline runs inline within the request and works in
+        // single-instance deployments that do NOT run a dedicated queue worker
+        // (e.g. Azure App Service, local `php artisan serve`). Set to "database"
+        // (or another connection) only when a worker (`php artisan queue:work`)
+        // is actually running to process the queue.
+        'ocr_queue_connection' => env('AI_SERVICE_OCR_QUEUE_CONNECTION', 'sync'),
     ],
 
 ];

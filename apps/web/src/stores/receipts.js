@@ -175,6 +175,9 @@ export const useReceiptStore = defineStore("receipts", () => {
       location: r.location || null,
       ocrConfidenceScore: r.ocr_confidence_score,
       ocrFlagged: r.ocr_flagged,
+      rejectionCode: r.rejection_code || null,
+      rejectionReason: r.rejection_reason || null,
+      duplicateSimilarity: r.duplicate_similarity ?? null,
       createdAt: r.created_at,
       items: r.items || [],
     };
@@ -410,6 +413,86 @@ export const useReceiptStore = defineStore("receipts", () => {
   }
 
   /**
+   * Re-run the OCR pipeline for an existing receipt.
+   *
+   * @param {number|string} id - The receipt's backend (db) id
+   * @returns {Promise<object>} The updated mapped receipt (status back to processing)
+   */
+  async function retryOcr(id) {
+    isSaving.value = true;
+
+    const rx = receipts.value.find((r) => r.dbId === id);
+
+    try {
+      const response = await apiFetch(
+        `/api/serms/reimbursements/receipts/${id}/retry-ocr`,
+        {
+          method: "POST",
+          credentials: "include",
+        },
+      );
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.message || `Retry OCR failed (Status ${response.status})`);
+      }
+
+      const resData = await response.json();
+      if (rx) Object.assign(rx, mapReceipt(resData.data));
+      return rx ?? resData.data;
+    } finally {
+      isSaving.value = false;
+    }
+  }
+
+  /**
+   * Re-fetch a single receipt from the API and sync it into the local store.
+   *
+   * Used by the edit modal to poll for OCR completion after Retry OCR: the
+   * external AI service updates the DB via its webhook callback, but the open
+   * modal holds a reference to the local mapped object and won't learn the new
+   * status until something re-reads it. This GETs the receipt, finds the local
+   * item by `dbId`, and `Object.assign`s the mapped data into it so existing
+   * references (including `props.receiptToEdit` in the modal) stay in sync and
+   * reactive. Uses no `isSaving` flag so it never clobbers save spinners.
+   *
+   * @param {number|string} id - The receipt's backend (db) id
+   * @returns {Promise<object>} The updated mapped receipt (existing local item
+   *   mutated in place), or the fetched mapped data when no local item exists.
+   */
+  async function refreshReceipt(id) {
+    try {
+      const response = await apiFetch(
+        `/api/serms/reimbursements/receipts/${id}`,
+        {
+          credentials: "include",
+        },
+      );
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(
+          errData.message ||
+            `Failed to refresh receipt (Status ${response.status})`,
+        );
+      }
+
+      const resData = await response.json();
+      const mapped = mapReceipt(resData.data);
+
+      const rx = receipts.value.find((r) => r.dbId === id);
+      if (rx) {
+        Object.assign(rx, mapped);
+        return rx;
+      }
+      return mapped;
+    } catch (error) {
+      console.error("Failed to refresh receipt:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Update an existing receipt's editable fields via PATCH.
    * Used by the OCR-driven expense upload flow to persist user corrections
    * after the backend has extracted the initial data.
@@ -618,6 +701,8 @@ export const useReceiptStore = defineStore("receipts", () => {
     fetchCategories,
     uploadReceipt,
     resubmitReceipt,
+    retryOcr,
+    refreshReceipt,
     updateReceipt,
     finalizeReReview,
     simulateUpload,

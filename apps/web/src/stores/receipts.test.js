@@ -378,4 +378,180 @@ describe("useReceiptStore", () => {
     const orderedDbIds = store.visibleReceipts.map((r) => r.dbId);
     expect(orderedDbIds).toEqual([11, 12, 10]);
   });
+
+  it("refreshReceipt GETs the receipt and Object.assigns into the existing local item", async () => {
+    const refreshed = {
+      id: 5,
+      file_path: "uploads/2026/upd.pdf",
+      file_type: "application/pdf",
+      file_size_bytes: 1024,
+      file_hash: "upd-hash",
+      transaction_date: "2026-04-01",
+      total_amount: 500,
+      vat_amount: 53.57,
+      status: "processed",
+      vendor_name: "Refreshed Vendor",
+      invoice_number: "INV-005",
+      category: { name: "Meals" },
+      expense_category_id: 9,
+      uploader: { name: "John Doe" },
+      items: [],
+    };
+
+    apiFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: refreshed }),
+    });
+
+    const store = useReceiptStore();
+    const local = {
+      id: "RCPT-2026-005",
+      dbId: 5,
+      amount: 0,
+      categoryId: 1,
+      vendorName: "Old Vendor",
+      status: "processing",
+    };
+    store.receipts = [local];
+
+    const result = await store.refreshReceipt(5);
+
+    expect(apiFetch).toHaveBeenCalledTimes(1);
+    const [url, opts] = apiFetch.mock.calls[0];
+    expect(url).toBe("/api/serms/reimbursements/receipts/5");
+    expect(opts.method).toBeUndefined(); // GET
+    // refreshReceipt returns the SAME local item (mutated in place) rather than
+    // a fresh copy, so the modal's props.receiptToEdit reference stays in sync.
+    expect(result).toBe(store.receipts[0]);
+    // The local item was updated in place with the fetched data.
+    expect(store.receipts[0].vendorName).toBe("Refreshed Vendor");
+    expect(store.receipts[0].status).toBe("processed");
+  });
+
+  it("refreshReceipt returns fetched data when no local item exists", async () => {
+    apiFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: {
+          id: 8,
+          file_path: "uploads/2026/new.pdf",
+          file_type: "application/pdf",
+          file_size_bytes: 1,
+          file_hash: "h",
+          transaction_date: "2026-04-01",
+          total_amount: 1,
+          status: "processed",
+          vendor_name: "V",
+          invoice_number: "INV-8",
+          category: { name: "Meals" },
+          expense_category_id: 1,
+          uploader: { name: "John Doe" },
+          items: [],
+        },
+      }),
+    });
+
+    const store = useReceiptStore();
+    const result = await store.refreshReceipt(8);
+
+    expect(store.receipts).toHaveLength(0);
+    expect(result.dbId).toBe(8);
+  });
+
+  it("propagates a processing status from resubmitReceipt when OCR re-runs", async () => {
+    const store = useReceiptStore();
+    store.receipts = [
+      {
+        id: "RCPT-2026-020",
+        dbId: 20,
+        amount: 0,
+        categoryId: 1,
+        vendorName: "Old Vendor",
+        status: "processed",
+      },
+    ];
+
+    apiFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: {
+          id: 20,
+          file_path: ["uploads/2026/re.png"],
+          file_type: ["image/png"],
+          file_size_bytes: [1024],
+          file_hash: ["h"],
+          status: "processing",
+          vendor_name: "Old Vendor",
+          category: { name: "Meals" },
+          expense_category_id: 1,
+          uploader: { name: "John Doe" },
+          items: [],
+        },
+      }),
+    });
+
+    const file = new File([""], "re.png", { type: "image/png" });
+    const result = await store.resubmitReceipt(
+      "RCPT-2026-020",
+      { vendor_name: "Old Vendor" },
+      file,
+    );
+
+    expect(apiFetch).toHaveBeenCalledTimes(1);
+    const [url, opts] = apiFetch.mock.calls[0];
+    expect(url).toBe("/api/serms/reimbursements/receipts/20/resubmit");
+    expect(opts.method).toBe("POST");
+    expect(opts.body).toBeInstanceOf(FormData);
+    expect(opts.body.get("file")).toBe(file);
+    // The backend is authoritative: the local receipt reflects "processing",
+    // not the hardcoded "processed" the store sends in the FormData.
+    expect(result.status).toBe("processing");
+    expect(store.receipts[0].status).toBe("processing");
+  });
+
+  it("propagates a duplicate-flagged status from resubmitReceipt", async () => {
+    const store = useReceiptStore();
+    store.receipts = [
+      {
+        id: "RCPT-2026-021",
+        dbId: 21,
+        amount: 0,
+        categoryId: 1,
+        vendorName: "Old Vendor",
+        status: "processed",
+      },
+    ];
+
+    apiFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: {
+          id: 21,
+          file_path: ["uploads/2026/re.png"],
+          file_type: ["image/png"],
+          file_size_bytes: [1024],
+          file_hash: ["h"],
+          status: "rejected",
+          rejection_code: "duplicate",
+          ocr_flagged: true,
+          vendor_name: "Old Vendor",
+          category: { name: "Meals" },
+          expense_category_id: 1,
+          uploader: { name: "John Doe" },
+          items: [],
+        },
+      }),
+    });
+
+    const file = new File([""], "re.png", { type: "image/png" });
+    const result = await store.resubmitReceipt(
+      "RCPT-2026-021",
+      { vendor_name: "Old Vendor" },
+      file,
+    );
+
+    expect(result.status).toBe("rejected");
+    expect(result.complianceStatus).toBe("rejected");
+    expect(result.ocrFlagged).toBe(true);
+  });
 });

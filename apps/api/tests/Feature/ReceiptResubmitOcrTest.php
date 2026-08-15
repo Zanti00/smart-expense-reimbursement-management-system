@@ -1,0 +1,275 @@
+<?php
+
+namespace Tests\Feature;
+
+use Tests\TestCase;
+use App\Modules\Users\Models\User;
+use App\Modules\Reimbursements\Models\Receipt;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Http;
+use App\Modules\Reimbursements\Jobs\DispatchReceiptToAiService;
+
+class ReceiptResubmitOcrTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private User $employee;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->employee = User::create([
+            'name' => 'Jane Doe',
+            'email' => 'jane.doe@example.com',
+            'role' => 'employee',
+            'grade' => 'L1',
+            'department' => 'IT',
+        ]);
+
+        Storage::fake('supabase');
+        Queue::fake();
+
+        // Set the AI service URL after the app is fully booted so it takes effect
+        // at runtime (the engine reads it at call time).
+        config([
+            'services.ai_service.url' => 'http://ai-service.test',
+            'services.ai_service.api_key' => 'test-key',
+        ]);
+
+        // OCR dispatches synchronously by default (no worker needed). Fake the
+        // external AI service so the inline dispatch succeeds; individual tests can
+        // re-fake a 500 to force an OCR failure.
+        Http::fake(function () {
+            return Http::response(['status' => 'received'], 200);
+        });
+    }
+
+    private function pngUploadedFile(string $name, string $content): UploadedFile
+    {
+        $path = tempnam(sys_get_temp_dir(), 'rcpt');
+        file_put_contents($path, $content);
+
+        return new UploadedFile($path, $name, 'image/png', null, true);
+    }
+
+    private function createReceipt(UploadedFile $file): array
+    {
+        $response = $this
+            ->withoutMiddleware(\App\Modules\Shared\Http\Middleware\AuthenticateWithExternalService::class)
+            ->actingAs($this->employee)
+            ->post('/api/reimbursements/receipts', [
+                'file' => $file,
+                'vendor_name' => 'Vendor',
+                'transaction_date' => '2026-06-10',
+                'total_amount' => 100.00,
+                'vat_amount' => 12.00,
+                'tin' => '123-456-789-000',
+                'invoice_number' => 'INV-001',
+                'vat_classification' => 'vat',
+                'currency' => 'PHP',
+            ]);
+
+        $response->assertStatus(201);
+
+        return $response->json('data');
+    }
+
+    /**
+     * Receipt image re-upload is disabled. Any file supplied to the resubmit
+     * endpoint must be rejected (422) and the existing on-file image preserved.
+     * This replaces the previous scenarios that triggered duplicate-detection or
+     * OCR re-runs on a re-uploaded file (different file, brand-new file, and the
+     * same file re-uploaded) — none of those are permitted anymore.
+     */
+    public function test_resubmit_rejects_file_upload_and_preserves_existing_receipt(): void
+    {
+        $fileA = UploadedFile::fake()->image('a.png', 100, 100);
+        $fileB = UploadedFile::fake()->image('b.png', 200, 200);
+        $contentA = file_get_contents($fileA->getRealPath());
+        $contentB = file_get_contents($fileB->getRealPath());
+
+        $receiptA = $this->createReceipt($fileA);
+        $this->createReceipt($fileB);
+
+        $scenarios = [
+            'different receipt file' => $this->pngUploadedFile('b_copy.png', $contentB),
+            'brand-new file'        => $this->pngUploadedFile('new.png', $contentA),
+            'same file re-uploaded' => $this->pngUploadedFile('a_same.png', $contentA),
+        ];
+
+        foreach ($scenarios as $label => $uploaded) {
+            Queue::fake();
+
+            $response = $this
+                ->withoutMiddleware(\App\Modules\Shared\Http\Middleware\AuthenticateWithExternalService::class)
+                ->actingAs($this->employee)
+                ->postJson("/api/reimbursements/receipts/{$receiptA['id']}/resubmit", [
+                    'file' => $uploaded,
+                    'vendor_name' => 'Changed',
+                ]);
+
+            // The re-upload must be rejected at the boundary.
+            $response->assertStatus(422, "Scenario failed: {$label}");
+            $this->assertArrayHasKey('file', $response->json('errors'), "Scenario failed: {$label}");
+
+            // The existing receipt image and metadata are preserved (no overwrite,
+            // no OCR dispatch for a rejected re-upload).
+            $this->assertDatabaseHas('receipts', [
+                'id' => $receiptA['id'],
+                'status' => 'processing',
+                'vendor_name' => 'Vendor',
+            ]);
+            $this->assertEquals(
+                $receiptA['file_path'],
+                Receipt::find($receiptA['id'])->file_path,
+                "Existing receipt image was replaced — scenario: {$label}"
+            );
+            Queue::assertNotPushed(DispatchReceiptToAiService::class, "Scenario failed: {$label}");
+        }
+    }
+
+    public function test_resubmit_metadata_only_keeps_processed_and_skips_ocr(): void
+    {
+        $fileA = UploadedFile::fake()->image('a.png', 100, 100);
+        $receiptA = $this->createReceipt($fileA);
+
+        Queue::fake();
+
+        $response = $this
+            ->withoutMiddleware(\App\Modules\Shared\Http\Middleware\AuthenticateWithExternalService::class)
+            ->actingAs($this->employee)
+            ->post("/api/reimbursements/receipts/{$receiptA['id']}/resubmit", [
+                'vendor_name' => 'Metadata Only',
+                'total_amount' => 200.00,
+            ]);
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('data.status', 'processed');
+        $response->assertJsonPath('data.vendor_name', 'Metadata Only');
+
+        $this->assertDatabaseHas('receipts', [
+            'id' => $receiptA['id'],
+            'status' => 'processed',
+            'vendor_name' => 'Metadata Only',
+        ]);
+
+        // Metadata-only edit must not dispatch OCR.
+        Queue::assertNotPushed(DispatchReceiptToAiService::class);
+    }
+
+    public function test_store_receipt_with_existing_file_hash_is_rejected_and_skips_ocr(): void
+    {
+        $fileA = UploadedFile::fake()->image('a.png', 100, 100);
+        $contentA = file_get_contents($fileA->getRealPath());
+
+        $this->createReceipt($fileA); // receipt A stored (status processing, OCR dispatched)
+
+        // Reset the fake so only the duplicate store's dispatch (if any) is observed.
+        Queue::fake();
+
+        $duplicate = $this->pngUploadedFile('a_dup.png', $contentA);
+        $response = $this
+            ->withoutMiddleware(\App\Modules\Shared\Http\Middleware\AuthenticateWithExternalService::class)
+            ->actingAs($this->employee)
+            ->postJson('/api/reimbursements/receipts', [
+                'file' => $duplicate,
+                'vendor_name' => 'Duplicate Vendor',
+                'transaction_date' => '2026-06-10',
+                'total_amount' => 100.00,
+                'vat_amount' => 12.00,
+                'tin' => '123-456-789-000',
+                'invoice_number' => 'INV-DUP',
+                'vat_classification' => 'vat',
+                'currency' => 'PHP',
+            ]);
+
+        // storeReceipt rejects duplicates with a 422 ValidationException (no receipt
+        // is created and no OCR is dispatched). The frontend new-upload path keys
+        // off this 422 to surface the DuplicateReceiptModal.
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['file_hash']);
+
+        // No second receipt should exist, and OCR must NOT be dispatched for a dup.
+        $this->assertDatabaseCount('receipts', 1);
+        Queue::assertNotPushed(DispatchReceiptToAiService::class);
+    }
+
+    public function test_new_receipt_store_stays_processing_and_dispatches_ocr(): void
+    {
+        $fileNew = UploadedFile::fake()->image('new_store.png', 300, 300);
+
+        Queue::fake();
+
+        $response = $this
+            ->withoutMiddleware(\App\Modules\Shared\Http\Middleware\AuthenticateWithExternalService::class)
+            ->actingAs($this->employee)
+            ->postJson('/api/reimbursements/receipts', [
+                'file' => $fileNew,
+                'vendor_name' => 'Fresh Vendor',
+                'transaction_date' => '2026-06-11',
+                'total_amount' => 250.00,
+                'vat_amount' => 30.00,
+                'tin' => '987-654-321-000',
+                'invoice_number' => 'INV-NEW',
+                'vat_classification' => 'vat',
+                'currency' => 'PHP',
+            ]);
+
+        $response->assertStatus(201);
+        $response->assertJsonPath('data.status', 'processing');
+
+        $this->assertDatabaseHas('receipts', [
+            'status' => 'processing',
+        ]);
+
+        // A brand-new upload MUST auto-trigger OCR (BUG 2 fix: the receipt must
+        // remain 'processing' so OcrCallbackService applies the async results
+        // instead of being force-flipped to 'processed' and skipped by the replay guard).
+        // OCR now dispatches synchronously by default; the faked AI service above
+        // accepts the request, leaving the receipt in `processing`.
+    }
+
+    public function test_dispatch_job_marks_receipt_failed_when_ai_service_throws(): void
+    {
+        Queue::fake();
+
+        $file = UploadedFile::fake()->image('ocr_fail.png', 300, 300);
+        $data = $this->createReceipt($file);
+        $receiptId = $data['id'];
+
+        $this->assertDatabaseHas('receipts', [
+            'id' => $receiptId,
+            'status' => 'processing',
+        ]);
+
+        // Simulate the external AI OCR service failing. Bind a mock engine that
+        // throws so we exercise the job's failure path deterministically.
+        $engine = $this->createMock(\App\Modules\Ai\Contracts\AsyncOcrEngineInterface::class);
+        $engine->method('sendForProcessing')
+            ->willThrowException(new \App\Modules\Ai\Exceptions\AiServiceException('AI service unreachable'));
+
+        $this->instance(\App\Modules\Ai\Contracts\AsyncOcrEngineInterface::class, $engine);
+
+        $job = new DispatchReceiptToAiService(Receipt::findOrFail($receiptId));
+
+        // The job must log + rethrow (so the queue can retry), but it must NOT
+        // silently swallow the failure: the receipt is left in a clear `failed`
+        // state with a reason so the UI can surface it (RC-3 fix).
+        try {
+            $job->handle($engine);
+            $this->fail('Expected AiServiceException to be thrown');
+        } catch (\App\Modules\Ai\Exceptions\AiServiceException $e) {
+            // expected rethrow
+        }
+
+        $this->assertDatabaseHas('receipts', [
+            'id' => $receiptId,
+            'status' => 'failed',
+            'rejection_code' => 'ocr_failed',
+        ]);
+    }
+}

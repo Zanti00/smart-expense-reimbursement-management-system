@@ -23,6 +23,13 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Set working directory
 WORKDIR /var/www
 
+# Copy the application source (vendor/.env excluded via .dockerignore so the
+# image is built deterministically from composer.lock).
+COPY . /var/www
+
+# Install PHP dependencies at build time
+RUN COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader --no-interaction
+
 # Expose port 9000 for PHP-FPM
 EXPOSE 9000
 

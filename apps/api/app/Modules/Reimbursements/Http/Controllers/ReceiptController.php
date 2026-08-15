@@ -189,4 +189,24 @@ class ReceiptController extends Controller
             ], 422);
         }
     }
+
+    /**
+     * Re-run the OCR pipeline for a receipt.
+     */
+    public function retryOcr(Request $request, $id)
+    {
+        try {
+            $receipt = $this->service->retryOcrReceipt(
+                $request->user(),
+                (int) $id
+            );
+
+            return response()->json([
+                'message' => 'OCR reprocessing started.',
+                'data' => $receipt,
+            ]);
+        } catch (AuthorizationException $e) {
+            return response()->json(['message' => $e->getMessage()], 403);
+        }
+    }
 }

@@ -32,14 +32,16 @@ SERMS is a high-precision, Modular Monolith financial compliance application bui
 - **Module Structure:** Every backend component must live in `app/Modules/{ModuleName}`. Cross-module imports are prohibited except via the `Shared` module or models.
 - **Immutability:** Never run updates or deletes on the `audit_logs` or `penalties` tables.
 - **Errors:** All authorization violations must return `403 Forbidden`, authentication failures must return `401 Unauthorized`, and duplicate conflicts must return `409 Conflict`.
-- **Git Operations (AI Rule):** AI agents and subagents must never push to Git or alter Git history without explicit user permission, even if technically capable. Always ask the user before pushing unless permission was granted on the spot.
-- **Context Gathering (AI Rule):** If you think a user's prompt or task lacks sufficient context, details, or information, AI agents and subagents must ask questions or interview the user via the `/grill-me` skill interface about the given task/prompt to deepen understanding and avoid hallucinations before proceeding.
-- **Reusability Check (AI Rule):** AI agents and subagents must search for pre-existing reusable components, composables, utils, functions, etc. before creating new ones. If an equivalent or near-equivalent implementation already exists, it must be reused or extended rather than duplicated.
+- **Error Handling (AI Rule):** Implement explicit `try-catch` blocks at system execution & integration boundaries (Supabase storage, OCR queue tasks, external HTTP APIs, filesystem I/O, background jobs). Never use empty or silent `catch` blocks—log actionable context and re-throw, map to domain exceptions, or return formatted HTTP 4xx/5xx responses. Never catch and swallow exceptions inside `DB::transaction()` blocks without rethrowing to guarantee atomic database rollbacks. Allow unhandled internal runtime errors to bubble up to Laravel's centralized Exception Handler or Vue's global error handler.
+- **Git Operations (AI Rule):** AI agents and developers must never push to Git or alter Git history without explicit user permission, even if technically capable. Always ask the user before pushing unless permission was granted on the spot.
+- **Context Gathering (AI Rule):** If you think a user's prompt or task lacks sufficient context, details, or information, AI agents and developers must ask questions or interview the user via the `/grill-me` skill interface about the given task/prompt to deepen understanding and avoid hallucinations before proceeding.
+- **Reusability Check (AI Rule):** AI agents and developers must search for pre-existing reusable components, composables, utils, functions, etc. before creating new ones. If an equivalent or near-equivalent implementation already exists, it must be reused or extended rather than duplicated.
 
 ## Definition of Done
 
 - [ ] Code conforms to `A-09` reusability constraints (no duplicate components or utility helpers).
 - [ ] Every database mutation has a corresponding `AuditLogService::log()` call in the same database transaction.
+- [ ] System boundary operations feature explicit `try-catch` blocks with logging/rethrowing and zero silent error swallowing.
 - [ ] Sensitive inputs are encrypted on the client side and verified/decrypted server-side.
 - [ ] Export actions for reports are written to the audit logs with filters used.
 - [ ] Pre-aggregated database aggregation is used for dashboard visual components.

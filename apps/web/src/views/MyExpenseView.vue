@@ -157,6 +157,73 @@ async function confirmDelete(password) {
   }
 }
 
+// ── OCR completion toasts ─────────────────────────────────────────
+// Poll any receipt currently in `processing` and surface a toast when the
+// external AI OCR callback flips it to a terminal status. Covers both the
+// Retry OCR flow and first-time uploads, even if the modal was closed.
+const ocrWatchedIds = ref(new Set());
+let ocrPollTimer = null;
+
+function toastOcrCompletion(receipt) {
+  if (!receipt) return;
+  const status = String(receipt.status || receipt.complianceStatus || "").toLowerCase();
+  const label = receipt.id || "receipt";
+  switch (status) {
+    case "processed":
+      addToast({ message: `OCR completed for ${label}.`, type: "success" });
+      break;
+    case "flagged":
+      addToast({
+        message: `OCR finished with low confidence — ${label} was flagged.`,
+        type: "warning",
+      });
+      break;
+    case "rejected":
+      addToast({ message: `OCR rejected ${label}.`, type: "error" });
+      break;
+    case "failed":
+      addToast({ message: `OCR failed for ${label}.`, type: "error" });
+      break;
+    default:
+      addToast({ message: `OCR finished for ${label} (${status}).`, type: "info" });
+  }
+}
+
+async function tickOcrWatch() {
+  for (const id of [...ocrWatchedIds.value]) {
+    try {
+      const updated = await receiptsStore.refreshReceipt(id);
+      const status = String(updated?.status || "").toLowerCase();
+      if (status && status !== "processing") {
+        toastOcrCompletion(updated);
+        ocrWatchedIds.value.delete(id);
+      }
+    } catch {
+      // keep watching; will retry on the next tick
+    }
+  }
+  if (ocrWatchedIds.value.size === 0 && ocrPollTimer) {
+    clearInterval(ocrPollTimer);
+    ocrPollTimer = null;
+  }
+}
+
+function ensureOcrWatch() {
+  for (const r of receiptsStore.visibleReceipts) {
+    if (String(r.status || "").toLowerCase() === "processing") {
+      ocrWatchedIds.value.add(r.dbId);
+    }
+  }
+  if (ocrWatchedIds.value.size > 0 && !ocrPollTimer) {
+    ocrPollTimer = setInterval(tickOcrWatch, 2500);
+  }
+}
+
+watch(
+  () => receiptsStore.visibleReceipts.map((r) => `${r.dbId}:${r.status}`).join("|"),
+  () => ensureOcrWatch(),
+);
+
 // ── View Modal ────────────────────────────────────────────────────
 const viewModalOpen = ref(false);
 const viewedReceipt = ref(null);
@@ -233,10 +300,12 @@ onMounted(async () => {
   const tasks = [fetchReceipts(1), receiptsStore.fetchCategories()];
   if (auth.isAdmin) tasks.push(receiptsStore.fetchReReviewReceipts());
   await Promise.all(tasks);
+  ensureOcrWatch();
   window.addEventListener('open-receipt-upload', handleOpenReceiptUpload);
 });
 
 onUnmounted(() => {
+  if (ocrPollTimer) clearInterval(ocrPollTimer);
   window.removeEventListener('open-receipt-upload', handleOpenReceiptUpload);
 });
 
