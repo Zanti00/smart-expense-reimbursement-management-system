@@ -1,20 +1,17 @@
 <script setup>
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import {
-  Receipt,
   X,
   FileText,
   Image as ImageIcon,
-  Sparkles,
-  CheckCircle2,
-  Clock,
   Download,
   Trash2,
   Pencil,
   AlertTriangle,
 } from "lucide-vue-next";
-import { formatPeso as formatCurrency, formatAmount, formatDate as formatDateBase } from "@/utils/formatters";
+import { formatAmount, formatDate as formatDateBase } from "@/utils/formatters";
 import { canEditReceipt, canDeleteReceipt } from "@/utils/receiptUtils";
+import StatusBadge from "@/components/base/StatusBadge.vue";
 
 const props = defineProps({
   modelValue: {
@@ -31,6 +28,7 @@ const emit = defineEmits(["update:modelValue", "delete", "edit"]);
 
 const canEdit = computed(() => canEditReceipt(props.receipt));
 const canDelete = computed(() => canDeleteReceipt(props.receipt));
+const imageError = ref(false);
 
 function close() {
   emit("update:modelValue", false);
@@ -41,7 +39,6 @@ function editReceipt() {
   close();
 }
 
-// ── Receipt Detail Helpers ────────────────────────────────────────
 const actualSubtotal = computed(() => {
   if (props.receipt?.items?.length) {
     return props.receipt.items.reduce(
@@ -67,261 +64,168 @@ function formatDate(dateStr) {
   <Transition name="modal">
     <div
       v-if="modelValue && receipt"
-      class="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4 lg:p-8 backdrop-blur-[1px]"
+      class="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
       @click="close"
     >
       <div
-        class="card border-none w-full max-w-4xl max-h-[92vh] overflow-hidden flex flex-col shadow-2xl"
+        class="relative bg-white w-full max-w-[840px] rounded-3xl shadow-[0_20px_40px_-10px_rgba(0,0,0,0.1)] flex flex-col md:flex-row p-6 gap-8 overflow-hidden min-h-[500px] max-h-[90vh]"
         @click.stop
       >
-        <!-- HEADER -->
-        <header
-          class="px-6 py-4 flex items-center justify-between sticky top-0 z-20 bg-primary text-white"
+        <!-- Close Button -->
+        <button
+          @click="close"
+          class="absolute top-6 right-6 text-slate-400 hover:bg-slate-100 transition-colors p-2 rounded-full flex items-center justify-center z-10"
         >
-          <div class="flex items-center gap-4">
-            <div
-              class="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center"
-            >
-              <Receipt class="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h2
-                class="text-lg font-bold leading-tight"
-              >
-                Receipt Details
-              </h2>
-              <p class="text-xs text-white/70">
-                {{ receipt.fileName }}
-              </p>
-            </div>
-          </div>
-          <button
-            @click="close"
-            class="w-10 h-10 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors"
-          >
-            <X class="w-5 h-5" />
-          </button>
-        </header>
+          <X class="w-5 h-5" />
+        </button>
 
-        <div class="overflow-y-auto p-6 space-y-6">
-          <!-- Receipt Image Preview -->
+        <!-- Left Column: Image -->
+        <div class="w-full md:w-5/12 bg-gradient-to-b from-slate-100 to-slate-50 rounded-2xl flex items-center justify-center p-4 shrink-0 relative overflow-hidden min-h-[400px]">
+          <img
+            v-if="receipt.thumbnail && receipt.fileType !== 'application/pdf' && !imageError"
+            :src="receipt.thumbnail"
+            class="w-full h-full object-contain rounded-md"
+            alt="Receipt"
+            @error="imageError = true"
+          />
           <div
-            class="relative w-full aspect-[21/9] rounded-xl overflow-hidden border border-slate-100 bg-slate-50 group"
+            v-else
+            class="flex flex-col items-center gap-2 text-slate-300"
           >
-            <img
-              v-if="receipt.thumbnail && receipt.fileType !== 'application/pdf'"
-              :src="receipt.thumbnail"
-              class="w-full h-full object-cover opacity-80"
+            <FileText
+              v-if="receipt.fileType === 'application/pdf' || receipt.fileType === 'pdf'"
+              class="w-12 h-12"
             />
-            <div
-              v-else
-              class="w-full h-full flex flex-col items-center justify-center gap-2 text-slate-300"
-            >
-              <FileText
-                v-if="
-                  receipt.fileType === 'application/pdf' ||
-                  receipt.fileType === 'pdf'
-                "
-                class="w-12 h-12 opacity-50"
-              />
-              <ImageIcon v-else class="w-12 h-12 opacity-50" />
-              <p
-                class="text-xs font-semibold uppercase tracking-widest"
-              >
-                No Image Preview
-              </p>
-            </div>
+            <ImageIcon v-else class="w-12 h-12" />
+            <span class="text-xs text-slate-400">No preview</span>
           </div>
+        </div>
 
-          <!-- AI BADGE -->
+        <!-- Right Column: Content -->
+        <div class="w-full md:w-7/12 flex flex-col pt-4 pb-2 pr-2 overflow-y-auto">
+          <!-- Rejection Alert -->
           <div
             v-if="receipt.status === 'automatic-rejected'"
-            class="rounded-xl border border-danger/20 bg-danger/5 p-4"
+            class="flex items-start gap-2.5 p-3 rounded-lg bg-red-50 border border-red-100 mb-5"
           >
-            <div class="flex items-start gap-3">
-              <AlertTriangle class="mt-0.5 h-5 w-5 shrink-0 text-danger" />
-              <div>
-                <p class="font-heading text-sm font-bold text-danger">
-                  Automatic Rejected
-                </p>
-                <p class="mt-1 text-sm text-slate-600">
-                  {{ receipt.complianceReason || "System validation could not approve this receipt." }}
-                </p>
-              </div>
+            <AlertTriangle class="h-4 w-4 shrink-0 text-red-500 mt-0.5" />
+            <div>
+              <p class="text-xs font-medium text-red-700">Automatic Rejected</p>
+              <p class="text-xs text-red-500 mt-0.5">
+                {{ receipt.complianceReason || "System validation could not approve this receipt." }}
+              </p>
             </div>
           </div>
 
+          <!-- Order Info -->
+          <div class="flex justify-between items-end border-b border-slate-100 pb-4 mb-5">
+            <div class="flex flex-col gap-0.5">
+              <span class="text-[11px] text-slate-400 uppercase tracking-wide">Confirmation</span>
+              <span class="text-sm text-slate-700">{{ receipt.invoiceNumber || receipt.fileName }}</span>
+            </div>
+            <div class="flex flex-col gap-0.5 items-end">
+              <span class="text-sm text-slate-500">{{ formatDate(receipt.date) }}</span>
+            </div>
+          </div>
+
+          <!-- Vendor -->
+          <div class="mb-5">
+            <span class="text-[11px] text-slate-400 uppercase tracking-wide">Vendor</span>
+            <p class="text-base font-medium text-slate-800 mt-0.5">
+              {{ receipt.vendorName || "Unknown Vendor" }}
+            </p>
+          </div>
+
+          <!-- Items List -->
           <div
-            class="flex items-center gap-2 px-4 py-2.5 bg-accent-50 border border-accent/20 rounded-xl"
-          >
-            <Sparkles class="w-4 h-4 text-accent fill-accent" />
-            <span
-              class="text-xs font-semibold text-accent"
-              >AI Scanned — Details automatically extracted</span
-            >
-          </div>
-
-          <!-- DATA GRID -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- Date -->
-            <div class="p-4 rounded-xl border border-slate-100 bg-slate-50/30">
-              <p class="section-label mb-1">Transaction Date</p>
-              <p class="text-sm font-bold text-slate-800">
-                {{ formatDate(receipt.date) }}
-              </p>
-            </div>
-            <!-- Vendor Name -->
-            <div class="p-4 rounded-xl border border-slate-100 bg-slate-50/30">
-              <p class="section-label mb-1">Vendor Name</p>
-              <p class="text-sm font-bold text-slate-800">
-                {{ receipt.vendorName || "—" }}
-              </p>
-            </div>
-            <!-- Category -->
-            <div class="p-4 rounded-xl border border-slate-100 bg-slate-50/30">
-              <p class="section-label mb-2">Category</p>
-              <span
-                class="badge bg-primary-100 border-primary-200 text-primary-700"
-              >
-                {{ receipt.category }}
-              </span>
-            </div>
-            <!-- TIN -->
-            <div class="p-4 rounded-xl border border-slate-100 bg-slate-50/30">
-              <p class="section-label mb-1">TIN</p>
-              <p class="text-sm font-bold text-slate-800">
-                {{ receipt.tin || "—" }}
-              </p>
-            </div>
-            <!-- Invoice Number -->
-            <div class="p-4 rounded-xl border border-slate-100 bg-slate-50/30">
-              <p class="section-label mb-1">Invoice Number</p>
-              <p class="text-sm font-bold text-slate-800">
-                {{ receipt.invoiceNumber || "—" }}
-              </p>
-            </div>
-            <!-- VAT Classification -->
-            <div class="p-4 rounded-xl border border-slate-100 bg-slate-50/30">
-              <p class="section-label mb-1">VAT Classification</p>
-              <p class="text-sm font-bold text-slate-800 uppercase">
-                {{ receipt.vatClassification || "—" }}
-              </p>
-            </div>
-            <!-- Currency -->
-            <div class="p-4 rounded-xl border border-slate-100 bg-slate-50/30">
-              <p class="section-label mb-1">Currency</p>
-              <p class="text-sm font-bold text-slate-800 uppercase">
-                {{ receipt.currency || "—" }}
-              </p>
-            </div>
-            <!-- Uploader -->
-            <div class="p-4 rounded-xl border border-slate-100 bg-slate-50/30">
-              <p class="section-label mb-1">Submitted By</p>
-              <p class="text-sm font-bold text-slate-800">
-                {{ receipt.uploader }}
-              </p>
-            </div>
-          </div>
-
-          <!-- ITEMS CHECKLIST -->
-          <div
-            class="space-y-3"
             v-if="receipt.items && receipt.items.length > 0"
+            class="mb-5"
           >
-            <h3
-              class="text-sm font-bold text-slate-800 px-1"
-            >
-              Expense Breakdown
-            </h3>
-            <div
-              class="border border-slate-100 rounded-xl overflow-hidden bg-white divide-y divide-slate-50"
-            >
+            <h3 class="text-[11px] text-slate-400 uppercase tracking-wide mb-3">Items</h3>
+            <div class="flex flex-col gap-3">
               <div
-                v-for="item in receipt.items"
-                :key="item.id"
-                class="flex items-center justify-between gap-3 px-5 py-3 hover:bg-slate-50 transition-colors"
+                v-for="(item, index) in receipt.items"
+                :key="item.id || index"
+                class="flex justify-between items-center"
               >
                 <div class="flex items-center gap-3">
-                  <CheckCircle2
-                    class="w-4 h-4 text-accent fill-accent-50"
-                  />
-                  <span class="text-sm text-slate-700">{{
-                    item.name || "Unnamed Item"
-                  }}</span>
+                  <span class="w-6 h-6 rounded-full bg-slate-100 text-accent flex items-center justify-center text-xs font-medium shrink-0">
+                    {{ index + 1 }}
+                  </span>
+                  <span class="text-sm text-slate-700">{{ item.name || "Item" }} ({{ item.quantity }}x)</span>
                 </div>
-                <div class="text-sm text-slate-500">
-                  {{ item.quantity }} x
-                  {{ formatAmount(Number(item.price) || 0, receipt.currency || "PHP") }}
-                </div>
+                <span class="text-sm text-slate-700">
+                  {{ formatAmount(Number(item.price) * Number(item.quantity) || 0, receipt.currency || "PHP") }}
+                </span>
               </div>
             </div>
           </div>
 
-          <!-- AMOUNT BREAKDOWN -->
-          <div
-            class="rounded-xl border border-slate-100 overflow-hidden bg-slate-50/50"
-          >
-            <div class="bg-primary px-5 py-3">
-              <h3
-                class="text-xs font-bold text-white uppercase tracking-widest"
-              >
-                Amount Breakdown
-              </h3>
+          <!-- Summary -->
+          <div class="flex flex-col gap-2 pt-4 border-t border-slate-100 mb-5">
+            <div class="flex justify-between items-center text-sm">
+              <span class="text-slate-400">Subtotal</span>
+              <span class="text-slate-600">{{ formatAmount(actualSubtotal, receipt.currency || "PHP") }}</span>
             </div>
-            <div class="p-5 space-y-3">
-              <div class="flex justify-between items-center text-slate-500">
-                <span class="text-sm">Items Subtotal</span>
-                <span class="text-sm">{{
-                  formatAmount(actualSubtotal, receipt.currency || "PHP")
-                }}</span>
-              </div>
-              <div
-                class="flex justify-between items-center text-slate-500 pb-3 border-b border-slate-200"
-              >
-                <span class="text-sm">VAT Amount</span>
-                <span class="text-sm">{{
-                  formatAmount(receipt.vatAmount || 0, receipt.currency || "PHP")
-                }}</span>
-              </div>
-              <div class="flex justify-between items-center pt-1">
-                <span
-                  class="text-base font-bold text-primary"
-                  >Total Amount</span
-                >
-                <span class="text-xl font-black text-primary">{{
-                  formatAmount(receipt.amount, receipt.currency || "PHP")
-                }}</span>
-              </div>
+            <div class="flex justify-between items-center text-sm">
+              <span class="text-slate-400">VAT</span>
+              <span class="text-slate-600">{{ formatAmount(receipt.vatAmount || 0, receipt.currency || "PHP") }}</span>
+            </div>
+            <div class="flex justify-between items-center pt-2 mt-1 border-t border-slate-100">
+              <span class="text-sm text-slate-700">Total</span>
+              <span class="text-base font-semibold text-primary">
+                {{ formatAmount(receipt.amount, receipt.currency || "PHP") }}
+              </span>
             </div>
           </div>
 
-          <!-- FOOTER -->
-          <div
-            class="flex flex-col md:flex-row items-center justify-between md:justify-end gap-4 pt-4 border-t border-slate-100"
-          >
-            <div class="flex gap-2">
-              <button
-                v-if="canEdit"
-                class="btn btn-cta"
-                @click="editReceipt"
-              >
-                <Pencil class="w-3.5 h-3.5" /> Edit Receipt
-              </button>
-              <button class="btn btn-secondary !py-2 !text-xs">
-                <Download class="w-3.5 h-3.5" /> Download
-              </button>
-              <button
-                v-if="canDelete"
-                @click="
-                  emit('delete', receipt.id);
-                  close();
-                "
-                class="inline-flex h-9 w-fit items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3.5 text-xs font-bold text-danger transition-colors hover:bg-red-100"
-              >
-                <Trash2 class="w-3.5 h-3.5" />
-                Delete Receipt
-              </button>
+          <!-- Metadata -->
+          <div class="grid grid-cols-2 gap-x-6 gap-y-3 mb-5 pb-5 border-b border-slate-100">
+            <div>
+              <span class="text-[11px] text-slate-400 uppercase tracking-wide">Category</span>
+              <p class="text-sm text-slate-700 mt-0.5">{{ receipt.category || "—" }}</p>
             </div>
+            <div>
+              <span class="text-[11px] text-slate-400 uppercase tracking-wide">TIN</span>
+              <p class="text-sm text-slate-700 mt-0.5">{{ receipt.tin || "—" }}</p>
+            </div>
+            <div>
+              <span class="text-[11px] text-slate-400 uppercase tracking-wide">VAT Type</span>
+              <p class="text-sm text-slate-700 mt-0.5 uppercase">{{ receipt.vatClassification || "—" }}</p>
+            </div>
+            <div>
+              <span class="text-[11px] text-slate-400 uppercase tracking-wide">Currency</span>
+              <p class="text-sm text-slate-700 mt-0.5">{{ receipt.currency || "PHP" }}</p>
+            </div>
+          </div>
+
+          <!-- Status -->
+          <div class="flex justify-between items-center mb-6">
+            <span class="text-sm text-slate-500">Status</span>
+            <StatusBadge :status="receipt.status" />
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex gap-3 mt-auto">
+            <button
+              v-if="canEdit"
+              @click="editReceipt"
+              class="btn btn-secondary flex-1"
+            >
+              <Pencil class="w-4 h-4" /> Edit
+            </button>
+            <button
+              class="btn btn-cta flex-1"
+            >
+              <Download class="w-4 h-4" /> Download
+            </button>
+            <button
+              v-if="canDelete"
+              @click="emit('delete', receipt.id); close();"
+              class="btn btn-danger !px-3"
+            >
+              <Trash2 class="w-4 h-4" />
+            </button>
           </div>
         </div>
       </div>
