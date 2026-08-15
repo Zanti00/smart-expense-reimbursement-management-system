@@ -1,206 +1,247 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
-import { useReimbursementStore } from '@/stores/reimbursement'
-import { useCashAdvanceStore } from '@/stores/cashAdvance'
-import StatusBadge from '@/components/base/StatusBadge.vue'
-import BaseButton from '@/components/base/BaseButton.vue'
-import BaseKpiGrid from '@/components/base/BaseKpiGrid.vue'
-import SkeletonLoader from '@/components/base/SkeletonLoader.vue'
-import { Bar, Doughnut } from 'vue-chartjs'
+import { ref, onMounted, computed } from "vue";
+import { useRouter } from "vue-router";
+import { useAuthStore } from "@/stores/auth";
+import { useReimbursementStore } from "@/stores/reimbursement";
+import { useCashAdvanceStore } from "@/stores/cashAdvance";
+import StatusBadge from "@/components/base/StatusBadge.vue";
+import BaseButton from "@/components/base/BaseButton.vue";
+import BaseKpiGrid from "@/components/base/BaseKpiGrid.vue";
+import SkeletonLoader from "@/components/base/SkeletonLoader.vue";
+import { Vue3Lottie } from "vue3-lottie";
+import { Bar, Doughnut } from "vue-chartjs";
 import {
-  Chart as ChartJS, CategoryScale, LinearScale, BarElement,
-  ArcElement, Tooltip, Legend, Title
-} from 'chart.js'
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  ArcElement,
+  Tooltip,
+  Legend,
+  Title,
+} from "chart.js";
 import {
-  TrendingUp, Clock, AlertTriangle,
-  ArrowRight, Plus, Wallet, Activity
-} from 'lucide-vue-next'
+  TrendingUp,
+  Clock,
+  AlertTriangle,
+  ArrowRight,
+  Plus,
+  Wallet,
+  Activity,
+} from "lucide-vue-next";
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend, Title)
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  ArcElement,
+  Tooltip,
+  Legend,
+  Title,
+);
 
-const auth = useAuthStore()
-const rStore = useReimbursementStore()
-const caStore = useCashAdvanceStore()
-const router = useRouter()
+const auth = useAuthStore();
+const rStore = useReimbursementStore();
+const caStore = useCashAdvanceStore();
+const router = useRouter();
 
 onMounted(async () => {
-  await Promise.all([rStore.fetchAll(), caStore.fetchAll()])
-})
+  await Promise.all([rStore.fetchAll(), caStore.fetchAll()]);
+});
 
 // KPIs
 const kpis = computed(() => [
   {
-    label: 'Total Reimbursed',
-    value: `₱${rStore.items.filter(i => i.status === 'approved').reduce((s, i) => s + i.amount, 0).toLocaleString()}`,
-    sub: 'This month',
+    label: "Total Reimbursed",
+    value: `₱${rStore.items
+      .filter((i) => i.status === "approved")
+      .reduce((s, i) => s + i.amount, 0)
+      .toLocaleString()}`,
+    sub: "This month",
     icon: TrendingUp,
-    iconBg: 'bg-emerald-100',
-    iconColor: 'text-emerald-600',
-    accent: 'bg-emerald-500',
+    iconBg: "bg-emerald-100",
+    iconColor: "text-emerald-600",
+    accent: "bg-emerald-500",
   },
   {
-    label: 'Awaiting Approval',
-    value: rStore.items.filter(i => i.status === 'pending').length,
-    sub: 'Pending review',
+    label: "Awaiting Approval",
+    value: rStore.items.filter((i) => i.status === "pending").length,
+    sub: "Pending review",
     icon: Clock,
-    iconBg: 'bg-amber-100',
-    iconColor: 'text-amber-600',
-    accent: 'bg-amber-500',
+    iconBg: "bg-amber-100",
+    iconColor: "text-amber-600",
+    accent: "bg-amber-500",
   },
   {
-    label: 'Open Advances',
+    label: "Open Advances",
     value: `₱${caStore.totalOutstanding.toLocaleString()}`,
-    sub: 'Outstanding',
+    sub: "Outstanding",
     icon: Wallet,
-    iconBg: 'bg-accent-100',
-    iconColor: 'text-accent-600',
-    accent: 'bg-accent',
+    iconBg: "bg-accent-100",
+    iconColor: "text-accent-600",
+    accent: "bg-accent",
   },
   {
-    label: 'Issues Found',
+    label: "Issues Found",
     value: 1,
-    sub: 'Requires attention',
+    sub: "Requires attention",
     icon: AlertTriangle,
-    iconBg: 'bg-red-100',
-    iconColor: 'text-red-500',
-    accent: 'bg-red-500',
-  }
-])
+    iconBg: "bg-red-100",
+    iconColor: "text-red-500",
+    accent: "bg-red-500",
+  },
+]);
 
-const cutoffDays = ref(5)
-const cutoffHours = ref(14)
-const isDashboardLoading = computed(() => rStore.isLoading || caStore.isLoading)
+const cutoffDays = ref(5);
+const cutoffHours = ref(14);
+const isDashboardLoading = computed(
+  () => rStore.isLoading || caStore.isLoading,
+);
 
 // Bar chart
 const barData = {
-  labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-  datasets: [{
-    label: 'Monthly Spend',
-    data: [42000, 68000, 55000, 91000, 47000, 73000],
-    backgroundColor: 'rgba(46,133,216,0.85)',
-    hoverBackgroundColor: '#252578',
-    borderRadius: 6,
-    barPercentage: 0.55,
-  }]
-}
+  labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+  datasets: [
+    {
+      label: "Monthly Spend",
+      data: [42000, 68000, 55000, 91000, 47000, 73000],
+      backgroundColor: "rgba(46,133,216,0.85)",
+      hoverBackgroundColor: "#252578",
+      borderRadius: 6,
+      barPercentage: 0.55,
+    },
+  ],
+};
 const barOptions = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
     legend: { display: false },
     tooltip: {
-      backgroundColor: '#1D1D61',
-      titleFont: { family: 'Poppins', size: 11, weight: '600' },
-      bodyFont: { family: 'Open Sans', size: 12 },
+      backgroundColor: "#1D1D61",
+      titleFont: { family: "Poppins", size: 11, weight: "600" },
+      bodyFont: { family: "Open Sans", size: 12 },
       cornerRadius: 8,
       padding: 12,
       displayColors: false,
       callbacks: {
-        label: (ctx) => ` ₱${ctx.raw.toLocaleString()}`
-      }
-    }
+        label: (ctx) => ` ₱${ctx.raw.toLocaleString()}`,
+      },
+    },
   },
   scales: {
     x: {
       grid: { display: false },
-      ticks: { color: '#94a3b8', font: { family: 'Open Sans', size: 11 } }
+      ticks: { color: "#94a3b8", font: { family: "Open Sans", size: 11 } },
     },
     y: {
-      grid: { color: 'rgba(148,163,184,0.12)', borderDash: [4, 4] },
+      grid: { color: "rgba(148,163,184,0.12)", borderDash: [4, 4] },
       ticks: {
-        color: '#94a3b8',
-        font: { family: 'Open Sans', size: 11 },
-        callback: v => `₱${(v / 1000).toFixed(0)}K`
-      }
-    }
-  }
-}
+        color: "#94a3b8",
+        font: { family: "Open Sans", size: 11 },
+        callback: (v) => `₱${(v / 1000).toFixed(0)}K`,
+      },
+    },
+  },
+};
 
 // Doughnut chart
 const doughnutData = {
-  labels: ['Lab Supplies', 'Transport', 'Client Meeting', 'Maintenance', 'Office'],
-  datasets: [{
-    data: [35, 20, 15, 20, 10],
-    backgroundColor: ['#252578', '#2E85D8', '#2F2F7E', '#93c5fd', '#dbeafe'],
-    borderWidth: 2,
-    borderColor: '#ffffff',
-    hoverOffset: 4,
-  }]
-}
+  labels: [
+    "Lab Supplies",
+    "Transport",
+    "Client Meeting",
+    "Maintenance",
+    "Office",
+  ],
+  datasets: [
+    {
+      data: [35, 20, 15, 20, 10],
+      backgroundColor: ["#252578", "#2E85D8", "#2F2F7E", "#93c5fd", "#dbeafe"],
+      borderWidth: 2,
+      borderColor: "#ffffff",
+      hoverOffset: 4,
+    },
+  ],
+};
 const doughnutOptions = {
   responsive: true,
   maintainAspectRatio: false,
-  cutout: '72%',
+  cutout: "72%",
   plugins: {
     legend: {
-      position: 'right',
+      position: "right",
       labels: {
         boxWidth: 8,
         boxHeight: 8,
         padding: 14,
-        color: '#475569',
-        font: { family: 'Open Sans', size: 11, weight: '500' }
-      }
+        color: "#475569",
+        font: { family: "Open Sans", size: 11, weight: "500" },
+      },
     },
     tooltip: {
-      backgroundColor: '#1D1D61',
-      titleFont: { family: 'Poppins', size: 11 },
-      bodyFont: { family: 'Open Sans', size: 12 },
+      backgroundColor: "#1D1D61",
+      titleFont: { family: "Poppins", size: 11 },
+      bodyFont: { family: "Open Sans", size: 12 },
       cornerRadius: 8,
       callbacks: {
-        label: (ctx) => ` ${ctx.raw}% of total spend`
-      }
-    }
-  }
-}
+        label: (ctx) => ` ${ctx.raw}% of total spend`,
+      },
+    },
+  },
+};
 
 const recentItems = computed(() => {
   const items = auth.isAdmin
     ? rStore.items.filter((i) => i.user_id === auth.user?.id)
     : rStore.items;
   return items.slice(0, 5);
-})
-const activeAdvances = computed(() => caStore.items.slice(0, 5))
+});
+const activeAdvances = computed(() => caStore.items.slice(0, 5));
 
 function isOverdue(dateStr) {
-  const diff = (new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24)
-  return diff < 0
+  const diff = (new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24);
+  return diff < 0;
 }
 function isAmberWarning(dateStr) {
-  const diff = (new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24)
-  return diff >= 0 && diff <= 5
+  const diff = (new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24);
+  return diff >= 0 && diff <= 5;
 }
 </script>
 
 <template>
   <div class="flex flex-col gap-6 font-sans animate-fade-up">
-
     <!-- ── Page Header ── -->
-    <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+    <div
+      class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"
+    >
       <div class="min-w-0">
-
-        <h1 class="font-heading text-2xl font-bold leading-tight text-slate-800">
-          Welcome back, <span class="text-primary">{{ auth.user?.name?.split(' ')[0] }}</span> 👋
+        <h1
+          class="font-heading text-2xl font-bold leading-tight text-slate-800"
+        >
+          Welcome back,
+          <span class="text-primary">{{ auth.user?.name?.split(" ")[0] }}</span>
+          <span class="inline-block ml-2">
+            <Vue3Lottie
+              animationLink="https://fonts.gstatic.com/s/e/notoemoji/latest/1f44b_1f3fb/lottie.json"
+              :height="32"
+              :width="32"
+            />
+          </span>
         </h1>
-        <p class="mt-1 text-sm text-slate-400">
-          Here's what's happening with your finances today.
-        </p>
+        <p class="mt-1 text-sm text-slate-400">Have a nice day!.</p>
       </div>
-      <BaseButton v-if="!auth.isAdmin" id="dashboard-new-claim" variant="cta" @click="router.push('/reimbursements/new')">
-        <Plus class="w-4 h-4" /> New Request
-      </BaseButton>
-      <BaseButton v-else variant="cta" @click="router.push('/reimbursements')">
-        <Activity class="w-4 h-4" /> Review Queue
-      </BaseButton>
     </div>
 
     <!-- ── Deadline Cutoff Widget ── -->
     <div class="rounded-xl overflow-hidden bg-primary shadow-sm">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between p-5 gap-4">
+      <div
+        class="flex flex-col sm:flex-row sm:items-center justify-between p-5 gap-4"
+      >
         <div class="flex items-center gap-4">
-          <div class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0">
+          <div
+            class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0"
+          >
             <Clock class="w-5 h-5 text-warning" />
           </div>
           <div>
@@ -208,24 +249,33 @@ function isAmberWarning(dateStr) {
               Upcoming Liquidation Deadline
             </h3>
             <p class="text-white/50 text-xs mt-0.5">
-              Next cutoff period is approaching. Submit your liquidations on time.
+              Next cutoff period is approaching. Submit your liquidations on
+              time.
             </p>
           </div>
         </div>
 
-        <div class="flex items-center gap-3 bg-white/10 border border-white/20 rounded-xl px-5 py-3 backdrop-blur-sm self-start sm:self-auto">
+        <div
+          class="flex items-center gap-3 bg-white/10 border border-white/20 rounded-xl px-5 py-3 backdrop-blur-sm self-start sm:self-auto"
+        >
           <div class="flex flex-col items-center">
             <span class="text-2xl font-bold text-white leading-none">
-              {{ String(cutoffDays).padStart(2, '0') }}
+              {{ String(cutoffDays).padStart(2, "0") }}
             </span>
-            <span class="text-[10px] text-warning/80 font-semibold tracking-widest mt-0.5">DAYS</span>
+            <span
+              class="text-[10px] text-warning/80 font-semibold tracking-widest mt-0.5"
+              >DAYS</span
+            >
           </div>
           <span class="text-2xl text-white/30 font-thin">:</span>
           <div class="flex flex-col items-center">
             <span class="text-2xl font-bold text-white leading-none">
-              {{ String(cutoffHours).padStart(2, '0') }}
+              {{ String(cutoffHours).padStart(2, "0") }}
             </span>
-            <span class="text-[10px] text-warning/80 font-semibold tracking-widest mt-0.5">HRS</span>
+            <span
+              class="text-[10px] text-warning/80 font-semibold tracking-widest mt-0.5"
+              >HRS</span
+            >
           </div>
         </div>
       </div>
@@ -241,7 +291,6 @@ function isAmberWarning(dateStr) {
 
     <!-- ── Charts Row ── -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
       <!-- Bar Chart -->
       <div class="card p-6 lg:col-span-2">
         <div class="flex items-center justify-between mb-5">
@@ -251,7 +300,9 @@ function isAmberWarning(dateStr) {
             </h3>
             <p class="text-xs text-slate-400 mt-0.5">January – June 2024</p>
           </div>
-          <span class="text-[10px] font-semibold text-accent bg-accent/10 border border-accent/20 rounded-full px-2.5 py-1">
+          <span
+            class="text-[10px] font-semibold text-accent bg-accent/10 border border-accent/20 rounded-full px-2.5 py-1"
+          >
             2024
           </span>
         </div>
@@ -271,8 +322,13 @@ function isAmberWarning(dateStr) {
           </h3>
           <p class="text-xs text-slate-400 mt-0.5">Distribution breakdown</p>
         </div>
-        <div v-if="isDashboardLoading" class="flex h-56 items-center justify-center rounded-lg bg-slate-50">
-          <div class="relative h-36 w-36 animate-pulse rounded-full bg-slate-200">
+        <div
+          v-if="isDashboardLoading"
+          class="flex h-56 items-center justify-center rounded-lg bg-slate-50"
+        >
+          <div
+            class="relative h-36 w-36 animate-pulse rounded-full bg-slate-200"
+          >
             <div class="absolute inset-8 rounded-full bg-slate-50"></div>
           </div>
           <div class="ml-6 hidden space-y-3 sm:block">
@@ -289,7 +345,9 @@ function isAmberWarning(dateStr) {
 
     <!-- ── Employee History Table ── -->
     <div class="card overflow-hidden">
-      <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+      <div
+        class="flex items-center justify-between px-5 py-4 border-b border-slate-100"
+      >
         <h3 class="text-sm font-semibold text-slate-800">
           My Recent Submissions
         </h3>
@@ -318,20 +376,34 @@ function isAmberWarning(dateStr) {
                 <td v-for="col in 6" :key="col" class="px-4 py-4">
                   <div
                     class="h-3.5 animate-pulse rounded bg-slate-200"
-                    :class="col === 6 ? 'mx-auto h-5 w-20 rounded-full' : col === 2 ? 'w-36' : col === 4 ? 'ml-auto w-20' : 'w-24'"
+                    :class="
+                      col === 6
+                        ? 'mx-auto h-5 w-20 rounded-full'
+                        : col === 2
+                          ? 'w-36'
+                          : col === 4
+                            ? 'ml-auto w-20'
+                            : 'w-24'
+                    "
                   ></div>
                 </td>
               </tr>
             </template>
             <tr v-for="item in recentItems" v-else :key="item.id">
               <td class="text-slate-400 text-xs">#{{ item.id }}</td>
-              <td class="font-semibold text-slate-700">{{ item.description }}</td>
+              <td class="font-semibold text-slate-700">
+                {{ item.description }}
+              </td>
               <td>
-                <span class="text-xs font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                <span
+                  class="text-xs font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full"
+                >
                   {{ item.category }}
                 </span>
               </td>
-              <td class="font-semibold text-primary">₱{{ item.amount.toLocaleString() }}</td>
+              <td class="font-semibold text-primary">
+                ₱{{ item.amount.toLocaleString() }}
+              </td>
               <td class="text-slate-400 text-xs">{{ item.date }}</td>
               <td><StatusBadge :status="item.status" /></td>
             </tr>
@@ -342,7 +414,9 @@ function isAmberWarning(dateStr) {
 
     <!-- ── Admin: Cash Advance Recovery Queue ── -->
     <div v-if="auth.isAdmin" class="card overflow-hidden">
-      <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+      <div
+        class="flex items-center justify-between px-5 py-4 border-b border-slate-100"
+      >
         <div class="flex items-center gap-2">
           <AlertTriangle class="w-4 h-4 text-warning" />
           <h3 class="text-sm font-semibold text-slate-800">
@@ -373,7 +447,15 @@ function isAmberWarning(dateStr) {
                 <td v-for="col in 5" :key="col" class="px-4 py-4">
                   <div
                     class="h-3.5 animate-pulse rounded bg-slate-200"
-                    :class="col === 5 ? 'h-5 w-20 rounded-full' : col === 2 ? 'w-36' : col === 3 ? 'ml-auto w-20' : 'w-24'"
+                    :class="
+                      col === 5
+                        ? 'h-5 w-20 rounded-full'
+                        : col === 2
+                          ? 'w-36'
+                          : col === 3
+                            ? 'ml-auto w-20'
+                            : 'w-24'
+                    "
                   ></div>
                 </td>
               </tr>
@@ -383,13 +465,20 @@ function isAmberWarning(dateStr) {
               v-for="item in activeAdvances"
               :key="item.id"
               :class="[
-                isOverdue(item.dueDate) ? 'border-l-2 border-l-danger' :
-                isAmberWarning(item.dueDate) ? 'border-l-2 border-l-warning' : ''
+                isOverdue(item.dueDate)
+                  ? 'border-l-2 border-l-danger'
+                  : isAmberWarning(item.dueDate)
+                    ? 'border-l-2 border-l-warning'
+                    : '',
               ]"
             >
-              <td class="font-semibold text-slate-700">{{ item.requestedBy }}</td>
+              <td class="font-semibold text-slate-700">
+                {{ item.requestedBy }}
+              </td>
               <td class="text-slate-500 text-xs">{{ item.purpose }}</td>
-              <td class="font-semibold text-primary">₱{{ item.amount.toLocaleString() }}</td>
+              <td class="font-semibold text-primary">
+                ₱{{ item.amount.toLocaleString() }}
+              </td>
               <td class="text-slate-400 text-xs">{{ item.dueDate }}</td>
               <td class="flex items-center gap-2 flex-wrap">
                 <span
@@ -413,6 +502,5 @@ function isAmberWarning(dateStr) {
         </table>
       </div>
     </div>
-
   </div>
 </template>
