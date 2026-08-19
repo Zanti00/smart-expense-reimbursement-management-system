@@ -9,7 +9,7 @@ import BaseKpiGrid from "@/components/base/BaseKpiGrid.vue";
 import BaseUtilityToolbar from "@/components/base/BaseUtilityToolbar.vue";
 import ReimbursementDetailsModal from "@/components/reimbursements/ReimbursementDetailsModal.vue";
 import ReceiptDetailsModal from "@/components/reimbursements/ReceiptDetailsModal.vue";
-import DecisionConfirmationModal from "@/components/reimbursements/DecisionConfirmationModal.vue";
+import DecisionConfirmationModal from "@/components/base/DecisionConfirmationModal.vue";
 import DeleteConfirmModal from "@/components/base/DeleteConfirmModal.vue";
 import ReimbursementsTable from "@/components/reimbursements/ReimbursementsTable.vue";
 import { formatPeso } from "@/utils/formatters";

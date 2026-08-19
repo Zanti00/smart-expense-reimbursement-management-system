@@ -5,8 +5,8 @@ import { useCashAdvanceStore } from "@/stores/cashAdvance";
 import { useToast } from "@/composables/useToast";
 import BaseModal from "@/components/base/BaseModal.vue";
 import StatusBadge from "@/components/base/StatusBadge.vue";
+import DecisionConfirmationModal from "@/components/base/DecisionConfirmationModal.vue";
 import { formatPeso } from "@/utils/formatters";
-import DecisionConfirmationModal from "@/components/reimbursements/DecisionConfirmationModal.vue";
 import {
   X,
   CheckCircle,
@@ -30,12 +30,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits([
-  "close",
-  "reject",
-  "approve-advance",
-  "approve-settlement",
-]);
+const emit = defineEmits(["close"]);
 
 const auth = useAuthStore();
 const store = useCashAdvanceStore();
@@ -160,13 +155,6 @@ function requestConfirmation(action) {
     return;
   }
 
-  if (action !== "disburse" && adminReviewNotes.value.trim().length < 10) {
-    addToast({
-      message: "Please enter at least 10 characters in the admin notes.",
-      type: "error",
-    });
-    return;
-  }
   confirmationAction.value = action;
 }
 
@@ -528,37 +516,6 @@ async function confirmAcknowledge() {
                 >
                   I acknowledge
                 </button>
-              </div>
-            </div>
-          </section>
-
-          <section class="space-y-2 pb-2" v-if="record.status === 'pending'">
-            <label class="text-xs font-medium text-slate-500" for="adminReviewNotes"
-              >Add Admin Notes / Instructions</label
-            >
-            <div class="input-wrapper">
-              <textarea
-                id="adminReviewNotes"
-                v-model="adminReviewNotes"
-                class="input min-h-[96px] resize-none !font-sans"
-                :class="
-                  adminReviewNotes.length > 0 &&
-                  adminReviewNotes.trim().length < 10
-                    ? 'border-danger focus:border-danger focus:ring-danger'
-                    : ''
-                "
-                placeholder="Enter comments or reason for decision..."
-              />
-              <div
-                class="text-[10px] font-bold uppercase tracking-widest flex gap-2 mt-1"
-                :class="
-                  adminReviewNotes.trim().length < 10
-                    ? 'text-danger'
-                    : 'text-accent'
-                "
-              >
-                <span>Requirement:</span>
-                <span>{{ adminReviewNotes.length }} / 10+</span>
               </div>
             </div>
           </section>

@@ -11,7 +11,6 @@ import DeleteConfirmModal from "@/components/base/DeleteConfirmModal.vue";
 import BaseKpiGrid from "@/components/base/BaseKpiGrid.vue";
 import BaseUtilityToolbar from "@/components/base/BaseUtilityToolbar.vue";
 import CashAdvanceTable from "@/components/cash-advances/CashAdvanceTable.vue";
-import RejectionModal from "@/components/cash-advances/RejectionModal.vue";
 import CashAdvanceDetailsModal from "@/components/cash-advances/CashAdvanceDetailsModal.vue";
 import { Plus, Wallet, Activity, ShieldCheck, X } from "lucide-vue-next";
 import { formatPeso } from "@/utils/formatters";
@@ -43,7 +42,7 @@ onMounted(() => store.fetchAll());
 function openDetails(row) {
   viewingRecord.value = {
     id: row.id,
-    purpose: row.purpose.replace(/\s\.\.\.$|\.\.\.$/, ""),
+    purpose: (row.purpose || "").replace(/\s\.\.\.$|\.\.\.$/, ""),
     amount: row.amount,
     balance:
       row.outstanding ??
@@ -70,45 +69,10 @@ function openDetails(row) {
   };
 }
 
-const rejectingId = ref(null);
-const rejectionType = ref("");
-
 const viewingRecord = ref(null);
 
 function closeDetails() {
   viewingRecord.value = null;
-}
-
-async function quickApproveAdvance(id) {
-  await store.approveRequest(id);
-}
-async function quickApproveSettlement(id) {
-  await store.approveSettlement(id);
-}
-
-function openRejectModal(id, type) {
-  rejectingId.value = id;
-  rejectionType.value = type;
-}
-
-function cancelReject() {
-  rejectingId.value = null;
-  rejectionType.value = "";
-}
-
-async function confirmReject(reason) {
-  if (!rejectingId.value) return;
-  try {
-    if (rejectionType.value === "advance") {
-      await store.rejectRequest(rejectingId.value, reason);
-    } else if (rejectionType.value === "settlement") {
-      await store.rejectSettlement(rejectingId.value, reason);
-    }
-    addToast({ message: "Request rejected successfully", type: "success" });
-    cancelReject();
-  } catch (error) {
-    addToast({ message: error.message || "Failed to reject", type: "error" });
-  }
 }
 
 const kpis = computed(() => {
@@ -264,23 +228,11 @@ async function confirmDelete(password) {
       @delete="handleDelete"
     />
 
-    <!-- Rejection Modal -->
-    <RejectionModal
-      :isOpen="!!rejectingId"
-      :id="rejectingId || ''"
-      :type="rejectionType"
-      @close="cancelReject"
-      @confirm="confirmReject"
-    />
-
     <!-- Cash Advance Details Modal -->
     <CashAdvanceDetailsModal
       :isOpen="!!viewingRecord"
       :record="viewingRecord"
       @close="closeDetails"
-      @reject="openRejectModal"
-      @approve-advance="quickApproveAdvance"
-      @approve-settlement="quickApproveSettlement"
     />
 
     <!-- Delete Confirmation Modal -->

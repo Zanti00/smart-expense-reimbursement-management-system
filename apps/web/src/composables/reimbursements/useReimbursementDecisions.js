@@ -97,6 +97,14 @@ export function useReimbursementDecisions(store, addToast, viewingRecord) {
       return;
     }
 
+    if (rejectionComment.value.length > 255) {
+      addToast({
+        message: "Rejection comment cannot exceed 255 characters.",
+        type: "error",
+      });
+      return;
+    }
+
     isReviewSubmitting.value = true;
     try {
       const updated = await store.reject(

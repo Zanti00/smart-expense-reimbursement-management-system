@@ -13,7 +13,7 @@ import BaseKpiGrid from "@/components/base/BaseKpiGrid.vue";
 import BasePagination from "@/components/base/BasePagination.vue";
 import BaseUtilityToolbar from "@/components/base/BaseUtilityToolbar.vue";
 import SkeletonLoader from "@/components/base/SkeletonLoader.vue";
-import DecisionConfirmationModal from "@/components/reimbursements/DecisionConfirmationModal.vue";
+import DecisionConfirmationModal from "@/components/base/DecisionConfirmationModal.vue";
 import ConfirmModal from "@/components/base/ConfirmModal.vue";
 import DeleteConfirmModal from "@/components/base/DeleteConfirmModal.vue";
 import ActionDropdownMenu from "@/components/base/ActionDropdownMenu.vue";

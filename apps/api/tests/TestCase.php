@@ -55,6 +55,7 @@ abstract class TestCase extends BaseTestCase
     {
         $payload = array_merge([
             'jti' => uniqid('mock_'),
+            'sub' => $claims['sub'] ?? 'auth_' . md5($claims['email'] ?? 'employee@serms.com'),
             'email' => 'employee@serms.com',
             'first_name' => 'John',
             'last_name' => 'Santos',

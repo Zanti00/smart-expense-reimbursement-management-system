@@ -37,9 +37,18 @@ const props = defineProps({
     type: Number,
     default: 10,
   },
+  maxCommentLength: {
+    type: Number,
+    default: 255,
+  },
 });
 
-const emit = defineEmits(["update:password", "update:comment", "close", "confirm"]);
+const emit = defineEmits([
+  "update:password",
+  "update:comment",
+  "close",
+  "confirm",
+]);
 
 const auth = useAuthStore();
 const showConfirmPassword = ref(false);
@@ -60,7 +69,9 @@ const config = computed(() => {
       icon: CheckCircle,
       iconWrapperClass: "bg-accent/10 text-accent",
       title: props.title || "Approve Request",
-      description: props.description || "Are you sure you want to approve this request? Please verify your identity by entering your password.",
+      description:
+        props.description ||
+        "Are you sure you want to approve this request? Please verify your identity by entering your password.",
       btnClass: "btn-primary",
       btnText: "Confirm Approve",
       isConfirmDisabled: !props.password || props.isSubmitting,
@@ -71,7 +82,9 @@ const config = computed(() => {
       icon: Activity, // You can change this to Wallet if imported, or just Activity
       iconWrapperClass: "bg-accent/10 text-accent",
       title: props.title || "Disburse Request",
-      description: props.description || "Are you sure you want to disburse this request? Please verify your identity by entering your password.",
+      description:
+        props.description ||
+        "Are you sure you want to disburse this request? Please verify your identity by entering your password.",
       btnClass: "btn-primary",
       btnText: "Confirm Disbursement",
       isConfirmDisabled: !props.password || props.isSubmitting,
@@ -81,10 +94,16 @@ const config = computed(() => {
     icon: XCircle,
     iconWrapperClass: "bg-red-50 text-red-600",
     title: props.title || "Reject Request",
-    description: props.description || "Please provide a reason for rejecting this request and enter your current password to authorize this action.",
+    description:
+      props.description ||
+      "Please provide a reason for rejecting this request and enter your current password to authorize this action.",
     btnClass: "btn-danger",
     btnText: "Confirm Reject",
-    isConfirmDisabled: props.comment.length < props.minCommentLength || !props.password || props.isSubmitting,
+    isConfirmDisabled:
+      (props.comment || "").length < props.minCommentLength ||
+      (props.comment || "").length > props.maxCommentLength ||
+      !props.password ||
+      props.isSubmitting,
   };
 });
 
@@ -127,17 +146,20 @@ function handleConfirm() {
         <textarea
           v-model="localComment"
           rows="3"
+          :maxlength="maxCommentLength"
           class="input !font-sans resize-none"
           placeholder="Explain the reason for rejecting..."
         />
         <div
-          class="text-[10px] font-bold uppercase tracking-widest flex justify-between mt-1"
+          class="text-[10px] font-bold uppercase tracking-widest flex justify-end mt-1"
           :class="
-            localComment.length < minCommentLength ? 'text-danger' : 'text-accent'
+            (localComment || '').length < minCommentLength ||
+            (localComment || '').length > maxCommentLength
+              ? 'text-danger'
+              : 'text-accent'
           "
         >
-          <span>Requirement: >= {{ minCommentLength }} Chars</span>
-          <span>{{ localComment.length }} / {{ minCommentLength }}+</span>
+          <span>{{ (localComment || "").length }}/{{ maxCommentLength }}</span>
         </div>
       </div>
 

@@ -28,7 +28,7 @@ class ReimbursementPasswordVerificationTest extends TestCase
             'name' => 'Alex Reyes',
             'role' => 'admin',
             'grade' => 'EXEC',
-            'department' => 'FINANCE',
+            'department' => 'ACCOUNTING',
         ]);
 
         // Create Approver User
@@ -37,7 +37,7 @@ class ReimbursementPasswordVerificationTest extends TestCase
             'name' => 'Sarah Connor',
             'role' => 'approver',
             'grade' => 'L3',
-            'department' => 'FINANCE',
+            'department' => 'ACCOUNTING',
         ]);
 
         // Create Employee User
@@ -72,6 +72,7 @@ class ReimbursementPasswordVerificationTest extends TestCase
         $token = $this->generateMockToken([
             'email' => $this->admin->email,
             'role' => 'admin',
+            'department' => 'ACCOUNTING',
         ]);
 
         $response = $this->withHeaders([
@@ -105,6 +106,7 @@ class ReimbursementPasswordVerificationTest extends TestCase
         $token = $this->generateMockToken([
             'email' => $this->admin->email,
             'role' => 'admin',
+            'department' => 'ACCOUNTING',
         ]);
 
         $response = $this->withHeaders([
@@ -135,6 +137,7 @@ class ReimbursementPasswordVerificationTest extends TestCase
         $token = $this->generateMockToken([
             'email' => $this->approver->email,
             'role' => 'approver',
+            'department' => 'ACCOUNTING',
         ]);
 
         $response = $this->withHeaders([
@@ -168,6 +171,7 @@ class ReimbursementPasswordVerificationTest extends TestCase
         $token = $this->generateMockToken([
             'email' => $this->approver->email,
             'role' => 'approver',
+            'department' => 'ACCOUNTING',
         ]);
 
         $response = $this->withHeaders([
@@ -193,6 +197,7 @@ class ReimbursementPasswordVerificationTest extends TestCase
         $token = $this->generateMockToken([
             'email' => $this->approver->email,
             'role' => 'approver',
+            'department' => 'ACCOUNTING',
         ]);
 
         // Missing comment and missing password
@@ -200,6 +205,29 @@ class ReimbursementPasswordVerificationTest extends TestCase
             'Authorization' => 'Bearer ' . $token,
         ])->postJson("/api/reimbursements/{$this->reimbursement->id}/reject", [
             'comment' => 'Bad', // too short
+            'password' => 'password',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['comment']);
+    }
+
+    public function test_reject_rejects_comment_exceeding_255_characters(): void
+    {
+        Http::fake([
+            '*/api/verify-password' => Http::response(['valid' => true], 200),
+        ]);
+
+        $token = $this->generateMockToken([
+            'email' => $this->approver->email,
+            'role' => 'approver',
+            'department' => 'ACCOUNTING',
+        ]);
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+        ])->postJson("/api/reimbursements/{$this->reimbursement->id}/reject", [
+            'comment' => str_repeat('a', 256), // too long
             'password' => 'password',
         ]);
 
