@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import {
   FilePieChart,
   CheckCircle,
@@ -7,6 +7,7 @@ import {
   X,
   Upload,
   AlertTriangle,
+  AlertCircle,
 } from "lucide-vue-next";
 import BaseButton from "@/components/base/BaseButton.vue";
 import FileUpload from "@/components/base/FileUpload.vue";
@@ -74,6 +75,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  disabled: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits([
@@ -89,6 +94,50 @@ const emit = defineEmits([
 ]);
 
 const reportAttachmentInput = ref(null);
+
+const isFormDisabled = computed(() => {
+  if (props.disabled) return true;
+
+  const normalize = (val) =>
+    String(val || "")
+      .toLowerCase()
+      .trim()
+      .replace(/[\s/_-]+/g, "-");
+
+  const disabledStatuses = [
+    "pending",
+    "liquidated",
+    "approved",
+    "under-review",
+    "pending-under-review",
+  ];
+
+  const existingStatus = normalize(props.existingLiquidation?.status);
+  const advanceStatus = normalize(props.selectedAdvance?.status);
+
+  if (existingStatus && disabledStatuses.includes(existingStatus)) {
+    return true;
+  }
+
+  if (advanceStatus && disabledStatuses.includes(advanceStatus)) {
+    return true;
+  }
+
+  return false;
+});
+
+const currentStatusLabel = computed(() => {
+  const status =
+    props.existingLiquidation?.status ||
+    props.selectedAdvance?.status ||
+    "";
+  const key = String(status).toLowerCase().trim().replace(/[\s/_-]+/g, "-");
+  if (key === "under-review" || key === "pending" || key === "pending-under-review") return "Under Review";
+  if (key === "liquidated") return "Liquidated";
+  if (key === "approved") return "Approved";
+  if (key === "rejected") return "Rejected";
+  return status || "Read-only";
+});
 
 function handleAmountChange(receipt) {
   if (receipt && receipt.ocrData) {
@@ -195,7 +244,18 @@ function attachmentFileSize(file) {
       </div>
     </div>
 
-    <div class="pt-4 border-t input-wrapper border-slate-100">
+    <!-- Status Banner for Disabled / Read-Only View -->
+    <div
+      v-if="isFormDisabled"
+      class="flex items-center gap-2.5 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs font-medium text-slate-600"
+    >
+      <AlertCircle class="h-4 w-4 shrink-0 text-slate-500" />
+      <span>
+        This liquidation request is currently <strong class="text-slate-800">{{ currentStatusLabel }}</strong> and is in read-only mode.
+      </span>
+    </div>
+
+    <div v-if="!isFormDisabled" class="pt-4 border-t input-wrapper border-slate-100">
       <div
         class="flex flex-col gap-2 mb-3 sm:flex-row sm:items-center sm:justify-between"
       >
@@ -267,7 +327,12 @@ function attachmentFileSize(file) {
             <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
               <label class="space-y-1">
                 <span class="input-label">Merchant Name</span>
-                <input class="bg-white input" v-model="receipt.ocrData.vendor" />
+                <input
+                  class="bg-white input"
+                  v-model="receipt.ocrData.vendor"
+                  :disabled="isFormDisabled"
+                  :class="{ 'cursor-not-allowed bg-slate-100 text-slate-500': isFormDisabled }"
+                />
               </label>
               <label class="space-y-1">
                 <span class="input-label">Date</span>
@@ -276,6 +341,8 @@ function attachmentFileSize(file) {
                     type="date"
                     class="pr-10 bg-white input"
                     v-model="receipt.ocrData.date"
+                    :disabled="isFormDisabled"
+                    :class="{ 'cursor-not-allowed bg-slate-100 text-slate-500': isFormDisabled }"
                   />
                 </span>
               </label>
@@ -287,6 +354,8 @@ function attachmentFileSize(file) {
                   inputmode="numeric"
                   maxlength="15"
                   placeholder="000-000-000-000"
+                  :disabled="isFormDisabled"
+                  :class="{ 'cursor-not-allowed bg-slate-100 text-slate-500': isFormDisabled }"
                   @input="handleTinInput(receipt)"
                   @blur="handleTinBlur(receipt)"
                 />
@@ -296,6 +365,8 @@ function attachmentFileSize(file) {
                 <select
                   v-model.number="receipt.categoryId"
                   class="bg-white input"
+                  :disabled="isFormDisabled"
+                  :class="{ 'cursor-not-allowed bg-slate-100 text-slate-500': isFormDisabled }"
                 >
                   <option
                     v-for="category in receiptCategoryOptions"
@@ -311,6 +382,8 @@ function attachmentFileSize(file) {
                 <input
                   class="bg-white input"
                   v-model="receipt.ocrData.invoiceNumber"
+                  :disabled="isFormDisabled"
+                  :class="{ 'cursor-not-allowed bg-slate-100 text-slate-500': isFormDisabled }"
                 />
               </label>
             </div>
@@ -341,6 +414,8 @@ function attachmentFileSize(file) {
                   step="0.01"
                   class="font-semibold bg-white input"
                   v-model.number="receipt.ocrData.vat"
+                  :disabled="isFormDisabled"
+                  :class="{ 'cursor-not-allowed bg-slate-100 text-slate-500': isFormDisabled }"
                 />
               </label>
               <div
@@ -352,6 +427,8 @@ function attachmentFileSize(file) {
                   step="0.01"
                   class="input font-semibold !bg-white !text-primary font-heading text-lg sm:text-xl"
                   v-model.number="receipt.ocrData.amount"
+                  :disabled="isFormDisabled"
+                  :class="{ '!cursor-not-allowed !bg-slate-100 !text-slate-500': isFormDisabled }"
                   @input="handleAmountChange(receipt)"
                 />
               </div>
@@ -367,13 +444,14 @@ function attachmentFileSize(file) {
         type="file"
         accept="image/*,.pdf,.docx"
         class="hidden"
+        :disabled="isFormDisabled"
         @change="(e) => $emit('file-selected', e)"
       />
 
       <div class="flex items-center justify-between">
         <label class="input-label !mb-0">Report Letter</label>
         <button
-          v-if="!reportAttachment"
+          v-if="!reportAttachment && !isFormDisabled"
           class="btn btn-cta min-h-[36px] text-xs px-4"
           type="button"
           @click="reportAttachmentInput?.click()"
@@ -398,6 +476,7 @@ function attachmentFileSize(file) {
           </div>
         </div>
         <button
+          v-if="!isFormDisabled"
           class="rounded-full p-1.5 text-slate-400 transition-colors hover:text-danger hover:bg-red-50"
           type="button"
           aria-label="Remove report attachment"
@@ -425,6 +504,8 @@ function attachmentFileSize(file) {
             @input="(e) => $emit('update:shortfallExplanation', e.target.value)"
             rows="2"
             class="bg-white resize-none input"
+            :disabled="isFormDisabled"
+            :class="{ 'cursor-not-allowed bg-slate-100 text-slate-500': isFormDisabled }"
             placeholder="Explain why the total expense is less than the advanced amount..."
           />
         </label>
@@ -510,7 +591,9 @@ function attachmentFileSize(file) {
         <button
           class="btn btn-cta min-h-[42px] w-full shrink-0 sm:w-fit"
           type="button"
-          @click="$emit('forward-overpayment')"
+          :disabled="isFormDisabled"
+          :class="{ 'opacity-50 cursor-not-allowed': isFormDisabled }"
+          @click="!isFormDisabled && $emit('forward-overpayment')"
         >
           <Upload class="w-4 h-4" />
           File Reimbursement
@@ -535,6 +618,7 @@ function attachmentFileSize(file) {
         variant="cta"
         class="min-h-[42px] w-full sm:w-fit"
         :disabled="
+          isFormDisabled ||
           receipts.length === 0 ||
           hasIncompleteReceiptFields ||
           receipts.some((r) => r.ocrStatus === 'processing') ||

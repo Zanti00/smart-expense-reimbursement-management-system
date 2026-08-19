@@ -123,21 +123,25 @@ const VALID_REPORT_ATTACHMENT_EXTENSIONS = [".pdf", ".docx"];
 const statusFilters = [
   "All",
   "Pending",
-  "Rejected",
+  "Under Review",
+  "Approved",
+  "Liquidated",
   "Incomplete",
   "Overpayment",
-  "Liquidated",
+  "Rejected",
   "Overdue",
 ];
 const employeeStatusFilters = [
   "All",
   "Pending",
-  "Rejected",
+  "Under Review",
   "Approved",
   "Disbursed",
   "Signed",
   "Incomplete",
-  "Under Review",
+  "Overpayment",
+  "Liquidated",
+  "Rejected",
   "Overdue",
 ];
 const employeeSortOptions = [
@@ -329,6 +333,9 @@ function categoryName(record, fallback = "Expense") {
 
 const mapBackendStatusToDisplayStatus = (backendStatus, row, acceptedTotal) => {
   if (backendStatus === "pending") return "Pending";
+  if (backendStatus === "under-review" || backendStatus === "under review")
+    return "Under Review";
+  if (backendStatus === "approved") return "Approved";
   if (backendStatus === "liquidated") return "Liquidated";
   if (backendStatus === "rejected") return "Rejected";
   if (backendStatus === "incomplete") return "Incomplete";
@@ -673,8 +680,13 @@ function employeeAdvanceStatus(advance) {
   ).toLowerCase();
 
   if (linkedLiquidationStatus === "rejected") return "Rejected";
-  if (linkedLiquidationStatus === "pending") return "Under Review";
+  if (
+    linkedLiquidationStatus === "pending" ||
+    linkedLiquidationStatus === "under-review"
+  )
+    return "Under Review";
   if (linkedLiquidationStatus === "liquidated") return "Liquidated";
+  if (linkedLiquidationStatus === "approved") return "Approved";
 
   if (liqStore.calculateAging(advance).isOverdue) return "Overdue";
   const status = String(advance.status || "pending").toLowerCase();
@@ -684,6 +696,8 @@ function employeeAdvanceStatus(advance) {
   if (status === "incomplete") return "Incomplete";
   if (status === "pending") return "Pending";
   if (status === "under-review") return "Under Review";
+  if (status === "liquidated") return "Liquidated";
+  if (status === "rejected") return "Rejected";
   return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
@@ -729,16 +743,11 @@ async function submitLiquidation() {
 
 const existingLiquidation = computed(() => {
   if (!selectedAdvance.value) return null;
-  const status = String(selectedAdvance.value.status || "").toLowerCase();
-  // If the cash advance is under-review or incomplete, look for a pending/rejected liquidation
-  if (status === "under-review" || status === "incomplete") {
-    return liqStore.settlements.find(
-      (s) =>
-        s.cash_advance_id === selectedAdvance.value.id &&
-        ["pending", "rejected"].includes(s.status),
-    );
-  }
-  return null;
+  return (
+    liqStore.settlements.find(
+      (s) => s.cash_advance_id === selectedAdvance.value.id,
+    ) || null
+  );
 });
 
 const isDeleteLiqModalOpen = ref(false);
@@ -791,11 +800,9 @@ function selectAdvance(adv) {
     selectedAdvance.value = adv;
     submitted.value = false;
 
-    // Find if there is an existing pending or rejected liquidation in liqStore.settlements
+    // Find if there is an existing liquidation in liqStore.settlements
     const existingLiq = liqStore.settlements.find(
-      (s) =>
-        s.cash_advance_id === adv.id &&
-        ["pending", "rejected"].includes(s.status),
+      (s) => s.cash_advance_id === adv.id,
     );
 
     if (existingLiq) {
