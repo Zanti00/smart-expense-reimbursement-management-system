@@ -1,33 +1,32 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
-import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useReimbursementStore } from "@/stores/reimbursement";
 import { useCashAdvanceStore } from "@/stores/cashAdvance";
-import StatusBadge from "@/components/base/StatusBadge.vue";
-import BaseButton from "@/components/base/BaseButton.vue";
+import { useLiquidationStore } from "@/stores/liquidation";
 import BaseKpiGrid from "@/components/base/BaseKpiGrid.vue";
 import SkeletonLoader from "@/components/base/SkeletonLoader.vue";
-import { Vue3Lottie } from "vue3-lottie";
-import { Bar, Doughnut } from "vue-chartjs";
+import { Bar, Pie, Line } from "vue-chartjs";
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
   BarElement,
   ArcElement,
+  PointElement,
+  LineElement,
+  Filler,
   Tooltip,
   Legend,
   Title,
 } from "chart.js";
 import {
-  TrendingUp,
+  Wallet,
+  FileText,
+  Banknote,
+  ReceiptText,
   Clock,
   AlertTriangle,
-  ArrowRight,
-  Plus,
-  Wallet,
-  Activity,
 } from "lucide-vue-next";
 
 ChartJS.register(
@@ -35,6 +34,9 @@ ChartJS.register(
   LinearScale,
   BarElement,
   ArcElement,
+  PointElement,
+  LineElement,
+  Filler,
   Tooltip,
   Legend,
   Title,
@@ -43,87 +45,266 @@ ChartJS.register(
 const auth = useAuthStore();
 const rStore = useReimbursementStore();
 const caStore = useCashAdvanceStore();
-const router = useRouter();
+const liqStore = useLiquidationStore();
 
 onMounted(async () => {
-  await Promise.all([rStore.fetchAll(), caStore.fetchAll()]);
+  await Promise.all([rStore.fetchAll(), caStore.fetchAll(), liqStore.fetchSettlements()]);
 });
 
-// KPIs
-const kpis = computed(() => [
+const isDashboardLoading = computed(
+  () => rStore.isLoading || caStore.isLoading || liqStore.isLoading,
+);
+
+// ══════════════════════════════════════════════════
+// EMPLOYEE DASHBOARD
+// ══════════════════════════════════════════════════
+
+const employeeKpis = computed(() => [
   {
-    label: "Total Reimbursed",
+    label: "Total Reimbursement",
     value: `₱${rStore.items
-      .filter((i) => i.status === "approved")
-      .reduce((s, i) => s + i.amount, 0)
+      .filter((i) => i.status === "approved" || i.status === "granted")
+      .reduce((s, i) => s + parseFloat(i.amount || 0), 0)
       .toLocaleString()}`,
-    sub: "This month",
-    icon: TrendingUp,
+    sub: "Approved claims",
+    icon: Wallet,
     iconBg: "bg-emerald-100",
     iconColor: "text-emerald-600",
     accent: "bg-emerald-500",
   },
   {
-    label: "Awaiting Approval",
-    value: rStore.items.filter((i) => i.status === "pending").length,
-    sub: "Pending review",
-    icon: Clock,
-    iconBg: "bg-amber-100",
-    iconColor: "text-amber-600",
-    accent: "bg-amber-500",
-  },
-  {
-    label: "Open Advances",
-    value: `₱${caStore.totalOutstanding.toLocaleString()}`,
-    sub: "Outstanding",
-    icon: Wallet,
+    label: "Total Reimbursement Request",
+    value: rStore.items.length,
+    sub: "All filed requests",
+    icon: FileText,
     iconBg: "bg-accent-100",
     iconColor: "text-accent-600",
     accent: "bg-accent",
   },
   {
-    label: "Issues Found",
-    value: 1,
-    sub: "Requires attention",
-    icon: AlertTriangle,
-    iconBg: "bg-red-100",
-    iconColor: "text-red-500",
-    accent: "bg-red-500",
+    label: "Total Filed Cash Advance",
+    value: `₱${caStore.totalOutstanding.toLocaleString()}`,
+    sub: "Total amount",
+    icon: Banknote,
+    iconBg: "bg-amber-100",
+    iconColor: "text-amber-600",
+    accent: "bg-amber-500",
+  },
+  {
+    label: "Total Filed Liquidation",
+    value: `₱${liqStore.settlements
+      .reduce((s, i) => s + (Number(i.total_expense_amount) || 0), 0)
+      .toLocaleString()}`,
+    sub: "Total amount",
+    icon: ReceiptText,
+    iconBg: "bg-violet-100",
+    iconColor: "text-violet-600",
+    accent: "bg-violet-500",
   },
 ]);
 
-const cutoffDays = ref(5);
-const cutoffHours = ref(14);
-const isDashboardLoading = computed(
-  () => rStore.isLoading || caStore.isLoading,
-);
-
-// Bar chart
-const barData = {
+// Employee Bar Chart
+const employeeBarData = computed(() => ({
   labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
   datasets: [
     {
-      label: "Monthly Spend",
-      data: [42000, 68000, 55000, 91000, 47000, 73000],
-      backgroundColor: "rgba(46,133,216,0.85)",
-      hoverBackgroundColor: "#252578",
-      borderRadius: 6,
-      barPercentage: 0.55,
+      label: "My Expense",
+      data: [32000, 45000, 38000, 52000, 41000, 60000],
+      backgroundColor: "#059669",
+      borderRadius: 4,
+      barPercentage: 0.6,
+      categoryPercentage: 0.7,
+    },
+    {
+      label: "Reimbursement",
+      data: [28000, 35000, 42000, 39000, 55000, 48000],
+      backgroundColor: "#2E85D8",
+      borderRadius: 4,
+      barPercentage: 0.6,
+      categoryPercentage: 0.7,
+    },
+  ],
+}));
+
+// Employee Pie Chart
+const employeePieData = {
+  labels: ["Lab Supplies", "Transport", "Client Meeting", "Maintenance", "Office", "Reimbursement"],
+  datasets: [
+    {
+      data: [25, 15, 15, 15, 10, 20],
+      backgroundColor: ["#252578", "#2E85D8", "#059669", "#D97706", "#64748b", "#7c3aed"],
+      borderWidth: 2,
+      borderColor: "#ffffff",
+      hoverOffset: 6,
     },
   ],
 };
-const barOptions = {
+
+// ══════════════════════════════════════════════════
+// ADMIN DASHBOARD
+// ══════════════════════════════════════════════════
+
+const adminKpis = computed(() => {
+  const pendingApproval = rStore.items.filter((i) => i.status === "pending").length;
+  const pendingCashAdvance = caStore.items.filter((i) => i.status === "pending").length;
+  const pendingLiquidating = liqStore.settlements.filter(
+    (i) => i.status === "pending"
+  ).length;
+  const overdueLiquidation = caStore.items.filter((i) => {
+    if (!i.expected_liquidation_date && !i.dueDate) return false;
+    const due = new Date(i.expected_liquidation_date || i.dueDate);
+    return due < new Date() && ["disbursed", "signed", "approved"].includes(i.status);
+  }).length;
+
+  return [
+    {
+      label: "Pending Approval",
+      value: pendingApproval,
+      sub: "Awaiting sign-off",
+      icon: Clock,
+      iconBg: "bg-amber-100",
+      iconColor: "text-amber-600",
+      accent: "bg-amber-500",
+    },
+    {
+      label: "Pending Cash Advance",
+      value: pendingCashAdvance,
+      sub: "Unreleased requests",
+      icon: Banknote,
+      iconBg: "bg-accent-100",
+      iconColor: "text-accent-600",
+      accent: "bg-accent",
+    },
+    {
+      label: "Pending Liquidating",
+      value: pendingLiquidating,
+      sub: "Under processing",
+      icon: ReceiptText,
+      iconBg: "bg-violet-100",
+      iconColor: "text-violet-600",
+      accent: "bg-violet-500",
+    },
+    {
+      label: "Overdue Liquidation",
+      value: overdueLiquidation,
+      sub: "Past due date",
+      icon: AlertTriangle,
+      iconBg: "bg-red-100",
+      iconColor: "text-red-500",
+      accent: "bg-red-500",
+    },
+  ];
+});
+
+// Admin Bar Chart: Monthly Spending Trend (Reimbursement only)
+const adminBarData = computed(() => ({
+  labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+  datasets: [
+    {
+      label: "Reimbursement",
+      data: [85000, 120000, 95000, 140000, 110000, 130000],
+      backgroundColor: "#2E85D8",
+      borderRadius: 4,
+      barPercentage: 0.5,
+      categoryPercentage: 0.6,
+    },
+  ],
+}));
+
+// Admin Pie Chart: Cash Advance Status Distribution
+const adminCaStatusPieData = computed(() => {
+  const statuses = ["pending", "approved", "rejected", "disbursed", "signed", "liquidated"];
+  const labels = ["Pending", "Approved", "Rejected", "Disbursed", "Signed", "Liquidated"];
+  const colors = ["#D97706", "#059669", "#DC2626", "#2E85D8", "#252578", "#64748b"];
+  const data = statuses.map(
+    (s) => caStore.items.filter((i) => i.status === s).length
+  );
+
+  return {
+    labels,
+    datasets: [
+      {
+        data,
+        backgroundColor: colors,
+        borderWidth: 2,
+        borderColor: "#ffffff",
+        hoverOffset: 6,
+      },
+    ],
+  };
+});
+
+// Admin Pie Chart: Advance vs Outstanding
+const totalCashAdvanceAmount = computed(() =>
+  caStore.items.reduce((s, i) => s + (Number(i.amount) || 0), 0)
+);
+const totalOutstandingBalance = computed(() => caStore.totalOutstanding);
+const remainingOutstanding = computed(() => totalOutstandingBalance.value);
+
+const adminBalancePieData = computed(() => ({
+  labels: ["Total Cash Advance", "Outstanding Balance"],
+  datasets: [
+    {
+      data: [totalCashAdvanceAmount.value, totalOutstandingBalance.value],
+      backgroundColor: ["#252578", "#DC2626"],
+      borderWidth: 2,
+      borderColor: "#ffffff",
+      hoverOffset: 6,
+    },
+  ],
+}));
+
+// ══════════════════════════════════════════════════
+// SHARED
+// ══════════════════════════════════════════════════
+
+// Liquidation Line Chart (shared)
+const liquidationGranularity = ref("month");
+
+const lineData = computed(() => {
+  const labels = {
+    day: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    week: ["Week 1", "Week 2", "Week 3", "Week 4"],
+    month: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+  };
+  const data = {
+    day: [8000, 12000, 5000, 15000, 9000, 3000, 6000],
+    week: [45000, 62000, 38000, 55000],
+    month: [120000, 95000, 140000, 88000, 110000, 130000],
+  };
+
+  return {
+    labels: labels[liquidationGranularity.value],
+    datasets: [
+      {
+        label: "Liquidation Volume",
+        data: data[liquidationGranularity.value],
+        borderColor: "#252578",
+        backgroundColor: "rgba(37, 37, 120, 0.05)",
+        borderWidth: 2,
+        pointBackgroundColor: "#252578",
+        pointBorderColor: "#ffffff",
+        pointBorderWidth: 2,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        tension: 0.3,
+        fill: true,
+      },
+    ],
+  };
+});
+
+const lineOptions = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
     legend: { display: false },
     tooltip: {
-      backgroundColor: "#1D1D61",
+      backgroundColor: "#1e293b",
       titleFont: { family: "Poppins", size: 11, weight: "600" },
-      bodyFont: { family: "Open Sans", size: 12 },
+      bodyFont: { family: "Poppins", size: 12 },
       cornerRadius: 8,
       padding: 12,
-      displayColors: false,
       callbacks: {
         label: (ctx) => ` ₱${ctx.raw.toLocaleString()}`,
       },
@@ -132,375 +313,291 @@ const barOptions = {
   scales: {
     x: {
       grid: { display: false },
-      ticks: { color: "#94a3b8", font: { family: "Open Sans", size: 11 } },
+      ticks: { color: "#94a3b8", font: { family: "Poppins", size: 11 } },
     },
     y: {
-      grid: { color: "rgba(148,163,184,0.12)", borderDash: [4, 4] },
+      grid: { color: "rgba(148,163,184,0.1)", borderDash: [4, 4] },
       ticks: {
         color: "#94a3b8",
-        font: { family: "Open Sans", size: 11 },
+        font: { family: "Poppins", size: 11 },
         callback: (v) => `₱${(v / 1000).toFixed(0)}K`,
       },
     },
   },
 };
 
-// Doughnut chart
-const doughnutData = {
-  labels: [
-    "Lab Supplies",
-    "Transport",
-    "Client Meeting",
-    "Maintenance",
-    "Office",
-  ],
-  datasets: [
-    {
-      data: [35, 20, 15, 20, 10],
-      backgroundColor: ["#252578", "#2E85D8", "#2F2F7E", "#93c5fd", "#dbeafe"],
-      borderWidth: 2,
-      borderColor: "#ffffff",
-      hoverOffset: 4,
-    },
-  ],
-};
-const doughnutOptions = {
+const barOptions = {
   responsive: true,
   maintainAspectRatio: false,
-  cutout: "72%",
   plugins: {
     legend: {
-      position: "right",
+      position: "top",
+      align: "end",
       labels: {
-        boxWidth: 8,
-        boxHeight: 8,
-        padding: 14,
+        boxWidth: 12,
+        boxHeight: 12,
+        padding: 16,
         color: "#475569",
-        font: { family: "Open Sans", size: 11, weight: "500" },
+        font: { family: "Poppins", size: 11 },
+        usePointStyle: true,
+        pointStyle: "rectRounded",
       },
     },
     tooltip: {
-      backgroundColor: "#1D1D61",
-      titleFont: { family: "Poppins", size: 11 },
-      bodyFont: { family: "Open Sans", size: 12 },
+      backgroundColor: "#1e293b",
+      titleFont: { family: "Poppins", size: 11, weight: "600" },
+      bodyFont: { family: "Poppins", size: 12 },
       cornerRadius: 8,
+      padding: 12,
       callbacks: {
-        label: (ctx) => ` ${ctx.raw}% of total spend`,
+        label: (ctx) => ` ${ctx.dataset.label}: ₱${ctx.raw.toLocaleString()}`,
+      },
+    },
+  },
+  scales: {
+    x: {
+      grid: { display: false },
+      ticks: { color: "#94a3b8", font: { family: "Poppins", size: 11 } },
+    },
+    y: {
+      grid: { color: "rgba(148,163,184,0.1)", borderDash: [4, 4] },
+      ticks: {
+        color: "#94a3b8",
+        font: { family: "Poppins", size: 11 },
+        callback: (v) => `₱${(v / 1000).toFixed(0)}K`,
       },
     },
   },
 };
 
-const recentItems = computed(() => {
-  const items = auth.isAdmin
-    ? rStore.items.filter((i) => i.user_id === auth.user?.id)
-    : rStore.items;
-  return items.slice(0, 5);
-});
-const activeAdvances = computed(() => caStore.items.slice(0, 5));
+const pieOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      position: "bottom",
+      labels: {
+        boxWidth: 10,
+        boxHeight: 10,
+        padding: 14,
+        color: "#475569",
+        font: { family: "Poppins", size: 11 },
+        usePointStyle: true,
+        pointStyle: "circle",
+      },
+    },
+    tooltip: {
+      backgroundColor: "#1e293b",
+      titleFont: { family: "Poppins", size: 11 },
+      bodyFont: { family: "Poppins", size: 12 },
+      cornerRadius: 8,
+      callbacks: {
+        label: (ctx) => ` ${ctx.label}: ${ctx.raw}${typeof ctx.raw === 'number' && ctx.raw > 100 ? '' : '%'}`,
+      },
+    },
+  },
+};
 
-function isOverdue(dateStr) {
-  const diff = (new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24);
-  return diff < 0;
-}
-function isAmberWarning(dateStr) {
-  const diff = (new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24);
-  return diff >= 0 && diff <= 5;
-}
+const pieOptionsWithCurrency = {
+  ...pieOptions,
+  plugins: {
+    ...pieOptions.plugins,
+    tooltip: {
+      ...pieOptions.plugins.tooltip,
+      callbacks: {
+        label: (ctx) => ` ${ctx.label}: ₱${ctx.raw.toLocaleString()}`,
+      },
+    },
+  },
+};
 </script>
 
 <template>
-  <div class="flex flex-col gap-6 font-sans animate-fade-up">
-    <!-- ── Page Header ── -->
-    <div
-      class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"
-    >
-      <div class="min-w-0">
-        <h1
-          class="font-heading text-2xl font-bold leading-tight text-slate-800"
-        >
-          Welcome back,
-          <span class="text-primary">{{ auth.user?.name?.split(" ")[0] }}</span>
-          <span class="inline-block ml-2">
-            <Vue3Lottie
-              animationLink="https://fonts.gstatic.com/s/e/notoemoji/latest/1f44b_1f3fb/lottie.json"
-              :height="32"
-              :width="32"
-            />
-          </span>
-        </h1>
-        <p class="mt-1 text-sm text-slate-400">Have a nice day!.</p>
-      </div>
+  <div class="flex flex-col gap-6 animate-fade-up">
+    <!-- Page Header -->
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">
+        Welcome back, <span class="text-primary">{{ auth.user?.name?.split(" ")[0] }}</span>
+      </h1>
+      <p class="mt-1 text-sm text-slate-400">
+        {{ auth.isAdmin ? "Here's your administrative overview." : "Here's your financial overview." }}
+      </p>
     </div>
 
-    <!-- ── Deadline Cutoff Widget ── -->
-    <div class="rounded-xl overflow-hidden bg-primary shadow-sm">
-      <div
-        class="flex flex-col sm:flex-row sm:items-center justify-between p-5 gap-4"
-      >
-        <div class="flex items-center gap-4">
-          <div
-            class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0"
-          >
-            <Clock class="w-5 h-5 text-warning" />
-          </div>
-          <div>
-            <h3 class="text-sm font-semibold text-warning">
-              Upcoming Liquidation Deadline
+    <!-- ══════════════════════════════════════════ -->
+    <!-- EMPLOYEE DASHBOARD -->
+    <!-- ══════════════════════════════════════════ -->
+    <template v-if="!auth.isAdmin">
+      <!-- KPI Cards -->
+      <BaseKpiGrid
+        :kpis="employeeKpis"
+        gridClasses="grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4"
+        :isLoading="isDashboardLoading"
+        :skeletonCount="4"
+      />
+
+      <!-- Charts Row 1: Bar + Pie -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="card p-6 lg:col-span-2">
+          <div class="mb-5">
+            <h3 class="text-sm font-medium text-slate-700">
+              Monthly Spending Trend for Reimbursement and My Expense
             </h3>
-            <p class="text-white/50 text-xs mt-0.5">
-              Next cutoff period is approaching. Submit your liquidations on
-              time.
-            </p>
+            <p class="text-xs text-slate-400 mt-0.5">January – June 2026</p>
+          </div>
+          <div v-if="isDashboardLoading" class="h-56">
+            <SkeletonLoader variant="chart" />
+          </div>
+          <div v-else class="h-56">
+            <Bar :data="employeeBarData" :options="barOptions" />
           </div>
         </div>
 
-        <div
-          class="flex items-center gap-3 bg-white/10 border border-white/20 rounded-xl px-5 py-3 backdrop-blur-sm self-start sm:self-auto"
-        >
-          <div class="flex flex-col items-center">
-            <span class="text-2xl font-bold text-white leading-none">
-              {{ String(cutoffDays).padStart(2, "0") }}
-            </span>
-            <span
-              class="text-[10px] text-warning/80 font-semibold tracking-widest mt-0.5"
-              >DAYS</span
-            >
+        <div class="card p-6">
+          <div class="mb-5">
+            <h3 class="text-sm font-medium text-slate-700">Spending by Category</h3>
+            <p class="text-xs text-slate-400 mt-0.5">Reimbursement Spending by Category</p>
           </div>
-          <span class="text-2xl text-white/30 font-thin">:</span>
-          <div class="flex flex-col items-center">
-            <span class="text-2xl font-bold text-white leading-none">
-              {{ String(cutoffHours).padStart(2, "0") }}
-            </span>
-            <span
-              class="text-[10px] text-warning/80 font-semibold tracking-widest mt-0.5"
-              >HRS</span
-            >
+          <div v-if="isDashboardLoading" class="flex h-56 items-center justify-center">
+            <div class="h-36 w-36 animate-pulse rounded-full bg-slate-200"></div>
+          </div>
+          <div v-else class="h-56">
+            <Pie :data="employeePieData" :options="pieOptions" />
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- ── KPI Cards ── -->
-    <BaseKpiGrid
-      :kpis="kpis"
-      gridClasses="grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4"
-      :isLoading="isDashboardLoading"
-      :skeletonCount="4"
-    />
-
-    <!-- ── Charts Row ── -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Bar Chart -->
-      <div class="card p-6 lg:col-span-2">
+      <!-- Liquidation Line Chart -->
+      <div class="card p-6">
         <div class="flex items-center justify-between mb-5">
           <div>
-            <h3 class="text-sm font-semibold text-slate-800">
-              Monthly Spending Trend
-            </h3>
-            <p class="text-xs text-slate-400 mt-0.5">January – June 2024</p>
+            <h3 class="text-sm font-medium text-slate-700">Liquidation Trend</h3>
+            <p class="text-xs text-slate-400 mt-0.5">Total liquidated volume over time</p>
           </div>
-          <span
-            class="text-[10px] font-semibold text-accent bg-accent/10 border border-accent/20 rounded-full px-2.5 py-1"
-          >
-            2024
-          </span>
+          <div class="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
+            <button
+              v-for="option in ['day', 'week', 'month']"
+              :key="option"
+              class="px-3 py-1.5 text-xs font-medium rounded-md transition-colors capitalize"
+              :class="liquidationGranularity === option
+                ? 'bg-white text-primary shadow-sm'
+                : 'text-slate-500 hover:text-slate-700'"
+              @click="liquidationGranularity = option"
+            >
+              {{ option }}
+            </button>
+          </div>
         </div>
         <div v-if="isDashboardLoading" class="h-56">
           <SkeletonLoader variant="chart" />
         </div>
         <div v-else class="h-56">
-          <Bar :data="barData" :options="barOptions" />
+          <Line :data="lineData" :options="lineOptions" />
         </div>
       </div>
+    </template>
 
-      <!-- Doughnut Chart -->
+    <!-- ══════════════════════════════════════════ -->
+    <!-- ADMIN DASHBOARD -->
+    <!-- ══════════════════════════════════════════ -->
+    <template v-else>
+      <!-- KPI Cards -->
+      <BaseKpiGrid
+        :kpis="adminKpis"
+        gridClasses="grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4"
+        :isLoading="isDashboardLoading"
+        :skeletonCount="4"
+      />
+
+      <!-- Charts Row 1: Bar Chart -->
       <div class="card p-6">
         <div class="mb-5">
-          <h3 class="text-sm font-semibold text-slate-800">
-            Spend by Category
-          </h3>
-          <p class="text-xs text-slate-400 mt-0.5">Distribution breakdown</p>
+          <h3 class="text-sm font-medium text-slate-700">Monthly Spending Trend</h3>
+          <p class="text-xs text-slate-400 mt-0.5">Total reimbursement disbursed across all employees</p>
         </div>
-        <div
-          v-if="isDashboardLoading"
-          class="flex h-56 items-center justify-center rounded-lg bg-slate-50"
-        >
-          <div
-            class="relative h-36 w-36 animate-pulse rounded-full bg-slate-200"
-          >
-            <div class="absolute inset-8 rounded-full bg-slate-50"></div>
-          </div>
-          <div class="ml-6 hidden space-y-3 sm:block">
-            <div class="h-2.5 w-24 rounded bg-slate-200 animate-pulse"></div>
-            <div class="h-2.5 w-20 rounded bg-slate-200 animate-pulse"></div>
-            <div class="h-2.5 w-28 rounded bg-slate-200 animate-pulse"></div>
-          </div>
+        <div v-if="isDashboardLoading" class="h-56">
+          <SkeletonLoader variant="chart" />
         </div>
         <div v-else class="h-56">
-          <Doughnut :data="doughnutData" :options="doughnutOptions" />
+          <Bar :data="adminBarData" :options="barOptions" />
         </div>
       </div>
-    </div>
 
-    <!-- ── Employee History Table ── -->
-    <div class="card overflow-hidden">
-      <div
-        class="flex items-center justify-between px-5 py-4 border-b border-slate-100"
-      >
-        <h3 class="text-sm font-semibold text-slate-800">
-          My Recent Submissions
-        </h3>
-        <button
-          class="text-xs font-semibold text-accent hover:text-accent-700 flex items-center gap-1 transition-colors"
-          @click="router.push('/reimbursements')"
-        >
-          View all <ArrowRight class="w-3.5 h-3.5" />
-        </button>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="table-base">
-          <thead>
-            <tr>
-              <th>Ref #</th>
-              <th>Description</th>
-              <th>Category</th>
-              <th>Amount (PHP)</th>
-              <th>Date</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            <template v-if="isDashboardLoading">
-              <tr v-for="i in 5" :key="`recent-skeleton-${i}`">
-                <td v-for="col in 6" :key="col" class="px-4 py-4">
-                  <div
-                    class="h-3.5 animate-pulse rounded bg-slate-200"
-                    :class="
-                      col === 6
-                        ? 'mx-auto h-5 w-20 rounded-full'
-                        : col === 2
-                          ? 'w-36'
-                          : col === 4
-                            ? 'ml-auto w-20'
-                            : 'w-24'
-                    "
-                  ></div>
-                </td>
-              </tr>
-            </template>
-            <tr v-for="item in recentItems" v-else :key="item.id">
-              <td class="text-slate-400 text-xs">#{{ item.id }}</td>
-              <td class="font-semibold text-slate-700">
-                {{ item.description }}
-              </td>
-              <td>
-                <span
-                  class="text-xs font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full"
-                >
-                  {{ item.category }}
-                </span>
-              </td>
-              <td class="font-semibold text-primary">
-                ₱{{ item.amount.toLocaleString() }}
-              </td>
-              <td class="text-slate-400 text-xs">{{ item.date }}</td>
-              <td><StatusBadge :status="item.status" /></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- ── Admin: Cash Advance Recovery Queue ── -->
-    <div v-if="auth.isAdmin" class="card overflow-hidden">
-      <div
-        class="flex items-center justify-between px-5 py-4 border-b border-slate-100"
-      >
-        <div class="flex items-center gap-2">
-          <AlertTriangle class="w-4 h-4 text-warning" />
-          <h3 class="text-sm font-semibold text-slate-800">
-            Cash Advance Recovery Queue
-          </h3>
+      <!-- Charts Row 2: CA Status Pie + Liquidation Line -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Cash Advance Status Pie -->
+        <div class="card p-6">
+          <div class="mb-5">
+            <h3 class="text-sm font-medium text-slate-700">Cash Advance Status Distribution</h3>
+            <p class="text-xs text-slate-400 mt-0.5">Breakdown by current status</p>
+          </div>
+          <div v-if="isDashboardLoading" class="flex h-56 items-center justify-center">
+            <div class="h-36 w-36 animate-pulse rounded-full bg-slate-200"></div>
+          </div>
+          <div v-else class="h-56">
+            <Pie :data="adminCaStatusPieData" :options="pieOptions" />
+          </div>
         </div>
-        <button
-          class="text-xs font-semibold text-accent hover:text-accent-700 flex items-center gap-1 transition-colors"
-          @click="router.push('/cash-advances')"
-        >
-          View full table <ArrowRight class="w-3.5 h-3.5" />
-        </button>
+
+        <!-- Liquidation Volume Line Chart -->
+        <div class="card p-6 lg:col-span-2">
+          <div class="flex items-center justify-between mb-5">
+            <div>
+              <h3 class="text-sm font-medium text-slate-700">Liquidation Volume</h3>
+              <p class="text-xs text-slate-400 mt-0.5">Completed liquidations over time</p>
+            </div>
+            <div class="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
+              <button
+                v-for="option in ['day', 'week', 'month']"
+                :key="option"
+                class="px-3 py-1.5 text-xs font-medium rounded-md transition-colors capitalize"
+                :class="liquidationGranularity === option
+                  ? 'bg-white text-primary shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'"
+                @click="liquidationGranularity = option"
+              >
+                {{ option }}
+              </button>
+            </div>
+          </div>
+          <div v-if="isDashboardLoading" class="h-56">
+            <SkeletonLoader variant="chart" />
+          </div>
+          <div v-else class="h-56">
+            <Line :data="lineData" :options="lineOptions" />
+          </div>
+        </div>
       </div>
-      <div class="overflow-x-auto">
-        <table class="table-base">
-          <thead>
-            <tr>
-              <th>Employee</th>
-              <th>Purpose</th>
-              <th>Amount</th>
-              <th>Due Date</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            <template v-if="isDashboardLoading">
-              <tr v-for="i in 5" :key="`advance-skeleton-${i}`">
-                <td v-for="col in 5" :key="col" class="px-4 py-4">
-                  <div
-                    class="h-3.5 animate-pulse rounded bg-slate-200"
-                    :class="
-                      col === 5
-                        ? 'h-5 w-20 rounded-full'
-                        : col === 2
-                          ? 'w-36'
-                          : col === 3
-                            ? 'ml-auto w-20'
-                            : 'w-24'
-                    "
-                  ></div>
-                </td>
-              </tr>
-            </template>
-            <tr
-              v-else
-              v-for="item in activeAdvances"
-              :key="item.id"
-              :class="[
-                isOverdue(item.dueDate)
-                  ? 'border-l-2 border-l-danger'
-                  : isAmberWarning(item.dueDate)
-                    ? 'border-l-2 border-l-warning'
-                    : '',
-              ]"
-            >
-              <td class="font-semibold text-slate-700">
-                {{ item.requestedBy }}
-              </td>
-              <td class="text-slate-500 text-xs">{{ item.purpose }}</td>
-              <td class="font-semibold text-primary">
-                ₱{{ item.amount.toLocaleString() }}
-              </td>
-              <td class="text-slate-400 text-xs">{{ item.dueDate }}</td>
-              <td class="flex items-center gap-2 flex-wrap">
-                <span
-                  v-if="isOverdue(item.dueDate)"
-                  class="badge bg-red-50 border-red-200 text-red-600 animate-pulse"
-                >
-                  <span class="w-1.5 h-1.5 bg-red-400 rounded-full" />
-                  Overdue
-                </span>
-                <span
-                  v-else-if="isAmberWarning(item.dueDate)"
-                  class="badge bg-amber-50 border-amber-200 text-amber-700"
-                >
-                  <span class="w-1.5 h-1.5 bg-amber-400 rounded-full" />
-                  Due Soon
-                </span>
-                <StatusBadge :status="item.status" />
-              </td>
-            </tr>
-          </tbody>
-        </table>
+
+      <!-- Charts Row 3: Advance vs Outstanding Pie -->
+      <div class="card p-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
+          <div>
+            <h3 class="text-sm font-medium text-slate-700 mb-1">Advance vs Outstanding Balance</h3>
+            <p class="text-xs text-slate-400 mb-4">Total cash advance compared to outstanding balances</p>
+            <div v-if="isDashboardLoading" class="flex h-48 items-center justify-center">
+              <div class="h-32 w-32 animate-pulse rounded-full bg-slate-200"></div>
+            </div>
+            <div v-else class="h-48">
+              <Pie :data="adminBalancePieData" :options="pieOptionsWithCurrency" />
+            </div>
+          </div>
+          <div class="flex flex-col gap-4 p-5 rounded-xl bg-slate-50 border border-slate-100">
+            <div>
+              <p class="text-xs text-slate-400 mb-0.5">Total Cash Advance</p>
+              <p class="text-lg font-semibold text-primary">₱{{ totalCashAdvanceAmount.toLocaleString() }}</p>
+            </div>
+            <div>
+              <p class="text-xs text-slate-400 mb-0.5">Total Outstanding Balance</p>
+              <p class="text-lg font-semibold text-red-600">₱{{ totalOutstandingBalance.toLocaleString() }}</p>
+            </div>
+            <div class="pt-3 border-t border-slate-200">
+              <p class="text-xs text-slate-400 mb-0.5">Remaining Outstanding Amount</p>
+              <p class="text-xl font-bold text-slate-800">₱{{ remainingOutstanding.toLocaleString() }}</p>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </template>
   </div>
 </template>
