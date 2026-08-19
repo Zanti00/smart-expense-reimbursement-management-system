@@ -29,6 +29,7 @@ import { useUnsavedChanges } from "@/composables/useUnsavedChanges";
 import { formatPeso, formatDate } from "@/utils/formatters";
 import { numberOrZero } from "@/utils/numbers";
 import { getFileUrl } from "@/utils/fileUtils";
+import { firstFilePathField } from "@/utils/receiptUtils";
 import {
   Activity,
   AlertTriangle,
@@ -264,7 +265,11 @@ const employeeOutstandingAdvances = computed(() =>
 const employeeFilteredAdvances = computed(() => {
   const query = employeeSearchQuery.value.trim().toLowerCase();
 
-  const rows = employeeOutstandingAdvances.value.filter((advance) => {
+  const baseRows = showAdminRequestForm.value
+    ? employeeOutstandingAdvances.value
+    : store.items;
+
+  const rows = baseRows.filter((advance) => {
     const status = employeeAdvanceStatus(advance);
     const matchesStatus =
       employeeActiveStatus.value === "All" ||
@@ -337,11 +342,16 @@ const sourceCases = computed(() => {
         Number(r.total_amount || 0) - Number(r.vat_amount || 0),
         0,
       );
+      const rawPath = firstFilePathField(r.file_path);
+      const filePathStr =
+        typeof rawPath === "string" ? rawPath : rawPath ? String(rawPath) : "";
+      const fileName = filePathStr
+        ? filePathStr.split("/").pop()
+        : r.file_name || r.fileName || `receipt_${rIdx + 1}.jpg`;
+
       return {
         id: r.id,
-        fileName: r.file_path
-          ? r.file_path.split("/").pop()
-          : `receipt_${rIdx + 1}.jpg`,
+        fileName,
         merchantName: r.vendor_name || "Unknown Vendor",
         location: r.location || "N/A",
         category: categoryName(r),
@@ -357,7 +367,7 @@ const sourceCases = computed(() => {
         vat: Number(r.vat_amount || 0),
         decision: r.status === "rejected" ? "rejected" : "accepted",
         notes: r.admin_notes || "",
-        filePath: r.file_path,
+        filePath: filePathStr || r.file_path,
       };
     });
 
@@ -794,25 +804,34 @@ function selectAdvance(adv) {
       reportAttachment.value = existingLiq.report_file_path;
 
       if (existingLiq.receipts && Array.isArray(existingLiq.receipts)) {
-        receipts.value = existingLiq.receipts.map((r) => ({
-          id: r.id,
-          name: r.vendor_name || `Receipt-${r.id}`,
-          ocrStatus: "done",
-          category: categoryName(r, "General"),
-          categoryId:
-            Number(r.expense_category_id ?? defaultReceiptCategoryId.value) ||
-            null,
-          amount: r.total_amount,
-          ocrData: {
+        receipts.value = existingLiq.receipts.map((r) => {
+          const rawPath = firstFilePathField(r.file_path);
+          const rawStr =
+            typeof rawPath === "string" ? rawPath : rawPath ? String(rawPath) : "";
+          return {
             id: r.id,
-            vendor: r.vendor_name,
-            date: r.transaction_date,
+            name:
+              r.vendor_name ||
+              (rawStr ? rawStr.split("/").pop() : `Receipt-${r.id}`),
+            ocrStatus: "done",
+            category: categoryName(r, "General"),
+            categoryId:
+              Number(r.expense_category_id ?? defaultReceiptCategoryId.value) ||
+              null,
             amount: r.total_amount,
-            vat: r.vat_amount || 0,
-            tin: r.tin,
-            invoiceNumber: r.invoice_number,
-          },
-        }));
+            filePath: rawStr || r.file_path,
+            ocrData: {
+              id: r.id,
+              vendor: r.vendor_name,
+              date: r.transaction_date,
+              amount: r.total_amount,
+              vat: r.vat_amount || 0,
+              tin: r.tin,
+              invoiceNumber: r.invoice_number,
+              file_path: r.file_path,
+            },
+          };
+        });
       } else {
         receipts.value = [];
       }

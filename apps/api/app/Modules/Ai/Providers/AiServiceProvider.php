@@ -16,6 +16,12 @@ class AiServiceProvider extends ServiceProvider
             \App\Modules\Ai\Contracts\AsyncOcrEngineInterface::class,
             \App\Modules\Ai\Services\AiServiceOcrEngine::class
         );
+
+        // Synchronous OCR engine — consumed by LiquidationController (constructor injection).
+        $this->app->singleton(
+            \App\Modules\Ai\Contracts\OcrEngineInterface::class,
+            \App\Modules\Ai\Services\TesseractOcrEngine::class
+        );
     }
 
     /**

@@ -231,9 +231,9 @@ async function logout() {
         class="flex-1 p-6 overflow-y-auto scrollbar-thin animate-fade-in bg-clinical"
       >
         <RouterView v-slot="{ Component, route: viewRoute }">
-          <Transition name="page" mode="out-in">
-            <component :is="Component" :key="viewRoute.path" />
-          </Transition>
+          <div :key="viewRoute.path" class="animate-fade-in">
+            <component :is="Component" />
+          </div>
         </RouterView>
       </main>
     </div>
@@ -256,15 +256,6 @@ async function logout() {
 }
 .fade-enter-from,
 .fade-leave-to {
-  opacity: 0;
-}
-
-.page-enter-active,
-.page-leave-active {
-  transition: opacity 0.15s linear;
-}
-.page-enter-from,
-.page-leave-to {
   opacity: 0;
 }
 

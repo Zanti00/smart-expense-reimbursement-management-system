@@ -112,8 +112,10 @@ onMounted(async () => {
         }
         const doc = data.document;
         if (doc) {
+          const rawDocPath = Array.isArray(doc.file_path) ? doc.file_path[0] : doc.file_path;
+          const docPathStr = typeof rawDocPath === "string" ? rawDocPath : rawDocPath ? String(rawDocPath) : "";
           form.documents.push({
-            name: doc.file_name || doc.file_path.split("/").pop(),
+            name: doc.file_name || (docPathStr ? docPathStr.split("/").pop() : "document.pdf"),
             isExisting: true,
             file_path: doc.file_path,
           });

@@ -129,6 +129,11 @@ function attachmentFileName(file) {
   if (!file) return "";
   if (typeof file === "string")
     return file.split("/").pop() || "Attached Report";
+  if (Array.isArray(file)) {
+    const first = file[0];
+    if (typeof first === "string")
+      return first.split("/").pop() || "Attached Report";
+  }
   return file.name || "Attached Report";
 }
 
