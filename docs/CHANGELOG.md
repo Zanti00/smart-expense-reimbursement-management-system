@@ -18,6 +18,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [1.3.1] - 2026-08-19
+
+### Added
+- **Browser Testing & Interactive Debugging Rule (Gemini & AI Agents):** Added explicit rule to `AGENTS.md` and `docs/Build.md` requiring Gemini and AI agents to prioritize browser testing (`browser_subagent`, DevTools, interactive DOM/console inspection, and screenshot verification) when debugging frontend issues, responsive layouts, and UI flows whenever applicable.
+- **Seeded Test Accounts & Debugging Credentials Register:** Added comprehensive reference table to `AGENTS.md` and `docs/Build.md` documenting seeded accounts (`employee@example.com`, `sum@sbsi.com`, `admin@example.com`, `approver@example.com`, `finance-admin@example.com`, `finance@example.com`, `manager@example.com`, `sales@example.com`, `superadmin@sbsi.com`, `employee.accounting@sbsi.com`, `manager.finance@sbsi.com`, `manager.operations@sbsi.com`, `supervisor.sales@sbsi.com`, `employee.it@sbsi.com`) across roles and departments to assist subagents in role-based debugging and authentication flows.
+
+---
+
 ## [1.3.0] - 2026-08-17
 
 ### Added

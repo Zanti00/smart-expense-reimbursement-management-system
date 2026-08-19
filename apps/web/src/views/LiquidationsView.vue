@@ -1191,8 +1191,8 @@ function finalizeLiquidation() {
       title="Liquidation Settlement Audit"
       :description="
         approvingId
-          ? 'Are you sure you want to approve this liquidation settlement? This will mark the cash advance as settled. Please enter your password to confirm.'
-          : 'Please enter your password and a comment to authorize rejecting this liquidation settlement.'
+          ? 'Are you sure you want to approve this liquidation settlement? This will mark the cash advance as settled.'
+          : 'Please provide a comment to authorize rejecting this liquidation settlement.'
       "
       v-model:password="confirmPassword"
       v-model:comment="rejectionComment"

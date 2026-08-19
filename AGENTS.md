@@ -39,8 +39,32 @@ SERMS is a high-precision, Modular Monolith financial compliance application bui
 - **Context Gathering (AI Rule):** If you think a user's prompt or task lacks sufficient context, details, or information, AI agents and developers must ask questions or interview the user via the `/grill-me` skill interface about the given task/prompt to deepen understanding and avoid hallucinations before proceeding.
 - **Reusability & Anti-Duplication Rule — Frontend (AI & Developer Rule):** Developers and subagents must thoroughly scan the codebase for pre-existing reusable components (in `src/components/base/`), composables (in `src/composables/`), utility helpers, and functions before creating new ones. If no existing reusable component or utility exists for a recurring UI/logic pattern, create a clean, reusable abstraction first rather than writing duplicated or inline one-off implementations.
 - **Reusability & Anti-Duplication Rule — Backend (AI & Developer Rule):** Before implementing new API routes or controllers, check if an existing endpoint, module controller action, service method, or repository query already fulfills or can be extended to fulfill the requirement. Reuse existing endpoints and services rather than creating duplicate routes, controllers, or redundant database queries.
+- **Browser Testing & Interactive Debugging (GEMINI & AI Agents Rule):** Gemini and AI agents MUST prioritize using browser testing (`browser_subagent`, DevTools, interactive browser actions, DOM/console log inspection, network payload checking, and screenshot verification) when debugging frontend issues, interactive modals, responsive UI layouts, and user workflows as long as it is applicable.
+- **Role-Based Debugging Credentials (AI Subagents & Developers):** When debugging or testing user roles, permissions, approval workflows, and multi-tenant views, subagents and developers must use the official seeded test credentials documented in the *Seeded Test Accounts & Debugging Credentials* section below.
 - **Cross-Project Access Rule for Sister Repositories (AI & Subagent Rule):** AI agents and subagents are permitted to access, inspect, and search sister repositories (`capstone-auth-module`, `capstone-azure-infra`, `ocr-pipeline`, `CMS`, `PRS`, `TS`) whenever they need additional architecture, schema, route contracts, or infrastructure context. However, agents are **strictly restricted to READ and SEARCH operations only** (e.g. `view_file`, `grep_search`, `list_dir`). AI agents must **NEVER modify, write to, delete, or commit/push changes to any other project** unless explicitly instructed and permitted by the user.
 - **Documentation Change Log (AI Rule):** Always add an entry to the Changelog in [`docs/CHANGELOG.md`](docs/CHANGELOG.md) whenever changes, additions, or updates are made to any documentation guide or specification in either `docs/` or `documentations/`.
+
+## Seeded Test Accounts & Debugging Credentials
+
+When debugging authentication, role-based access control (RBAC), approval thresholds, disbursements, and submission flows, use these pre-seeded test accounts:
+
+| Role / Persona | Email | Password | Department / Grade | Purpose & Scopes |
+| -------------- | ----- | -------- | ------------------ | ---------------- |
+| **Employee (Standard)** | `employee@example.com` | `password` | Operations / L2 | Regular expense upload, reimbursement requests, cash advances, liquidation submissions |
+| **Accounting / Finance** | `sum@sbsi.com` | `@.Akirasendoh07` | Accounting / Finance | Primary accounting verification, disbursements, settlement validation |
+| **IT Administrator** | `admin@example.com` | `password` | IT / L5 | System administration, user management, audit log inspection, global settings |
+| **Approver / Finance Manager** | `approver@example.com` | `password` | Finance / L4 | Cash advance approvals, threshold sign-offs, reimbursement approvals |
+| **Finance Administrator** | `finance-admin@example.com` | `password` | Finance / Admin | Financial compliance, expense category oversight, audit reporting |
+| **Finance Officer** | `finance@example.com` | `password` | Finance / Employee | Financial operations, receipt verification, payment matching |
+| **Operations Manager** | `manager@example.com` | `password` | Operations / Manager | Departmental expense approval, operational budget sign-off |
+| **Sales Representative** | `sales@example.com` | `password` | Operations / Sales | Field sales reimbursements, client entertainment claims, travel advances |
+| **Accounting Staff (SBSI)** | `employee.accounting@sbsi.com` | `password` | Accounting / Accountant | Client-specific accounting reviews, BIR VAT compliance |
+| **Finance Manager (SBSI)** | `manager.finance@sbsi.com` | `password` | Finance / Manager | High-tier approval thresholds, budget disbursements |
+| **Operations Manager (SBSI)** | `manager.operations@sbsi.com` | `password` | Operations / Manager | Field operations oversight, regional cash advance sign-offs |
+| **Sales Supervisor (SBSI)** | `supervisor.sales@sbsi.com` | `password` | Sales & Marketing / Supervisor | First-line expense validations, team travel approvals |
+| **Super Admin (SBSI)** | `superadmin@sbsi.com` | `password` | Executive / Super Admin | Full ecosystem administrative privileges across integrated systems |
+| **IT Support Engineer (SBSI)** | `employee.it@sbsi.com` | `password` | IT / Employee | IT support tickets, technical access verification |
+
 
 ## Definition of Done
 

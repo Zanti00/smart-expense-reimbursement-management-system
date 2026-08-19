@@ -164,23 +164,6 @@
         "source_file": "docs/SDD.md"
       },
       {
-        "id": "serms_ui_components",
-        "label": "SERMS Base UI Components",
-        "nodes": [
-          "statusbadge_vue",
-          "basebutton_vue",
-          "basetable_vue",
-          "basemodal_vue",
-          "basekpigrid_vue",
-          "ocrfield_vue",
-          "applayout_vue"
-        ],
-        "relation": "form",
-        "confidence": "EXTRACTED",
-        "confidence_score": 1.0,
-        "source_file": "docs/DSD.md"
-      },
-      {
         "id": "serms_enterprise_ecosystem",
         "label": "Capstone Enterprise Ecosystem",
         "nodes": [
@@ -400,6 +383,19 @@
       "norm_label": "storereimbursementrequest"
     },
     {
+      "label": "PrsReimbursementWebhookTest",
+      "file_type": "code",
+      "source_file": "apps/api/tests/Feature/PrsReimbursementWebhookTest.php",
+      "source_location": "L9",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "apps_api_tests_feature_prsreimbursementwebhooktest_prsreimbursementwebhooktest",
+      "community": 147,
+      "community_name": "PrsReimbursementWebhookTest",
+      "norm_label": "prsreimbursementwebhooktest"
+    },
+    {
       "label": "ExpenseService",
       "file_type": "code",
       "source_file": "apps/api/app/Modules/Expenses/Services/ExpenseService.php",
@@ -411,32 +407,6 @@
       "community": 16,
       "community_name": "ExpenseCategory",
       "norm_label": "expenseservice"
-    },
-    {
-      "label": "ExpenseCategoryController",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/Reimbursements/Http/Controllers/ExpenseCategoryController.php",
-      "source_location": "L8",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "apps_api_app_modules_reimbursements_http_controllers_expensecategorycontroller_expensecategorycontroller",
-      "community": 16,
-      "community_name": "ExpenseCategory",
-      "norm_label": "expensecategorycontroller"
-    },
-    {
-      "label": "PrsReimbursementRequestController",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/Reimbursements/Http/Controllers/PrsReimbursementRequestController.php",
-      "source_location": "L16",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "apps_api_app_modules_reimbursements_http_controllers_prsreimbursementrequestcontroller_prsreimbursementrequestcontroller",
-      "community": 16,
-      "community_name": "ExpenseCategory",
-      "norm_label": "prsreimbursementrequestcontroller"
     },
     {
       "label": "PrsWebhookController",
@@ -582,69 +552,43 @@
       "norm_label": "reimbursementsserviceprovider"
     },
     {
-      "label": "AuditLog",
+      "label": "OcrCallbackController",
       "file_type": "code",
-      "source_file": "apps/api/app/Modules/AuditLogs/Models/AuditLog.php",
+      "source_file": "apps/api/app/Modules/Reimbursements/Http/Controllers/OcrCallbackController.php",
+      "source_location": "L16",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "apps_api_app_modules_reimbursements_http_controllers_ocrcallbackcontroller_ocrcallbackcontroller",
+      "community": 23,
+      "community_name": "OcrCallbackRequest",
+      "norm_label": "ocrcallbackcontroller"
+    },
+    {
+      "label": "OcrCallbackRequest",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/Reimbursements/Http/Requests/OcrCallbackRequest.php",
       "source_location": "L7",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "id": "apps_api_app_modules_auditlogs_models_auditlog_auditlog",
+      "id": "apps_api_app_modules_reimbursements_http_requests_ocrcallbackrequest_ocrcallbackrequest",
       "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": "auditlog"
+      "community_name": "OcrCallbackRequest",
+      "norm_label": "ocrcallbackrequest"
     },
     {
-      "label": "ReceiptItem",
+      "label": "OcrCallbackService",
       "file_type": "code",
-      "source_file": "apps/api/app/Modules/Reimbursements/Models/ReceiptItem.php",
-      "source_location": "L7",
+      "source_file": "apps/api/app/Modules/Reimbursements/Services/OcrCallbackService.php",
+      "source_location": "L11",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "id": "apps_api_app_modules_reimbursements_models_receiptitem_receiptitem",
+      "id": "apps_api_app_modules_reimbursements_services_ocrcallbackservice_ocrcallbackservice",
       "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": "receiptitem"
-    },
-    {
-      "label": "Reimbursement",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/Reimbursements/Models/Reimbursement.php",
-      "source_location": "L8",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "apps_api_app_modules_reimbursements_models_reimbursement_reimbursement",
-      "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": "reimbursement"
-    },
-    {
-      "label": "ReimbursementLogicTest",
-      "file_type": "code",
-      "source_file": "apps/api/tests/Feature/ReimbursementLogicTest.php",
-      "source_location": "L18",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "apps_api_tests_feature_reimbursementlogictest_reimbursementlogictest",
-      "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": "reimbursementlogictest"
-    },
-    {
-      "label": "ReimbursementPasswordVerificationTest",
-      "file_type": "code",
-      "source_file": "apps/api/tests/Feature/ReimbursementPasswordVerificationTest.php",
-      "source_location": "L12",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "apps_api_tests_feature_reimbursementpasswordverificationtest_reimbursementpasswordverificationtest",
-      "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": "reimbursementpasswordverificationtest"
+      "community_name": "OcrCallbackRequest",
+      "norm_label": "ocrcallbackservice"
     },
     {
       "label": "AiServiceProvider",
@@ -881,19 +825,6 @@
       "norm_label": "controller"
     },
     {
-      "label": "TesseractOcrEngine",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/Ai/Services/TesseractOcrEngine.php",
-      "source_location": "L9",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "apps_api_app_modules_ai_services_tesseractocrengine_tesseractocrengine",
-      "community": 48,
-      "community_name": "Illuminate\\Http\\Request",
-      "norm_label": "tesseractocrengine"
-    },
-    {
       "label": "ExpenseController",
       "file_type": "code",
       "source_file": "apps/api/app/Modules/Expenses/Http/Controllers/ExpenseController.php",
@@ -907,30 +838,30 @@
       "norm_label": "expensecontroller"
     },
     {
-      "label": "LiquidationController",
+      "label": "ExpenseCategoryController",
       "file_type": "code",
-      "source_file": "apps/api/app/Modules/Liquidations/Http/Controllers/LiquidationController.php",
-      "source_location": "L17",
+      "source_file": "apps/api/app/Modules/Reimbursements/Http/Controllers/ExpenseCategoryController.php",
+      "source_location": "L8",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "id": "apps_api_app_modules_liquidations_http_controllers_liquidationcontroller_liquidationcontroller",
+      "id": "apps_api_app_modules_reimbursements_http_controllers_expensecategorycontroller_expensecategorycontroller",
       "community": 48,
       "community_name": "Illuminate\\Http\\Request",
-      "norm_label": "liquidationcontroller"
+      "norm_label": "expensecategorycontroller"
     },
     {
-      "label": "Liquidation",
+      "label": "PrsReimbursementRequestController",
       "file_type": "code",
-      "source_file": "apps/api/app/Modules/Liquidations/Models/Liquidation.php",
-      "source_location": "L9",
+      "source_file": "apps/api/app/Modules/Reimbursements/Http/Controllers/PrsReimbursementRequestController.php",
+      "source_location": "L16",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "id": "apps_api_app_modules_liquidations_models_liquidation_liquidation",
+      "id": "apps_api_app_modules_reimbursements_http_controllers_prsreimbursementrequestcontroller_prsreimbursementrequestcontroller",
       "community": 48,
       "community_name": "Illuminate\\Http\\Request",
-      "norm_label": "liquidation"
+      "norm_label": "prsreimbursementrequestcontroller"
     },
     {
       "label": "ReceiptController",
@@ -1037,6 +968,19 @@
       "norm_label": "receiptuploadtest"
     },
     {
+      "label": "AuditLog",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/AuditLogs/Models/AuditLog.php",
+      "source_location": "L7",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "apps_api_app_modules_auditlogs_models_auditlog_auditlog",
+      "community": 55,
+      "community_name": "TestCase",
+      "norm_label": "auditlog"
+    },
+    {
       "label": "ExampleTest",
       "file_type": "code",
       "source_file": "apps/api/tests/Feature/ExampleTest.php",
@@ -1076,6 +1020,32 @@
       "norm_label": "prsreimbursementapitest"
     },
     {
+      "label": "ReimbursementPasswordVerificationTest",
+      "file_type": "code",
+      "source_file": "apps/api/tests/Feature/ReimbursementPasswordVerificationTest.php",
+      "source_location": "L12",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "apps_api_tests_feature_reimbursementpasswordverificationtest_reimbursementpasswordverificationtest",
+      "community": 55,
+      "community_name": "TestCase",
+      "norm_label": "reimbursementpasswordverificationtest"
+    },
+    {
+      "label": "WarnReceiptDeletionTest",
+      "file_type": "code",
+      "source_file": "apps/api/tests/Feature/WarnReceiptDeletionTest.php",
+      "source_location": "L14",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "apps_api_tests_feature_warnreceiptdeletiontest_warnreceiptdeletiontest",
+      "community": 55,
+      "community_name": "TestCase",
+      "norm_label": "warnreceiptdeletiontest"
+    },
+    {
       "label": "TestCase",
       "file_type": "code",
       "source_file": "apps/api/tests/TestCase.php",
@@ -1102,43 +1072,17 @@
       "norm_label": "receiptfilteringtest"
     },
     {
-      "label": "OcrCallbackController",
+      "label": "DisburseCashAdvanceRequest",
       "file_type": "code",
-      "source_file": "apps/api/app/Modules/Reimbursements/Http/Controllers/OcrCallbackController.php",
-      "source_location": "L16",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "apps_api_app_modules_reimbursements_http_controllers_ocrcallbackcontroller_ocrcallbackcontroller",
-      "community": 59,
-      "community_name": "OcrCallbackRequest",
-      "norm_label": "ocrcallbackcontroller"
-    },
-    {
-      "label": "OcrCallbackRequest",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/Reimbursements/Http/Requests/OcrCallbackRequest.php",
+      "source_file": "apps/api/app/Modules/CashAdvances/Http/Requests/DisburseCashAdvanceRequest.php",
       "source_location": "L7",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "id": "apps_api_app_modules_reimbursements_http_requests_ocrcallbackrequest_ocrcallbackrequest",
+      "id": "apps_api_app_modules_cashadvances_http_requests_disbursecashadvancerequest_disbursecashadvancerequest",
       "community": 59,
-      "community_name": "OcrCallbackRequest",
-      "norm_label": "ocrcallbackrequest"
-    },
-    {
-      "label": "OcrCallbackService",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/Reimbursements/Services/OcrCallbackService.php",
-      "source_location": "L11",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "apps_api_app_modules_reimbursements_services_ocrcallbackservice_ocrcallbackservice",
-      "community": 59,
-      "community_name": "OcrCallbackRequest",
-      "norm_label": "ocrcallbackservice"
+      "community_name": "DisburseCashAdvanceRequest",
+      "norm_label": "disbursecashadvancerequest"
     },
     {
       "label": "CashAdvanceController",
@@ -1219,17 +1163,43 @@
       "norm_label": "ocrcallbackservicetest"
     },
     {
-      "label": "PrsReimbursementWebhookTest",
+      "label": "TesseractOcrEngine",
       "file_type": "code",
-      "source_file": "apps/api/tests/Feature/PrsReimbursementWebhookTest.php",
+      "source_file": "apps/api/app/Modules/Ai/Services/TesseractOcrEngine.php",
       "source_location": "L9",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "id": "apps_api_tests_feature_prsreimbursementwebhooktest_prsreimbursementwebhooktest",
-      "community": 60,
-      "community_name": "OcrCallbackServiceTest",
-      "norm_label": "prsreimbursementwebhooktest"
+      "id": "apps_api_app_modules_ai_services_tesseractocrengine_tesseractocrengine",
+      "community": 61,
+      "community_name": "Liquidation",
+      "norm_label": "tesseractocrengine"
+    },
+    {
+      "label": "LiquidationController",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/Liquidations/Http/Controllers/LiquidationController.php",
+      "source_location": "L17",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "apps_api_app_modules_liquidations_http_controllers_liquidationcontroller_liquidationcontroller",
+      "community": 61,
+      "community_name": "Liquidation",
+      "norm_label": "liquidationcontroller"
+    },
+    {
+      "label": "Liquidation",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/Liquidations/Models/Liquidation.php",
+      "source_location": "L9",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "apps_api_app_modules_liquidations_models_liquidation_liquidation",
+      "community": 61,
+      "community_name": "Liquidation",
+      "norm_label": "liquidation"
     },
     {
       "label": "LiquidationLogicTest",
@@ -1241,7 +1211,7 @@
       "_origin": "ast",
       "id": "apps_api_tests_feature_liquidationlogictest_liquidationlogictest",
       "community": 61,
-      "community_name": "LiquidationLogicTest",
+      "community_name": "Liquidation",
       "norm_label": "liquidationlogictest"
     },
     {
@@ -1269,6 +1239,19 @@
       "community": 7,
       "community_name": "Receipt",
       "norm_label": "receipt"
+    },
+    {
+      "label": "ReceiptItem",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/Reimbursements/Models/ReceiptItem.php",
+      "source_location": "L7",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "apps_api_app_modules_reimbursements_models_receiptitem_receiptitem",
+      "community": 7,
+      "community_name": "Receipt",
+      "norm_label": "receiptitem"
     },
     {
       "label": "ReceiptStatusObserver",
@@ -1310,6 +1293,19 @@
       "norm_label": "receiptstorageretrievaltest"
     },
     {
+      "label": "Reimbursement",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/Reimbursements/Models/Reimbursement.php",
+      "source_location": "L8",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "apps_api_app_modules_reimbursements_models_reimbursement_reimbursement",
+      "community": 72,
+      "community_name": "User",
+      "norm_label": "reimbursement"
+    },
+    {
       "label": "ReimbursementService",
       "file_type": "code",
       "source_file": "apps/api/app/Modules/Reimbursements/Services/ReimbursementService.php",
@@ -1336,17 +1332,17 @@
       "norm_label": "user"
     },
     {
-      "label": "WarnReceiptDeletionTest",
+      "label": "ReimbursementLogicTest",
       "file_type": "code",
-      "source_file": "apps/api/tests/Feature/WarnReceiptDeletionTest.php",
-      "source_location": "L14",
+      "source_file": "apps/api/tests/Feature/ReimbursementLogicTest.php",
+      "source_location": "L18",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "id": "apps_api_tests_feature_warnreceiptdeletiontest_warnreceiptdeletiontest",
+      "id": "apps_api_tests_feature_reimbursementlogictest_reimbursementlogictest",
       "community": 72,
       "community_name": "User",
-      "norm_label": "warnreceiptdeletiontest"
+      "norm_label": "reimbursementlogictest"
     },
     {
       "label": "ExpenseCategorySeeder",
@@ -1375,17 +1371,17 @@
       "norm_label": "databaseseeder"
     },
     {
-      "label": "DisburseCashAdvanceRequest",
+      "label": "RejectCashAdvanceRequest",
       "file_type": "code",
-      "source_file": "apps/api/app/Modules/CashAdvances/Http/Requests/DisburseCashAdvanceRequest.php",
+      "source_file": "apps/api/app/Modules/CashAdvances/Http/Requests/RejectCashAdvanceRequest.php",
       "source_location": "L7",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "id": "apps_api_app_modules_cashadvances_http_requests_disbursecashadvancerequest_disbursecashadvancerequest",
+      "id": "apps_api_app_modules_cashadvances_http_requests_rejectcashadvancerequest_rejectcashadvancerequest",
       "community": 88,
-      "community_name": "DisburseCashAdvanceRequest",
-      "norm_label": "disbursecashadvancerequest"
+      "community_name": "RejectCashAdvanceRequest",
+      "norm_label": "rejectcashadvancerequest"
     },
     {
       "label": "CashAdvance",
@@ -1425,19 +1421,6 @@
       "community": 94,
       "community_name": "Illuminate\\Support\\Facades\\Route",
       "norm_label": "liquidationsserviceprovider"
-    },
-    {
-      "label": "RejectCashAdvanceRequest",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/CashAdvances/Http/Requests/RejectCashAdvanceRequest.php",
-      "source_location": "L7",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "apps_api_app_modules_cashadvances_http_requests_rejectcashadvancerequest_rejectcashadvancerequest",
-      "community": 95,
-      "community_name": "RejectCashAdvanceRequest",
-      "norm_label": "rejectcashadvancerequest"
     },
     {
       "label": "cancelReceiptDecision()",
@@ -2964,6 +2947,66 @@
       "norm_label": "up()"
     },
     {
+      "label": ".headers()",
+      "file_type": "code",
+      "source_file": "apps/api/tests/Feature/PrsReimbursementWebhookTest.php",
+      "source_location": "L105",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_tests_feature_prsreimbursementwebhooktest_prsreimbursementwebhooktest_headers",
+      "community": 147,
+      "community_name": "PrsReimbursementWebhookTest",
+      "norm_label": ".headers()"
+    },
+    {
+      "label": ".payload()",
+      "file_type": "code",
+      "source_file": "apps/api/tests/Feature/PrsReimbursementWebhookTest.php",
+      "source_location": "L60",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_tests_feature_prsreimbursementwebhooktest_prsreimbursementwebhooktest_payload",
+      "community": 147,
+      "community_name": "PrsReimbursementWebhookTest",
+      "norm_label": ".payload()"
+    },
+    {
+      "label": ".test_duplicate_delivery_is_idempotent()",
+      "file_type": "code",
+      "source_file": "apps/api/tests/Feature/PrsReimbursementWebhookTest.php",
+      "source_location": "L47",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_tests_feature_prsreimbursementwebhooktest_prsreimbursementwebhooktest_test_duplicate_delivery_is_idempotent",
+      "community": 147,
+      "community_name": "PrsReimbursementWebhookTest",
+      "norm_label": ".test_duplicate_delivery_is_idempotent()"
+    },
+    {
+      "label": ".test_invalid_signature_is_rejected()",
+      "file_type": "code",
+      "source_file": "apps/api/tests/Feature/PrsReimbursementWebhookTest.php",
+      "source_location": "L35",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_tests_feature_prsreimbursementwebhooktest_prsreimbursementwebhooktest_test_invalid_signature_is_rejected",
+      "community": 147,
+      "community_name": "PrsReimbursementWebhookTest",
+      "norm_label": ".test_invalid_signature_is_rejected()"
+    },
+    {
+      "label": ".test_valid_signed_prs_webhook_creates_reimbursement()",
+      "file_type": "code",
+      "source_file": "apps/api/tests/Feature/PrsReimbursementWebhookTest.php",
+      "source_location": "L13",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_tests_feature_prsreimbursementwebhooktest_prsreimbursementwebhooktest_test_valid_signed_prs_webhook_creates_reimbursement",
+      "community": 147,
+      "community_name": "PrsReimbursementWebhookTest",
+      "norm_label": ".test_valid_signed_prs_webhook_creates_reimbursement()"
+    },
+    {
       "label": "down()",
       "file_type": "code",
       "source_file": "apps/api/database/migrations/0001_01_01_000001_create_cache_table.php",
@@ -3384,18 +3427,6 @@
       "norm_label": ".updatereceipt()"
     },
     {
-      "label": ".index()",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/Reimbursements/Http/Controllers/ExpenseCategoryController.php",
-      "source_location": "L13",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_app_modules_reimbursements_http_controllers_expensecategorycontroller_expensecategorycontroller_index",
-      "community": 16,
-      "community_name": "ExpenseCategory",
-      "norm_label": ".index()"
-    },
-    {
       "label": ".__invoke()",
       "file_type": "code",
       "source_file": "apps/api/app/Modules/Reimbursements/Http/Controllers/PrsReimbursementRequestController.php",
@@ -3804,6 +3835,18 @@
       "norm_label": ".send()"
     },
     {
+      "label": ".__construct()",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/Reimbursements/Http/Controllers/ReceiptController.php",
+      "source_location": "L18",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_app_modules_reimbursements_http_controllers_receiptcontroller_receiptcontroller_construct",
+      "community": 19,
+      "community_name": "AuditLogService",
+      "norm_label": ".__construct()"
+    },
+    {
       "label": ".handle()",
       "file_type": "code",
       "source_file": "apps/api/app/Modules/Reimbursements/Services/OcrCallbackService.php",
@@ -3838,6 +3881,30 @@
       "community": 19,
       "community_name": "AuditLogService",
       "norm_label": ".dispatchocrjob()"
+    },
+    {
+      "label": ".getReceipt()",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/Reimbursements/Services/ReceiptService.php",
+      "source_location": "L61",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_app_modules_reimbursements_services_receiptservice_receiptservice_getreceipt",
+      "community": 19,
+      "community_name": "AuditLogService",
+      "norm_label": ".getreceipt()"
+    },
+    {
+      "label": ".listReceipts()",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/Reimbursements/Services/ReceiptService.php",
+      "source_location": "L22",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_app_modules_reimbursements_services_receiptservice_receiptservice_listreceipts",
+      "community": 19,
+      "community_name": "AuditLogService",
+      "norm_label": ".listreceipts()"
     },
     {
       "label": ".resubmitReceipt()",
@@ -3898,6 +3965,18 @@
       "community": 19,
       "community_name": "AuditLogService",
       "norm_label": ".updatereceipt()"
+    },
+    {
+      "label": ".verify()",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/Shared/Services/PasswordVerificationService.php",
+      "source_location": "L43",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_app_modules_shared_services_passwordverificationservice_passwordverificationservice_verify",
+      "community": 19,
+      "community_name": "AuditLogService",
+      "norm_label": ".verify()"
     },
     {
       "label": "closeDetails()",
@@ -4416,292 +4495,64 @@
       "norm_label": "up()"
     },
     {
-      "label": ".booted()",
+      "label": ".__construct()",
       "file_type": "code",
-      "source_file": "apps/api/app/Modules/AuditLogs/Models/AuditLog.php",
-      "source_location": "L30",
+      "source_file": "apps/api/app/Modules/Reimbursements/Http/Controllers/OcrCallbackController.php",
+      "source_location": "L18",
       "_callable": true,
       "_origin": "ast",
-      "id": "apps_api_app_modules_auditlogs_models_auditlog_auditlog_booted",
+      "id": "apps_api_app_modules_reimbursements_http_controllers_ocrcallbackcontroller_ocrcallbackcontroller_construct",
       "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": ".booted()"
+      "community_name": "OcrCallbackRequest",
+      "norm_label": ".__construct()"
     },
     {
-      "label": ".receipt()",
+      "label": ".__invoke()",
       "file_type": "code",
-      "source_file": "apps/api/app/Modules/Reimbursements/Models/ReceiptItem.php",
-      "source_location": "L21",
+      "source_file": "apps/api/app/Modules/Reimbursements/Http/Controllers/OcrCallbackController.php",
+      "source_location": "L20",
       "_callable": true,
       "_origin": "ast",
-      "id": "apps_api_app_modules_reimbursements_models_receiptitem_receiptitem_receipt",
+      "id": "apps_api_app_modules_reimbursements_http_controllers_ocrcallbackcontroller_ocrcallbackcontroller_invoke",
       "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": ".receipt()"
+      "community_name": "OcrCallbackRequest",
+      "norm_label": ".__invoke()"
     },
     {
-      "label": ".expenseCategory()",
+      "label": ".authorize()",
       "file_type": "code",
-      "source_file": "apps/api/app/Modules/Reimbursements/Models/Reimbursement.php",
-      "source_location": "L49",
+      "source_file": "apps/api/app/Modules/Reimbursements/Http/Requests/OcrCallbackRequest.php",
+      "source_location": "L9",
       "_callable": true,
       "_origin": "ast",
-      "id": "apps_api_app_modules_reimbursements_models_reimbursement_reimbursement_expensecategory",
+      "id": "apps_api_app_modules_reimbursements_http_requests_ocrcallbackrequest_ocrcallbackrequest_authorize",
       "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": ".expensecategory()"
+      "community_name": "OcrCallbackRequest",
+      "norm_label": ".authorize()"
     },
     {
-      "label": ".receipt()",
+      "label": ".messages()",
       "file_type": "code",
-      "source_file": "apps/api/app/Modules/Reimbursements/Models/Reimbursement.php",
-      "source_location": "L39",
+      "source_file": "apps/api/app/Modules/Reimbursements/Http/Requests/OcrCallbackRequest.php",
+      "source_location": "L42",
       "_callable": true,
       "_origin": "ast",
-      "id": "apps_api_app_modules_reimbursements_models_reimbursement_reimbursement_receipt",
+      "id": "apps_api_app_modules_reimbursements_http_requests_ocrcallbackrequest_ocrcallbackrequest_messages",
       "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": ".receipt()"
+      "community_name": "OcrCallbackRequest",
+      "norm_label": ".messages()"
     },
     {
-      "label": ".receipts()",
+      "label": ".rules()",
       "file_type": "code",
-      "source_file": "apps/api/app/Modules/Reimbursements/Models/Reimbursement.php",
-      "source_location": "L44",
+      "source_file": "apps/api/app/Modules/Reimbursements/Http/Requests/OcrCallbackRequest.php",
+      "source_location": "L14",
       "_callable": true,
       "_origin": "ast",
-      "id": "apps_api_app_modules_reimbursements_models_reimbursement_reimbursement_receipts",
+      "id": "apps_api_app_modules_reimbursements_http_requests_ocrcallbackrequest_ocrcallbackrequest_rules",
       "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": ".receipts()"
-    },
-    {
-      "label": ".user()",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/Reimbursements/Models/Reimbursement.php",
-      "source_location": "L34",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_app_modules_reimbursements_models_reimbursement_reimbursement_user",
-      "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": ".user()"
-    },
-    {
-      "label": ".setUp()",
-      "file_type": "code",
-      "source_file": "apps/api/tests/Feature/ReimbursementLogicTest.php",
-      "source_location": "L25",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_tests_feature_reimbursementlogictest_reimbursementlogictest_setup",
-      "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": ".setup()"
-    },
-    {
-      "label": ".test_admin_can_update_status()",
-      "file_type": "code",
-      "source_file": "apps/api/tests/Feature/ReimbursementLogicTest.php",
-      "source_location": "L273",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_tests_feature_reimbursementlogictest_reimbursementlogictest_test_admin_can_update_status",
-      "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": ".test_admin_can_update_status()"
-    },
-    {
-      "label": ".test_automatic_rejection_rule()",
-      "file_type": "code",
-      "source_file": "apps/api/tests/Feature/ReimbursementLogicTest.php",
-      "source_location": "L381",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_tests_feature_reimbursementlogictest_reimbursementlogictest_test_automatic_rejection_rule",
-      "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": ".test_automatic_rejection_rule()"
-    },
-    {
-      "label": ".test_categories_endpoint_seeds_defaults_when_empty()",
-      "file_type": "code",
-      "source_file": "apps/api/tests/Feature/ReimbursementLogicTest.php",
-      "source_location": "L108",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_tests_feature_reimbursementlogictest_reimbursementlogictest_test_categories_endpoint_seeds_defaults_when_empty",
-      "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": ".test_categories_endpoint_seeds_defaults_when_empty()"
-    },
-    {
-      "label": ".test_detail_panel_returns_accurate_data()",
-      "file_type": "code",
-      "source_file": "apps/api/tests/Feature/ReimbursementLogicTest.php",
-      "source_location": "L305",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_tests_feature_reimbursementlogictest_reimbursementlogictest_test_detail_panel_returns_accurate_data",
-      "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": ".test_detail_panel_returns_accurate_data()"
-    },
-    {
-      "label": ".test_fresh_unattached_receipt_reports_zero_reimbursement_count()",
-      "file_type": "code",
-      "source_file": "apps/api/tests/Feature/ReimbursementLogicTest.php",
-      "source_location": "L160",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_tests_feature_reimbursementlogictest_reimbursementlogictest_test_fresh_unattached_receipt_reports_zero_reimbursement_count",
-      "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": ".test_fresh_unattached_receipt_reports_zero_reimbursement_count()"
-    },
-    {
-      "label": ".test_receipt_list_includes_reimbursement_count()",
-      "file_type": "code",
-      "source_file": "apps/api/tests/Feature/ReimbursementLogicTest.php",
-      "source_location": "L123",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_tests_feature_reimbursementlogictest_reimbursementlogictest_test_receipt_list_includes_reimbursement_count",
-      "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": ".test_receipt_list_includes_reimbursement_count()"
-    },
-    {
-      "label": ".test_reimbursement_cannot_reuse_claimed_receipt()",
-      "file_type": "code",
-      "source_file": "apps/api/tests/Feature/ReimbursementLogicTest.php",
-      "source_location": "L191",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_tests_feature_reimbursementlogictest_reimbursementlogictest_test_reimbursement_cannot_reuse_claimed_receipt",
-      "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": ".test_reimbursement_cannot_reuse_claimed_receipt()"
-    },
-    {
-      "label": ".test_self_approval_is_prohibited()",
-      "file_type": "code",
-      "source_file": "apps/api/tests/Feature/ReimbursementLogicTest.php",
-      "source_location": "L237",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_tests_feature_reimbursementlogictest_reimbursementlogictest_test_self_approval_is_prohibited",
-      "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": ".test_self_approval_is_prohibited()"
-    },
-    {
-      "label": ".setUp()",
-      "file_type": "code",
-      "source_file": "apps/api/tests/Feature/ReimbursementPasswordVerificationTest.php",
-      "source_location": "L21",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_tests_feature_reimbursementpasswordverificationtest_reimbursementpasswordverificationtest_setup",
-      "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": ".setup()"
-    },
-    {
-      "label": ".test_admin_can_approve_reimbursement_with_correct_password()",
-      "file_type": "code",
-      "source_file": "apps/api/tests/Feature/ReimbursementPasswordVerificationTest.php",
-      "source_location": "L65",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_tests_feature_reimbursementpasswordverificationtest_reimbursementpasswordverificationtest_test_admin_can_approve_reimbursement_with_correct_password",
-      "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": ".test_admin_can_approve_reimbursement_with_correct_password()"
-    },
-    {
-      "label": ".test_admin_cannot_approve_reimbursement_with_incorrect_password()",
-      "file_type": "code",
-      "source_file": "apps/api/tests/Feature/ReimbursementPasswordVerificationTest.php",
-      "source_location": "L99",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_tests_feature_reimbursementpasswordverificationtest_reimbursementpasswordverificationtest_test_admin_cannot_approve_reimbursement_with_incorrect_password",
-      "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": ".test_admin_cannot_approve_reimbursement_with_incorrect_password()"
-    },
-    {
-      "label": ".test_approver_can_reject_reimbursement_with_correct_password_and_comment()",
-      "file_type": "code",
-      "source_file": "apps/api/tests/Feature/ReimbursementPasswordVerificationTest.php",
-      "source_location": "L131",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_tests_feature_reimbursementpasswordverificationtest_reimbursementpasswordverificationtest_test_approver_can_reject_reimbursement_with_correct_password_and_comment",
-      "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": ".test_approver_can_reject_reimbursement_with_correct_password_and_comment()"
-    },
-    {
-      "label": ".test_approver_cannot_reject_reimbursement_with_incorrect_password()",
-      "file_type": "code",
-      "source_file": "apps/api/tests/Feature/ReimbursementPasswordVerificationTest.php",
-      "source_location": "L165",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_tests_feature_reimbursementpasswordverificationtest_reimbursementpasswordverificationtest_test_approver_cannot_reject_reimbursement_with_incorrect_password",
-      "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": ".test_approver_cannot_reject_reimbursement_with_incorrect_password()"
-    },
-    {
-      "label": ".test_reject_rejects_comment_exceeding_255_characters()",
-      "file_type": "code",
-      "source_file": "apps/api/tests/Feature/ReimbursementPasswordVerificationTest.php",
-      "source_location": "L215",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_tests_feature_reimbursementpasswordverificationtest_reimbursementpasswordverificationtest_test_reject_rejects_comment_exceeding_255_characters",
-      "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": ".test_reject_rejects_comment_exceeding_255_characters()"
-    },
-    {
-      "label": ".test_reject_requires_comment_of_min_5_characters()",
-      "file_type": "code",
-      "source_file": "apps/api/tests/Feature/ReimbursementPasswordVerificationTest.php",
-      "source_location": "L191",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_tests_feature_reimbursementpasswordverificationtest_reimbursementpasswordverificationtest_test_reject_requires_comment_of_min_5_characters",
-      "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": ".test_reject_requires_comment_of_min_5_characters()"
-    },
-    {
-      "label": ".test_self_approval_is_forbidden()",
-      "file_type": "code",
-      "source_file": "apps/api/tests/Feature/ReimbursementPasswordVerificationTest.php",
-      "source_location": "L238",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_tests_feature_reimbursementpasswordverificationtest_reimbursementpasswordverificationtest_test_self_approval_is_forbidden",
-      "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": ".test_self_approval_is_forbidden()"
-    },
-    {
-      "label": ".test_receipt_deletion_warning_command_executes_successfully()",
-      "file_type": "code",
-      "source_file": "apps/api/tests/Feature/WarnReceiptDeletionTest.php",
-      "source_location": "L34",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_tests_feature_warnreceiptdeletiontest_warnreceiptdeletiontest_test_receipt_deletion_warning_command_executes_successfully",
-      "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": ".test_receipt_deletion_warning_command_executes_successfully()"
+      "community_name": "OcrCallbackRequest",
+      "norm_label": ".rules()"
     },
     {
       "label": "buildDefaultItems()",
@@ -5798,37 +5649,13 @@
     {
       "label": "down()",
       "file_type": "code",
-      "source_file": "apps/api/app/Modules/CashAdvances/Database/Migrations/2026_05_18_000003_create_cash_advances_table.php",
-      "source_location": "L30",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_app_modules_cashadvances_database_migrations_2026_05_18_000003_create_cash_advances_table_down",
-      "community": 40,
-      "community_name": "Illuminate\\Database\\Schema\\Blueprint",
-      "norm_label": "down()"
-    },
-    {
-      "label": "up()",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/CashAdvances/Database/Migrations/2026_05_18_000003_create_cash_advances_table.php",
-      "source_location": "L12",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_app_modules_cashadvances_database_migrations_2026_05_18_000003_create_cash_advances_table_up",
-      "community": 40,
-      "community_name": "Illuminate\\Database\\Schema\\Blueprint",
-      "norm_label": "up()"
-    },
-    {
-      "label": "down()",
-      "file_type": "code",
       "source_file": "apps/api/app/Modules/CashAdvances/Database/Migrations/2026_06_12_000002_add_settled_to_cash_advances_status.php",
       "source_location": "L29",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_api_app_modules_cashadvances_database_migrations_2026_06_12_000002_add_settled_to_cash_advances_status_down",
       "community": 40,
-      "community_name": "Illuminate\\Database\\Schema\\Blueprint",
+      "community_name": "Illuminate\\Database\\Migrations\\Migration",
       "norm_label": "down()"
     },
     {
@@ -5840,31 +5667,7 @@
       "_origin": "ast",
       "id": "apps_api_app_modules_cashadvances_database_migrations_2026_06_12_000002_add_settled_to_cash_advances_status_up",
       "community": 40,
-      "community_name": "Illuminate\\Database\\Schema\\Blueprint",
-      "norm_label": "up()"
-    },
-    {
-      "label": "down()",
-      "file_type": "code",
-      "source_file": "apps/api/database/migrations/2026_05_31_174205_create_receipt_items_table.php",
-      "source_location": "L27",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_database_migrations_2026_05_31_174205_create_receipt_items_table_down",
-      "community": 40,
-      "community_name": "Illuminate\\Database\\Schema\\Blueprint",
-      "norm_label": "down()"
-    },
-    {
-      "label": "up()",
-      "file_type": "code",
-      "source_file": "apps/api/database/migrations/2026_05_31_174205_create_receipt_items_table.php",
-      "source_location": "L12",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_database_migrations_2026_05_31_174205_create_receipt_items_table_up",
-      "community": 40,
-      "community_name": "Illuminate\\Database\\Schema\\Blueprint",
+      "community_name": "Illuminate\\Database\\Migrations\\Migration",
       "norm_label": "up()"
     },
     {
@@ -5875,7 +5678,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_api_app_modules_cashadvances_database_migrations_2026_06_14_000001_add_incomplete_to_cash_advances_status_down",
-      "community": 41,
+      "community": 40,
       "community_name": "Illuminate\\Database\\Migrations\\Migration",
       "norm_label": "down()"
     },
@@ -5887,8 +5690,56 @@
       "_callable": true,
       "_origin": "ast",
       "id": "apps_api_app_modules_cashadvances_database_migrations_2026_06_14_000001_add_incomplete_to_cash_advances_status_up",
-      "community": 41,
+      "community": 40,
       "community_name": "Illuminate\\Database\\Migrations\\Migration",
+      "norm_label": "up()"
+    },
+    {
+      "label": "down()",
+      "file_type": "code",
+      "source_file": "apps/api/database/migrations/2026_05_31_174205_create_receipt_items_table.php",
+      "source_location": "L27",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_database_migrations_2026_05_31_174205_create_receipt_items_table_down",
+      "community": 40,
+      "community_name": "Illuminate\\Database\\Migrations\\Migration",
+      "norm_label": "down()"
+    },
+    {
+      "label": "up()",
+      "file_type": "code",
+      "source_file": "apps/api/database/migrations/2026_05_31_174205_create_receipt_items_table.php",
+      "source_location": "L12",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_database_migrations_2026_05_31_174205_create_receipt_items_table_up",
+      "community": 40,
+      "community_name": "Illuminate\\Database\\Migrations\\Migration",
+      "norm_label": "up()"
+    },
+    {
+      "label": "down()",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/CashAdvances/Database/Migrations/2026_05_18_000003_create_cash_advances_table.php",
+      "source_location": "L30",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_app_modules_cashadvances_database_migrations_2026_05_18_000003_create_cash_advances_table_down",
+      "community": 41,
+      "community_name": "Illuminate\\Database\\Schema\\Blueprint",
+      "norm_label": "down()"
+    },
+    {
+      "label": "up()",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/CashAdvances/Database/Migrations/2026_05_18_000003_create_cash_advances_table.php",
+      "source_location": "L12",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_app_modules_cashadvances_database_migrations_2026_05_18_000003_create_cash_advances_table_up",
+      "community": 41,
+      "community_name": "Illuminate\\Database\\Schema\\Blueprint",
       "norm_label": "up()"
     },
     {
@@ -5900,7 +5751,7 @@
       "_origin": "ast",
       "id": "apps_api_app_modules_reimbursements_database_migrations_2026_05_19_000001_add_category_to_receipts_table_down",
       "community": 41,
-      "community_name": "Illuminate\\Database\\Migrations\\Migration",
+      "community_name": "Illuminate\\Database\\Schema\\Blueprint",
       "norm_label": "down()"
     },
     {
@@ -5912,7 +5763,7 @@
       "_origin": "ast",
       "id": "apps_api_app_modules_reimbursements_database_migrations_2026_05_19_000001_add_category_to_receipts_table_up",
       "community": 41,
-      "community_name": "Illuminate\\Database\\Migrations\\Migration",
+      "community_name": "Illuminate\\Database\\Schema\\Blueprint",
       "norm_label": "up()"
     },
     {
@@ -5924,7 +5775,7 @@
       "_origin": "ast",
       "id": "apps_api_app_modules_reimbursements_database_migrations_2026_05_19_000002_add_deletion_warning_sent_to_receipts_table_down",
       "community": 41,
-      "community_name": "Illuminate\\Database\\Migrations\\Migration",
+      "community_name": "Illuminate\\Database\\Schema\\Blueprint",
       "norm_label": "down()"
     },
     {
@@ -5936,7 +5787,7 @@
       "_origin": "ast",
       "id": "apps_api_app_modules_reimbursements_database_migrations_2026_05_19_000002_add_deletion_warning_sent_to_receipts_table_up",
       "community": 41,
-      "community_name": "Illuminate\\Database\\Migrations\\Migration",
+      "community_name": "Illuminate\\Database\\Schema\\Blueprint",
       "norm_label": "up()"
     },
     {
@@ -6051,7 +5902,7 @@
       "label": "handleClose()",
       "file_type": "code",
       "source_file": "apps/web/src/components/base/DecisionConfirmationModal.vue",
-      "source_location": "L110",
+      "source_location": "L114",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_base_decisionconfirmationmodal_handleclose",
@@ -6060,16 +5911,28 @@
       "norm_label": "handleclose()"
     },
     {
-      "label": "handleConfirm()",
+      "label": "handleFinalConfirm()",
       "file_type": "code",
       "source_file": "apps/web/src/components/base/DecisionConfirmationModal.vue",
-      "source_location": "L115",
+      "source_location": "L125",
       "_callable": true,
       "_origin": "ast",
-      "id": "apps_web_src_components_base_decisionconfirmationmodal_handleconfirm",
+      "id": "apps_web_src_components_base_decisionconfirmationmodal_handlefinalconfirm",
       "community": 44,
       "community_name": "DecisionConfirmationModal.vue",
-      "norm_label": "handleconfirm()"
+      "norm_label": "handlefinalconfirm()"
+    },
+    {
+      "label": "handleRejectNext()",
+      "file_type": "code",
+      "source_file": "apps/web/src/components/base/DecisionConfirmationModal.vue",
+      "source_location": "L119",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_web_src_components_base_decisionconfirmationmodal_handlerejectnext",
+      "community": 44,
+      "community_name": "DecisionConfirmationModal.vue",
+      "norm_label": "handlerejectnext()"
     },
     {
       "label": "handleReportDrop()",
@@ -6336,30 +6199,6 @@
       "norm_label": "firstfilepathfield()"
     },
     {
-      "label": ".extractDataFromText()",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/Ai/Services/TesseractOcrEngine.php",
-      "source_location": "L32",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_app_modules_ai_services_tesseractocrengine_tesseractocrengine_extractdatafromtext",
-      "community": 48,
-      "community_name": "Illuminate\\Http\\Request",
-      "norm_label": ".extractdatafromtext()"
-    },
-    {
-      "label": ".extractReceiptData()",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/Ai/Services/TesseractOcrEngine.php",
-      "source_location": "L14",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_app_modules_ai_services_tesseractocrengine_tesseractocrengine_extractreceiptdata",
-      "community": 48,
-      "community_name": "Illuminate\\Http\\Request",
-      "norm_label": ".extractreceiptdata()"
-    },
-    {
       "label": ".deleteAdvance()",
       "file_type": "code",
       "source_file": "apps/api/app/Modules/CashAdvances/Services/CashAdvanceService.php",
@@ -6432,136 +6271,16 @@
       "norm_label": ".store()"
     },
     {
-      "label": ".audit()",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/Liquidations/Http/Controllers/LiquidationController.php",
-      "source_location": "L282",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_app_modules_liquidations_http_controllers_liquidationcontroller_liquidationcontroller_audit",
-      "community": 48,
-      "community_name": "Illuminate\\Http\\Request",
-      "norm_label": ".audit()"
-    },
-    {
-      "label": ".__construct()",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/Liquidations/Http/Controllers/LiquidationController.php",
-      "source_location": "L21",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_app_modules_liquidations_http_controllers_liquidationcontroller_liquidationcontroller_construct",
-      "community": 48,
-      "community_name": "Illuminate\\Http\\Request",
-      "norm_label": ".__construct()"
-    },
-    {
-      "label": ".destroy()",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/Liquidations/Http/Controllers/LiquidationController.php",
-      "source_location": "L473",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_app_modules_liquidations_http_controllers_liquidationcontroller_liquidationcontroller_destroy",
-      "community": 48,
-      "community_name": "Illuminate\\Http\\Request",
-      "norm_label": ".destroy()"
-    },
-    {
       "label": ".index()",
       "file_type": "code",
-      "source_file": "apps/api/app/Modules/Liquidations/Http/Controllers/LiquidationController.php",
-      "source_location": "L29",
+      "source_file": "apps/api/app/Modules/Reimbursements/Http/Controllers/ExpenseCategoryController.php",
+      "source_location": "L13",
       "_callable": true,
       "_origin": "ast",
-      "id": "apps_api_app_modules_liquidations_http_controllers_liquidationcontroller_liquidationcontroller_index",
+      "id": "apps_api_app_modules_reimbursements_http_controllers_expensecategorycontroller_expensecategorycontroller_index",
       "community": 48,
       "community_name": "Illuminate\\Http\\Request",
       "norm_label": ".index()"
-    },
-    {
-      "label": ".scan()",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/Liquidations/Http/Controllers/LiquidationController.php",
-      "source_location": "L59",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_app_modules_liquidations_http_controllers_liquidationcontroller_liquidationcontroller_scan",
-      "community": 48,
-      "community_name": "Illuminate\\Http\\Request",
-      "norm_label": ".scan()"
-    },
-    {
-      "label": ".show()",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/Liquidations/Http/Controllers/LiquidationController.php",
-      "source_location": "L257",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_app_modules_liquidations_http_controllers_liquidationcontroller_liquidationcontroller_show",
-      "community": 48,
-      "community_name": "Illuminate\\Http\\Request",
-      "norm_label": ".show()"
-    },
-    {
-      "label": ".store()",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/Liquidations/Http/Controllers/LiquidationController.php",
-      "source_location": "L140",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_app_modules_liquidations_http_controllers_liquidationcontroller_liquidationcontroller_store",
-      "community": 48,
-      "community_name": "Illuminate\\Http\\Request",
-      "norm_label": ".store()"
-    },
-    {
-      "label": ".update()",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/Liquidations/Http/Controllers/LiquidationController.php",
-      "source_location": "L392",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_app_modules_liquidations_http_controllers_liquidationcontroller_liquidationcontroller_update",
-      "community": 48,
-      "community_name": "Illuminate\\Http\\Request",
-      "norm_label": ".update()"
-    },
-    {
-      "label": ".cashAdvance()",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/Liquidations/Models/Liquidation.php",
-      "source_location": "L34",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_app_modules_liquidations_models_liquidation_liquidation_cashadvance",
-      "community": 48,
-      "community_name": "Illuminate\\Http\\Request",
-      "norm_label": ".cashadvance()"
-    },
-    {
-      "label": ".user()",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/Liquidations/Models/Liquidation.php",
-      "source_location": "L29",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_app_modules_liquidations_models_liquidation_liquidation_user",
-      "community": 48,
-      "community_name": "Illuminate\\Http\\Request",
-      "norm_label": ".user()"
-    },
-    {
-      "label": ".__construct()",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/Reimbursements/Http/Controllers/ReceiptController.php",
-      "source_location": "L18",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_app_modules_reimbursements_http_controllers_receiptcontroller_receiptcontroller_construct",
-      "community": 48,
-      "community_name": "Illuminate\\Http\\Request",
-      "norm_label": ".__construct()"
     },
     {
       "label": ".destroy()",
@@ -6658,18 +6377,6 @@
       "community": 48,
       "community_name": "Illuminate\\Http\\Request",
       "norm_label": ".publickey()"
-    },
-    {
-      "label": ".verify()",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/Shared/Services/PasswordVerificationService.php",
-      "source_location": "L43",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_app_modules_shared_services_passwordverificationservice_passwordverificationservice_verify",
-      "community": 48,
-      "community_name": "Illuminate\\Http\\Request",
-      "norm_label": ".verify()"
     },
     {
       "label": ".boot()",
@@ -7464,6 +7171,18 @@
       "norm_label": "viewreceiptdetails()"
     },
     {
+      "label": ".booted()",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/AuditLogs/Models/AuditLog.php",
+      "source_location": "L30",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_app_modules_auditlogs_models_auditlog_auditlog_booted",
+      "community": 55,
+      "community_name": "TestCase",
+      "norm_label": ".booted()"
+    },
+    {
       "label": ".test_the_application_returns_a_successful_response()",
       "file_type": "code",
       "source_file": "apps/api/tests/Feature/ExampleTest.php",
@@ -7594,6 +7313,126 @@
       "community": 55,
       "community_name": "TestCase",
       "norm_label": ".test_valid_prs_api_request_creates_reimbursement()"
+    },
+    {
+      "label": ".setUp()",
+      "file_type": "code",
+      "source_file": "apps/api/tests/Feature/ReimbursementPasswordVerificationTest.php",
+      "source_location": "L21",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_tests_feature_reimbursementpasswordverificationtest_reimbursementpasswordverificationtest_setup",
+      "community": 55,
+      "community_name": "TestCase",
+      "norm_label": ".setup()"
+    },
+    {
+      "label": ".test_admin_can_approve_reimbursement_with_correct_password()",
+      "file_type": "code",
+      "source_file": "apps/api/tests/Feature/ReimbursementPasswordVerificationTest.php",
+      "source_location": "L65",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_tests_feature_reimbursementpasswordverificationtest_reimbursementpasswordverificationtest_test_admin_can_approve_reimbursement_with_correct_password",
+      "community": 55,
+      "community_name": "TestCase",
+      "norm_label": ".test_admin_can_approve_reimbursement_with_correct_password()"
+    },
+    {
+      "label": ".test_admin_cannot_approve_reimbursement_with_incorrect_password()",
+      "file_type": "code",
+      "source_file": "apps/api/tests/Feature/ReimbursementPasswordVerificationTest.php",
+      "source_location": "L99",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_tests_feature_reimbursementpasswordverificationtest_reimbursementpasswordverificationtest_test_admin_cannot_approve_reimbursement_with_incorrect_password",
+      "community": 55,
+      "community_name": "TestCase",
+      "norm_label": ".test_admin_cannot_approve_reimbursement_with_incorrect_password()"
+    },
+    {
+      "label": ".test_approver_can_reject_reimbursement_with_correct_password_and_comment()",
+      "file_type": "code",
+      "source_file": "apps/api/tests/Feature/ReimbursementPasswordVerificationTest.php",
+      "source_location": "L131",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_tests_feature_reimbursementpasswordverificationtest_reimbursementpasswordverificationtest_test_approver_can_reject_reimbursement_with_correct_password_and_comment",
+      "community": 55,
+      "community_name": "TestCase",
+      "norm_label": ".test_approver_can_reject_reimbursement_with_correct_password_and_comment()"
+    },
+    {
+      "label": ".test_approver_cannot_reject_reimbursement_with_incorrect_password()",
+      "file_type": "code",
+      "source_file": "apps/api/tests/Feature/ReimbursementPasswordVerificationTest.php",
+      "source_location": "L165",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_tests_feature_reimbursementpasswordverificationtest_reimbursementpasswordverificationtest_test_approver_cannot_reject_reimbursement_with_incorrect_password",
+      "community": 55,
+      "community_name": "TestCase",
+      "norm_label": ".test_approver_cannot_reject_reimbursement_with_incorrect_password()"
+    },
+    {
+      "label": ".test_reject_rejects_comment_exceeding_255_characters()",
+      "file_type": "code",
+      "source_file": "apps/api/tests/Feature/ReimbursementPasswordVerificationTest.php",
+      "source_location": "L215",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_tests_feature_reimbursementpasswordverificationtest_reimbursementpasswordverificationtest_test_reject_rejects_comment_exceeding_255_characters",
+      "community": 55,
+      "community_name": "TestCase",
+      "norm_label": ".test_reject_rejects_comment_exceeding_255_characters()"
+    },
+    {
+      "label": ".test_reject_requires_comment_of_min_5_characters()",
+      "file_type": "code",
+      "source_file": "apps/api/tests/Feature/ReimbursementPasswordVerificationTest.php",
+      "source_location": "L191",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_tests_feature_reimbursementpasswordverificationtest_reimbursementpasswordverificationtest_test_reject_requires_comment_of_min_5_characters",
+      "community": 55,
+      "community_name": "TestCase",
+      "norm_label": ".test_reject_requires_comment_of_min_5_characters()"
+    },
+    {
+      "label": ".test_self_approval_is_forbidden()",
+      "file_type": "code",
+      "source_file": "apps/api/tests/Feature/ReimbursementPasswordVerificationTest.php",
+      "source_location": "L238",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_tests_feature_reimbursementpasswordverificationtest_reimbursementpasswordverificationtest_test_self_approval_is_forbidden",
+      "community": 55,
+      "community_name": "TestCase",
+      "norm_label": ".test_self_approval_is_forbidden()"
+    },
+    {
+      "label": ".setUp()",
+      "file_type": "code",
+      "source_file": "apps/api/tests/Feature/WarnReceiptDeletionTest.php",
+      "source_location": "L20",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_tests_feature_warnreceiptdeletiontest_warnreceiptdeletiontest_setup",
+      "community": 55,
+      "community_name": "TestCase",
+      "norm_label": ".setup()"
+    },
+    {
+      "label": ".test_receipt_deletion_warning_command_executes_successfully()",
+      "file_type": "code",
+      "source_file": "apps/api/tests/Feature/WarnReceiptDeletionTest.php",
+      "source_location": "L34",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_tests_feature_warnreceiptdeletiontest_warnreceiptdeletiontest_test_receipt_deletion_warning_command_executes_successfully",
+      "community": 55,
+      "community_name": "TestCase",
+      "norm_label": ".test_receipt_deletion_warning_command_executes_successfully()"
     },
     {
       "label": ".generateMockToken()",
@@ -7800,63 +7639,39 @@
       "norm_label": "formatdate()"
     },
     {
-      "label": ".__construct()",
+      "label": ".disburse()",
       "file_type": "code",
-      "source_file": "apps/api/app/Modules/Reimbursements/Http/Controllers/OcrCallbackController.php",
-      "source_location": "L18",
+      "source_file": "apps/api/app/Modules/CashAdvances/Http/Controllers/CashAdvanceController.php",
+      "source_location": "L140",
       "_callable": true,
       "_origin": "ast",
-      "id": "apps_api_app_modules_reimbursements_http_controllers_ocrcallbackcontroller_ocrcallbackcontroller_construct",
+      "id": "apps_api_app_modules_cashadvances_http_controllers_cashadvancecontroller_cashadvancecontroller_disburse",
       "community": 59,
-      "community_name": "OcrCallbackRequest",
-      "norm_label": ".__construct()"
-    },
-    {
-      "label": ".__invoke()",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/Reimbursements/Http/Controllers/OcrCallbackController.php",
-      "source_location": "L20",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_app_modules_reimbursements_http_controllers_ocrcallbackcontroller_ocrcallbackcontroller_invoke",
-      "community": 59,
-      "community_name": "OcrCallbackRequest",
-      "norm_label": ".__invoke()"
+      "community_name": "DisburseCashAdvanceRequest",
+      "norm_label": ".disburse()"
     },
     {
       "label": ".authorize()",
       "file_type": "code",
-      "source_file": "apps/api/app/Modules/Reimbursements/Http/Requests/OcrCallbackRequest.php",
-      "source_location": "L9",
+      "source_file": "apps/api/app/Modules/CashAdvances/Http/Requests/DisburseCashAdvanceRequest.php",
+      "source_location": "L12",
       "_callable": true,
       "_origin": "ast",
-      "id": "apps_api_app_modules_reimbursements_http_requests_ocrcallbackrequest_ocrcallbackrequest_authorize",
+      "id": "apps_api_app_modules_cashadvances_http_requests_disbursecashadvancerequest_disbursecashadvancerequest_authorize",
       "community": 59,
-      "community_name": "OcrCallbackRequest",
+      "community_name": "DisburseCashAdvanceRequest",
       "norm_label": ".authorize()"
-    },
-    {
-      "label": ".messages()",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/Reimbursements/Http/Requests/OcrCallbackRequest.php",
-      "source_location": "L42",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_app_modules_reimbursements_http_requests_ocrcallbackrequest_ocrcallbackrequest_messages",
-      "community": 59,
-      "community_name": "OcrCallbackRequest",
-      "norm_label": ".messages()"
     },
     {
       "label": ".rules()",
       "file_type": "code",
-      "source_file": "apps/api/app/Modules/Reimbursements/Http/Requests/OcrCallbackRequest.php",
-      "source_location": "L14",
+      "source_file": "apps/api/app/Modules/CashAdvances/Http/Requests/DisburseCashAdvanceRequest.php",
+      "source_location": "L22",
       "_callable": true,
       "_origin": "ast",
-      "id": "apps_api_app_modules_reimbursements_http_requests_ocrcallbackrequest_ocrcallbackrequest_rules",
+      "id": "apps_api_app_modules_cashadvances_http_requests_disbursecashadvancerequest_disbursecashadvancerequest_rules",
       "community": 59,
-      "community_name": "OcrCallbackRequest",
+      "community_name": "DisburseCashAdvanceRequest",
       "norm_label": ".rules()"
     },
     {
@@ -8124,64 +7939,148 @@
       "norm_label": ".test_successful_high_confidence_ocr_sets_status_processed()"
     },
     {
-      "label": ".headers()",
+      "label": ".extractDataFromText()",
       "file_type": "code",
-      "source_file": "apps/api/tests/Feature/PrsReimbursementWebhookTest.php",
-      "source_location": "L105",
+      "source_file": "apps/api/app/Modules/Ai/Services/TesseractOcrEngine.php",
+      "source_location": "L32",
       "_callable": true,
       "_origin": "ast",
-      "id": "apps_api_tests_feature_prsreimbursementwebhooktest_prsreimbursementwebhooktest_headers",
-      "community": 60,
-      "community_name": "OcrCallbackServiceTest",
-      "norm_label": ".headers()"
+      "id": "apps_api_app_modules_ai_services_tesseractocrengine_tesseractocrengine_extractdatafromtext",
+      "community": 61,
+      "community_name": "Liquidation",
+      "norm_label": ".extractdatafromtext()"
     },
     {
-      "label": ".payload()",
+      "label": ".extractReceiptData()",
       "file_type": "code",
-      "source_file": "apps/api/tests/Feature/PrsReimbursementWebhookTest.php",
-      "source_location": "L60",
+      "source_file": "apps/api/app/Modules/Ai/Services/TesseractOcrEngine.php",
+      "source_location": "L14",
       "_callable": true,
       "_origin": "ast",
-      "id": "apps_api_tests_feature_prsreimbursementwebhooktest_prsreimbursementwebhooktest_payload",
-      "community": 60,
-      "community_name": "OcrCallbackServiceTest",
-      "norm_label": ".payload()"
+      "id": "apps_api_app_modules_ai_services_tesseractocrengine_tesseractocrengine_extractreceiptdata",
+      "community": 61,
+      "community_name": "Liquidation",
+      "norm_label": ".extractreceiptdata()"
     },
     {
-      "label": ".test_duplicate_delivery_is_idempotent()",
+      "label": ".audit()",
       "file_type": "code",
-      "source_file": "apps/api/tests/Feature/PrsReimbursementWebhookTest.php",
-      "source_location": "L47",
+      "source_file": "apps/api/app/Modules/Liquidations/Http/Controllers/LiquidationController.php",
+      "source_location": "L282",
       "_callable": true,
       "_origin": "ast",
-      "id": "apps_api_tests_feature_prsreimbursementwebhooktest_prsreimbursementwebhooktest_test_duplicate_delivery_is_idempotent",
-      "community": 60,
-      "community_name": "OcrCallbackServiceTest",
-      "norm_label": ".test_duplicate_delivery_is_idempotent()"
+      "id": "apps_api_app_modules_liquidations_http_controllers_liquidationcontroller_liquidationcontroller_audit",
+      "community": 61,
+      "community_name": "Liquidation",
+      "norm_label": ".audit()"
     },
     {
-      "label": ".test_invalid_signature_is_rejected()",
+      "label": ".__construct()",
       "file_type": "code",
-      "source_file": "apps/api/tests/Feature/PrsReimbursementWebhookTest.php",
-      "source_location": "L35",
+      "source_file": "apps/api/app/Modules/Liquidations/Http/Controllers/LiquidationController.php",
+      "source_location": "L21",
       "_callable": true,
       "_origin": "ast",
-      "id": "apps_api_tests_feature_prsreimbursementwebhooktest_prsreimbursementwebhooktest_test_invalid_signature_is_rejected",
-      "community": 60,
-      "community_name": "OcrCallbackServiceTest",
-      "norm_label": ".test_invalid_signature_is_rejected()"
+      "id": "apps_api_app_modules_liquidations_http_controllers_liquidationcontroller_liquidationcontroller_construct",
+      "community": 61,
+      "community_name": "Liquidation",
+      "norm_label": ".__construct()"
     },
     {
-      "label": ".test_valid_signed_prs_webhook_creates_reimbursement()",
+      "label": ".destroy()",
       "file_type": "code",
-      "source_file": "apps/api/tests/Feature/PrsReimbursementWebhookTest.php",
-      "source_location": "L13",
+      "source_file": "apps/api/app/Modules/Liquidations/Http/Controllers/LiquidationController.php",
+      "source_location": "L473",
       "_callable": true,
       "_origin": "ast",
-      "id": "apps_api_tests_feature_prsreimbursementwebhooktest_prsreimbursementwebhooktest_test_valid_signed_prs_webhook_creates_reimbursement",
-      "community": 60,
-      "community_name": "OcrCallbackServiceTest",
-      "norm_label": ".test_valid_signed_prs_webhook_creates_reimbursement()"
+      "id": "apps_api_app_modules_liquidations_http_controllers_liquidationcontroller_liquidationcontroller_destroy",
+      "community": 61,
+      "community_name": "Liquidation",
+      "norm_label": ".destroy()"
+    },
+    {
+      "label": ".index()",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/Liquidations/Http/Controllers/LiquidationController.php",
+      "source_location": "L29",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_app_modules_liquidations_http_controllers_liquidationcontroller_liquidationcontroller_index",
+      "community": 61,
+      "community_name": "Liquidation",
+      "norm_label": ".index()"
+    },
+    {
+      "label": ".scan()",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/Liquidations/Http/Controllers/LiquidationController.php",
+      "source_location": "L59",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_app_modules_liquidations_http_controllers_liquidationcontroller_liquidationcontroller_scan",
+      "community": 61,
+      "community_name": "Liquidation",
+      "norm_label": ".scan()"
+    },
+    {
+      "label": ".show()",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/Liquidations/Http/Controllers/LiquidationController.php",
+      "source_location": "L257",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_app_modules_liquidations_http_controllers_liquidationcontroller_liquidationcontroller_show",
+      "community": 61,
+      "community_name": "Liquidation",
+      "norm_label": ".show()"
+    },
+    {
+      "label": ".store()",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/Liquidations/Http/Controllers/LiquidationController.php",
+      "source_location": "L140",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_app_modules_liquidations_http_controllers_liquidationcontroller_liquidationcontroller_store",
+      "community": 61,
+      "community_name": "Liquidation",
+      "norm_label": ".store()"
+    },
+    {
+      "label": ".update()",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/Liquidations/Http/Controllers/LiquidationController.php",
+      "source_location": "L392",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_app_modules_liquidations_http_controllers_liquidationcontroller_liquidationcontroller_update",
+      "community": 61,
+      "community_name": "Liquidation",
+      "norm_label": ".update()"
+    },
+    {
+      "label": ".cashAdvance()",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/Liquidations/Models/Liquidation.php",
+      "source_location": "L34",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_app_modules_liquidations_models_liquidation_liquidation_cashadvance",
+      "community": 61,
+      "community_name": "Liquidation",
+      "norm_label": ".cashadvance()"
+    },
+    {
+      "label": ".user()",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/Liquidations/Models/Liquidation.php",
+      "source_location": "L29",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_app_modules_liquidations_models_liquidation_liquidation_user",
+      "community": 61,
+      "community_name": "Liquidation",
+      "norm_label": ".user()"
     },
     {
       "label": ".setUp()",
@@ -8192,7 +8091,7 @@
       "_origin": "ast",
       "id": "apps_api_tests_feature_liquidationlogictest_liquidationlogictest_setup",
       "community": 61,
-      "community_name": "LiquidationLogicTest",
+      "community_name": "Liquidation",
       "norm_label": ".setup()"
     },
     {
@@ -8204,7 +8103,7 @@
       "_origin": "ast",
       "id": "apps_api_tests_feature_liquidationlogictest_liquidationlogictest_test_audit_liquidation_approval_on_full_payment_sets_advance_to_liquidated",
       "community": 61,
-      "community_name": "LiquidationLogicTest",
+      "community_name": "Liquidation",
       "norm_label": ".test_audit_liquidation_approval_on_full_payment_sets_advance_to_liquidated()"
     },
     {
@@ -8216,7 +8115,7 @@
       "_origin": "ast",
       "id": "apps_api_tests_feature_liquidationlogictest_liquidationlogictest_test_audit_liquidation_approval_on_shortfall_sets_advance_to_incomplete",
       "community": 61,
-      "community_name": "LiquidationLogicTest",
+      "community_name": "Liquidation",
       "norm_label": ".test_audit_liquidation_approval_on_shortfall_sets_advance_to_incomplete()"
     },
     {
@@ -8228,7 +8127,7 @@
       "_origin": "ast",
       "id": "apps_api_tests_feature_liquidationlogictest_liquidationlogictest_test_audit_liquidation_rejection_requires_admin_note",
       "community": 61,
-      "community_name": "LiquidationLogicTest",
+      "community_name": "Liquidation",
       "norm_label": ".test_audit_liquidation_rejection_requires_admin_note()"
     },
     {
@@ -8240,7 +8139,7 @@
       "_origin": "ast",
       "id": "apps_api_tests_feature_liquidationlogictest_liquidationlogictest_test_audit_rejection_on_incomplete_advance_returns_to_incomplete",
       "community": 61,
-      "community_name": "LiquidationLogicTest",
+      "community_name": "Liquidation",
       "norm_label": ".test_audit_rejection_on_incomplete_advance_returns_to_incomplete()"
     },
     {
@@ -8252,7 +8151,7 @@
       "_origin": "ast",
       "id": "apps_api_tests_feature_liquidationlogictest_liquidationlogictest_test_resubmission_is_allowed_on_incomplete_advance",
       "community": 61,
-      "community_name": "LiquidationLogicTest",
+      "community_name": "Liquidation",
       "norm_label": ".test_resubmission_is_allowed_on_incomplete_advance()"
     },
     {
@@ -8264,7 +8163,7 @@
       "_origin": "ast",
       "id": "apps_api_tests_feature_liquidationlogictest_liquidationlogictest_test_submit_liquidation_requires_shortfall_explanation",
       "community": 61,
-      "community_name": "LiquidationLogicTest",
+      "community_name": "Liquidation",
       "norm_label": ".test_submit_liquidation_requires_shortfall_explanation()"
     },
     {
@@ -8276,7 +8175,7 @@
       "_origin": "ast",
       "id": "apps_api_tests_feature_liquidationlogictest_liquidationlogictest_test_submit_liquidation_transitions_cash_advance_status",
       "community": 61,
-      "community_name": "LiquidationLogicTest",
+      "community_name": "Liquidation",
       "norm_label": ".test_submit_liquidation_transitions_cash_advance_status()"
     },
     {
@@ -8676,6 +8575,18 @@
       "norm_label": ".uploader()"
     },
     {
+      "label": ".receipt()",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/Reimbursements/Models/ReceiptItem.php",
+      "source_location": "L21",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_app_modules_reimbursements_models_receiptitem_receiptitem_receipt",
+      "community": 7,
+      "community_name": "Receipt",
+      "norm_label": ".receipt()"
+    },
+    {
       "label": ".updated()",
       "file_type": "code",
       "source_file": "apps/api/app/Modules/Reimbursements/Observers/ReceiptStatusObserver.php",
@@ -8686,30 +8597,6 @@
       "community": 7,
       "community_name": "Receipt",
       "norm_label": ".updated()"
-    },
-    {
-      "label": ".getReceipt()",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/Reimbursements/Services/ReceiptService.php",
-      "source_location": "L61",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_app_modules_reimbursements_services_receiptservice_receiptservice_getreceipt",
-      "community": 7,
-      "community_name": "Receipt",
-      "norm_label": ".getreceipt()"
-    },
-    {
-      "label": ".listReceipts()",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/Reimbursements/Services/ReceiptService.php",
-      "source_location": "L22",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_app_modules_reimbursements_services_receiptservice_receiptservice_listreceipts",
-      "community": 7,
-      "community_name": "Receipt",
-      "norm_label": ".listreceipts()"
     },
     {
       "label": "duplicateReceiptExists()",
@@ -9024,6 +8911,54 @@
       "norm_label": "selectadvance()"
     },
     {
+      "label": ".expenseCategory()",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/Reimbursements/Models/Reimbursement.php",
+      "source_location": "L49",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_app_modules_reimbursements_models_reimbursement_reimbursement_expensecategory",
+      "community": 72,
+      "community_name": "User",
+      "norm_label": ".expensecategory()"
+    },
+    {
+      "label": ".receipt()",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/Reimbursements/Models/Reimbursement.php",
+      "source_location": "L39",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_app_modules_reimbursements_models_reimbursement_reimbursement_receipt",
+      "community": 72,
+      "community_name": "User",
+      "norm_label": ".receipt()"
+    },
+    {
+      "label": ".receipts()",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/Reimbursements/Models/Reimbursement.php",
+      "source_location": "L44",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_app_modules_reimbursements_models_reimbursement_reimbursement_receipts",
+      "community": 72,
+      "community_name": "User",
+      "norm_label": ".receipts()"
+    },
+    {
+      "label": ".user()",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/Reimbursements/Models/Reimbursement.php",
+      "source_location": "L34",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_app_modules_reimbursements_models_reimbursement_reimbursement_user",
+      "community": 72,
+      "community_name": "User",
+      "norm_label": ".user()"
+    },
+    {
       "label": ".approveReimbursement()",
       "file_type": "code",
       "source_file": "apps/api/app/Modules/Reimbursements/Services/ReimbursementService.php",
@@ -9158,14 +9093,110 @@
     {
       "label": ".setUp()",
       "file_type": "code",
-      "source_file": "apps/api/tests/Feature/WarnReceiptDeletionTest.php",
-      "source_location": "L20",
+      "source_file": "apps/api/tests/Feature/ReimbursementLogicTest.php",
+      "source_location": "L25",
       "_callable": true,
       "_origin": "ast",
-      "id": "apps_api_tests_feature_warnreceiptdeletiontest_warnreceiptdeletiontest_setup",
+      "id": "apps_api_tests_feature_reimbursementlogictest_reimbursementlogictest_setup",
       "community": 72,
       "community_name": "User",
       "norm_label": ".setup()"
+    },
+    {
+      "label": ".test_admin_can_update_status()",
+      "file_type": "code",
+      "source_file": "apps/api/tests/Feature/ReimbursementLogicTest.php",
+      "source_location": "L273",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_tests_feature_reimbursementlogictest_reimbursementlogictest_test_admin_can_update_status",
+      "community": 72,
+      "community_name": "User",
+      "norm_label": ".test_admin_can_update_status()"
+    },
+    {
+      "label": ".test_automatic_rejection_rule()",
+      "file_type": "code",
+      "source_file": "apps/api/tests/Feature/ReimbursementLogicTest.php",
+      "source_location": "L381",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_tests_feature_reimbursementlogictest_reimbursementlogictest_test_automatic_rejection_rule",
+      "community": 72,
+      "community_name": "User",
+      "norm_label": ".test_automatic_rejection_rule()"
+    },
+    {
+      "label": ".test_categories_endpoint_seeds_defaults_when_empty()",
+      "file_type": "code",
+      "source_file": "apps/api/tests/Feature/ReimbursementLogicTest.php",
+      "source_location": "L108",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_tests_feature_reimbursementlogictest_reimbursementlogictest_test_categories_endpoint_seeds_defaults_when_empty",
+      "community": 72,
+      "community_name": "User",
+      "norm_label": ".test_categories_endpoint_seeds_defaults_when_empty()"
+    },
+    {
+      "label": ".test_detail_panel_returns_accurate_data()",
+      "file_type": "code",
+      "source_file": "apps/api/tests/Feature/ReimbursementLogicTest.php",
+      "source_location": "L305",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_tests_feature_reimbursementlogictest_reimbursementlogictest_test_detail_panel_returns_accurate_data",
+      "community": 72,
+      "community_name": "User",
+      "norm_label": ".test_detail_panel_returns_accurate_data()"
+    },
+    {
+      "label": ".test_fresh_unattached_receipt_reports_zero_reimbursement_count()",
+      "file_type": "code",
+      "source_file": "apps/api/tests/Feature/ReimbursementLogicTest.php",
+      "source_location": "L160",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_tests_feature_reimbursementlogictest_reimbursementlogictest_test_fresh_unattached_receipt_reports_zero_reimbursement_count",
+      "community": 72,
+      "community_name": "User",
+      "norm_label": ".test_fresh_unattached_receipt_reports_zero_reimbursement_count()"
+    },
+    {
+      "label": ".test_receipt_list_includes_reimbursement_count()",
+      "file_type": "code",
+      "source_file": "apps/api/tests/Feature/ReimbursementLogicTest.php",
+      "source_location": "L123",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_tests_feature_reimbursementlogictest_reimbursementlogictest_test_receipt_list_includes_reimbursement_count",
+      "community": 72,
+      "community_name": "User",
+      "norm_label": ".test_receipt_list_includes_reimbursement_count()"
+    },
+    {
+      "label": ".test_reimbursement_cannot_reuse_claimed_receipt()",
+      "file_type": "code",
+      "source_file": "apps/api/tests/Feature/ReimbursementLogicTest.php",
+      "source_location": "L191",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_tests_feature_reimbursementlogictest_reimbursementlogictest_test_reimbursement_cannot_reuse_claimed_receipt",
+      "community": 72,
+      "community_name": "User",
+      "norm_label": ".test_reimbursement_cannot_reuse_claimed_receipt()"
+    },
+    {
+      "label": ".test_self_approval_is_prohibited()",
+      "file_type": "code",
+      "source_file": "apps/api/tests/Feature/ReimbursementLogicTest.php",
+      "source_location": "L237",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "apps_api_tests_feature_reimbursementlogictest_reimbursementlogictest_test_self_approval_is_prohibited",
+      "community": 72,
+      "community_name": "User",
+      "norm_label": ".test_self_approval_is_prohibited()"
     },
     {
       "label": "formatTin()",
@@ -9399,7 +9430,7 @@
       "label": "cancelConfirmation()",
       "file_type": "code",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L160",
+      "source_location": "L161",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_cancelconfirmation",
@@ -9411,7 +9442,7 @@
       "label": "clearSignature()",
       "file_type": "code",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L255",
+      "source_location": "L256",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_clearsignature",
@@ -9423,7 +9454,7 @@
       "label": "closeDetails()",
       "file_type": "code",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L91",
+      "source_location": "L92",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_closedetails",
@@ -9435,7 +9466,7 @@
       "label": "confirmAcknowledge()",
       "file_type": "code",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L267",
+      "source_location": "L268",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_confirmacknowledge",
@@ -9447,7 +9478,7 @@
       "label": "confirmAdminDecision()",
       "file_type": "code",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L164",
+      "source_location": "L165",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_confirmadmindecision",
@@ -9459,7 +9490,7 @@
       "label": "downloadDocument()",
       "file_type": "code",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L114",
+      "source_location": "L115",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_downloaddocument",
@@ -9471,7 +9502,7 @@
       "label": "drawSignature()",
       "file_type": "code",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L241",
+      "source_location": "L242",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_drawsignature",
@@ -9483,7 +9514,7 @@
       "label": "formatDateOnly()",
       "file_type": "code",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L102",
+      "source_location": "L103",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_formatdateonly",
@@ -9495,7 +9526,7 @@
       "label": "outstandingBalance()",
       "file_type": "code",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L95",
+      "source_location": "L96",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_outstandingbalance",
@@ -9507,7 +9538,7 @@
       "label": "prepareSignatureCanvas()",
       "file_type": "code",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L196",
+      "source_location": "L197",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_preparesignaturecanvas",
@@ -9519,7 +9550,7 @@
       "label": "requestConfirmation()",
       "file_type": "code",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L145",
+      "source_location": "L146",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_requestconfirmation",
@@ -9531,7 +9562,7 @@
       "label": "signaturePoint()",
       "file_type": "code",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L220",
+      "source_location": "L221",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_signaturepoint",
@@ -9543,7 +9574,7 @@
       "label": "startSignature()",
       "file_type": "code",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L228",
+      "source_location": "L229",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_startsignature",
@@ -9555,7 +9586,7 @@
       "label": "stopSignature()",
       "file_type": "code",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L251",
+      "source_location": "L252",
       "_callable": true,
       "_origin": "ast",
       "id": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_stopsignature",
@@ -9600,39 +9631,39 @@
       "norm_label": "generate()"
     },
     {
-      "label": ".disburse()",
+      "label": ".reject()",
       "file_type": "code",
       "source_file": "apps/api/app/Modules/CashAdvances/Http/Controllers/CashAdvanceController.php",
-      "source_location": "L140",
+      "source_location": "L115",
       "_callable": true,
       "_origin": "ast",
-      "id": "apps_api_app_modules_cashadvances_http_controllers_cashadvancecontroller_cashadvancecontroller_disburse",
+      "id": "apps_api_app_modules_cashadvances_http_controllers_cashadvancecontroller_cashadvancecontroller_reject",
       "community": 88,
-      "community_name": "DisburseCashAdvanceRequest",
-      "norm_label": ".disburse()"
+      "community_name": "RejectCashAdvanceRequest",
+      "norm_label": ".reject()"
     },
     {
       "label": ".authorize()",
       "file_type": "code",
-      "source_file": "apps/api/app/Modules/CashAdvances/Http/Requests/DisburseCashAdvanceRequest.php",
+      "source_file": "apps/api/app/Modules/CashAdvances/Http/Requests/RejectCashAdvanceRequest.php",
       "source_location": "L12",
       "_callable": true,
       "_origin": "ast",
-      "id": "apps_api_app_modules_cashadvances_http_requests_disbursecashadvancerequest_disbursecashadvancerequest_authorize",
+      "id": "apps_api_app_modules_cashadvances_http_requests_rejectcashadvancerequest_rejectcashadvancerequest_authorize",
       "community": 88,
-      "community_name": "DisburseCashAdvanceRequest",
+      "community_name": "RejectCashAdvanceRequest",
       "norm_label": ".authorize()"
     },
     {
       "label": ".rules()",
       "file_type": "code",
-      "source_file": "apps/api/app/Modules/CashAdvances/Http/Requests/DisburseCashAdvanceRequest.php",
+      "source_file": "apps/api/app/Modules/CashAdvances/Http/Requests/RejectCashAdvanceRequest.php",
       "source_location": "L22",
       "_callable": true,
       "_origin": "ast",
-      "id": "apps_api_app_modules_cashadvances_http_requests_disbursecashadvancerequest_disbursecashadvancerequest_rules",
+      "id": "apps_api_app_modules_cashadvances_http_requests_rejectcashadvancerequest_rejectcashadvancerequest_rules",
       "community": 88,
-      "community_name": "DisburseCashAdvanceRequest",
+      "community_name": "RejectCashAdvanceRequest",
       "norm_label": ".rules()"
     },
     {
@@ -9982,42 +10013,6 @@
       "community": 94,
       "community_name": "Illuminate\\Support\\Facades\\Route",
       "norm_label": ".register()"
-    },
-    {
-      "label": ".reject()",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/CashAdvances/Http/Controllers/CashAdvanceController.php",
-      "source_location": "L115",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_app_modules_cashadvances_http_controllers_cashadvancecontroller_cashadvancecontroller_reject",
-      "community": 95,
-      "community_name": "RejectCashAdvanceRequest",
-      "norm_label": ".reject()"
-    },
-    {
-      "label": ".authorize()",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/CashAdvances/Http/Requests/RejectCashAdvanceRequest.php",
-      "source_location": "L12",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_app_modules_cashadvances_http_requests_rejectcashadvancerequest_rejectcashadvancerequest_authorize",
-      "community": 95,
-      "community_name": "RejectCashAdvanceRequest",
-      "norm_label": ".authorize()"
-    },
-    {
-      "label": ".rules()",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/CashAdvances/Http/Requests/RejectCashAdvanceRequest.php",
-      "source_location": "L22",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "apps_api_app_modules_cashadvances_http_requests_rejectcashadvancerequest_rejectcashadvancerequest_rules",
-      "community": 95,
-      "community_name": "RejectCashAdvanceRequest",
-      "norm_label": ".rules()"
     },
     {
       "label": "handleKeydown()",
@@ -13052,37 +13047,15 @@
       "norm_label": "2026_05_18_000000_create_users_table.php"
     },
     {
-      "label": "extra",
+      "label": "PrsReimbursementWebhookTest.php",
       "file_type": "code",
-      "source_file": "apps/api/composer.json",
-      "source_location": "L73",
+      "source_file": "apps/api/tests/Feature/PrsReimbursementWebhookTest.php",
+      "source_location": "L1",
       "_origin": "ast",
-      "id": "apps_api_composer_extra",
+      "id": "apps_api_tests_feature_prsreimbursementwebhooktest",
       "community": 147,
-      "community_name": "extra",
-      "norm_label": "extra"
-    },
-    {
-      "label": "laravel",
-      "file_type": "code",
-      "source_file": "apps/api/composer.json",
-      "source_location": "L74",
-      "_origin": "ast",
-      "id": "apps_api_composer_extra_laravel",
-      "community": 147,
-      "community_name": "extra",
-      "norm_label": "laravel"
-    },
-    {
-      "label": "dont-discover",
-      "file_type": "code",
-      "source_file": "apps/api/composer.json",
-      "source_location": "L75",
-      "_origin": "ast",
-      "id": "apps_api_composer_laravel_dont_discover",
-      "community": 147,
-      "community_name": "extra",
-      "norm_label": "dont-discover"
+      "community_name": "PrsReimbursementWebhookTest",
+      "norm_label": "prsreimbursementwebhooktest.php"
     },
     {
       "label": "post-autoload-dump",
@@ -13393,6 +13366,17 @@
       "norm_label": "useliquidationsubmit.js"
     },
     {
+      "label": "App\\Modules\\Shared\\Traits\\ValidatesReceiptDuplicates",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "_origin": "ast",
+      "id": "app_modules_shared_traits_validatesreceiptduplicates",
+      "community": 16,
+      "community_name": "ExpenseCategory",
+      "norm_label": "app\\modules\\shared\\traits\\validatesreceiptduplicates"
+    },
+    {
       "label": "ExpenseService.php",
       "file_type": "code",
       "source_file": "apps/api/app/Modules/Expenses/Services/ExpenseService.php",
@@ -13402,17 +13386,6 @@
       "community": 16,
       "community_name": "ExpenseCategory",
       "norm_label": "expenseservice.php"
-    },
-    {
-      "label": "ExpenseCategoryController.php",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/Reimbursements/Http/Controllers/ExpenseCategoryController.php",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "apps_api_app_modules_reimbursements_http_controllers_expensecategorycontroller",
-      "community": 16,
-      "community_name": "ExpenseCategory",
-      "norm_label": "expensecategorycontroller.php"
     },
     {
       "label": "PrsReimbursementRequestController.php",
@@ -13435,17 +13408,6 @@
       "community": 16,
       "community_name": "ExpenseCategory",
       "norm_label": "prswebhookcontroller.php"
-    },
-    {
-      "label": "Reimbursements/routes/api.php",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/Reimbursements/routes/api.php",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "apps_api_app_modules_reimbursements_routes_api",
-      "community": 16,
-      "community_name": "ExpenseCategory",
-      "norm_label": "reimbursements/routes/api.php"
     },
     {
       "label": "Collection",
@@ -14094,17 +14056,6 @@
       "norm_label": "mail.php"
     },
     {
-      "label": "App\\Modules\\Shared\\Traits\\ValidatesReceiptDuplicates",
-      "file_type": "code",
-      "source_file": "",
-      "source_location": "",
-      "_origin": "ast",
-      "id": "app_modules_shared_traits_validatesreceiptduplicates",
-      "community": 19,
-      "community_name": "AuditLogService",
-      "norm_label": "app\\modules\\shared\\traits\\validatesreceiptduplicates"
-    },
-    {
       "label": "ComputeDailyPenalties.php",
       "file_type": "code",
       "source_file": "apps/api/app/Console/Commands/ComputeDailyPenalties.php",
@@ -14138,17 +14089,6 @@
       "norm_label": "notificationdeliveryservice.php"
     },
     {
-      "label": "ReceiptService.php",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/Reimbursements/Services/ReceiptService.php",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "apps_api_app_modules_reimbursements_services_receiptservice",
-      "community": 19,
-      "community_name": "AuditLogService",
-      "norm_label": "receiptservice.php"
-    },
-    {
       "label": "Command",
       "file_type": "code",
       "source_file": "",
@@ -14169,17 +14109,6 @@
       "community": 19,
       "community_name": "AuditLogService",
       "norm_label": "illuminate\\console\\command"
-    },
-    {
-      "label": "Illuminate\\Support\\Facades\\Bus",
-      "file_type": "code",
-      "source_file": "",
-      "source_location": "",
-      "_origin": "ast",
-      "id": "illuminate_support_facades_bus",
-      "community": 19,
-      "community_name": "AuditLogService",
-      "norm_label": "illuminate\\support\\facades\\bus"
     },
     {
       "label": "queue.php",
@@ -14798,70 +14727,26 @@
       "norm_label": "2026_06_18_000003_drop_category_from_reimbursements_table.php"
     },
     {
-      "label": "AuditLog.php",
+      "label": "OcrCallbackController.php",
       "file_type": "code",
-      "source_file": "apps/api/app/Modules/AuditLogs/Models/AuditLog.php",
+      "source_file": "apps/api/app/Modules/Reimbursements/Http/Controllers/OcrCallbackController.php",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "apps_api_app_modules_auditlogs_models_auditlog",
+      "id": "apps_api_app_modules_reimbursements_http_controllers_ocrcallbackcontroller",
       "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": "auditlog.php"
+      "community_name": "OcrCallbackRequest",
+      "norm_label": "ocrcallbackcontroller.php"
     },
     {
-      "label": "AuditLogService.php",
+      "label": "OcrCallbackRequest.php",
       "file_type": "code",
-      "source_file": "apps/api/app/Modules/AuditLogs/Services/AuditLogService.php",
+      "source_file": "apps/api/app/Modules/Reimbursements/Http/Requests/OcrCallbackRequest.php",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "apps_api_app_modules_auditlogs_services_auditlogservice",
+      "id": "apps_api_app_modules_reimbursements_http_requests_ocrcallbackrequest",
       "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": "auditlogservice.php"
-    },
-    {
-      "label": "ReceiptItem.php",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/Reimbursements/Models/ReceiptItem.php",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "apps_api_app_modules_reimbursements_models_receiptitem",
-      "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": "receiptitem.php"
-    },
-    {
-      "label": "ReceiptOwnerUpdateTest.php",
-      "file_type": "code",
-      "source_file": "apps/api/tests/Feature/ReceiptOwnerUpdateTest.php",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "apps_api_tests_feature_receiptownerupdatetest",
-      "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": "receiptownerupdatetest.php"
-    },
-    {
-      "label": "ReimbursementLogicTest.php",
-      "file_type": "code",
-      "source_file": "apps/api/tests/Feature/ReimbursementLogicTest.php",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "apps_api_tests_feature_reimbursementlogictest",
-      "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": "reimbursementlogictest.php"
-    },
-    {
-      "label": "Mockery",
-      "file_type": "code",
-      "source_file": "",
-      "source_location": "",
-      "_origin": "ast",
-      "id": "mockery",
-      "community": 23,
-      "community_name": "Reimbursement",
-      "norm_label": "mockery"
+      "community_name": "OcrCallbackRequest",
+      "norm_label": "ocrcallbackrequest.php"
     },
     {
       "label": "receiptUtils.js",
@@ -17388,17 +17273,6 @@
       "norm_label": "runtimeexception"
     },
     {
-      "label": "2026_05_18_000003_create_cash_advances_table.php",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/CashAdvances/Database/Migrations/2026_05_18_000003_create_cash_advances_table.php",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "apps_api_app_modules_cashadvances_database_migrations_2026_05_18_000003_create_cash_advances_table",
-      "community": 40,
-      "community_name": "Illuminate\\Database\\Schema\\Blueprint",
-      "norm_label": "2026_05_18_000003_create_cash_advances_table.php"
-    },
-    {
       "label": "2026_06_12_000002_add_settled_to_cash_advances_status.php",
       "file_type": "code",
       "source_file": "apps/api/app/Modules/CashAdvances/Database/Migrations/2026_06_12_000002_add_settled_to_cash_advances_status.php",
@@ -17406,8 +17280,19 @@
       "_origin": "ast",
       "id": "apps_api_app_modules_cashadvances_database_migrations_2026_06_12_000002_add_settled_to_cash_advances_status",
       "community": 40,
-      "community_name": "Illuminate\\Database\\Schema\\Blueprint",
+      "community_name": "Illuminate\\Database\\Migrations\\Migration",
       "norm_label": "2026_06_12_000002_add_settled_to_cash_advances_status.php"
+    },
+    {
+      "label": "2026_06_14_000001_add_incomplete_to_cash_advances_status.php",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/CashAdvances/Database/Migrations/2026_06_14_000001_add_incomplete_to_cash_advances_status.php",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "apps_api_app_modules_cashadvances_database_migrations_2026_06_14_000001_add_incomplete_to_cash_advances_status",
+      "community": 40,
+      "community_name": "Illuminate\\Database\\Migrations\\Migration",
+      "norm_label": "2026_06_14_000001_add_incomplete_to_cash_advances_status.php"
     },
     {
       "label": "2026_05_31_174205_create_receipt_items_table.php",
@@ -17417,30 +17302,30 @@
       "_origin": "ast",
       "id": "apps_api_database_migrations_2026_05_31_174205_create_receipt_items_table",
       "community": 40,
-      "community_name": "Illuminate\\Database\\Schema\\Blueprint",
+      "community_name": "Illuminate\\Database\\Migrations\\Migration",
       "norm_label": "2026_05_31_174205_create_receipt_items_table.php"
     },
     {
-      "label": "Illuminate\\Database\\Schema\\Blueprint",
+      "label": "Illuminate\\Database\\Migrations\\Migration",
       "file_type": "code",
       "source_file": "",
       "source_location": "",
       "_origin": "ast",
-      "id": "illuminate_database_schema_blueprint",
+      "id": "illuminate_database_migrations_migration",
       "community": 40,
-      "community_name": "Illuminate\\Database\\Schema\\Blueprint",
-      "norm_label": "illuminate\\database\\schema\\blueprint"
+      "community_name": "Illuminate\\Database\\Migrations\\Migration",
+      "norm_label": "illuminate\\database\\migrations\\migration"
     },
     {
-      "label": "2026_06_14_000001_add_incomplete_to_cash_advances_status.php",
+      "label": "2026_05_18_000003_create_cash_advances_table.php",
       "file_type": "code",
-      "source_file": "apps/api/app/Modules/CashAdvances/Database/Migrations/2026_06_14_000001_add_incomplete_to_cash_advances_status.php",
+      "source_file": "apps/api/app/Modules/CashAdvances/Database/Migrations/2026_05_18_000003_create_cash_advances_table.php",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "apps_api_app_modules_cashadvances_database_migrations_2026_06_14_000001_add_incomplete_to_cash_advances_status",
+      "id": "apps_api_app_modules_cashadvances_database_migrations_2026_05_18_000003_create_cash_advances_table",
       "community": 41,
-      "community_name": "Illuminate\\Database\\Migrations\\Migration",
-      "norm_label": "2026_06_14_000001_add_incomplete_to_cash_advances_status.php"
+      "community_name": "Illuminate\\Database\\Schema\\Blueprint",
+      "norm_label": "2026_05_18_000003_create_cash_advances_table.php"
     },
     {
       "label": "2026_05_19_000001_add_category_to_receipts_table.php",
@@ -17450,7 +17335,7 @@
       "_origin": "ast",
       "id": "apps_api_app_modules_reimbursements_database_migrations_2026_05_19_000001_add_category_to_receipts_table",
       "community": 41,
-      "community_name": "Illuminate\\Database\\Migrations\\Migration",
+      "community_name": "Illuminate\\Database\\Schema\\Blueprint",
       "norm_label": "2026_05_19_000001_add_category_to_receipts_table.php"
     },
     {
@@ -17461,19 +17346,19 @@
       "_origin": "ast",
       "id": "apps_api_app_modules_reimbursements_database_migrations_2026_05_19_000002_add_deletion_warning_sent_to_receipts_table",
       "community": 41,
-      "community_name": "Illuminate\\Database\\Migrations\\Migration",
+      "community_name": "Illuminate\\Database\\Schema\\Blueprint",
       "norm_label": "2026_05_19_000002_add_deletion_warning_sent_to_receipts_table.php"
     },
     {
-      "label": "Illuminate\\Database\\Migrations\\Migration",
+      "label": "Illuminate\\Database\\Schema\\Blueprint",
       "file_type": "code",
       "source_file": "",
       "source_location": "",
       "_origin": "ast",
-      "id": "illuminate_database_migrations_migration",
+      "id": "illuminate_database_schema_blueprint",
       "community": 41,
-      "community_name": "Illuminate\\Database\\Migrations\\Migration",
-      "norm_label": "illuminate\\database\\migrations\\migration"
+      "community_name": "Illuminate\\Database\\Schema\\Blueprint",
+      "norm_label": "illuminate\\database\\schema\\blueprint"
     },
     {
       "label": "2026_06_14_000002_add_outstanding_balance_to_cash_advances.php",
@@ -17608,21 +17493,10 @@
       "norm_label": "decisionconfirmationmodal.vue"
     },
     {
-      "label": "auth",
-      "file_type": "code",
-      "source_file": "apps/web/src/components/base/DecisionConfirmationModal.vue",
-      "source_location": "L53",
-      "_origin": "ast",
-      "id": "apps_web_src_components_base_decisionconfirmationmodal_auth",
-      "community": 44,
-      "community_name": "DecisionConfirmationModal.vue",
-      "norm_label": "auth"
-    },
-    {
       "label": "config",
       "file_type": "code",
       "source_file": "apps/web/src/components/base/DecisionConfirmationModal.vue",
-      "source_location": "L66",
+      "source_location": "L77",
       "_origin": "ast",
       "id": "apps_web_src_components_base_decisionconfirmationmodal_config",
       "community": 44,
@@ -17633,7 +17507,7 @@
       "label": "emit",
       "file_type": "code",
       "source_file": "apps/web/src/components/base/DecisionConfirmationModal.vue",
-      "source_location": "L46",
+      "source_location": "L45",
       "_origin": "ast",
       "id": "apps_web_src_components_base_decisionconfirmationmodal_emit",
       "community": 44,
@@ -17641,10 +17515,32 @@
       "norm_label": "emit"
     },
     {
+      "label": "isConfirmStep",
+      "file_type": "code",
+      "source_file": "apps/web/src/components/base/DecisionConfirmationModal.vue",
+      "source_location": "L52",
+      "_origin": "ast",
+      "id": "apps_web_src_components_base_decisionconfirmationmodal_isconfirmstep",
+      "community": 44,
+      "community_name": "DecisionConfirmationModal.vue",
+      "norm_label": "isconfirmstep"
+    },
+    {
+      "label": "isRejectNextDisabled",
+      "file_type": "code",
+      "source_file": "apps/web/src/components/base/DecisionConfirmationModal.vue",
+      "source_location": "L68",
+      "_origin": "ast",
+      "id": "apps_web_src_components_base_decisionconfirmationmodal_isrejectnextdisabled",
+      "community": 44,
+      "community_name": "DecisionConfirmationModal.vue",
+      "norm_label": "isrejectnextdisabled"
+    },
+    {
       "label": "localComment",
       "file_type": "code",
       "source_file": "apps/web/src/components/base/DecisionConfirmationModal.vue",
-      "source_location": "L61",
+      "source_location": "L54",
       "_origin": "ast",
       "id": "apps_web_src_components_base_decisionconfirmationmodal_localcomment",
       "community": 44,
@@ -17652,37 +17548,15 @@
       "norm_label": "localcomment"
     },
     {
-      "label": "localPassword",
-      "file_type": "code",
-      "source_file": "apps/web/src/components/base/DecisionConfirmationModal.vue",
-      "source_location": "L56",
-      "_origin": "ast",
-      "id": "apps_web_src_components_base_decisionconfirmationmodal_localpassword",
-      "community": 44,
-      "community_name": "DecisionConfirmationModal.vue",
-      "norm_label": "localpassword"
-    },
-    {
       "label": "props",
       "file_type": "code",
       "source_file": "apps/web/src/components/base/DecisionConfirmationModal.vue",
-      "source_location": "L7",
+      "source_location": "L6",
       "_origin": "ast",
       "id": "apps_web_src_components_base_decisionconfirmationmodal_props",
       "community": 44,
       "community_name": "DecisionConfirmationModal.vue",
       "norm_label": "props"
-    },
-    {
-      "label": "showConfirmPassword",
-      "file_type": "code",
-      "source_file": "apps/web/src/components/base/DecisionConfirmationModal.vue",
-      "source_location": "L54",
-      "_origin": "ast",
-      "id": "apps_web_src_components_base_decisionconfirmationmodal_showconfirmpassword",
-      "community": 44,
-      "community_name": "DecisionConfirmationModal.vue",
-      "norm_label": "showconfirmpassword"
     },
     {
       "label": "MetaAndAttachments.vue",
@@ -17872,17 +17746,6 @@
       "norm_label": "fileutils.js"
     },
     {
-      "label": "App\\Modules\\Ai\\Contracts\\OcrEngineInterface",
-      "file_type": "code",
-      "source_file": "",
-      "source_location": "",
-      "_origin": "ast",
-      "id": "app_modules_ai_contracts_ocrengineinterface",
-      "community": 48,
-      "community_name": "Illuminate\\Http\\Request",
-      "norm_label": "app\\modules\\ai\\contracts\\ocrengineinterface"
-    },
-    {
       "label": "Controller.php",
       "file_type": "code",
       "source_file": "apps/api/app/Http/Controllers/Controller.php",
@@ -17892,17 +17755,6 @@
       "community": 48,
       "community_name": "Illuminate\\Http\\Request",
       "norm_label": "controller.php"
-    },
-    {
-      "label": "TesseractOcrEngine.php",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/Ai/Services/TesseractOcrEngine.php",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "apps_api_app_modules_ai_services_tesseractocrengine",
-      "community": 48,
-      "community_name": "Illuminate\\Http\\Request",
-      "norm_label": "tesseractocrengine.php"
     },
     {
       "label": "CashAdvanceService.php",
@@ -17938,6 +17790,17 @@
       "norm_label": "liquidationcontroller.php"
     },
     {
+      "label": "ExpenseCategoryController.php",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/Reimbursements/Http/Controllers/ExpenseCategoryController.php",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "apps_api_app_modules_reimbursements_http_controllers_expensecategorycontroller",
+      "community": 48,
+      "community_name": "Illuminate\\Http\\Request",
+      "norm_label": "expensecategorycontroller.php"
+    },
+    {
       "label": "ReceiptController.php",
       "file_type": "code",
       "source_file": "apps/api/app/Modules/Reimbursements/Http/Controllers/ReceiptController.php",
@@ -17960,6 +17823,17 @@
       "norm_label": "reimbursementcontroller.php"
     },
     {
+      "label": "Reimbursements/routes/api.php",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/Reimbursements/routes/api.php",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "apps_api_app_modules_reimbursements_routes_api",
+      "community": 48,
+      "community_name": "Illuminate\\Http\\Request",
+      "norm_label": "reimbursements/routes/api.php"
+    },
+    {
       "label": "OcrCallbackService.php",
       "file_type": "code",
       "source_file": "apps/api/app/Modules/Reimbursements/Services/OcrCallbackService.php",
@@ -17969,6 +17843,17 @@
       "community": 48,
       "community_name": "Illuminate\\Http\\Request",
       "norm_label": "ocrcallbackservice.php"
+    },
+    {
+      "label": "ReceiptService.php",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/Reimbursements/Services/ReceiptService.php",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "apps_api_app_modules_reimbursements_services_receiptservice",
+      "community": 48,
+      "community_name": "Illuminate\\Http\\Request",
+      "norm_label": "receiptservice.php"
     },
     {
       "label": "ReimbursementService.php",
@@ -18026,6 +17911,17 @@
       "norm_label": "passwordverificationservice.php"
     },
     {
+      "label": "ReimbursementLogicTest.php",
+      "file_type": "code",
+      "source_file": "apps/api/tests/Feature/ReimbursementLogicTest.php",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "apps_api_tests_feature_reimbursementlogictest",
+      "community": 48,
+      "community_name": "Illuminate\\Http\\Request",
+      "norm_label": "reimbursementlogictest.php"
+    },
+    {
       "label": "Illuminate\\Auth\\Access\\AuthorizationException",
       "file_type": "code",
       "source_file": "",
@@ -18046,6 +17942,17 @@
       "community": 48,
       "community_name": "Illuminate\\Http\\Request",
       "norm_label": "illuminate\\http\\request"
+    },
+    {
+      "label": "Illuminate\\Support\\Facades\\Bus",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "_origin": "ast",
+      "id": "illuminate_support_facades_bus",
+      "community": 48,
+      "community_name": "Illuminate\\Http\\Request",
+      "norm_label": "illuminate\\support\\facades\\bus"
     },
     {
       "label": "Illuminate\\Support\\Facades\\DB",
@@ -18070,6 +17977,17 @@
       "norm_label": "illuminate\\support\\facades\\log"
     },
     {
+      "label": "Illuminate\\Support\\Facades\\Storage",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "_origin": "ast",
+      "id": "illuminate_support_facades_storage",
+      "community": 48,
+      "community_name": "Illuminate\\Http\\Request",
+      "norm_label": "illuminate\\support\\facades\\storage"
+    },
+    {
       "label": "Illuminate\\Validation\\ValidationException",
       "file_type": "code",
       "source_file": "",
@@ -18081,15 +17999,15 @@
       "norm_label": "illuminate\\validation\\validationexception"
     },
     {
-      "label": "thiagoalessio\\TesseractOCR\\TesseractOCR",
+      "label": "Mockery",
       "file_type": "code",
       "source_file": "",
       "source_location": "",
       "_origin": "ast",
-      "id": "thiagoalessio_tesseractocr_tesseractocr",
+      "id": "mockery",
       "community": 48,
       "community_name": "Illuminate\\Http\\Request",
-      "norm_label": "thiagoalessio\\tesseractocr\\tesseractocr"
+      "norm_label": "mockery"
     },
     {
       "label": "AppServiceProvider.php",
@@ -18422,6 +18340,17 @@
       "norm_label": "viewmodalopen"
     },
     {
+      "label": "Illuminate\\Http\\UploadedFile",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "_origin": "ast",
+      "id": "illuminate_http_uploadedfile",
+      "community": 50,
+      "community_name": "ReceiptResubmitOcrTest",
+      "norm_label": "illuminate\\http\\uploadedfile"
+    },
+    {
       "label": "UploadedFile",
       "file_type": "code",
       "source_file": "",
@@ -18642,6 +18571,28 @@
       "norm_label": "usereimbursementdetails.js"
     },
     {
+      "label": "AuditLog.php",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/AuditLogs/Models/AuditLog.php",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "apps_api_app_modules_auditlogs_models_auditlog",
+      "community": 55,
+      "community_name": "TestCase",
+      "norm_label": "auditlog.php"
+    },
+    {
+      "label": "AuditLogService.php",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/AuditLogs/Services/AuditLogService.php",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "apps_api_app_modules_auditlogs_services_auditlogservice",
+      "community": 55,
+      "community_name": "TestCase",
+      "norm_label": "auditlogservice.php"
+    },
+    {
       "label": "Feature/ExampleTest.php",
       "file_type": "code",
       "source_file": "apps/api/tests/Feature/ExampleTest.php",
@@ -18741,6 +18692,17 @@
       "norm_label": "reimbursementpasswordverificationtest.php"
     },
     {
+      "label": "WarnReceiptDeletionTest.php",
+      "file_type": "code",
+      "source_file": "apps/api/tests/Feature/WarnReceiptDeletionTest.php",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "apps_api_tests_feature_warnreceiptdeletiontest",
+      "community": 55,
+      "community_name": "TestCase",
+      "norm_label": "warnreceiptdeletiontest.php"
+    },
+    {
       "label": "TestCase.php",
       "file_type": "code",
       "source_file": "apps/api/tests/TestCase.php",
@@ -18785,17 +18747,6 @@
       "norm_label": "illuminate\\foundation\\testing\\testcase"
     },
     {
-      "label": "Illuminate\\Http\\UploadedFile",
-      "file_type": "code",
-      "source_file": "",
-      "source_location": "",
-      "_origin": "ast",
-      "id": "illuminate_http_uploadedfile",
-      "community": 55,
-      "community_name": "TestCase",
-      "norm_label": "illuminate\\http\\uploadedfile"
-    },
-    {
       "label": "Illuminate\\Support\\Facades\\Http",
       "file_type": "code",
       "source_file": "",
@@ -18816,17 +18767,6 @@
       "community": 55,
       "community_name": "TestCase",
       "norm_label": "illuminate\\support\\facades\\queue"
-    },
-    {
-      "label": "Illuminate\\Support\\Facades\\Storage",
-      "file_type": "code",
-      "source_file": "",
-      "source_location": "",
-      "_origin": "ast",
-      "id": "illuminate_support_facades_storage",
-      "community": 55,
-      "community_name": "TestCase",
-      "norm_label": "illuminate\\support\\facades\\storage"
     },
     {
       "label": "ReceiptViewModal.vue",
@@ -18917,26 +18857,15 @@
       "norm_label": "props"
     },
     {
-      "label": "OcrCallbackController.php",
+      "label": "DisburseCashAdvanceRequest.php",
       "file_type": "code",
-      "source_file": "apps/api/app/Modules/Reimbursements/Http/Controllers/OcrCallbackController.php",
+      "source_file": "apps/api/app/Modules/CashAdvances/Http/Requests/DisburseCashAdvanceRequest.php",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "apps_api_app_modules_reimbursements_http_controllers_ocrcallbackcontroller",
+      "id": "apps_api_app_modules_cashadvances_http_requests_disbursecashadvancerequest",
       "community": 59,
-      "community_name": "OcrCallbackRequest",
-      "norm_label": "ocrcallbackcontroller.php"
-    },
-    {
-      "label": "OcrCallbackRequest.php",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/Reimbursements/Http/Requests/OcrCallbackRequest.php",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "apps_api_app_modules_reimbursements_http_requests_ocrcallbackrequest",
-      "community": 59,
-      "community_name": "OcrCallbackRequest",
-      "norm_label": "ocrcallbackrequest.php"
+      "community_name": "DisburseCashAdvanceRequest",
+      "norm_label": "disbursecashadvancerequest.php"
     },
     {
       "label": "CashAdvanceController.php",
@@ -18983,17 +18912,6 @@
       "norm_label": "storecashadvancerequest.php"
     },
     {
-      "label": "PrsReimbursementWebhookTest.php",
-      "file_type": "code",
-      "source_file": "apps/api/tests/Feature/PrsReimbursementWebhookTest.php",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "apps_api_tests_feature_prsreimbursementwebhooktest",
-      "community": 60,
-      "community_name": "OcrCallbackServiceTest",
-      "norm_label": "prsreimbursementwebhooktest.php"
-    },
-    {
       "label": "TestResponse",
       "file_type": "code",
       "source_file": "",
@@ -19003,6 +18921,50 @@
       "community": 60,
       "community_name": "OcrCallbackServiceTest",
       "norm_label": "testresponse"
+    },
+    {
+      "label": "App\\Modules\\Ai\\Contracts\\OcrEngineInterface",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "_origin": "ast",
+      "id": "app_modules_ai_contracts_ocrengineinterface",
+      "community": 61,
+      "community_name": "Liquidation",
+      "norm_label": "app\\modules\\ai\\contracts\\ocrengineinterface"
+    },
+    {
+      "label": "TesseractOcrEngine.php",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/Ai/Services/TesseractOcrEngine.php",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "apps_api_app_modules_ai_services_tesseractocrengine",
+      "community": 61,
+      "community_name": "Liquidation",
+      "norm_label": "tesseractocrengine.php"
+    },
+    {
+      "label": "Liquidation.php",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/Liquidations/Models/Liquidation.php",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "apps_api_app_modules_liquidations_models_liquidation",
+      "community": 61,
+      "community_name": "Liquidation",
+      "norm_label": "liquidation.php"
+    },
+    {
+      "label": "thiagoalessio\\TesseractOCR\\TesseractOCR",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "_origin": "ast",
+      "id": "thiagoalessio_tesseractocr_tesseractocr",
+      "community": 61,
+      "community_name": "Liquidation",
+      "norm_label": "thiagoalessio\\tesseractocr\\tesseractocr"
     },
     {
       "label": "BaseButton.vue",
@@ -19533,6 +19495,17 @@
       "norm_label": "receipt.php"
     },
     {
+      "label": "ReceiptItem.php",
+      "file_type": "code",
+      "source_file": "apps/api/app/Modules/Reimbursements/Models/ReceiptItem.php",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "apps_api_app_modules_reimbursements_models_receiptitem",
+      "community": 7,
+      "community_name": "Receipt",
+      "norm_label": "receiptitem.php"
+    },
+    {
       "label": "ReceiptStatusObserver.php",
       "file_type": "code",
       "source_file": "apps/api/app/Modules/Reimbursements/Observers/ReceiptStatusObserver.php",
@@ -19553,6 +19526,17 @@
       "community": 7,
       "community_name": "Receipt",
       "norm_label": "validatesreceiptduplicates.php"
+    },
+    {
+      "label": "ReceiptOwnerUpdateTest.php",
+      "file_type": "code",
+      "source_file": "apps/api/tests/Feature/ReceiptOwnerUpdateTest.php",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "apps_api_tests_feature_receiptownerupdatetest",
+      "community": 7,
+      "community_name": "Receipt",
+      "norm_label": "receiptownerupdatetest.php"
     },
     {
       "label": "ReceiptStorageRetrievalTest.php",
@@ -19621,17 +19605,6 @@
       "norm_label": "sourcecases"
     },
     {
-      "label": "Liquidation.php",
-      "file_type": "code",
-      "source_file": "apps/api/app/Modules/Liquidations/Models/Liquidation.php",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "apps_api_app_modules_liquidations_models_liquidation",
-      "community": 72,
-      "community_name": "User",
-      "norm_label": "liquidation.php"
-    },
-    {
       "label": "User.php",
       "file_type": "code",
       "source_file": "apps/api/app/Modules/Users/Models/User.php",
@@ -19652,17 +19625,6 @@
       "community": 72,
       "community_name": "User",
       "norm_label": "auth.php"
-    },
-    {
-      "label": "WarnReceiptDeletionTest.php",
-      "file_type": "code",
-      "source_file": "apps/api/tests/Feature/WarnReceiptDeletionTest.php",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "apps_api_tests_feature_warnreceiptdeletiontest",
-      "community": 72,
-      "community_name": "User",
-      "norm_label": "warnreceiptdeletiontest.php"
     },
     {
       "label": "Illuminate\\Database\\Eloquent\\Factories\\HasFactory",
@@ -19855,7 +19817,7 @@
       "label": "{ addToast }",
       "file_type": "code",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L36",
+      "source_location": "L37",
       "_origin": "ast",
       "id": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_addtoast",
       "community": 8,
@@ -19866,7 +19828,7 @@
       "label": "adminPassword",
       "file_type": "code",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L45",
+      "source_location": "L46",
       "_origin": "ast",
       "id": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_adminpassword",
       "community": 8,
@@ -19877,7 +19839,7 @@
       "label": "adminReviewNotes",
       "file_type": "code",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L41",
+      "source_location": "L42",
       "_origin": "ast",
       "id": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_adminreviewnotes",
       "community": 8,
@@ -19888,7 +19850,7 @@
       "label": "auth",
       "file_type": "code",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L34",
+      "source_location": "L35",
       "_origin": "ast",
       "id": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_auth",
       "community": 8,
@@ -19899,7 +19861,7 @@
       "label": "canAcknowledgeFromCurrentView",
       "file_type": "code",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L70",
+      "source_location": "L71",
       "_origin": "ast",
       "id": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_canacknowledgefromcurrentview",
       "community": 8,
@@ -19910,7 +19872,7 @@
       "label": "confirmationAction",
       "file_type": "code",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L42",
+      "source_location": "L43",
       "_origin": "ast",
       "id": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_confirmationaction",
       "community": 8,
@@ -19921,7 +19883,7 @@
       "label": "documentData",
       "file_type": "code",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L47",
+      "source_location": "L48",
       "_origin": "ast",
       "id": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_documentdata",
       "community": 8,
@@ -19932,7 +19894,7 @@
       "label": "emit",
       "file_type": "code",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L32",
+      "source_location": "L33",
       "_origin": "ast",
       "id": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_emit",
       "community": 8,
@@ -19943,7 +19905,7 @@
       "label": "isAdminDecisionSubmitting",
       "file_type": "code",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L43",
+      "source_location": "L44",
       "_origin": "ast",
       "id": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_isadmindecisionsubmitting",
       "community": 8,
@@ -19954,7 +19916,7 @@
       "label": "isLoadingDocument",
       "file_type": "code",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L48",
+      "source_location": "L49",
       "_origin": "ast",
       "id": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_isloadingdocument",
       "community": 8,
@@ -19965,7 +19927,7 @@
       "label": "isOwnSubmission",
       "file_type": "code",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L49",
+      "source_location": "L50",
       "_origin": "ast",
       "id": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_isownsubmission",
       "community": 8,
@@ -19976,7 +19938,7 @@
       "label": "isSigning",
       "file_type": "code",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L39",
+      "source_location": "L40",
       "_origin": "ast",
       "id": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_issigning",
       "community": 8,
@@ -19987,7 +19949,7 @@
       "label": "props",
       "file_type": "code",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L21",
+      "source_location": "L22",
       "_origin": "ast",
       "id": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_props",
       "community": 8,
@@ -19998,7 +19960,7 @@
       "label": "showAcknowledgeModal",
       "file_type": "code",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L44",
+      "source_location": "L45",
       "_origin": "ast",
       "id": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_showacknowledgemodal",
       "community": 8,
@@ -20009,7 +19971,7 @@
       "label": "showSignatureSection",
       "file_type": "code",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L66",
+      "source_location": "L67",
       "_origin": "ast",
       "id": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_showsignaturesection",
       "community": 8,
@@ -20020,7 +19982,7 @@
       "label": "signatureCanvas",
       "file_type": "code",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L38",
+      "source_location": "L39",
       "_origin": "ast",
       "id": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_signaturecanvas",
       "community": 8,
@@ -20031,7 +19993,7 @@
       "label": "signatureStarted",
       "file_type": "code",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L40",
+      "source_location": "L41",
       "_origin": "ast",
       "id": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_signaturestarted",
       "community": 8,
@@ -20042,7 +20004,7 @@
       "label": "store",
       "file_type": "code",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L35",
+      "source_location": "L36",
       "_origin": "ast",
       "id": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_store",
       "community": 8,
@@ -20534,15 +20496,15 @@
       "norm_label": "sort-packages"
     },
     {
-      "label": "DisburseCashAdvanceRequest.php",
+      "label": "RejectCashAdvanceRequest.php",
       "file_type": "code",
-      "source_file": "apps/api/app/Modules/CashAdvances/Http/Requests/DisburseCashAdvanceRequest.php",
+      "source_file": "apps/api/app/Modules/CashAdvances/Http/Requests/RejectCashAdvanceRequest.php",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "apps_api_app_modules_cashadvances_http_requests_disbursecashadvancerequest",
+      "id": "apps_api_app_modules_cashadvances_http_requests_rejectcashadvancerequest",
       "community": 88,
-      "community_name": "DisburseCashAdvanceRequest",
-      "norm_label": "disbursecashadvancerequest.php"
+      "community_name": "RejectCashAdvanceRequest",
+      "norm_label": "rejectcashadvancerequest.php"
     },
     {
       "label": "BasePagination.vue",
@@ -20809,15 +20771,37 @@
       "norm_label": "illuminate\\support\\facades\\route"
     },
     {
-      "label": "RejectCashAdvanceRequest.php",
+      "label": "extra",
       "file_type": "code",
-      "source_file": "apps/api/app/Modules/CashAdvances/Http/Requests/RejectCashAdvanceRequest.php",
-      "source_location": "L1",
+      "source_file": "apps/api/composer.json",
+      "source_location": "L73",
       "_origin": "ast",
-      "id": "apps_api_app_modules_cashadvances_http_requests_rejectcashadvancerequest",
+      "id": "apps_api_composer_extra",
       "community": 95,
-      "community_name": "RejectCashAdvanceRequest",
-      "norm_label": "rejectcashadvancerequest.php"
+      "community_name": "extra",
+      "norm_label": "extra"
+    },
+    {
+      "label": "laravel",
+      "file_type": "code",
+      "source_file": "apps/api/composer.json",
+      "source_location": "L74",
+      "_origin": "ast",
+      "id": "apps_api_composer_extra_laravel",
+      "community": 95,
+      "community_name": "extra",
+      "norm_label": "laravel"
+    },
+    {
+      "label": "dont-discover",
+      "file_type": "code",
+      "source_file": "apps/api/composer.json",
+      "source_location": "L75",
+      "_origin": "ast",
+      "id": "apps_api_composer_laravel_dont_discover",
+      "community": 95,
+      "community_name": "extra",
+      "norm_label": "dont-discover"
     },
     {
       "label": "BaseModal.vue",
@@ -23281,6 +23265,66 @@
       "id": "capstone_project"
     },
     {
+      "label": "HTTP Error Codes 401 403 409",
+      "file_type": "concept",
+      "source_file": "AGENTS.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 228,
+      "community_name": "Role-Based Access Control",
+      "norm_label": "http error codes 401 403 409",
+      "_origin": "semantic",
+      "id": "agents_md_http_error_codes"
+    },
+    {
+      "label": "Role-Based Access Control",
+      "file_type": "concept",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 228,
+      "community_name": "Role-Based Access Control",
+      "norm_label": "role-based access control",
+      "_origin": "semantic",
+      "id": "readme_rbac"
+    },
+    {
+      "label": "Role-Based Access Control",
+      "file_type": "rationale",
+      "source_file": ".agents/rules/smart-expense-reimbursement-management-system.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 228,
+      "community_name": "Role-Based Access Control",
+      "norm_label": "role-based access control",
+      "_origin": "semantic",
+      "id": "agents_rules_smart_expense_reimbursement_management_system_rbac"
+    },
+    {
+      "label": "Session Timeout Policy",
+      "file_type": "rationale",
+      "source_file": ".agents/rules/smart-expense-reimbursement-management-system.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 228,
+      "community_name": "Role-Based Access Control",
+      "norm_label": "session timeout policy",
+      "_origin": "semantic",
+      "id": "agents_rules_smart_expense_reimbursement_management_system_session_timeout_policy"
+    },
+    {
       "label": "Aging Tracker Countdown",
       "file_type": "concept",
       "source_file": "apps/web/docs/design.md",
@@ -23431,21 +23475,6 @@
       "id": "agents_rules_smart_expense_reimbursement_management_system_penalty_computation"
     },
     {
-      "label": "HTTP Error Codes 401 403 409",
-      "file_type": "concept",
-      "source_file": "AGENTS.md",
-      "source_location": null,
-      "source_url": null,
-      "captured_at": null,
-      "author": null,
-      "contributor": null,
-      "community": 71,
-      "community_name": "Governance and Security",
-      "norm_label": "http error codes 401 403 409",
-      "_origin": "semantic",
-      "id": "agents_md_http_error_codes"
-    },
-    {
       "label": "useNotificationStore",
       "file_type": "concept",
       "source_file": "apps/web/docs/technical_spec.md",
@@ -23491,21 +23520,6 @@
       "id": "readme_governance_security"
     },
     {
-      "label": "Role-Based Access Control",
-      "file_type": "concept",
-      "source_file": "README.md",
-      "source_location": null,
-      "source_url": null,
-      "captured_at": null,
-      "author": null,
-      "contributor": null,
-      "community": 71,
-      "community_name": "Governance and Security",
-      "norm_label": "role-based access control",
-      "_origin": "semantic",
-      "id": "readme_rbac"
-    },
-    {
       "label": "Client-Side Pre-Encryption",
       "file_type": "rationale",
       "source_file": "AGENTS.md",
@@ -23519,6 +23533,36 @@
       "norm_label": "client-side pre-encryption",
       "_origin": "semantic",
       "id": "agents_md_client_side_encryption"
+    },
+    {
+      "label": "Append-Only Penalty Records",
+      "file_type": "rationale",
+      "source_file": ".agents/rules/smart-expense-reimbursement-management-system.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 71,
+      "community_name": "Governance and Security",
+      "norm_label": "append-only penalty records",
+      "_origin": "semantic",
+      "id": "agents_rules_smart_expense_reimbursement_management_system_append_only_penalties"
+    },
+    {
+      "label": "Audit Log Immutability",
+      "file_type": "rationale",
+      "source_file": ".agents/rules/smart-expense-reimbursement-management-system.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 71,
+      "community_name": "Governance and Security",
+      "norm_label": "audit log immutability",
+      "_origin": "semantic",
+      "id": "agents_rules_smart_expense_reimbursement_management_system_audit_log_immutability"
     },
     {
       "label": "BIR Compliance",
@@ -23536,36 +23580,6 @@
       "id": "agents_rules_smart_expense_reimbursement_management_system_bir_compliance"
     },
     {
-      "label": "Role-Based Access Control",
-      "file_type": "rationale",
-      "source_file": ".agents/rules/smart-expense-reimbursement-management-system.md",
-      "source_location": null,
-      "source_url": null,
-      "captured_at": null,
-      "author": null,
-      "contributor": null,
-      "community": 71,
-      "community_name": "Governance and Security",
-      "norm_label": "role-based access control",
-      "_origin": "semantic",
-      "id": "agents_rules_smart_expense_reimbursement_management_system_rbac"
-    },
-    {
-      "label": "Session Timeout Policy",
-      "file_type": "rationale",
-      "source_file": ".agents/rules/smart-expense-reimbursement-management-system.md",
-      "source_location": null,
-      "source_url": null,
-      "captured_at": null,
-      "author": null,
-      "contributor": null,
-      "community": 71,
-      "community_name": "Governance and Security",
-      "norm_label": "session timeout policy",
-      "_origin": "semantic",
-      "id": "agents_rules_smart_expense_reimbursement_management_system_session_timeout_policy"
-    },
-    {
       "label": "VAT Classification",
       "file_type": "rationale",
       "source_file": ".agents/rules/smart-expense-reimbursement-management-system.md",
@@ -23579,6 +23593,21 @@
       "norm_label": "vat classification",
       "_origin": "semantic",
       "id": "agents_rules_smart_expense_reimbursement_management_system_vat_classification"
+    },
+    {
+      "label": "Immutable Audit Logs",
+      "file_type": "rationale",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 71,
+      "community_name": "Governance and Security",
+      "norm_label": "immutable audit logs",
+      "_origin": "semantic",
+      "id": "readme_immutable_audit_trail"
     },
     {
       "label": "AuditLogService log",
@@ -24316,36 +24345,6 @@
       "id": "apps_web_docs_technical_spec_file_upload"
     },
     {
-      "label": "Append-Only Penalty Records",
-      "file_type": "rationale",
-      "source_file": ".agents/rules/smart-expense-reimbursement-management-system.md",
-      "source_location": null,
-      "source_url": null,
-      "captured_at": null,
-      "author": null,
-      "contributor": null,
-      "community": 93,
-      "community_name": "Hold-to-Confirm Pattern",
-      "norm_label": "append-only penalty records",
-      "_origin": "semantic",
-      "id": "agents_rules_smart_expense_reimbursement_management_system_append_only_penalties"
-    },
-    {
-      "label": "Audit Log Immutability",
-      "file_type": "rationale",
-      "source_file": ".agents/rules/smart-expense-reimbursement-management-system.md",
-      "source_location": null,
-      "source_url": null,
-      "captured_at": null,
-      "author": null,
-      "contributor": null,
-      "community": 93,
-      "community_name": "Hold-to-Confirm Pattern",
-      "norm_label": "audit log immutability",
-      "_origin": "semantic",
-      "id": "agents_rules_smart_expense_reimbursement_management_system_audit_log_immutability"
-    },
-    {
       "label": "Hold-to-Confirm Pattern",
       "file_type": "rationale",
       "source_file": ".agents/rules/smart-expense-reimbursement-management-system.md",
@@ -24404,21 +24403,6 @@
       "norm_label": "hold-to-confirm pattern",
       "_origin": "semantic",
       "id": "readme_hold_to_confirm"
-    },
-    {
-      "label": "Immutable Audit Logs",
-      "file_type": "rationale",
-      "source_file": "README.md",
-      "source_location": null,
-      "source_url": null,
-      "captured_at": null,
-      "author": null,
-      "contributor": null,
-      "community": 93,
-      "community_name": "Hold-to-Confirm Pattern",
-      "norm_label": "immutable audit logs",
-      "_origin": "semantic",
-      "id": "readme_immutable_audit_trail"
     },
     {
       "label": "Readout Typography",
@@ -27385,7 +27369,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/base/DecisionConfirmationModal.vue",
-      "source_location": "L112",
+      "source_location": "L116",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_base_decisionconfirmationmodal_handleclose",
@@ -27397,10 +27381,10 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/base/DecisionConfirmationModal.vue",
-      "source_location": "L117",
+      "source_location": "L126",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "apps_web_src_components_base_decisionconfirmationmodal_handleconfirm",
+      "source": "apps_web_src_components_base_decisionconfirmationmodal_handlefinalconfirm",
       "target": "apps_web_src_components_base_decisionconfirmationmodal_emit",
       "confidence_score": 1.0
     },
@@ -27409,22 +27393,10 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/base/DecisionConfirmationModal.vue",
-      "source_location": "L63",
+      "source_location": "L56",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_base_decisionconfirmationmodal_localcomment",
-      "target": "apps_web_src_components_base_decisionconfirmationmodal_emit",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "apps/web/src/components/base/DecisionConfirmationModal.vue",
-      "source_location": "L58",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "apps_web_src_components_base_decisionconfirmationmodal_localpassword",
       "target": "apps_web_src_components_base_decisionconfirmationmodal_emit",
       "confidence_score": 1.0
     },
@@ -27829,7 +27801,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L92",
+      "source_location": "L93",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_closedetails",
@@ -27841,7 +27813,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L280",
+      "source_location": "L281",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_confirmacknowledge",
@@ -27853,7 +27825,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L188",
+      "source_location": "L189",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_confirmadmindecision",
@@ -27865,7 +27837,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L243",
+      "source_location": "L244",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_drawsignature",
@@ -27877,7 +27849,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L246",
+      "source_location": "L247",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_drawsignature",
@@ -27889,7 +27861,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L229",
+      "source_location": "L230",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_startsignature",
@@ -27901,7 +27873,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L236",
+      "source_location": "L237",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal_startsignature",
@@ -42425,7 +42397,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/base/DecisionConfirmationModal.vue",
-      "source_location": "L110",
+      "source_location": "L114",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_base_decisionconfirmationmodal",
@@ -42436,18 +42408,29 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/base/DecisionConfirmationModal.vue",
-      "source_location": "L115",
+      "source_location": "L119",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_base_decisionconfirmationmodal",
-      "target": "apps_web_src_components_base_decisionconfirmationmodal_handleconfirm",
+      "target": "apps_web_src_components_base_decisionconfirmationmodal_handlerejectnext",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/base/DecisionConfirmationModal.vue",
-      "source_location": "L46",
+      "source_location": "L125",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "apps_web_src_components_base_decisionconfirmationmodal",
+      "target": "apps_web_src_components_base_decisionconfirmationmodal_handlefinalconfirm",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/components/base/DecisionConfirmationModal.vue",
+      "source_location": "L45",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_base_decisionconfirmationmodal",
@@ -42458,11 +42441,11 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/base/DecisionConfirmationModal.vue",
-      "source_location": "L53",
+      "source_location": "L52",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_base_decisionconfirmationmodal",
-      "target": "apps_web_src_components_base_decisionconfirmationmodal_auth",
+      "target": "apps_web_src_components_base_decisionconfirmationmodal_isconfirmstep",
       "confidence_score": 1.0
     },
     {
@@ -42473,28 +42456,6 @@
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_base_decisionconfirmationmodal",
-      "target": "apps_web_src_components_base_decisionconfirmationmodal_showconfirmpassword",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "apps/web/src/components/base/DecisionConfirmationModal.vue",
-      "source_location": "L56",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "apps_web_src_components_base_decisionconfirmationmodal",
-      "target": "apps_web_src_components_base_decisionconfirmationmodal_localpassword",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "apps/web/src/components/base/DecisionConfirmationModal.vue",
-      "source_location": "L61",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "apps_web_src_components_base_decisionconfirmationmodal",
       "target": "apps_web_src_components_base_decisionconfirmationmodal_localcomment",
       "confidence_score": 1.0
     },
@@ -42502,22 +42463,33 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/base/DecisionConfirmationModal.vue",
-      "source_location": "L66",
+      "source_location": "L6",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_base_decisionconfirmationmodal",
-      "target": "apps_web_src_components_base_decisionconfirmationmodal_config",
+      "target": "apps_web_src_components_base_decisionconfirmationmodal_props",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/base/DecisionConfirmationModal.vue",
-      "source_location": "L7",
+      "source_location": "L68",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_base_decisionconfirmationmodal",
-      "target": "apps_web_src_components_base_decisionconfirmationmodal_props",
+      "target": "apps_web_src_components_base_decisionconfirmationmodal_isrejectnextdisabled",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/components/base/DecisionConfirmationModal.vue",
+      "source_location": "L77",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "apps_web_src_components_base_decisionconfirmationmodal",
+      "target": "apps_web_src_components_base_decisionconfirmationmodal_config",
       "confidence_score": 1.0
     },
     {
@@ -43393,7 +43365,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L102",
+      "source_location": "L103",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal",
@@ -43404,7 +43376,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L114",
+      "source_location": "L115",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal",
@@ -43415,7 +43387,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L145",
+      "source_location": "L146",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal",
@@ -43426,7 +43398,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L160",
+      "source_location": "L161",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal",
@@ -43437,7 +43409,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L164",
+      "source_location": "L165",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal",
@@ -43448,7 +43420,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L196",
+      "source_location": "L197",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal",
@@ -43459,7 +43431,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L21",
+      "source_location": "L22",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal",
@@ -43470,7 +43442,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L220",
+      "source_location": "L221",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal",
@@ -43481,7 +43453,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L228",
+      "source_location": "L229",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal",
@@ -43492,7 +43464,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L241",
+      "source_location": "L242",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal",
@@ -43503,7 +43475,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L251",
+      "source_location": "L252",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal",
@@ -43514,7 +43486,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L255",
+      "source_location": "L256",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal",
@@ -43525,7 +43497,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L267",
+      "source_location": "L268",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal",
@@ -43536,7 +43508,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L32",
+      "source_location": "L33",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal",
@@ -43547,7 +43519,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L34",
+      "source_location": "L35",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal",
@@ -43558,7 +43530,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L35",
+      "source_location": "L36",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal",
@@ -43569,7 +43541,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L36",
+      "source_location": "L37",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal",
@@ -43580,7 +43552,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L38",
+      "source_location": "L39",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal",
@@ -43591,7 +43563,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L39",
+      "source_location": "L40",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal",
@@ -43602,7 +43574,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L40",
+      "source_location": "L41",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal",
@@ -43613,7 +43585,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L41",
+      "source_location": "L42",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal",
@@ -43624,7 +43596,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L42",
+      "source_location": "L43",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal",
@@ -43635,7 +43607,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L43",
+      "source_location": "L44",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal",
@@ -43646,7 +43618,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L44",
+      "source_location": "L45",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal",
@@ -43657,7 +43629,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L45",
+      "source_location": "L46",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal",
@@ -43668,7 +43640,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L47",
+      "source_location": "L48",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal",
@@ -43679,7 +43651,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L48",
+      "source_location": "L49",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal",
@@ -43690,7 +43662,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L49",
+      "source_location": "L50",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal",
@@ -43701,7 +43673,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L66",
+      "source_location": "L67",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal",
@@ -43712,7 +43684,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L70",
+      "source_location": "L71",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal",
@@ -43723,7 +43695,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L91",
+      "source_location": "L92",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal",
@@ -43734,7 +43706,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/cash-advances/CashAdvanceDetailsModal.vue",
-      "source_location": "L95",
+      "source_location": "L96",
       "weight": 1.0,
       "_origin": "ast",
       "source": "apps_web_src_components_cash_advances_cashadvancedetailsmodal",
@@ -57058,17 +57030,6 @@
       "weight": 1.0,
       "_origin": "semantic",
       "source": "docs_dsd",
-      "target": "applayout_vue"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "docs/DSD.md",
-      "source_location": null,
-      "weight": 1.0,
-      "_origin": "semantic",
-      "source": "docs_dsd",
       "target": "basebutton_vue"
     },
     {
@@ -60347,23 +60308,6 @@
       "source_file": "docs/SDD.md"
     },
     {
-      "id": "serms_ui_components",
-      "label": "SERMS Base UI Components",
-      "nodes": [
-        "statusbadge_vue",
-        "basebutton_vue",
-        "basetable_vue",
-        "basemodal_vue",
-        "basekpigrid_vue",
-        "ocrfield_vue",
-        "applayout_vue"
-      ],
-      "relation": "form",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "docs/DSD.md"
-    },
-    {
       "id": "serms_enterprise_ecosystem",
       "label": "Capstone Enterprise Ecosystem",
       "nodes": [
@@ -60411,5 +60355,5 @@
       "source_file": ".github/ISSUE_TEMPLATE/bug_report.md"
     }
   ],
-  "built_at_commit": "945e629aaf70fddaed6277319c2af7c1d5509780"
+  "built_at_commit": "35dceec85b60f46c2932bcc70e1bd15df69cff54"
 }

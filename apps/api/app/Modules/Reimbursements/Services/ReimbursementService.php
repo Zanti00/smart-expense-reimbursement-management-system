@@ -132,11 +132,11 @@ class ReimbursementService
     /**
      * Approve claim.
      */
-    public function approveReimbursement(User $user, int $id, string $password, string $ipAddress, Request $requestContext)
+    public function approveReimbursement(User $user, int $id, ?string $password, string $ipAddress, Request $requestContext)
     {
         return DB::transaction(function () use ($user, $id, $password, $ipAddress, $requestContext) {
-            // Verify password against external auth service
-            if (!PasswordVerificationService::verify($requestContext, $password)) {
+            // Verify password against external auth service if provided
+            if (!empty($password) && !PasswordVerificationService::verify($requestContext, $password)) {
                 throw ValidationException::withMessages([
                     'password' => ['Invalid password. Please try again.']
                 ]);
@@ -177,11 +177,11 @@ class ReimbursementService
     /**
      * Reject claim.
      */
-    public function rejectReimbursement(User $user, int $id, string $comment, string $password, string $ipAddress, Request $requestContext)
+    public function rejectReimbursement(User $user, int $id, string $comment, ?string $password, string $ipAddress, Request $requestContext)
     {
         return DB::transaction(function () use ($user, $id, $comment, $password, $ipAddress, $requestContext) {
-            // Verify password against external auth service
-            if (!PasswordVerificationService::verify($requestContext, $password)) {
+            // Verify password against external auth service if provided
+            if (!empty($password) && !PasswordVerificationService::verify($requestContext, $password)) {
                 throw ValidationException::withMessages([
                     'password' => ['Invalid password. Please try again.']
                 ]);
