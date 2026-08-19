@@ -175,15 +175,32 @@ class LiquidationController extends Controller
                 if (!isset($receiptData['id'])) continue;
                 $receipt = Receipt::findOrFail($receiptData['id']);
                 $receipt->update([
-                    'vendor_name' => $receiptData['vendor_name'] ?? $receipt->vendor_name,
-                    'transaction_date' => $receiptData['transaction_date'] ?? $receipt->transaction_date,
-                    'total_amount' => $receiptData['total_amount'] ?? $receipt->total_amount,
-                    'vat_amount' => $receiptData['vat_amount'] ?? $receipt->vat_amount,
+                    'vendor_name' => $receiptData['vendor_name'] ?? $receiptData['vendor'] ?? $receipt->vendor_name,
+                    'transaction_date' => $receiptData['transaction_date'] ?? $receiptData['date'] ?? $receipt->transaction_date,
+                    'total_amount' => $receiptData['total_amount'] ?? $receiptData['amount'] ?? $receipt->total_amount,
+                    'vat_amount' => $receiptData['vat_amount'] ?? $receiptData['vat'] ?? $receiptData['tax'] ?? $receipt->vat_amount,
                     'tin' => $receiptData['tin'] ?? $receipt->tin,
-                    'invoice_number' => $receiptData['invoice_number'] ?? $receipt->invoice_number,
-                    'expense_category_id' => $receiptData['expense_category_id'] ?? $receipt->expense_category_id ?? null,
+                    'invoice_number' => $receiptData['invoice_number'] ?? $receiptData['invoiceNumber'] ?? $receipt->invoice_number,
+                    'expense_category_id' => $receiptData['expense_category_id'] ?? $receiptData['categoryId'] ?? $receipt->expense_category_id ?? null,
+                    'location' => $receiptData['location'] ?? $receipt->location ?? null,
+                    'currency' => $receiptData['currency'] ?? $receipt->currency ?? 'PHP',
+                    'vat_classification' => $receiptData['vat_classification'] ?? $receiptData['vatClassification'] ?? $receipt->vat_classification ?? 'vat',
                     'status' => 'pending', // Awaiting admin audit
                 ]);
+
+                if (isset($receiptData['items']) && is_array($receiptData['items'])) {
+                    $receipt->items()->delete();
+                    foreach ($receiptData['items'] as $item) {
+                        if (!empty($item['name']) || isset($item['price'])) {
+                            $receipt->items()->create([
+                                'name' => $item['name'] ?? 'Item',
+                                'qty' => $item['qty'] ?? 1,
+                                'price' => $item['price'] ?? 0,
+                            ]);
+                        }
+                    }
+                }
+
                 $receiptIds[] = $receipt->id;
             }
 
@@ -422,15 +439,32 @@ class LiquidationController extends Controller
                         if (!isset($receiptData['id'])) continue;
                         $receipt = Receipt::findOrFail($receiptData['id']);
                         $receipt->update([
-                            'vendor_name' => $receiptData['vendor_name'] ?? $receipt->vendor_name,
-                            'transaction_date' => $receiptData['transaction_date'] ?? $receipt->transaction_date,
-                            'total_amount' => $receiptData['total_amount'] ?? $receipt->total_amount,
-                            'vat_amount' => $receiptData['vat_amount'] ?? $receipt->vat_amount,
+                            'vendor_name' => $receiptData['vendor_name'] ?? $receiptData['vendor'] ?? $receipt->vendor_name,
+                            'transaction_date' => $receiptData['transaction_date'] ?? $receiptData['date'] ?? $receipt->transaction_date,
+                            'total_amount' => $receiptData['total_amount'] ?? $receiptData['amount'] ?? $receipt->total_amount,
+                            'vat_amount' => $receiptData['vat_amount'] ?? $receiptData['vat'] ?? $receiptData['tax'] ?? $receipt->vat_amount,
                             'tin' => $receiptData['tin'] ?? $receipt->tin,
-                            'invoice_number' => $receiptData['invoice_number'] ?? $receipt->invoice_number,
-                            'expense_category_id' => $receiptData['expense_category_id'] ?? $receipt->expense_category_id ?? null,
+                            'invoice_number' => $receiptData['invoice_number'] ?? $receiptData['invoiceNumber'] ?? $receipt->invoice_number,
+                            'expense_category_id' => $receiptData['expense_category_id'] ?? $receiptData['categoryId'] ?? $receipt->expense_category_id ?? null,
+                            'location' => $receiptData['location'] ?? $receipt->location ?? null,
+                            'currency' => $receiptData['currency'] ?? $receipt->currency ?? 'PHP',
+                            'vat_classification' => $receiptData['vat_classification'] ?? $receiptData['vatClassification'] ?? $receipt->vat_classification ?? 'vat',
                             'status' => 'pending',
                         ]);
+
+                        if (isset($receiptData['items']) && is_array($receiptData['items'])) {
+                            $receipt->items()->delete();
+                            foreach ($receiptData['items'] as $item) {
+                                if (!empty($item['name']) || isset($item['price'])) {
+                                    $receipt->items()->create([
+                                        'name' => $item['name'] ?? 'Item',
+                                        'qty' => $item['qty'] ?? 1,
+                                        'price' => $item['price'] ?? 0,
+                                    ]);
+                                }
+                            }
+                        }
+
                         $receiptIds[] = $receipt->id;
                     }
                     $liquidation->reimbursement_ids = $receiptIds;

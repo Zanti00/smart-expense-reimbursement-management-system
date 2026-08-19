@@ -11,8 +11,8 @@ import {
 } from "lucide-vue-next";
 import BaseButton from "@/components/base/BaseButton.vue";
 import FileUpload from "@/components/base/FileUpload.vue";
+import ScannedReceiptsList from "@/components/reimbursements/ScannedReceiptsList.vue";
 import { formatPeso } from "@/utils/formatters";
-import { vatOf } from "@/utils/receiptUtils";
 
 const props = defineProps({
   selectedAdvance: {
@@ -139,11 +139,11 @@ const currentStatusLabel = computed(() => {
   return status || "Read-only";
 });
 
-function handleAmountChange(receipt) {
-  if (receipt && receipt.ocrData) {
-    const amt = Number(receipt.ocrData.amount) || 0;
-    receipt.ocrData.vat = Number(vatOf(amt).toFixed(2));
-  }
+function handleRemoveReceipt(receiptToRemove) {
+  const updated = props.receipts.filter(
+    (r) => r !== receiptToRemove && (!receiptToRemove.id || r.id !== receiptToRemove.id)
+  );
+  emit("update:receipts", updated);
 }
 
 function formatTinValue(value, { padLastBlock = false } = {}) {
@@ -160,18 +160,6 @@ function formatTinValue(value, { padLastBlock = false } = {}) {
   if (digits.length > 6) parts.push(digits.slice(6, 9));
   if (digits.length > 9) parts.push(digits.slice(9, 12));
   return parts.join("-");
-}
-
-function handleTinInput(receipt) {
-  if (!receipt?.ocrData) return;
-  receipt.ocrData.tin = formatTinValue(receipt.ocrData.tin);
-}
-
-function handleTinBlur(receipt) {
-  if (!receipt?.ocrData) return;
-  receipt.ocrData.tin = formatTinValue(receipt.ocrData.tin, {
-    padLastBlock: true,
-  });
 }
 
 function attachmentFileName(file) {
@@ -271,172 +259,14 @@ function attachmentFileSize(file) {
       />
     </div>
 
-    <section
+    <ScannedReceiptsList
       v-if="receipts.length > 0"
-      class="p-4 space-y-4 bg-white border rounded-xl border-slate-200"
-    >
-      <div
-        class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
-      >
-        <div>
-          <p class="text-base font-bold font-heading text-primary">
-            Receipts
-          </p>
-        </div>
-      </div>
-
-      <article
-        v-for="(receipt, index) in receipts"
-        :key="receipt.name + index"
-        class="overflow-hidden border rounded-xl border-slate-200 bg-slate-50"
-      >
-        <div class="grid grid-cols-1 xl:grid-cols-[180px_minmax(0,1fr)]">
-          <aside
-            class="p-4 border-b border-slate-200 bg-slate-100/70 xl:border-b-0 xl:border-r"
-          >
-            <p class="kpi-label text-slate-400">Receipt Preview</p>
-            <div
-              class="flex items-center justify-center mt-2 overflow-hidden bg-white border rounded-lg shadow-sm h-44 border-slate-200"
-            >
-              <img
-                v-if="receipt.preview"
-                :src="receipt.preview"
-                alt="Uploaded receipt preview"
-                class="object-cover object-top w-full h-full"
-              />
-              <FileText v-else class="w-8 h-8 text-slate-300" />
-            </div>
-          </aside>
-
-          <div class="p-4 space-y-4 bg-white">
-            <div
-              class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"
-            >
-              <div class="min-w-0">
-                <p
-                  class="text-sm font-bold truncate font-heading text-slate-900"
-                >
-                  {{ receipt.ocrData?.vendor || receipt.name }}
-                </p>
-                <p class="mt-0.5 truncate text-xs font-semibold text-slate-400">
-                  {{ receipt.name }}
-                </p>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <label class="space-y-1">
-                <span class="input-label">Merchant Name</span>
-                <input
-                  class="bg-white input"
-                  v-model="receipt.ocrData.vendor"
-                  :disabled="isFormDisabled"
-                  :class="{ 'cursor-not-allowed bg-slate-100 text-slate-500': isFormDisabled }"
-                />
-              </label>
-              <label class="space-y-1">
-                <span class="input-label">Date</span>
-                <span class="relative block">
-                  <input
-                    type="date"
-                    class="pr-10 bg-white input"
-                    v-model="receipt.ocrData.date"
-                    :disabled="isFormDisabled"
-                    :class="{ 'cursor-not-allowed bg-slate-100 text-slate-500': isFormDisabled }"
-                  />
-                </span>
-              </label>
-              <label class="space-y-1">
-                <span class="input-label">TIN Number</span>
-                <input
-                  class="bg-white input"
-                  v-model="receipt.ocrData.tin"
-                  inputmode="numeric"
-                  maxlength="15"
-                  placeholder="000-000-000-000"
-                  :disabled="isFormDisabled"
-                  :class="{ 'cursor-not-allowed bg-slate-100 text-slate-500': isFormDisabled }"
-                  @input="handleTinInput(receipt)"
-                  @blur="handleTinBlur(receipt)"
-                />
-              </label>
-              <label class="space-y-1">
-                <span class="input-label">Expense Category</span>
-                <select
-                  v-model.number="receipt.categoryId"
-                  class="bg-white input"
-                  :disabled="isFormDisabled"
-                  :class="{ 'cursor-not-allowed bg-slate-100 text-slate-500': isFormDisabled }"
-                >
-                  <option
-                    v-for="category in receiptCategoryOptions"
-                    :key="category.id"
-                    :value="Number(category.id)"
-                  >
-                    {{ category.name }}
-                  </option>
-                </select>
-              </label>
-              <label class="space-y-1">
-                <span class="input-label">Invoice Number</span>
-                <input
-                  class="bg-white input"
-                  v-model="receipt.ocrData.invoiceNumber"
-                  :disabled="isFormDisabled"
-                  :class="{ 'cursor-not-allowed bg-slate-100 text-slate-500': isFormDisabled }"
-                />
-              </label>
-            </div>
-
-            <div
-              class="grid grid-cols-1 gap-3 pt-4 border-t border-slate-200 md:grid-cols-2 xl:grid-cols-3"
-            >
-              <label class="space-y-1">
-                <span class="input-label">Subtotal</span>
-                <input
-                  class="font-semibold cursor-not-allowed input bg-slate-100 text-slate-500"
-                  disabled
-                  :value="
-                    formatPeso(
-                      Math.max(
-                        Number(receipt.ocrData?.amount || 0) -
-                          Number(receipt.ocrData?.vat || 0),
-                        0,
-                      ),
-                    )
-                  "
-                />
-              </label>
-              <label class="space-y-1">
-                <span class="input-label">Tax (VAT)</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  class="font-semibold bg-white input"
-                  v-model.number="receipt.ocrData.vat"
-                  :disabled="isFormDisabled"
-                  :class="{ 'cursor-not-allowed bg-slate-100 text-slate-500': isFormDisabled }"
-                />
-              </label>
-              <div
-                class="p-3 border rounded-lg border-accent/20 bg-accent-50 md:col-span-2 xl:col-span-1"
-              >
-                <p class="input-label text-accent">Receipt Total</p>
-                <input
-                  type="number"
-                  step="0.01"
-                  class="input font-semibold !bg-white !text-primary font-heading text-lg sm:text-xl"
-                  v-model.number="receipt.ocrData.amount"
-                  :disabled="isFormDisabled"
-                  :class="{ '!cursor-not-allowed !bg-slate-100 !text-slate-500': isFormDisabled }"
-                  @input="handleAmountChange(receipt)"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </article>
-    </section>
+      :receipts="receipts"
+      :categories="receiptCategoryOptions"
+      :allow-remove="!isFormDisabled"
+      :disabled="isFormDisabled"
+      @remove-receipt="handleRemoveReceipt"
+    />
 
     <section class="p-4 space-y-3 bg-white border rounded-xl border-slate-200">
       <input

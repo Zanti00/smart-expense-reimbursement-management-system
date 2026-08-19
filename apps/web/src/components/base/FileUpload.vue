@@ -69,6 +69,7 @@ function buildPrefilledOcrData(file) {
     vendor: '',
     invoiceNumber: '',
     date: '',
+    location: '',
     confidence: 0,
   }
 }
@@ -102,9 +103,22 @@ function processFiles(fileList, mode) {
     const entry = {
       pages: validFiles,
       name: `Multi-page Receipt (${validFiles.length} pages)`,
+      fileName: `Multi-page Receipt (${validFiles.length} pages)`,
       size: validFiles.reduce((acc, f) => acc + f.size, 0),
       previews: validFiles.map(f => f.type.startsWith('image/') ? URL.createObjectURL(f) : null),
+      thumbnail: validFiles[0]?.type.startsWith('image/') ? URL.createObjectURL(validFiles[0]) : null,
       ocrStatus: 'idle',
+      merchantName: '',
+      date: '',
+      tin: '',
+      invoiceNumber: '',
+      location: '',
+      currency: 'PHP',
+      vatClassification: 'vat',
+      subtotal: '0.00',
+      tax: '0.00',
+      amount: 0,
+      items: [],
       ocrData: buildPrefilledOcrData(validFiles[0]),
     }
     files.value.push(entry)
@@ -114,9 +128,22 @@ function processFiles(fileList, mode) {
       const entry = {
         pages: [file],
         name: file.name,
+        fileName: file.name,
         size: file.size,
         previews: [file.type.startsWith('image/') ? URL.createObjectURL(file) : null],
+        thumbnail: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
         ocrStatus: 'idle',
+        merchantName: '',
+        date: '',
+        tin: '',
+        invoiceNumber: '',
+        location: '',
+        currency: 'PHP',
+        vatClassification: 'vat',
+        subtotal: '0.00',
+        tax: '0.00',
+        amount: 0,
+        items: [],
         ocrData: buildPrefilledOcrData(file),
       }
       files.value.push(entry)
@@ -161,6 +188,7 @@ async function simulateOCR(entry) {
     const ocrData = result.data
 
     entry.ocrStatus = 'done'
+    entry.id = ocrData.id
     entry.ocrData = {
       id: ocrData.id,
       amount: ocrData.total_amount || entry.ocrData.amount || '',
@@ -169,12 +197,23 @@ async function simulateOCR(entry) {
       vendor: ocrData.vendor_name || entry.ocrData.vendor || '',
       invoiceNumber: ocrData.invoice_number || entry.ocrData.invoiceNumber || '',
       date: formatDateForInput(ocrData.transaction_date || entry.ocrData.date),
+      location: ocrData.location || entry.location || '',
       confidence: Math.round(ocrData.ocr_confidence_score || 85),
       file_path: ocrData.file_path,
       file_hash: ocrData.file_hash,
       file_type: ocrData.file_type,
       file_size_bytes: ocrData.file_size_bytes,
     }
+    entry.merchantName = entry.ocrData.vendor
+    entry.date = entry.ocrData.date
+    entry.tin = entry.ocrData.tin
+    entry.invoiceNumber = entry.ocrData.invoiceNumber
+    entry.location = entry.ocrData.location
+    entry.amount = Number(entry.ocrData.amount) || 0
+    entry.tax = entry.ocrData.vat ? String(entry.ocrData.vat) : '0.00'
+    entry.subtotal = (Math.max(Number(entry.amount || 0) - Number(entry.tax || 0), 0)).toFixed(2)
+    entry.thumbnail = entry.previews?.[0] || null
+
     emit('ocr-result', entry.ocrData)
     emit('update:modelValue', files.value)
   } catch (error) {

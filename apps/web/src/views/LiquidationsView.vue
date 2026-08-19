@@ -815,9 +815,17 @@ function selectAdvance(adv) {
           const rawPath = firstFilePathField(r.file_path);
           const rawStr =
             typeof rawPath === "string" ? rawPath : rawPath ? String(rawPath) : "";
+          const vatClass = r.vat_classification || "vat";
+          const subtotal = Math.max(
+            Number(r.total_amount || 0) - Number(r.vat_amount || 0),
+            0,
+          );
           return {
             id: r.id,
             name:
+              r.vendor_name ||
+              (rawStr ? rawStr.split("/").pop() : `Receipt-${r.id}`),
+            fileName:
               r.vendor_name ||
               (rawStr ? rawStr.split("/").pop() : `Receipt-${r.id}`),
             ocrStatus: "done",
@@ -825,8 +833,25 @@ function selectAdvance(adv) {
             categoryId:
               Number(r.expense_category_id ?? defaultReceiptCategoryId.value) ||
               null,
-            amount: r.total_amount,
+            merchantName: r.vendor_name || "",
+            date: r.transaction_date,
+            tin: r.tin || "",
+            invoiceNumber: r.invoice_number || "",
+            location: r.location || "",
+            currency: r.currency || "PHP",
+            vatClassification: vatClass,
+            subtotal: subtotal.toFixed(2),
+            tax: Number(r.vat_amount || 0).toFixed(2),
+            amount: Number(r.total_amount || 0),
+            items: Array.isArray(r.items) && r.items.length > 0
+              ? r.items.map((item) => ({
+                  name: item.name || "",
+                  qty: Number(item.qty || 1),
+                  price: Number(item.price || 0),
+                }))
+              : [],
             filePath: rawStr || r.file_path,
+            thumbnail: rawStr ? getFileUrl(rawStr) : null,
             ocrData: {
               id: r.id,
               vendor: r.vendor_name,
@@ -835,6 +860,7 @@ function selectAdvance(adv) {
               vat: r.vat_amount || 0,
               tin: r.tin,
               invoiceNumber: r.invoice_number,
+              location: r.location || "",
               file_path: r.file_path,
             },
           };
