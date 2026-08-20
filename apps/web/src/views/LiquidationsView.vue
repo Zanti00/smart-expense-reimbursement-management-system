@@ -113,8 +113,8 @@ const pageSize = 10;
 const currentPage = ref(1);
 const employeeSearchQuery = ref("");
 const employeeActiveStatus = ref("All");
-const employeeSortKey = ref("status");
-const employeeSortDirection = ref("asc");
+const employeeSortKey = ref("date");
+const employeeSortDirection = ref("desc");
 const VALID_REPORT_ATTACHMENT_MIME_TYPES = [
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -146,8 +146,8 @@ const employeeStatusFilters = [
   "Overdue",
 ];
 const employeeSortOptions = [
-  { value: "status", label: "Status" },
   { value: "date", label: "Date" },
+  { value: "status", label: "Status" },
   { value: "amount", label: "Total Amount" },
 ];
 const receiptCategoryOptions = computed(() => receiptStore.categories || []);
@@ -300,6 +300,27 @@ const employeeFilteredAdvances = computed(() => {
   return [...rows].sort((a, b) => {
     const aValue = employeeSortValue(a, employeeSortKey.value);
     const bValue = employeeSortValue(b, employeeSortKey.value);
+
+    if (aValue === bValue) {
+      const aTime = new Date(
+        a.submitted_at ||
+          a.submittedAt ||
+          a.date ||
+          a.created_at ||
+          a.createdAt ||
+          0,
+      ).getTime();
+      const bTime = new Date(
+        b.submitted_at ||
+          b.submittedAt ||
+          b.date ||
+          b.created_at ||
+          b.createdAt ||
+          0,
+      ).getTime();
+      if (aTime !== bTime) return bTime - aTime;
+      return (Number(b.id) || 0) - (Number(a.id) || 0);
+    }
 
     if (typeof aValue === "number" && typeof bValue === "number") {
       return (aValue - bValue) * direction;
@@ -718,9 +739,11 @@ function employeeSortValue(advance, key) {
   if (key === "amount") return numberOrZero(advance.amount);
   if (key === "date") {
     const timestamp = new Date(
-      advance.date ||
-        advance.submitted_at ||
+      advance.submitted_at ||
+        advance.submittedAt ||
+        advance.date ||
         advance.created_at ||
+        advance.createdAt ||
         advance.dueDate ||
         0,
     ).getTime();

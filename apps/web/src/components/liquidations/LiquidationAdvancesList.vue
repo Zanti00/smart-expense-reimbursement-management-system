@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from "vue";
+import { computed, ref, watch } from "vue";
 import {
   ChevronUp,
   ChevronDown,
@@ -9,6 +9,7 @@ import {
 } from "lucide-vue-next";
 import SkeletonLoader from "@/components/base/SkeletonLoader.vue";
 import StatusBadge from "@/components/base/StatusBadge.vue";
+import BasePagination from "@/components/base/BasePagination.vue";
 import { formatPeso } from "@/utils/formatters";
 
 const props = defineProps({
@@ -48,28 +49,63 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  pageSize: {
+    type: Number,
+    default: 8,
+  },
 });
 
-const emit = defineEmits(["update:sortKey", "update:sortDirection", "select", "toggle-collapse"]);
+const emit = defineEmits([
+  "update:sortKey",
+  "update:sortDirection",
+  "select",
+  "toggle-collapse",
+]);
+
+const currentPage = ref(1);
+
+const totalPages = computed(() =>
+  Math.max(1, Math.ceil((props.advances?.length || 0) / props.pageSize)),
+);
+
+const paginatedAdvances = computed(() => {
+  const list = props.advances || [];
+  const start = (currentPage.value - 1) * props.pageSize;
+  return list.slice(start, start + props.pageSize);
+});
+
+watch(
+  () => props.advances?.length,
+  () => {
+    if (currentPage.value > totalPages.value) {
+      currentPage.value = Math.max(1, totalPages.value);
+    }
+  },
+);
 
 function handleSortClick(optionValue) {
   if (props.sortKey === optionValue) {
     emit(
       "update:sortDirection",
-      props.sortDirection === "asc" ? "desc" : "asc"
+      props.sortDirection === "asc" ? "desc" : "asc",
     );
   } else {
     emit("update:sortKey", optionValue);
-    emit("update:sortDirection", "asc");
+    emit("update:sortDirection", optionValue === "date" ? "desc" : "asc");
   }
 }
 </script>
 
 <template>
-  <div class="flex flex-col gap-3" :class="collapsed ? 'xl:col-span-1' : 'xl:col-span-2'">
+  <div
+    class="flex flex-col gap-3"
+    :class="collapsed ? 'xl:col-span-1' : 'xl:col-span-2'"
+  >
     <!-- Collapse Toggle -->
     <div class="hidden xl:flex items-center justify-between">
-      <span v-if="!collapsed" class="text-xs text-slate-400">{{ advances.length }} advances</span>
+      <span v-if="!collapsed" class="text-xs text-slate-400"
+        >{{ advances.length }} advances</span
+      >
       <button
         class="p-1.5 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
         :title="collapsed ? 'Expand panel' : 'Collapse panel'"
@@ -83,7 +119,7 @@ function handleSortClick(optionValue) {
     <!-- Collapsed State -->
     <template v-if="collapsed">
       <div
-        v-for="adv in advances"
+        v-for="adv in paginatedAdvances"
         :key="adv.id"
         :class="[
           'card px-3 py-2.5 cursor-pointer border',
@@ -103,6 +139,32 @@ function handleSortClick(optionValue) {
         <p class="text-sm font-semibold text-primary mt-1">
           {{ formatPeso(adv.balance || 0) }}
         </p>
+      </div>
+
+      <!-- Collapsed Pagination Controls -->
+      <div
+        v-if="!isLoading && advances.length > pageSize"
+        class="flex items-center justify-between gap-1 pt-1"
+      >
+        <button
+          class="btn btn-secondary btn-sm px-2 py-1 text-xs"
+          :disabled="currentPage === 1"
+          type="button"
+          @click="currentPage = Math.max(1, currentPage - 1)"
+        >
+          Prev
+        </button>
+        <span class="text-[10px] font-bold text-slate-500">
+          {{ currentPage }} / {{ totalPages }}
+        </span>
+        <button
+          class="btn btn-secondary btn-sm px-2 py-1 text-xs"
+          :disabled="currentPage === totalPages"
+          type="button"
+          @click="currentPage = Math.min(totalPages, currentPage + 1)"
+        >
+          Next
+        </button>
       </div>
     </template>
 
@@ -147,9 +209,7 @@ function handleSortClick(optionValue) {
         v-if="!isLoading && advances.length === 0"
         class="flex items-center justify-center p-6 text-center border-dashed card min-h-32"
       >
-        <p class="text-sm text-slate-400">
-          No advances found.
-        </p>
+        <p class="text-sm text-slate-400">No advances found.</p>
       </div>
 
       <template v-if="isLoading">
@@ -164,7 +224,7 @@ function handleSortClick(optionValue) {
 
       <template v-else>
         <div
-          v-for="adv in advances"
+          v-for="adv in paginatedAdvances"
           :key="adv.id"
           :class="[
             'card px-4 py-3 cursor-pointer transition-none group border',
@@ -217,6 +277,15 @@ function handleSortClick(optionValue) {
             </div>
           </div>
         </div>
+
+        <BasePagination
+          v-if="advances.length > pageSize"
+          v-model:page="currentPage"
+          :page-size="pageSize"
+          :total="advances.length"
+          label="advances"
+          class="rounded-xl border border-slate-200 shadow-sm"
+        />
       </template>
     </template>
   </div>
