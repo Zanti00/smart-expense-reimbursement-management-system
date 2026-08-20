@@ -1,5 +1,6 @@
 <script setup>
 import BaseKpiCardSkeleton from "./BaseKpiCardSkeleton.vue";
+import { formatKpiValue } from "@/utils/formatters";
 
 defineProps({
   kpis: {
@@ -46,7 +47,7 @@ defineProps({
             {{ kpi.sub }}
           </span>
         </div>
-        <p class="kpi-value truncate" :title="kpi.value">{{ kpi.value }}</p>
+        <p class="kpi-value truncate" :title="formatKpiValue(kpi.value)">{{ formatKpiValue(kpi.value) }}</p>
         <p class="kpi-label">{{ kpi.label }}</p>
         <div
           v-if="kpi.subtext"

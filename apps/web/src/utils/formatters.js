@@ -1,9 +1,12 @@
-/** Format a monetary amount using the Philippine Peso (₱) locale. */
+/** Format a monetary amount using the Philippine Peso (₱) locale with 2 decimals. */
 export function formatPeso(value) {
+  const num = typeof value === "number" ? value : parseFloat(value) || 0;
   return new Intl.NumberFormat("en-PH", {
     style: "currency",
     currency: "PHP",
-  }).format(value);
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(num);
 }
 
 /**
@@ -15,19 +18,76 @@ export function formatPeso(value) {
  *
  * @example
  * formatAmount(150.00, "USD")  // → "$150.00"
- * formatAmount(12000, "JPY")   // → "¥12,000"
+ * formatAmount(12000, "JPY")   // → "¥12,000.00"
  * formatAmount(500.00)         // → "₱500.00"
  */
 export function formatAmount(value, currencyCode = "PHP") {
   try {
+    const num = typeof value === "number" ? value : parseFloat(value) || 0;
     return new Intl.NumberFormat("en", {
       style: "currency",
       currency: currencyCode || "PHP",
-    }).format(value ?? 0);
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(num);
   } catch {
     // Fallback if an unsupported code is somehow passed (defensive).
     return formatPeso(value);
   }
+}
+
+/**
+ * Format a KPI value to display at most 2 decimal digits for monetary or decimal numbers (e.g. 1,200.12 or ₱1,200.12).
+ *
+ * @param {string|number} value - The KPI value to format.
+ * @returns {string} Formatted KPI value.
+ */
+export function formatKpiValue(value) {
+  if (value === null || value === undefined) return "—";
+
+  if (typeof value === "number") {
+    if (Number.isInteger(value)) {
+      return value.toLocaleString();
+    }
+    return value.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+
+    // Match currency-prefixed strings like ₱1200.1, $500, ₱44,750, ₱03200.006500
+    const currencyMatch = trimmed.match(/^([^\d\-+]+)([-+]?[\d,]+(?:\.\d+)?)$/);
+    if (currencyMatch) {
+      const prefix = currencyMatch[1];
+      const rawNum = parseFloat(currencyMatch[2].replace(/,/g, ""));
+      if (!isNaN(rawNum)) {
+        return `${prefix}${rawNum.toLocaleString(undefined, {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}`;
+      }
+    }
+
+    // Match raw decimal numbers formatted as strings like "1200.1234"
+    const numOnlyMatch = trimmed.match(/^([-+]?[\d,]+(?:\.\d+)?)$/);
+    if (numOnlyMatch) {
+      const rawNum = parseFloat(numOnlyMatch[1].replace(/,/g, ""));
+      if (!isNaN(rawNum)) {
+        if (Number.isInteger(rawNum) && !trimmed.includes(".")) {
+          return rawNum.toLocaleString();
+        }
+        return rawNum.toLocaleString(undefined, {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        });
+      }
+    }
+  }
+
+  return String(value);
 }
 
 export function getInitials(name) {

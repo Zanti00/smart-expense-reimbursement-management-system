@@ -10,7 +10,7 @@ export const useCashAdvanceStore = defineStore("cashAdvance", () => {
     () => items.value.filter((i) => i.status === "pending").length,
   );
   const totalOutstanding = computed(() =>
-    items.value.reduce((s, i) => s + (i.amount || 0), 0),
+    items.value.reduce((s, i) => s + (Number(i.amount) || 0), 0),
   ); // simplistic for now
 
   function normalizeAdvance(item = {}) {

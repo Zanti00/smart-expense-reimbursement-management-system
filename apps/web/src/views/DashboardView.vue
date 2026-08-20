@@ -6,7 +6,8 @@ import { useCashAdvanceStore } from "@/stores/cashAdvance";
 import { useLiquidationStore } from "@/stores/liquidation";
 import BaseKpiGrid from "@/components/base/BaseKpiGrid.vue";
 import SkeletonLoader from "@/components/base/SkeletonLoader.vue";
-import { Bar, Doughnut } from "vue-chartjs";
+import { formatPeso } from "@/utils/formatters";
+import { Bar, Doughnut, Line, Pie } from "vue-chartjs";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -62,10 +63,11 @@ const isDashboardLoading = computed(
 const employeeKpis = computed(() => [
   {
     label: "Total Reimbursement",
-    value: `₱${rStore.items
-      .filter((i) => i.status === "approved" || i.status === "granted")
-      .reduce((s, i) => s + parseFloat(i.amount || 0), 0)
-      .toLocaleString()}`,
+    value: formatPeso(
+      rStore.items
+        .filter((i) => i.status === "approved" || i.status === "granted")
+        .reduce((s, i) => s + parseFloat(i.amount || 0), 0),
+    ),
     sub: "Approved claims",
     icon: Wallet,
     iconBg: "bg-emerald-100",
@@ -83,7 +85,7 @@ const employeeKpis = computed(() => [
   },
   {
     label: "Total Filed Cash Advance",
-    value: `₱${caStore.totalOutstanding.toLocaleString()}`,
+    value: formatPeso(caStore.totalOutstanding),
     sub: "Total amount",
     icon: Banknote,
     iconBg: "bg-amber-100",
@@ -92,9 +94,12 @@ const employeeKpis = computed(() => [
   },
   {
     label: "Total Filed Liquidation",
-    value: `₱${liqStore.settlements
-      .reduce((s, i) => s + (Number(i.total_expense_amount) || 0), 0)
-      .toLocaleString()}`,
+    value: formatPeso(
+      liqStore.settlements.reduce(
+        (s, i) => s + (Number(i.total_expense_amount) || 0),
+        0,
+      ),
+    ),
     sub: "Total amount",
     icon: ReceiptText,
     iconBg: "bg-violet-100",
@@ -104,41 +109,101 @@ const employeeKpis = computed(() => [
 ]);
 
 // Employee Bar Chart
-const employeeBarData = computed(() => ({
-  labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-  datasets: [
-    {
-      label: "My Expense",
-      data: [32000, 45000, 38000, 52000, 41000, 60000],
-      backgroundColor: "#059669",
-      borderRadius: 4,
-      barPercentage: 0.6,
-      categoryPercentage: 0.7,
-    },
-    {
-      label: "Reimbursement",
-      data: [28000, 35000, 42000, 39000, 55000, 48000],
-      backgroundColor: "#2E85D8",
-      borderRadius: 4,
-      barPercentage: 0.6,
-      categoryPercentage: 0.7,
-    },
-  ],
-}));
+const employeeBarData = computed(() => {
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+  const reimbursementByMonth = [0, 0, 0, 0, 0, 0];
+  const expenseByMonth = [0, 0, 0, 0, 0, 0];
+
+  rStore.items.forEach((item) => {
+    if (!item.date && !item.created_at) return;
+    const date = new Date(item.date || item.created_at);
+    const month = date.getMonth();
+    if (month >= 0 && month < 6) {
+      reimbursementByMonth[month] += parseFloat(item.amount || 0);
+    }
+  });
+
+  return {
+    labels: months,
+    datasets: [
+      {
+        label: "My Expense",
+        data: expenseByMonth,
+        backgroundColor: "#059669",
+        borderRadius: 4,
+        barPercentage: 0.6,
+        categoryPercentage: 0.7,
+      },
+      {
+        label: "Reimbursement",
+        data: reimbursementByMonth,
+        backgroundColor: "#2E85D8",
+        borderRadius: 4,
+        barPercentage: 0.6,
+        categoryPercentage: 0.7,
+      },
+    ],
+  };
+});
 
 // Employee Pie Chart
-const employeePieData = {
-  labels: ["Lab Supplies", "Transport", "Client Meeting", "Maintenance", "Office", "Reimbursement"],
-  datasets: [
-    {
-      data: [25, 15, 15, 15, 10, 20],
-      backgroundColor: ["#252578", "#2E85D8", "#059669", "#D97706", "#64748b", "#7c3aed"],
-      borderWidth: 2,
-      borderColor: "#ffffff",
-      hoverOffset: 6,
-    },
-  ],
-};
+const employeePieData = computed(() => {
+  const categoryMap = {};
+
+  rStore.items.forEach((item) => {
+    const catName =
+      item.expense_category?.name ||
+      item.expenseCategory?.name ||
+      item.category?.name ||
+      item.category ||
+      (item.receipts && item.receipts[0]?.category?.name) ||
+      "Other";
+    const amount = parseFloat(item.amount || 0);
+    categoryMap[catName] = (categoryMap[catName] || 0) + amount;
+  });
+
+  const labels = Object.keys(categoryMap);
+  const data = Object.values(categoryMap);
+  const total = data.reduce((a, b) => a + b, 0);
+
+  const colors = [
+    "#252578",
+    "#2E85D8",
+    "#059669",
+    "#D97706",
+    "#64748b",
+    "#7c3aed",
+    "#ec4899",
+    "#06b6d4",
+  ];
+
+  if (labels.length === 0 || total === 0) {
+    return {
+      labels: ["No Expenses Recorded"],
+      datasets: [
+        {
+          data: [1],
+          backgroundColor: ["#E2E8F0"],
+          borderWidth: 2,
+          borderColor: "#ffffff",
+        },
+      ],
+    };
+  }
+
+  return {
+    labels,
+    datasets: [
+      {
+        data,
+        backgroundColor: colors.slice(0, labels.length),
+        borderWidth: 2,
+        borderColor: "#ffffff",
+        hoverOffset: 6,
+      },
+    ],
+  };
+});
 
 // ══════════════════════════════════════════════════
 // ADMIN DASHBOARD
@@ -197,19 +262,33 @@ const adminKpis = computed(() => {
 });
 
 // Admin Bar Chart: Monthly Spending Trend (Reimbursement only)
-const adminBarData = computed(() => ({
-  labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-  datasets: [
-    {
-      label: "Reimbursement",
-      data: [85000, 120000, 95000, 140000, 110000, 130000],
-      backgroundColor: "#2E85D8",
-      borderRadius: 4,
-      barPercentage: 0.5,
-      categoryPercentage: 0.6,
-    },
-  ],
-}));
+const adminBarData = computed(() => {
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+  const monthlyAmounts = [0, 0, 0, 0, 0, 0];
+
+  rStore.items.forEach((item) => {
+    if (!item.date && !item.created_at) return;
+    const date = new Date(item.date || item.created_at);
+    const month = date.getMonth();
+    if (month >= 0 && month < 6) {
+      monthlyAmounts[month] += parseFloat(item.amount || 0);
+    }
+  });
+
+  return {
+    labels: months,
+    datasets: [
+      {
+        label: "Reimbursement",
+        data: monthlyAmounts,
+        backgroundColor: "#2E85D8",
+        borderRadius: 4,
+        barPercentage: 0.5,
+        categoryPercentage: 0.6,
+      },
+    ],
+  };
+});
 
 // Admin Pie Chart: Cash Advance Status Distribution
 const adminCaStatusPieData = computed(() => {
@@ -219,6 +298,21 @@ const adminCaStatusPieData = computed(() => {
   const data = statuses.map(
     (s) => caStore.items.filter((i) => i.status === s).length
   );
+  const total = data.reduce((a, b) => a + b, 0);
+
+  if (total === 0) {
+    return {
+      labels: ["No Cash Advances"],
+      datasets: [
+        {
+          data: [1],
+          backgroundColor: ["#E2E8F0"],
+          borderWidth: 2,
+          borderColor: "#ffffff",
+        },
+      ],
+    };
+  }
 
   return {
     labels,
@@ -241,18 +335,37 @@ const totalCashAdvanceAmount = computed(() =>
 const totalOutstandingBalance = computed(() => caStore.totalOutstanding);
 const remainingOutstanding = computed(() => totalOutstandingBalance.value);
 
-const adminBalancePieData = computed(() => ({
-  labels: ["Total Cash Advance", "Outstanding Balance"],
-  datasets: [
-    {
-      data: [totalCashAdvanceAmount.value, totalOutstandingBalance.value],
-      backgroundColor: ["#252578", "#DC2626"],
-      borderWidth: 2,
-      borderColor: "#ffffff",
-      hoverOffset: 6,
-    },
-  ],
-}));
+const adminBalancePieData = computed(() => {
+  const totalCA = totalCashAdvanceAmount.value;
+  const totalOut = totalOutstandingBalance.value;
+
+  if (totalCA === 0 && totalOut === 0) {
+    return {
+      labels: ["No Cash Advances"],
+      datasets: [
+        {
+          data: [1],
+          backgroundColor: ["#E2E8F0"],
+          borderWidth: 2,
+          borderColor: "#ffffff",
+        },
+      ],
+    };
+  }
+
+  return {
+    labels: ["Total Cash Advance", "Outstanding Balance"],
+    datasets: [
+      {
+        data: [totalCA, totalOut],
+        backgroundColor: ["#252578", "#DC2626"],
+        borderWidth: 2,
+        borderColor: "#ffffff",
+        hoverOffset: 6,
+      },
+    ],
+  };
+});
 
 // ══════════════════════════════════════════════════
 // SHARED
@@ -267,10 +380,33 @@ const lineData = computed(() => {
     week: ["Week 1", "Week 2", "Week 3", "Week 4"],
     month: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
   };
-  const data = {
-    day: [8000, 12000, 5000, 15000, 9000, 3000, 6000],
-    week: [45000, 62000, 38000, 55000],
-    month: [120000, 95000, 140000, 88000, 110000, 130000],
+
+  const dayData = [0, 0, 0, 0, 0, 0, 0];
+  const weekData = [0, 0, 0, 0];
+  const monthData = [0, 0, 0, 0, 0, 0];
+
+  liqStore.settlements.forEach((item) => {
+    const amount = Number(item.total_expense_amount) || 0;
+    const dateStr = item.settlement_date || item.created_at || item.date;
+    if (!dateStr) return;
+    const date = new Date(dateStr);
+
+    const dayIdx = (date.getDay() + 6) % 7;
+    dayData[dayIdx] += amount;
+
+    const weekIdx = Math.min(Math.floor(date.getDate() / 7), 3);
+    weekData[weekIdx] += amount;
+
+    const monthIdx = date.getMonth();
+    if (monthIdx >= 0 && monthIdx < 6) {
+      monthData[monthIdx] += amount;
+    }
+  });
+
+  const datasetMap = {
+    day: dayData,
+    week: weekData,
+    month: monthData,
   };
 
   return {
@@ -278,7 +414,7 @@ const lineData = computed(() => {
     datasets: [
       {
         label: "Liquidation Volume",
-        data: data[liquidationGranularity.value],
+        data: datasetMap[liquidationGranularity.value],
         borderColor: "#252578",
         backgroundColor: "rgba(37, 37, 120, 0.05)",
         borderWidth: 2,
@@ -316,6 +452,9 @@ const lineOptions = {
       ticks: { color: "#94a3b8", font: { family: "Poppins", size: 11 } },
     },
     y: {
+      beginAtZero: true,
+      suggestedMin: 0,
+      suggestedMax: 10000,
       grid: { color: "rgba(148,163,184,0.1)", borderDash: [4, 4] },
       ticks: {
         color: "#94a3b8",
@@ -360,6 +499,9 @@ const barOptions = {
       ticks: { color: "#94a3b8", font: { family: "Poppins", size: 11 } },
     },
     y: {
+      beginAtZero: true,
+      suggestedMin: 0,
+      suggestedMax: 10000,
       grid: { color: "rgba(148,163,184,0.1)", borderDash: [4, 4] },
       ticks: {
         color: "#94a3b8",
@@ -392,7 +534,12 @@ const pieOptions = {
       bodyFont: { family: "Poppins", size: 12 },
       cornerRadius: 8,
       callbacks: {
-        label: (ctx) => ` ${ctx.label}: ${ctx.raw}${typeof ctx.raw === 'number' && ctx.raw > 100 ? '' : '%'}`,
+        label: (ctx) => {
+          if (typeof ctx.label === "string" && ctx.label.includes("No ")) {
+            return " No data available";
+          }
+          return ` ${ctx.label}: ${ctx.raw}${typeof ctx.raw === "number" && ctx.raw > 100 ? "" : "%"}`;
+        },
       },
     },
   },
@@ -405,7 +552,12 @@ const pieOptionsWithCurrency = {
     tooltip: {
       ...pieOptions.plugins.tooltip,
       callbacks: {
-        label: (ctx) => ` ${ctx.label}: ₱${ctx.raw.toLocaleString()}`,
+        label: (ctx) => {
+          if (typeof ctx.label === "string" && ctx.label.includes("No ")) {
+            return " No data available";
+          }
+          return ` ${ctx.label}: ₱${typeof ctx.raw === "number" ? ctx.raw.toLocaleString() : ctx.raw}`;
+        },
       },
     },
   },
@@ -585,15 +737,15 @@ const pieOptionsWithCurrency = {
           <div class="flex flex-col gap-4 p-5 rounded-xl bg-slate-50 border border-slate-100">
             <div>
               <p class="text-xs text-slate-400 mb-0.5">Total Cash Advance</p>
-              <p class="text-lg font-semibold text-primary">₱{{ totalCashAdvanceAmount.toLocaleString() }}</p>
+              <p class="text-lg font-semibold text-primary">{{ formatPeso(totalCashAdvanceAmount) }}</p>
             </div>
             <div>
               <p class="text-xs text-slate-400 mb-0.5">Total Outstanding Balance</p>
-              <p class="text-lg font-semibold text-red-600">₱{{ totalOutstandingBalance.toLocaleString() }}</p>
+              <p class="text-lg font-semibold text-red-600">{{ formatPeso(totalOutstandingBalance) }}</p>
             </div>
             <div class="pt-3 border-t border-slate-200">
               <p class="text-xs text-slate-400 mb-0.5">Remaining Outstanding Amount</p>
-              <p class="text-xl font-bold text-slate-800">₱{{ remainingOutstanding.toLocaleString() }}</p>
+              <p class="text-xl font-bold text-slate-800">{{ formatPeso(remainingOutstanding) }}</p>
             </div>
           </div>
         </div>
