@@ -220,6 +220,56 @@ class ReimbursementService
     }
 
     /**
+     * Grant (disburse) a previously approved claim.
+     */
+    public function grantReimbursement(User $user, int $id, ?string $password, string $ipAddress, Request $requestContext)
+    {
+        return DB::transaction(function () use ($user, $id, $password, $ipAddress, $requestContext) {
+            // Verify password against external auth service if provided
+            if (!empty($password) && !PasswordVerificationService::verify($requestContext, $password)) {
+                throw ValidationException::withMessages([
+                    'password' => ['Invalid password. Please try again.']
+                ]);
+            }
+
+            $reimbursement = Reimbursement::findOrFail($id);
+
+            // Status guard: only approved reimbursements can be granted
+            if ($reimbursement->status !== 'approved') {
+                throw new \Illuminate\Auth\Access\AuthorizationException('Only approved reimbursements can be granted.');
+            }
+
+            // Self-grant check
+            if ($reimbursement->user_id === $user->id) {
+                throw new \Illuminate\Auth\Access\AuthorizationException('Self-grant is prohibited.');
+            }
+
+            $beforeState = $reimbursement->toArray();
+            $reimbursement->update(['status' => 'granted']);
+            $this->updateReceiptStatuses($reimbursement->receipts()->pluck('receipts.id')->all(), 'granted');
+            $afterState = $reimbursement->toArray();
+
+            // Immutable Audit Log
+            AuditLogService::log(
+                actorId: $user->id,
+                actorRole: $user->role,
+                actionType: 'CLAIM_GRANTED',
+                entityType: 'reimbursement',
+                entityId: $reimbursement->id,
+                beforeState: $beforeState,
+                afterState: $afterState,
+                ipAddress: $ipAddress
+            );
+
+            if ($reimbursement->is_request == 1 && !empty($reimbursement->source_submission_id)) {
+                UpdatePrsReimbursementStatusJob::dispatch($reimbursement->source_submission_id);
+            }
+
+            return $reimbursement;
+        });
+    }
+
+    /**
      * Update reimbursement details.
      *
      * Supports two modes:
@@ -232,6 +282,9 @@ class ReimbursementService
 
         // Admin mode — existing behaviour
         if ($canManage && ($user->id !== $reimbursement->user_id)) {
+            if (!empty($data['status']) && $data['status'] === 'granted') {
+                throw new \Illuminate\Auth\Access\AuthorizationException('Use POST /{id}/grant with password verification.');
+            }
             $reimbursement->update($data);
             if (!empty($data['status']) && in_array($data['status'], ['pending', 'approved', 'rejected'])) {
                 $this->updateReceiptStatuses(

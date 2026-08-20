@@ -554,4 +554,95 @@ describe("useReceiptStore", () => {
     expect(result.complianceStatus).toBe("rejected");
     expect(result.ocrFlagged).toBe(true);
   });
+
+  it("sorts visibleReceipts by price-desc when sort=price-desc is passed to fetchAll", async () => {
+    // 3,000 has a newer createdAt than 4,000 to ensure createdAt default sort doesn't override price-desc
+    const receipt3000 = {
+      id: 30,
+      file_path: "receipts/3000.pdf",
+      file_type: "application/pdf",
+      file_size_bytes: 100,
+      file_hash: "hash-3000",
+      transaction_date: "2026-08-10",
+      created_at: "2026-08-10T10:00:00.000Z", // Newer upload
+      total_amount: 3000,
+      category: { name: "Meals" },
+      expense_category_id: 1,
+      status: "processed",
+      vendor_name: "Vendor B",
+      invoice_number: "INV-3000",
+      uploader: { name: "John Doe" },
+      items: [],
+    };
+    const receipt4000 = {
+      id: 40,
+      file_path: "receipts/4000.pdf",
+      file_type: "application/pdf",
+      file_size_bytes: 100,
+      file_hash: "hash-4000",
+      transaction_date: "2026-08-01",
+      created_at: "2026-08-01T10:00:00.000Z", // Older upload
+      total_amount: 4000,
+      category: { name: "Meals" },
+      expense_category_id: 1,
+      status: "processed",
+      vendor_name: "Vendor A",
+      invoice_number: "INV-4000",
+      uploader: { name: "John Doe" },
+      items: [],
+    };
+
+    apiFetch.mockResolvedValue(okJson([receipt4000, receipt3000], 2));
+
+    const store = useReceiptStore();
+    await store.fetchAll({ sort: "price-desc" });
+
+    const orderedAmounts = store.visibleReceipts.map((r) => r.amount);
+    expect(orderedAmounts).toEqual([4000, 3000]);
+  });
+
+  it("sorts visibleReceipts by price-asc when sort=price-asc is passed to fetchAll", async () => {
+    const receipt3000 = {
+      id: 30,
+      file_path: "receipts/3000.pdf",
+      file_type: "application/pdf",
+      file_size_bytes: 100,
+      file_hash: "hash-3000",
+      transaction_date: "2026-08-10",
+      created_at: "2026-08-10T10:00:00.000Z",
+      total_amount: 3000,
+      category: { name: "Meals" },
+      expense_category_id: 1,
+      status: "processed",
+      vendor_name: "Vendor B",
+      invoice_number: "INV-3000",
+      uploader: { name: "John Doe" },
+      items: [],
+    };
+    const receipt4000 = {
+      id: 40,
+      file_path: "receipts/4000.pdf",
+      file_type: "application/pdf",
+      file_size_bytes: 100,
+      file_hash: "hash-4000",
+      transaction_date: "2026-08-01",
+      created_at: "2026-08-01T10:00:00.000Z",
+      total_amount: 4000,
+      category: { name: "Meals" },
+      expense_category_id: 1,
+      status: "processed",
+      vendor_name: "Vendor A",
+      invoice_number: "INV-4000",
+      uploader: { name: "John Doe" },
+      items: [],
+    };
+
+    apiFetch.mockResolvedValue(okJson([receipt3000, receipt4000], 2));
+
+    const store = useReceiptStore();
+    await store.fetchAll({ sort: "price-asc" });
+
+    const orderedAmounts = store.visibleReceipts.map((r) => r.amount);
+    expect(orderedAmounts).toEqual([3000, 4000]);
+  });
 });

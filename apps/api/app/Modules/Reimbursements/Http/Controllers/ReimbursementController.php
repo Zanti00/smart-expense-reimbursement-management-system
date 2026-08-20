@@ -8,6 +8,7 @@ use App\Modules\Reimbursements\Services\ReimbursementService;
 use App\Modules\Reimbursements\Http\Requests\StoreReimbursementRequest;
 use App\Modules\Reimbursements\Http\Requests\ApproveReimbursementRequest;
 use App\Modules\Reimbursements\Http\Requests\RejectReimbursementRequest;
+use App\Modules\Reimbursements\Http\Requests\GrantReimbursementRequest;
 use App\Modules\Reimbursements\Http\Requests\UpdateReimbursementRequest;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -109,6 +110,34 @@ class ReimbursementController extends Controller
 
             return response()->json([
                 'message' => 'Reimbursement request rejected.',
+                'data' => $reimbursement,
+            ]);
+        } catch (AuthorizationException $e) {
+            return response()->json(['message' => $e->getMessage()], 403);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => 'The given data was invalid.',
+                'errors' => $e->errors(),
+            ], 422);
+        }
+    }
+
+    /**
+     * Grant (disburse) a previously approved claim.
+     */
+    public function grant(GrantReimbursementRequest $request, $id)
+    {
+        try {
+            $reimbursement = $this->service->grantReimbursement(
+                $request->user(),
+                (int)$id,
+                $request->validated('password'),
+                $request->ip(),
+                $request
+            );
+
+            return response()->json([
+                'message' => 'Reimbursement granted.',
                 'data' => $reimbursement,
             ]);
         } catch (AuthorizationException $e) {

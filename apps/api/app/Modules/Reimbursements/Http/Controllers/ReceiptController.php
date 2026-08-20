@@ -32,6 +32,7 @@ class ReceiptController extends Controller
             'status' => $request->query('status'),
             'category' => $request->query('category'),
             'scope' => $request->query('scope'),
+            'sort' => $request->query('sort'),
             'per_page' => $request->query('per_page', 10),
         ]);
 

@@ -30,10 +30,13 @@ Route::middleware(['auth.external'])->group(function () {
     // Expense Categories
     Route::get('/categories', [ExpenseCategoryController::class, 'index']);
 
+    // Specific actions must be BEFORE dynamic {id} routes
+    Route::post('/{id}/approve', [ReimbursementController::class, 'approve']);
+    Route::post('/{id}/reject', [ReimbursementController::class, 'reject']);
+    Route::post('/{id}/grant', [ReimbursementController::class, 'grant']);
+
     // Dynamic routes must be at the bottom
     Route::get('/{id}', [ReimbursementController::class, 'show']);
     Route::patch('/{id}', [ReimbursementController::class, 'update']);
     Route::delete('/{id}', [ReimbursementController::class, 'destroy']);
-    Route::post('/{id}/approve', [ReimbursementController::class, 'approve']);
-    Route::post('/{id}/reject', [ReimbursementController::class, 'reject']);
 });

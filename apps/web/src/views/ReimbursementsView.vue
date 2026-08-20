@@ -148,6 +148,7 @@ const {
 const {
   approvingId,
   rejectingId,
+  grantingId,
   rejectionComment,
   confirmPassword,
   isReviewSubmitting,
@@ -157,6 +158,9 @@ const {
   openRejectModal,
   cancelReject,
   confirmReject,
+  openGrantModal,
+  cancelGrant,
+  confirmGrant,
 } = useReimbursementDecisions(store, addToast, viewingRecord);
 
 const isDeleteModalOpen = ref(false);
@@ -287,6 +291,7 @@ onMounted(() => store.fetchAll());
       @view-receipt-details="viewReceiptDetails"
       @reject="openRejectModal"
       @approve="openApproveModal"
+      @grant="openGrantModal"
     />
 
     <!-- ── Single Receipt Details Modal ── -->
@@ -309,15 +314,15 @@ onMounted(() => store.fetchAll());
       @confirm-decision="confirmReceiptDecision"
     />
 
-    <!-- Approve and Reject Confirmation Modal -->
+    <!-- Approve / Reject / Grant Confirmation Modal -->
     <DecisionConfirmationModal
-      :is-open="!!approvingId || !!rejectingId"
-      :mode="approvingId ? 'approve' : 'reject'"
+      :is-open="!!approvingId || !!rejectingId || !!grantingId"
+      :mode="grantingId ? 'grant' : approvingId ? 'approve' : 'reject'"
       :is-submitting="isReviewSubmitting"
       v-model:password="confirmPassword"
       v-model:comment="rejectionComment"
-      @close="approvingId ? cancelApprove() : cancelReject()"
-      @confirm="approvingId ? confirmApprove() : confirmReject()"
+      @close="grantingId ? cancelGrant() : approvingId ? cancelApprove() : cancelReject()"
+      @confirm="grantingId ? confirmGrant() : approvingId ? confirmApprove() : confirmReject()"
     />
 
     <!-- Delete Confirmation Modal -->

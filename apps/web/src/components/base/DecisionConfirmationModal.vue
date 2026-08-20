@@ -1,7 +1,8 @@
 <script setup>
 import { ref, computed, watch } from "vue";
 import BaseModal from "@/components/base/BaseModal.vue";
-import { Activity, CheckCircle, XCircle, AlertTriangle } from "lucide-vue-next";
+import { Activity, CheckCircle, XCircle, AlertTriangle, Eye, EyeOff, Wallet } from "lucide-vue-next";
+import { useAuthStore } from "@/stores/auth";
 
 const props = defineProps({
   isOpen: {
@@ -9,7 +10,7 @@ const props = defineProps({
     default: false,
   },
   mode: {
-    type: String, // 'approve' | 'reject' | 'disburse'
+    type: String, // 'approve' | 'reject' | 'disburse' | 'grant'
     required: true,
   },
   isSubmitting: {
@@ -49,11 +50,18 @@ const emit = defineEmits([
   "confirm",
 ]);
 
+const auth = useAuthStore();
 const isConfirmStep = ref(false);
+const showConfirmPassword = ref(false);
 
 const localComment = computed({
   get: () => props.comment,
   set: (val) => emit("update:comment", val),
+});
+
+const localPassword = computed({
+  get: () => props.password,
+  set: (val) => emit("update:password", val),
 });
 
 watch(
@@ -61,6 +69,7 @@ watch(
   (open) => {
     if (!open) {
       isConfirmStep.value = false;
+      showConfirmPassword.value = false;
     }
   },
 );
@@ -74,6 +83,10 @@ const isRejectNextDisabled = computed(() => {
   );
 });
 
+const isProceedDisabled = computed(() => {
+  return !localPassword.value?.trim() || props.isSubmitting;
+});
+
 const config = computed(() => {
   if (props.mode === "approve") {
     return {
@@ -83,7 +96,7 @@ const config = computed(() => {
       promptTitle: "Confirm Approval",
       promptMessage:
         props.description ||
-        "Are you sure you want to approve this request? Please confirm that all details and supporting documents have been verified.",
+        "Are you sure you want to approve this request? Please verify your identity by entering your password.",
       proceedBtnClass: "btn-primary",
     };
   }
@@ -95,7 +108,19 @@ const config = computed(() => {
       promptTitle: "Confirm Disbursement",
       promptMessage:
         props.description ||
-        "Are you sure you want to disburse this request? Please confirm that funds are ready for release.",
+        "Are you sure you want to disburse this request? Please verify your identity by entering your password.",
+      proceedBtnClass: "btn-primary",
+    };
+  }
+  if (props.mode === "grant") {
+    return {
+      icon: Wallet,
+      iconWrapperClass: "bg-emerald-50 text-emerald-600 border border-emerald-200",
+      title: props.title || "Grant Reimbursement",
+      promptTitle: "Confirm Grant",
+      promptMessage:
+        props.description ||
+        "Are you sure you want to mark this approved claim as granted? Please verify your identity.",
       proceedBtnClass: "btn-primary",
     };
   }
@@ -113,6 +138,7 @@ const config = computed(() => {
 
 function handleClose() {
   isConfirmStep.value = false;
+  showConfirmPassword.value = false;
   emit("close");
 }
 
@@ -123,7 +149,9 @@ function handleRejectNext() {
 }
 
 function handleFinalConfirm() {
-  emit("confirm");
+  if (!isProceedDisabled.value) {
+    emit("confirm");
+  }
 }
 </script>
 
@@ -225,7 +253,7 @@ function handleFinalConfirm() {
         </div>
       </template>
 
-      <!-- REJECT: Step 2 (Confirmation Popup) -->
+      <!-- REJECT: Step 2 (Confirmation Popup + Password) -->
       <template v-else-if="mode === 'reject' && isConfirmStep">
         <div class="rounded-xl border border-amber-200 bg-amber-50/60 p-4 space-y-2">
           <p class="text-sm font-semibold text-slate-800 leading-relaxed">
@@ -241,6 +269,38 @@ function handleFinalConfirm() {
           </div>
         </div>
 
+        <!-- Password for reject confirmation -->
+        <input
+          type="text"
+          :value="auth.user?.email"
+          autocomplete="username"
+          tabindex="-1"
+          aria-hidden="true"
+          class="sr-only"
+        />
+        <div class="input-wrapper">
+          <label class="input-label mb-1 block">Password <span class="text-danger">*</span></label>
+          <div class="relative">
+            <input
+              :type="showConfirmPassword ? 'text' : 'password'"
+              class="input w-full pr-10"
+              v-model="localPassword"
+              placeholder="Enter your current password"
+              autocomplete="current-password"
+              @keyup.enter="handleFinalConfirm"
+            />
+            <button
+              type="button"
+              @click="showConfirmPassword = !showConfirmPassword"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+              tabindex="-1"
+            >
+              <Eye v-if="!showConfirmPassword" class="w-4 h-4" />
+              <EyeOff v-else class="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
         <div class="flex items-center justify-end gap-2 mt-2 pt-2 border-t border-slate-100">
           <button
             class="btn btn-secondary min-h-9 px-4"
@@ -248,12 +308,12 @@ function handleFinalConfirm() {
             :disabled="isSubmitting"
             @click="isConfirmStep = false"
           >
-            Cancel
+            Back
           </button>
           <button
             class="btn btn-danger min-h-9 px-5"
             type="button"
-            :disabled="isSubmitting"
+            :disabled="isProceedDisabled"
             @click="handleFinalConfirm"
           >
             <span
@@ -266,12 +326,43 @@ function handleFinalConfirm() {
         </div>
       </template>
 
-      <!-- APPROVE or DISBURSE: Direct Confirmation Popup -->
+      <!-- APPROVE or DISBURSE: Direct Confirmation Popup + Password -->
       <template v-else>
         <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-2">
           <p class="text-sm font-medium text-slate-700 leading-relaxed">
             {{ config.promptMessage }}
           </p>
+        </div>
+
+        <input
+          type="text"
+          :value="auth.user?.email"
+          autocomplete="username"
+          tabindex="-1"
+          aria-hidden="true"
+          class="sr-only"
+        />
+        <div class="input-wrapper">
+          <label class="input-label mb-1 block">Password <span class="text-danger">*</span></label>
+          <div class="relative">
+            <input
+              :type="showConfirmPassword ? 'text' : 'password'"
+              class="input w-full pr-10"
+              v-model="localPassword"
+              placeholder="Enter your current password"
+              autocomplete="current-password"
+              @keyup.enter="handleFinalConfirm"
+            />
+            <button
+              type="button"
+              @click="showConfirmPassword = !showConfirmPassword"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+              tabindex="-1"
+            >
+              <Eye v-if="!showConfirmPassword" class="w-4 h-4" />
+              <EyeOff v-else class="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         <div class="flex items-center justify-end gap-2 mt-2 pt-2 border-t border-slate-100">
@@ -287,7 +378,7 @@ function handleFinalConfirm() {
             class="btn min-h-9 px-5"
             :class="config.proceedBtnClass"
             type="button"
-            :disabled="isSubmitting"
+            :disabled="isProceedDisabled"
             @click="handleFinalConfirm"
           >
             <span

@@ -5,7 +5,6 @@ import { useCashAdvanceStore } from "@/stores/cashAdvance";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "@/composables/useToast";
 import { useCashAdvanceList } from "@/composables/useCashAdvanceList";
-import ToastNotification from "@/components/ToastNotification.vue";
 import DeleteConfirmModal from "@/components/base/DeleteConfirmModal.vue";
 
 import BaseKpiGrid from "@/components/base/BaseKpiGrid.vue";
@@ -169,7 +168,6 @@ async function confirmDelete(password) {
 
 <template>
   <div class="flex flex-col w-full gap-6 mx-auto font-sans max-w-7xl">
-    <ToastNotification />
     <!-- Page Header -->
     <section
       class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"

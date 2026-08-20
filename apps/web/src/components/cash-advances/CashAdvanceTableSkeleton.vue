@@ -9,6 +9,11 @@ defineProps({
 
 <template>
   <tr class="whitespace-nowrap">
+    <td class="max-w-[200px] px-5 py-5 sm:max-w-[260px]">
+      <div
+        class="h-3.5 w-28 max-w-full animate-pulse rounded bg-slate-200 sm:w-36"
+      ></div>
+    </td>
     <td v-if="isAdmin" class="px-5 py-5">
       <div
         class="h-3.5 w-20 max-w-full animate-pulse rounded bg-slate-200 sm:w-24"
@@ -17,11 +22,6 @@ defineProps({
     <td class="px-5 py-5 text-right">
       <div
         class="ml-auto h-3.5 w-16 max-w-full animate-pulse rounded bg-slate-200 sm:w-20"
-      ></div>
-    </td>
-    <td class="px-5 py-5 text-right">
-      <div
-        class="ml-auto h-3.5 w-14 max-w-full animate-pulse rounded bg-slate-200 sm:w-16"
       ></div>
     </td>
     <td class="px-5 py-5">

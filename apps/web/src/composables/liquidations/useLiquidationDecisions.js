@@ -69,7 +69,15 @@ export function useLiquidationDecisions(liqStore, addToast, reviewingCase, refre
   }
 
   async function confirmApprove() {
-    if (!approvingId.value || !confirmPassword.value) return;
+    if (!approvingId.value) return;
+    if (!confirmPassword.value?.trim()) {
+      addToast({
+        title: "Validation Error",
+        message: "Password is required to approve this settlement.",
+        type: "danger",
+      });
+      return;
+    }
     if (
       rejectionComment.value.trim() &&
       rejectionComment.value.trim().length < 10
@@ -110,7 +118,15 @@ export function useLiquidationDecisions(liqStore, addToast, reviewingCase, refre
   }
 
   async function confirmReject() {
-    if (!rejectingId.value || !confirmPassword.value) return;
+    if (!rejectingId.value) return;
+    if (!confirmPassword.value?.trim()) {
+      addToast({
+        title: "Validation Error",
+        message: "Password is required to reject this settlement.",
+        type: "danger",
+      });
+      return;
+    }
     if (rejectionComment.value.length < 5) {
       addToast({
         title: "Validation Error",

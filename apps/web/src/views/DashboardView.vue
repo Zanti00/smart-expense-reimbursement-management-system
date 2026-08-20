@@ -6,7 +6,7 @@ import { useCashAdvanceStore } from "@/stores/cashAdvance";
 import { useLiquidationStore } from "@/stores/liquidation";
 import BaseKpiGrid from "@/components/base/BaseKpiGrid.vue";
 import SkeletonLoader from "@/components/base/SkeletonLoader.vue";
-import { Bar, Pie, Line } from "vue-chartjs";
+import { Bar, Doughnut } from "vue-chartjs";
 import {
   Chart as ChartJS,
   CategoryScale,

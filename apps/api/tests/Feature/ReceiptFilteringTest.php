@@ -42,7 +42,7 @@ class ReceiptFilteringTest extends TestCase
             'name' => 'Alex Reyes',
             'role' => 'admin',
             'grade' => 'EXEC',
-            'department' => 'FINANCE',
+            'department' => 'accounting',
             'avatar' => 'AR',
         ]);
 
@@ -143,7 +143,7 @@ class ReceiptFilteringTest extends TestCase
 
         // Admin -> sees 5 receipts
         $responseAdmin = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->generateMockToken(['email' => 'admin@serms.com', 'role' => 'admin'])
+            'Authorization' => 'Bearer ' . $this->generateMockToken(['email' => 'admin@serms.com', 'role' => 'admin', 'department' => 'accounting'])
         ])->getJson('/api/expenses');
 
         $responseAdmin->assertStatus(200);
@@ -215,7 +215,7 @@ class ReceiptFilteringTest extends TestCase
     {
         // Admin filters for other employee -> should see receipt 4 and 5
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->generateMockToken(['email' => 'admin@serms.com', 'role' => 'admin'])
+            'Authorization' => 'Bearer ' . $this->generateMockToken(['email' => 'admin@serms.com', 'role' => 'admin', 'department' => 'accounting'])
         ])->getJson("/api/expenses?uploader_id={$this->otherEmployee->id}");
 
         $response->assertStatus(200);
@@ -336,5 +336,41 @@ class ReceiptFilteringTest extends TestCase
 
         $responseEmp->assertStatus(200);
         $responseEmp->assertJsonCount(3, 'data');
+    }
+
+    /**
+     * Test sorting receipts by various sort options.
+     */
+    public function test_receipt_list_sorting_options(): void
+    {
+        $employeeToken = $this->generateMockToken(['sub' => 1000]);
+
+        // 1. Price Low to High: receipt2 (500), receipt1 (1500), receipt3 (2500)
+        $resAsc = $this->withHeaders(['Authorization' => 'Bearer ' . $employeeToken])
+            ->getJson('/api/reimbursements/receipts?scope=mine&sort=price-asc');
+        $resAsc->assertStatus(200);
+        $idsAsc = collect($resAsc->json('data'))->pluck('id')->all();
+        $this->assertSame([$this->receipt2->id, $this->receipt1->id, $this->receipt3->id], $idsAsc);
+
+        // 2. Price High to Low: receipt3 (2500), receipt1 (1500), receipt2 (500)
+        $resDesc = $this->withHeaders(['Authorization' => 'Bearer ' . $employeeToken])
+            ->getJson('/api/reimbursements/receipts?scope=mine&sort=price-desc');
+        $resDesc->assertStatus(200);
+        $idsDesc = collect($resDesc->json('data'))->pluck('id')->all();
+        $this->assertSame([$this->receipt3->id, $this->receipt1->id, $this->receipt2->id], $idsDesc);
+
+        // 3. Name A to Z: Catering C (receipt3), Restaurant A (receipt1), Taxi B (receipt2)
+        $resNameAsc = $this->withHeaders(['Authorization' => 'Bearer ' . $employeeToken])
+            ->getJson('/api/reimbursements/receipts?scope=mine&sort=name-asc');
+        $resNameAsc->assertStatus(200);
+        $idsNameAsc = collect($resNameAsc->json('data'))->pluck('id')->all();
+        $this->assertSame([$this->receipt3->id, $this->receipt1->id, $this->receipt2->id], $idsNameAsc);
+
+        // 4. Category A to Z: Meals (receipt1, receipt3), Travel (receipt2)
+        $resCat = $this->withHeaders(['Authorization' => 'Bearer ' . $employeeToken])
+            ->getJson('/api/reimbursements/receipts?scope=mine&sort=category-asc');
+        $resCat->assertStatus(200);
+        $idsCat = collect($resCat->json('data'))->pluck('id')->all();
+        $this->assertSame($this->receipt2->id, $idsCat[2]); // Travel is last
     }
 }

@@ -49,10 +49,42 @@ class ReceiptService
             });
         }
 
+        $sort = strtolower(trim((string) ($filters['sort'] ?? 'newest')));
+        switch ($sort) {
+            case 'oldest':
+                $query->orderBy('created_at', 'asc')->orderBy('id', 'asc');
+                break;
+            case 'name-asc':
+                $query->orderByRaw('LOWER(COALESCE(vendor_name, \'\')) ASC')->orderBy('id', 'asc');
+                break;
+            case 'name-desc':
+                $query->orderByRaw('LOWER(COALESCE(vendor_name, \'\')) DESC')->orderBy('id', 'desc');
+                break;
+            case 'price-desc':
+                $query->orderBy('total_amount', 'desc')->orderBy('id', 'desc');
+                break;
+            case 'price-asc':
+                $query->orderBy('total_amount', 'asc')->orderBy('id', 'asc');
+                break;
+            case 'category-asc':
+                $query->leftJoin('expense_categories', 'receipts.expense_category_id', '=', 'expense_categories.id')
+                    ->select('receipts.*')
+                    ->orderByRaw('LOWER(COALESCE(expense_categories.name, \'\')) ASC')
+                    ->orderBy('receipts.id', 'asc');
+                break;
+            case 'status-asc':
+                $query->orderBy('status', 'asc')->orderBy('id', 'asc');
+                break;
+            case 'newest':
+            default:
+                $query->orderByDesc('created_at')->orderByDesc('id');
+                break;
+        }
+
         $perPage = (int) ($filters['per_page'] ?? 10);
         $perPage = max(1, min($perPage, 10));
 
-        return $query->orderByDesc('created_at')->paginate($perPage);
+        return $query->paginate($perPage);
     }
 
     /**

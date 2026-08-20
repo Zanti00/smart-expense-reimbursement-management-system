@@ -60,6 +60,7 @@ async function refreshAll() {
 onMounted(() => refreshAll());
 
 const selectedAdvance = ref(null);
+const advancePanelCollapsed = ref(false);
 const receipts = ref([]);
 const reportAttachment = ref(null);
 const reportAttachmentInput = ref(null);
@@ -314,10 +315,10 @@ const employeeFilteredAdvances = computed(() => {
 });
 
 const tableColumns = [
+  { key: "purpose", label: "Purpose" },
   { key: "requestorName", label: "Requestor Name" },
   { key: "dueDate", label: "Due Date" },
   { key: "cashAdvanceAmount", label: "Cash Advance Amount", align: "right" },
-  { key: "outstandingBalance", label: "Outstanding Balance", align: "right" },
   { key: "status", label: "Status", align: "center" },
   { key: "actions", label: "Actions", align: "center" },
 ];
@@ -396,6 +397,11 @@ const sourceCases = computed(() => {
       databaseId: item.id,
       advanceId: `CA-${String(item.cash_advance_id).padStart(3, "0")}`,
       cashAdvanceId: item.cash_advance_id,
+      purpose:
+        item.purpose ||
+        item.cash_advance?.purpose ||
+        item.cashAdvance?.purpose ||
+        "",
       requestorId:
         item.user?.id ??
         item.user_id ??
@@ -461,12 +467,12 @@ const filteredRows = computed(() => {
       !query ||
       [
         row.advanceId,
+        row.purpose,
         row.requestorName,
         row.dueDate,
         row.status,
         formatDate(row.dueDate),
         formatPeso(row.cashAdvanceAmount),
-        formatPeso(row.outstandingBalance),
       ].some((value) =>
         String(value || "")
           .toLowerCase()
@@ -1167,6 +1173,16 @@ function finalizeLiquidation() {
         :sort-direction="sortDirection"
         @sort="toggleSort"
       >
+        <template #cell-purpose="{ row }">
+          <div class="max-w-[200px] sm:max-w-[260px]">
+            <span
+              class="block truncate text-sm font-medium text-slate-800"
+              :title="row.purpose"
+            >
+              {{ row.purpose || "—" }}
+            </span>
+          </div>
+        </template>
         <template #cell-requestorName="{ row }">
           <span class="text-sm font-semibold text-slate-700">{{
             row.requestorName
@@ -1180,11 +1196,6 @@ function finalizeLiquidation() {
         <template #cell-cashAdvanceAmount="{ row }">
           <span class="text-sm font-bold text-primary">{{
             formatPeso(row.cashAdvanceAmount)
-          }}</span>
-        </template>
-        <template #cell-outstandingBalance="{ row }">
-          <span class="text-sm font-semibold text-slate-700">{{
-            formatPeso(row.outstandingBalance)
           }}</span>
         </template>
         <template #cell-status="{ row }">
@@ -1269,7 +1280,8 @@ function finalizeLiquidation() {
 
     <div
       v-if="!auth.isAdmin || showAdminRequestForm"
-      class="grid grid-cols-1 gap-6 xl:grid-cols-5"
+      class="grid grid-cols-1 gap-6"
+      :class="advancePanelCollapsed ? 'xl:grid-cols-[auto_1fr]' : 'xl:grid-cols-5'"
     >
       <LiquidationAdvancesList
         :sort-options="employeeSortOptions"
@@ -1282,10 +1294,12 @@ function finalizeLiquidation() {
         :selected-advance="selectedAdvance"
         :get-badge-status="employeeAdvanceBadgeStatus"
         :calculate-aging="liqStore.calculateAging"
+        :collapsed="advancePanelCollapsed"
         @select="selectAdvance"
+        @toggle-collapse="advancePanelCollapsed = !advancePanelCollapsed"
       />
 
-      <div class="xl:col-span-3">
+      <div :class="advancePanelCollapsed ? 'min-w-0' : 'xl:col-span-3 min-w-0'">>
         <LiquidationSettlementForm
           :selected-advance="selectedAdvance"
           :submitted="submitted"
