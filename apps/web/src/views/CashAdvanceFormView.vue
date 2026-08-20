@@ -3,7 +3,6 @@ import { ref, reactive, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useCashAdvanceStore } from "@/stores/cashAdvance";
 import { useToast } from "@/composables/useToast";
-import ToastNotification from "@/components/ToastNotification.vue";
 import ConfirmModal from "@/components/base/ConfirmModal.vue";
 import { useUnsavedChanges } from "@/composables/useUnsavedChanges";
 import {
@@ -284,7 +283,6 @@ function goBack() {
 
 <template>
   <div class="flex min-h-full flex-col bg-clinical">
-    <ToastNotification />
     <main class="flex-1 overflow-y-auto">
       <div class="mx-auto flex w-full max-w-5xl flex-col gap-8 p-6">
         <header

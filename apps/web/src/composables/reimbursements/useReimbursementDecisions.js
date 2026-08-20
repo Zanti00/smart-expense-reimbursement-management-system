@@ -5,6 +5,7 @@ export function useReimbursementDecisions(store, addToast, viewingRecord) {
   const auth = useAuthStore();
   const approvingId = ref(null);
   const rejectingId = ref(null);
+  const grantingId = ref(null);
   const rejectionComment = ref("");
   const confirmPassword = ref("");
   const isReviewSubmitting = ref(false);
@@ -46,6 +47,13 @@ export function useReimbursementDecisions(store, addToast, viewingRecord) {
 
   async function confirmApprove() {
     if (!approvingId.value) return;
+    if (!confirmPassword.value?.trim()) {
+      addToast({
+        message: "Password is required to approve this request.",
+        type: "error",
+      });
+      return;
+    }
 
     isReviewSubmitting.value = true;
     try {
@@ -89,6 +97,13 @@ export function useReimbursementDecisions(store, addToast, viewingRecord) {
   }
 
   async function confirmReject() {
+    if (!confirmPassword.value?.trim()) {
+      addToast({
+        message: "Password is required to reject this request.",
+        type: "error",
+      });
+      return;
+    }
     if (rejectionComment.value.length < 10) {
       addToast({
         message: "Rejection comment must be at least 10 characters.",
@@ -127,9 +142,49 @@ export function useReimbursementDecisions(store, addToast, viewingRecord) {
     }
   }
 
+  function openGrantModal(id) {
+    if (isOwnSubmission()) {
+      addToast({
+        message: "You cannot process your own request.",
+        type: "error",
+      });
+      return;
+    }
+
+    grantingId.value = id;
+    confirmPassword.value = "";
+  }
+
+  function cancelGrant() {
+    grantingId.value = null;
+    confirmPassword.value = "";
+  }
+
+  async function confirmGrant() {
+    if (!grantingId.value) return;
+
+    isReviewSubmitting.value = true;
+    try {
+      const updated = await store.grant(grantingId.value, confirmPassword.value);
+      if (viewingRecord.value?.id === grantingId.value) {
+        viewingRecord.value = updated;
+      }
+      addToast({ message: "Reimbursement granted!", type: "success" });
+      cancelGrant();
+    } catch (e) {
+      addToast({
+        message: e.message || "Error granting reimbursement",
+        type: "error",
+      });
+    } finally {
+      isReviewSubmitting.value = false;
+    }
+  }
+
   return {
     approvingId,
     rejectingId,
+    grantingId,
     rejectionComment,
     confirmPassword,
     isReviewSubmitting,
@@ -139,5 +194,8 @@ export function useReimbursementDecisions(store, addToast, viewingRecord) {
     openRejectModal,
     cancelReject,
     confirmReject,
+    openGrantModal,
+    cancelGrant,
+    confirmGrant,
   };
 }

@@ -8,7 +8,7 @@ import {
   Pencil,
   Trash2,
 } from "lucide-vue-next";
-import { formatPeso } from "@/utils/formatters";
+import { formatPeso, formatDate } from "@/utils/formatters";
 import StatusBadge from "@/components/base/StatusBadge.vue";
 import BasePagination from "@/components/base/BasePagination.vue";
 import CashAdvanceTableSkeleton from "./CashAdvanceTableSkeleton.vue";
@@ -57,15 +57,15 @@ function getActions(row) {
   ];
 }
 
-const sortKey = ref("");
-const sortDirection = ref("asc");
+const sortKey = ref("requested");
+const sortDirection = ref("desc");
 const pageSize = 10;
 const currentPage = ref(1);
 
 const columns = computed(() => [
+  { key: "purpose", label: "Purpose" },
   ...(props.isAdmin ? [{ key: "user", label: "User" }] : []),
   { key: "amount", label: "Amount", align: "right" },
-  { key: "outstanding", label: "Outstanding", align: "right" },
   { key: "requested", label: "Date Requested" },
   { key: "dueDate", label: "Due Date" },
   { key: "status", label: "Status", align: "center" },
@@ -74,12 +74,24 @@ const columns = computed(() => [
 
 const sortedRows = computed(() => {
   const rows = [...props.rows];
-  if (!sortKey.value) return rows;
+  if (!sortKey.value) {
+    return rows.sort((a, b) => {
+      const aTime = new Date(a.date || a.requested || a.submitted_at || a.created_at || 0).getTime();
+      const bTime = new Date(b.date || b.requested || b.submitted_at || b.created_at || 0).getTime();
+      if (aTime !== bTime) return bTime - aTime;
+      return (Number(b.id) || 0) - (Number(a.id) || 0);
+    });
+  }
 
   return rows.sort((a, b) => {
     const aValue = getSortValue(a, sortKey.value);
     const bValue = getSortValue(b, sortKey.value);
-    if (aValue === bValue) return 0;
+    if (aValue === bValue) {
+      const aTime = new Date(a.date || a.requested || a.submitted_at || a.created_at || 0).getTime();
+      const bTime = new Date(b.date || b.requested || b.submitted_at || b.created_at || 0).getTime();
+      if (aTime !== bTime) return bTime - aTime;
+      return (Number(b.id) || 0) - (Number(a.id) || 0);
+    }
     const result = aValue > bValue ? 1 : -1;
     return sortDirection.value === "asc" ? result : -result;
   });
@@ -106,9 +118,17 @@ watch(totalPages, (pages) => {
 
 function getSortValue(row, key) {
   const value = row[key];
-  if (["amount", "outstanding"].includes(key)) return Number(value || 0);
-  if (["requested", "dueDate"].includes(key)) {
-    const timestamp = new Date(value).getTime();
+  if (key === "amount") return Number(value || 0);
+  if (key === "requested") {
+    const raw = row.date || row.requested || row.submitted_at || row.created_at;
+    const timestamp = new Date(raw).getTime();
+    return Number.isNaN(timestamp)
+      ? String(value || "").toLowerCase()
+      : timestamp;
+  }
+  if (key === "dueDate") {
+    const raw = row.dueDate || row.expected_liquidation_date;
+    const timestamp = new Date(raw).getTime();
     return Number.isNaN(timestamp)
       ? String(value || "").toLowerCase()
       : timestamp;
@@ -164,7 +184,7 @@ function isSorted(column) {
     <div class="overflow-x-auto">
       <table
         class="w-full text-left border-collapse"
-        :class="isAdmin ? 'min-w-[920px]' : 'min-w-[640px]'"
+        :class="isAdmin ? 'min-w-[880px]' : 'min-w-[680px]'"
       >
         <thead>
           <tr class="border-b border-slate-200 bg-slate-50">
@@ -215,7 +235,7 @@ function isSorted(column) {
           <template v-else-if="sortedRows.length === 0">
             <tr>
               <td
-                :colspan="isAdmin ? 7 : 5"
+                :colspan="columns.length"
                 class="px-5 py-8 text-sm text-center text-slate-500"
               >
                 No cash advance records found.
@@ -228,6 +248,13 @@ function isSorted(column) {
               :key="row.id"
               class="transition-colors duration-200 ease-out group whitespace-nowrap hover:bg-slate-50/80"
             >
+              <td
+                class="max-w-[200px] px-5 py-5 text-sm font-medium text-slate-800 sm:max-w-[260px]"
+              >
+                <span class="block truncate" :title="row.purpose">
+                  {{ row.purpose || "—" }}
+                </span>
+              </td>
               <td v-if="isAdmin" class="px-5 py-5">
                 <div class="flex items-center gap-2">
                   <span class="text-sm font-medium text-slate-700">{{
@@ -238,16 +265,11 @@ function isSorted(column) {
               <td class="px-5 py-5 text-right text-sm font-bold text-primary">
                 {{ formatPeso(row.amount) }}
               </td>
-              <td
-                class="px-5 py-5 text-right text-sm font-semibold text-slate-600"
-              >
-                {{ formatPeso(row.outstanding) }}
+              <td class="px-5 py-5 text-sm text-slate-500">
+                {{ formatDate(row.date || row.requested) }}
               </td>
               <td class="px-5 py-5 text-sm text-slate-500">
-                {{ row.requested }}
-              </td>
-              <td class="px-5 py-5 text-sm text-slate-500">
-                {{ row.dueDate }}
+                {{ formatDate(row.dueDate) }}
               </td>
               <td class="px-5 py-5 text-center">
                 <StatusBadge :status="row.status" />

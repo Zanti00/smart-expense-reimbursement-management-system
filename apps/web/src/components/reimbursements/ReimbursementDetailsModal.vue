@@ -10,6 +10,7 @@ import {
   Eye,
   XCircle,
   CheckCircle,
+  Wallet,
 } from "lucide-vue-next";
 
 const props = defineProps({
@@ -32,6 +33,7 @@ const emit = defineEmits([
   "view-receipt-details",
   "reject",
   "approve",
+  "grant",
 ]);
 
 const auth = useAuthStore();
@@ -344,6 +346,31 @@ function categoryName(record) {
             @click="emit('approve', viewingRecord.id)"
           >
             <CheckCircle class="w-4 h-4" /> Approve Claim
+          </button>
+        </div>
+
+        <!-- Admin Grant Footer (approved → granted) -->
+        <div
+          v-if="
+            auth.isAdmin &&
+            viewingRecord &&
+            normalizeStatus(viewingRecord.status) === 'approved'
+          "
+          class="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-3"
+        >
+          <p
+            v-if="isOwnSubmission"
+            class="mr-auto text-sm font-semibold text-danger"
+          >
+            You cannot process your own request.
+          </p>
+          <button
+            class="btn btn-cta min-h-[42px] disabled:cursor-not-allowed disabled:opacity-60"
+            type="button"
+            :disabled="isOwnSubmission"
+            @click="emit('grant', viewingRecord.id)"
+          >
+            <Wallet class="w-4 h-4" /> Grant Claim
           </button>
         </div>
       </div>

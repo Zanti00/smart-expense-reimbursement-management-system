@@ -14,12 +14,16 @@ export function useToast() {
    */
   const addToast = (options) => {
     const id = nextId++
-    const toast = {
-      id,
-      message: options.message,
-      type: options.type || 'info',
-      duration: options.duration || 5000
-    }
+    const isString = typeof options === 'string'
+    const toast = isString
+      ? { id, title: '', message: options, type: 'info', duration: 5000 }
+      : {
+          id,
+          title: options.title || '',
+          message: options.message || '',
+          type: options.type || 'info',
+          duration: options.duration !== undefined ? options.duration : 5000
+        }
     toasts.value = [...toasts.value, toast]
 
     if (toast.duration && toast.duration > 0) {

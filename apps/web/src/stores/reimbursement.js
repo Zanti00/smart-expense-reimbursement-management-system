@@ -205,6 +205,31 @@ export const useReimbursementStore = defineStore("reimbursement", () => {
     }
   }
 
+  async function grant(id, password) {
+    isLoading.value = true;
+    try {
+      const response = await apiFetch(`/api/serms/reimbursements/${id}/grant`, {
+        method: "POST",
+        body: JSON.stringify({ password }),
+      });
+      if (!response.ok) {
+        const errJson = await response.json().catch(() => ({}));
+        const errMsg = errJson.errors?.password?.[0] || errJson.message || "Failed to grant";
+        throw new Error(errMsg);
+      }
+      const json = await response.json();
+      const index = items.value.findIndex((i) => i.id == id);
+      if (index !== -1) items.value[index] = json.data;
+      if (currentItem.value?.id == id) currentItem.value = json.data;
+      return json.data;
+    } catch (e) {
+      console.error(e);
+      throw e;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   return {
     items,
     currentItem,
@@ -219,6 +244,7 @@ export const useReimbursementStore = defineStore("reimbursement", () => {
     submit,
     approve,
     reject,
+    grant,
     updateNotes,
     updateRequest,
     deleteRequest,
