@@ -8,7 +8,6 @@ import StatusBadge from "@/components/base/StatusBadge.vue";
 import BaseButton from "@/components/base/BaseButton.vue";
 import BaseKpiGrid from "@/components/base/BaseKpiGrid.vue";
 import SkeletonLoader from "@/components/base/SkeletonLoader.vue";
-import { Vue3Lottie } from "vue3-lottie";
 import { Bar, Doughnut } from "vue-chartjs";
 import {
   Chart as ChartJS,
@@ -221,13 +220,6 @@ function isAmberWarning(dateStr) {
         >
           Welcome back,
           <span class="text-primary">{{ auth.user?.name?.split(" ")[0] }}</span>
-          <span class="inline-block ml-2">
-            <Vue3Lottie
-              animationLink="https://fonts.gstatic.com/s/e/notoemoji/latest/1f44b_1f3fb/lottie.json"
-              :height="32"
-              :width="32"
-            />
-          </span>
         </h1>
         <p class="mt-1 text-sm text-slate-400">Have a nice day!.</p>
       </div>

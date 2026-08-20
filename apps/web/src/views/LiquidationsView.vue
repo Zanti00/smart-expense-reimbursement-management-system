@@ -60,6 +60,7 @@ async function refreshAll() {
 onMounted(() => refreshAll());
 
 const selectedAdvance = ref(null);
+const advancePanelCollapsed = ref(false);
 const receipts = ref([]);
 const reportAttachment = ref(null);
 const reportAttachmentInput = ref(null);
@@ -1279,7 +1280,8 @@ function finalizeLiquidation() {
 
     <div
       v-if="!auth.isAdmin || showAdminRequestForm"
-      class="grid grid-cols-1 gap-6 xl:grid-cols-5"
+      class="grid grid-cols-1 gap-6"
+      :class="advancePanelCollapsed ? 'xl:grid-cols-[auto_1fr]' : 'xl:grid-cols-5'"
     >
       <LiquidationAdvancesList
         :sort-options="employeeSortOptions"
@@ -1292,10 +1294,12 @@ function finalizeLiquidation() {
         :selected-advance="selectedAdvance"
         :get-badge-status="employeeAdvanceBadgeStatus"
         :calculate-aging="liqStore.calculateAging"
+        :collapsed="advancePanelCollapsed"
         @select="selectAdvance"
+        @toggle-collapse="advancePanelCollapsed = !advancePanelCollapsed"
       />
 
-      <div class="xl:col-span-3">
+      <div :class="advancePanelCollapsed ? 'min-w-0' : 'xl:col-span-3 min-w-0'">>
         <LiquidationSettlementForm
           :selected-advance="selectedAdvance"
           :submitted="submitted"

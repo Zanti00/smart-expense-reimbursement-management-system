@@ -362,18 +362,19 @@ function removeReceiptItem(receipt, index) {
               <div
                 class="border border-slate-100 rounded-lg overflow-hidden shadow-sm bg-white"
               >
-                <table class="w-full text-left border-collapse">
+                <table class="w-full text-left border-collapse table-fixed">
                   <thead
                     class="bg-slate-50 text-[11px] text-slate-500 uppercase"
                   >
                     <tr>
-                      <th class="px-4 py-2.5 font-bold">Items</th>
-                      <th class="px-4 py-2.5 font-bold text-center">
+                      <th class="px-4 py-2.5 font-bold" style="width: 45%">Items</th>
+                      <th class="px-4 py-2.5 font-bold text-center" style="width: 18%">
                         Qty
                       </th>
-                      <th class="px-4 py-2.5 font-bold text-right">
+                      <th class="px-4 py-2.5 font-bold text-right" style="width: 25%">
                         Price
                       </th>
+                      <th v-if="!disabled" style="width: 12%"></th>
                     </tr>
                   </thead>
                   <tbody class="text-sm divide-y divide-slate-50">
@@ -390,17 +391,17 @@ function removeReceiptItem(receipt, index) {
                           :disabled="disabled || receipt.isUploading || receipt.isProcessing"
                         />
                       </td>
-                      <td class="px-0 py-2 w-20">
+                      <td class="px-2 py-2">
                         <input
                           type="number"
-                          class="input !py-1 !text-sm text-center disabled:opacity-50 disabled:cursor-not-allowed"
+                          class="input !py-1 !text-sm text-center min-w-[60px] disabled:opacity-50 disabled:cursor-not-allowed"
                           :class="{ 'cursor-not-allowed bg-slate-100 text-slate-500': disabled }"
                           v-model="item.qty"
                           :disabled="disabled || receipt.isUploading || receipt.isProcessing"
                           @input="recalculateFromItems(receipt)"
                         />
                       </td>
-                      <td class="px-4 py-2 w-32">
+                      <td class="px-4 py-2">
                         <input
                           type="number"
                           class="input !py-1 !text-sm text-right text-primary font-bold disabled:opacity-50 disabled:cursor-not-allowed"
@@ -410,7 +411,7 @@ function removeReceiptItem(receipt, index) {
                           @input="recalculateFromItems(receipt)"
                         />
                       </td>
-                      <td v-if="!disabled" class="pr-4 py-2 w-10 text-right">
+                      <td v-if="!disabled" class="py-2 text-center">
                         <button
                           class="text-slate-400 hover:text-danger transition-colors p-1 disabled:opacity-50 disabled:cursor-not-allowed"
                           :disabled="receipt.isUploading || receipt.isProcessing"
@@ -441,65 +442,60 @@ function removeReceiptItem(receipt, index) {
             <div
               class="flex flex-col gap-4 pt-2 border-t border-slate-100"
             >
-              <div class="flex items-end justify-between gap-4">
-                <div class="flex gap-4 flex-wrap items-end">
-                  <div class="input-wrapper">
-                    <label class="input-label">Currency</label>
-                    <CurrencySelect
-                      v-model="receipt.currency"
-                      :disabled="disabled || receipt.isUploading || receipt.isProcessing"
-                      select-class="!bg-white"
-                    />
-                  </div>
-                  <div class="input-wrapper">
-                    <label class="input-label">VAT Classification <span class="text-danger">*</span></label>
-                    <div class="relative">
-                      <select
-                        class="input !w-32 !bg-white appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                        :class="{ 'cursor-not-allowed bg-slate-100 text-slate-500': disabled }"
-                        v-model="receipt.vatClassification"
-                        :disabled="disabled || receipt.isUploading || receipt.isProcessing"
-                        @change="handleVatClassChange(receipt)"
-                      >
-                        <option value="vat">VAT</option>
-                        <option value="non-vat">NON-VAT</option>
-                      </select>
-                      <ChevronDown class="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                    </div>
-                  </div>
-                  <div class="input-wrapper">
-                    <label class="input-label">Subtotal <span class="text-danger">*</span></label>
-                    <input
-                      class="input !w-32 !bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                <div class="input-wrapper">
+                  <label class="input-label">Currency</label>
+                  <CurrencySelect
+                    v-model="receipt.currency"
+                    :disabled="disabled || receipt.isUploading || receipt.isProcessing"
+                    select-class="!bg-white"
+                  />
+                </div>
+                <div class="input-wrapper">
+                  <label class="input-label">VAT Classification <span class="text-danger">*</span></label>
+                  <div class="relative">
+                    <select
+                      class="input !bg-white appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       :class="{ 'cursor-not-allowed bg-slate-100 text-slate-500': disabled }"
-                      type="number"
-                      v-model="receipt.subtotal"
+                      v-model="receipt.vatClassification"
                       :disabled="disabled || receipt.isUploading || receipt.isProcessing"
-                      @input="recalculateFromSubtotal(receipt)"
-                    />
-                  </div>
-                  <div class="input-wrapper">
-                    <label class="input-label">Tax (VAT 12%) <span class="text-danger">*</span></label>
-                    <input
-                      class="input !w-32 !bg-white disabled:opacity-50 disabled:cursor-not-allowed"
-                      :class="{ 'cursor-not-allowed bg-slate-100 text-slate-500': disabled }"
-                      type="number"
-                      v-model="receipt.tax"
-                      :disabled="disabled || receipt.vatClassification === 'non-vat' || receipt.isUploading || receipt.isProcessing"
-                      @input="recalculateFromSubtotal(receipt)"
-                    />
+                      @change="handleVatClassChange(receipt)"
+                    >
+                      <option value="vat">VAT</option>
+                      <option value="non-vat">NON-VAT</option>
+                    </select>
+                    <ChevronDown class="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                   </div>
                 </div>
-                <div
-                  class="bg-accent-50 px-6 py-3 rounded-xl border border-accent/15 flex flex-col items-end shadow-sm"
-                >
-                  <label
-                    class="text-[10px] font-bold text-accent uppercase tracking-wider mb-1"
-                    >Total <span class="text-danger">*</span></label
-                  >
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+                <div class="input-wrapper">
+                  <label class="input-label">Subtotal <span class="text-danger">*</span></label>
+                  <input
+                    class="input !bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    :class="{ 'cursor-not-allowed bg-slate-100 text-slate-500': disabled }"
+                    type="number"
+                    v-model="receipt.subtotal"
+                    :disabled="disabled || receipt.isUploading || receipt.isProcessing"
+                    @input="recalculateFromSubtotal(receipt)"
+                  />
+                </div>
+                <div class="input-wrapper">
+                  <label class="input-label">Tax (VAT 12%) <span class="text-danger">*</span></label>
+                  <input
+                    class="input !bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    :class="{ 'cursor-not-allowed bg-slate-100 text-slate-500': disabled }"
+                    type="number"
+                    v-model="receipt.tax"
+                    :disabled="disabled || receipt.vatClassification === 'non-vat' || receipt.isUploading || receipt.isProcessing"
+                    @input="recalculateFromSubtotal(receipt)"
+                  />
+                </div>
+                <div class="input-wrapper">
+                  <label class="input-label text-accent">Total <span class="text-danger">*</span></label>
                   <input
                     type="number"
-                    class="input !w-36 !bg-white text-xl font-black text-accent text-right disabled:opacity-50 disabled:cursor-not-allowed"
+                    class="input !bg-white text-lg font-bold text-accent text-right disabled:opacity-50 disabled:cursor-not-allowed"
                     :class="{ 'cursor-not-allowed !bg-slate-100 !text-slate-500': disabled }"
                     v-model="receipt.amount"
                     :disabled="disabled || receipt.isUploading || receipt.isProcessing"
