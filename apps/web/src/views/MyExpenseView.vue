@@ -82,8 +82,20 @@ const CATEGORIES = computed(() => {
 
   return ["All", ...source.map((c) => c.name)];
 });
+const SORT_OPTIONS = [
+  { value: "newest", label: "Newest First" },
+  { value: "oldest", label: "Oldest First" },
+  { value: "name-asc", label: "Name: A to Z" },
+  { value: "name-desc", label: "Name: Z to A" },
+  { value: "price-desc", label: "Price: High to Low" },
+  { value: "price-asc", label: "Price: Low to High" },
+  { value: "category-asc", label: "Category: A to Z" },
+  { value: "status-asc", label: "Status: A to Z" },
+];
+
 const activeCategory = ref("All");
 const activeStatus = ref("All");
+const activeSort = ref("newest");
 const searchQuery = ref("");
 const currentPage = ref(1);
 const pageSize = 10;
@@ -106,6 +118,7 @@ async function fetchReceipts(page = currentPage.value) {
     search: searchQuery.value.trim(),
     status: normalizeFilterLabel(activeStatus.value),
     category: activeCategory.value,
+    sort: activeSort.value,
     scope: "mine",
   });
 }
@@ -309,7 +322,7 @@ onUnmounted(() => {
   window.removeEventListener('open-receipt-upload', handleOpenReceiptUpload);
 });
 
-watch([activeCategory, activeStatus], () => {
+watch([activeCategory, activeStatus, activeSort], () => {
   fetchReceipts(1);
 });
 
@@ -358,17 +371,12 @@ const kpis = computed(() => [
       >
         <div>
           <h1
-            class="text-2xl font-bold leading-tight text-slate-800"
-            style="
-              font-family: &quot;Poppins&quot;, sans-serif;
-              letter-spacing: -0.02em;
-            "
+            class="text-2xl font-bold leading-tight text-slate-800 font-heading tracking-tight"
           >
             My Expense
           </h1>
           <p
-            class="mt-1 text-sm text-slate-400"
-            style="font-family: &quot;Open Sans&quot;, sans-serif"
+            class="mt-1 text-sm text-slate-400 font-sans"
           >
             Organize and manage your receipts
           </p>
@@ -508,8 +516,10 @@ const kpis = computed(() => [
         v-model:search="searchQuery"
         v-model:status-value="activeStatus"
         v-model:category-value="activeCategory"
+        v-model:sort-value="activeSort"
         :statuses="STATUS_FILTERS"
         :categories="CATEGORIES"
+        :sort-options="SORT_OPTIONS"
       />
 
       <!-- ── Receipt Card Grid ── -->
@@ -563,8 +573,7 @@ const kpis = computed(() => [
         </div>
         <div>
           <p
-            class="text-sm font-semibold text-slate-600"
-            style="font-family: &quot;Poppins&quot;, sans-serif"
+            class="text-sm font-semibold text-slate-600 font-heading"
           >
             No receipts found
           </p>

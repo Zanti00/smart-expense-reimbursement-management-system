@@ -29,6 +29,7 @@ export const useReceiptStore = defineStore("receipts", () => {
     uploader: "",
     category: "",
     status: "",
+    sort: "newest",
     amountRange: { min: null, max: null },
   });
 
@@ -84,15 +85,51 @@ export const useReceiptStore = defineStore("receipts", () => {
       });
     }
 
-    // Sorting by newest uploaded first (created_at), newest at the top.
-    // Uses the already-mapped `createdAt` field (upload time) rather than the
-    // receipt's transaction_date so the grid reflects upload order, matching the
-    // backend's `orderByDesc('created_at')`.
+    const sort = filters.value.sort || "newest";
     return filtered.sort((a, b) => {
-      const byCreated = new Date(b.createdAt) - new Date(a.createdAt);
-      if (byCreated !== 0) return byCreated;
-      // Deterministic tiebreaker for receipts uploaded in the same second.
-      return Number(b.dbId) - Number(a.dbId);
+      switch (sort) {
+        case "oldest": {
+          const byCreated = new Date(a.createdAt) - new Date(b.createdAt);
+          if (byCreated !== 0) return byCreated;
+          return Number(a.dbId) - Number(b.dbId);
+        }
+        case "name-asc": {
+          const res = (a.vendorName || "").localeCompare(b.vendorName || "");
+          if (res !== 0) return res;
+          return Number(a.dbId) - Number(b.dbId);
+        }
+        case "name-desc": {
+          const res = (b.vendorName || "").localeCompare(a.vendorName || "");
+          if (res !== 0) return res;
+          return Number(b.dbId) - Number(a.dbId);
+        }
+        case "price-desc": {
+          const res = (b.amount || 0) - (a.amount || 0);
+          if (res !== 0) return res;
+          return Number(b.dbId) - Number(a.dbId);
+        }
+        case "price-asc": {
+          const res = (a.amount || 0) - (b.amount || 0);
+          if (res !== 0) return res;
+          return Number(a.dbId) - Number(b.dbId);
+        }
+        case "category-asc": {
+          const res = (a.category || "").localeCompare(b.category || "");
+          if (res !== 0) return res;
+          return Number(a.dbId) - Number(b.dbId);
+        }
+        case "status-asc": {
+          const res = (a.status || "").localeCompare(b.status || "");
+          if (res !== 0) return res;
+          return Number(a.dbId) - Number(b.dbId);
+        }
+        case "newest":
+        default: {
+          const byCreated = new Date(b.createdAt) - new Date(a.createdAt);
+          if (byCreated !== 0) return byCreated;
+          return Number(b.dbId) - Number(a.dbId);
+        }
+      }
     });
   });
 
@@ -216,6 +253,9 @@ export const useReceiptStore = defineStore("receipts", () => {
    */
   async function fetchAll(params = {}) {
     isLoading.value = true;
+    if (params.sort !== undefined) {
+      filters.value.sort = params.sort;
+    }
     try {
       const query = new URLSearchParams();
       query.set("page", String(params.page || 1));
@@ -228,6 +268,7 @@ export const useReceiptStore = defineStore("receipts", () => {
         query.set("category", params.category);
       }
       if (params.scope) query.set("scope", params.scope);
+      if (params.sort) query.set("sort", params.sort);
 
       const response = await apiFetch(`/api/serms/reimbursements/receipts?${query.toString()}`, {
         credentials: "include",
@@ -682,6 +723,7 @@ export const useReceiptStore = defineStore("receipts", () => {
       uploader: "",
       category: "",
       status: "",
+      sort: "newest",
       amountRange: { min: null, max: null },
     };
   }
