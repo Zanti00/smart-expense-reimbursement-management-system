@@ -1,16 +1,16 @@
-# Graph Report - smart-expense-management-system  (2026-08-19)
+# Graph Report - smart-expense-management-system  (2026-08-20)
 
 ## Corpus Check
-- 298 files · ~168,243 words
+- 299 files · ~169,466 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2039 nodes · 3130 edges · 224 communities (174 shown, 50 thin omitted)
-- Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 218 edges (avg confidence: 0.77)
+- 2058 nodes · 3141 edges · 206 communities (169 shown, 37 thin omitted)
+- Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 224 edges (avg confidence: 0.77)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `b5ec65fd`
+- Built from commit: `0521cd1d`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -20,25 +20,24 @@
 - Receipt
 - Illuminate\Support\ServiceProvider
 - DispatchReceiptToAiService
-- src/views/MyExpenseView.vue
-- CashAdvanceController
+- MyExpenseView.vue
+- Illuminate\Foundation\Http\FormRequest
 - Receipt
 - CashAdvanceDetailsModal.vue
-- CashAdvance
+- PayloadDecryptionService
 - dependencies
 - ReceiptUploadModal.vue
-- Illuminate\Database\Eloquent\Model
+- CashAdvance
 - src/views/ReimbursementFormView.vue
-- RejectReimbursementRequest
+- App\Modules\Ai\Contracts\OcrEngineInterface
 - ImagePreviewModal.vue
-- ExpenseCategory
-- StoreReceiptRequest
+- Controller
+- UserFactory.php
 - main.js
-- AuditLogService
+- ReceiptService
 - src/views/CashAdvancesView.vue
 - FileUpload.vue
-- 2026_08_01_134526_convert_receipts_columns_to_json.php
-- Illuminate\Support\Facades\DB
+- ReceiptService.php
 - receiptUtils.js
 - src/views/CashAdvanceFormView.vue
 - src/views/ReimbursementsView.vue
@@ -55,8 +54,8 @@
 - BaseTable.vue
 - SegmentedReceiptUpload.vue
 - src/layouts/AppLayout.vue
+- Illuminate\Support\Facades\DB
 - Illuminate\Database\Migrations\Migration
-- Illuminate\Database\Schema\Blueprint
 - Illuminate\Support\Facades\Schema
 - AuthenticateWithExternalService.php
 - DecisionConfirmationModal.vue
@@ -64,7 +63,7 @@
 - useReceiptUploads
 - receipts.js
 - Illuminate\Http\Request
-- AppServiceProvider
+- ValidatesReceiptDuplicates.php
 - ReceiptResubmitOcrTest
 - ActionDropdownMenu.vue
 - CurrencySelect.vue
@@ -74,14 +73,14 @@
 - ReceiptFilteringTest
 - ReceiptViewModal.vue
 - UNLIQUIDATED Status
-- ComputeDailyPenalties.php
+- AuditLogService
 - OcrCallbackServiceTest
 - Liquidation
 - BaseButton.vue
 - BaseUtilityToolbar.vue
 - DuplicateReceiptModal.vue
 - LiquidationSettlementForm.vue
-- ReimbursementLogicTest
+- Illuminate\Database\Eloquent\Model
 - ReimbursementDetailsModal.vue
 - ReimbursementsTable.vue
 - apiFetch
@@ -103,20 +102,16 @@
 - src/views/admin/ReportsView.vue
 - Queue Worker Service
 - config
-- Illuminate\Foundation\Http\FormRequest
 - BasePagination.vue
 - ReceiptQualityRejectionModal.vue
 - useReimbursementFilters
 - formatters.js
 - Hold-to-Confirm Pattern
-- Illuminate\Support\Facades\Route
-- PrsReimbursementApiTest
 - Clinical Neutral Palette
 - BaseModal.vue
 - BaseWarningBanner.vue
 - ImagePreviewModal.test.js
 - OCRField.vue
-- UpdateReceiptRequest
 - ExpenseCard.vue
 - crypto.js
 - reimbursementForwarding.js
@@ -131,8 +126,6 @@
 - useUnsavedChanges
 - policy.js
 - employeeAdvanceStatus
-- UsersServiceProvider
-- console.php
 - ExampleTest
 - SBSI Logo
 - NotificationPanel.vue
@@ -143,8 +136,6 @@
 - src/views/admin/AuditView.vue
 - src/views/AuthCallbackView.vue
 - opencode.json
-- AuditLogsServiceProvider
-- LiquidationsServiceProvider
 - PrsReimbursementWebhookTest
 - post-autoload-dump
 - AppLayout Component
@@ -174,22 +165,20 @@
 - autoload-dev
 - User
 - ReimbursementController
-- ReimbursementsServiceProvider.php
-- ExpensesServiceProvider
-- NotificationsServiceProvider
+- Illuminate\Database\Schema\Blueprint
 - Role-Based Access Control
 
 ## God Nodes (most connected - your core abstractions)
-1. `User` - 89 edges
-2. `Receipt` - 88 edges
+1. `User` - 78 edges
+2. `Receipt` - 75 edges
 3. `CashAdvance` - 48 edges
 4. `SERMS Master Specification` - 47 edges
 5. `System Design Document` - 42 edges
 6. `Reimbursement` - 36 edges
-7. `TestCase` - 34 edges
+7. `TestCase` - 32 edges
 8. `Build Guide` - 23 edges
 9. `ExpenseCategory` - 21 edges
-10. `Controller` - 21 edges
+10. `Product Requirements Document` - 21 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Vue 3 SPA` --implements--> `pinia`  [INFERRED]
@@ -221,7 +210,7 @@
 - **SERMS Technology Stack** — vue3_spa, laravel13, mysql8, redis, mongodb, supabase_bucket, pinia, tailwind_config, index_css, web_crypto_api [INFERRED 0.75]
 - **GitHub Issue Reporting Templates** — github_issue_template_bug_report, github_issue_template_feature_request [INFERRED 0.85]
 
-## Communities (224 total, 50 thin omitted)
+## Communities (206 total, 37 thin omitted)
 
 ### Community 0 - "SERMS Master Specification"
 Cohesion: 0.07
@@ -248,32 +237,32 @@ Cohesion: 0.06
 Nodes (51): Currency Field, USD, 5/20/2025 11:47:32 AM, 340, 1 Family Bundle - 10 pieces (Chickenjoy bucket + 3 large sides), 3890 S Maryland Parkway Suite 137, Las Vegas, NV 89119, Jollibee, 358 (+43 more)
 
 ### Community 3 - "Illuminate\Support\ServiceProvider"
-Cohesion: 0.24
-Nodes (4): AiServiceProvider, SharedServiceProvider, Illuminate\Support\ServiceProvider, Router
+Cohesion: 0.05
+Nodes (13): AiServiceProvider, AuditLogsServiceProvider, CashAdvancesServiceProvider, ExpensesServiceProvider, LiquidationsServiceProvider, NotificationsServiceProvider, ReimbursementsServiceProvider, SharedServiceProvider (+5 more)
 
 ### Community 4 - "DispatchReceiptToAiService"
-Cohesion: 0.06
-Nodes (24): App\Modules\Ai\Contracts\AsyncOcrEngineInterface, ReceiptDuplicateDetected, AiServiceException, Throwable, AiServiceOcrEngine, TesseractOcrEngine, DispatchReceiptToAiService, Throwable (+16 more)
+Cohesion: 0.10
+Nodes (19): App\Modules\Ai\Contracts\AsyncOcrEngineInterface, ReceiptDuplicateDetected, AiServiceException, Throwable, AiServiceOcrEngine, DispatchReceiptToAiService, Throwable, UpdatePrsReimbursementStatusJob (+11 more)
 
-### Community 5 - "src/views/MyExpenseView.vue"
+### Community 5 - "MyExpenseView.vue"
 Cohesion: 0.05
-Nodes (36): activeCategory, activeStatus, { addToast }, adminNotesByReceipt, auth, automaticRejectedReceipts, CATEGORIES, confirmDelete() (+28 more)
+Nodes (38): activeCategory, activeSort, activeStatus, { addToast }, adminNotesByReceipt, auth, automaticRejectedReceipts, CATEGORIES (+30 more)
 
-### Community 6 - "CashAdvanceController"
-Cohesion: 0.09
-Nodes (6): CashAdvanceController, ApproveCashAdvanceRequest, DisburseCashAdvanceRequest, RejectCashAdvanceRequest, StoreCashAdvanceRequest, Illuminate\Support\Facades\Gate
+### Community 6 - "Illuminate\Foundation\Http\FormRequest"
+Cohesion: 0.05
+Nodes (12): AcknowledgeCashAdvanceRequest, ApproveCashAdvanceRequest, DisburseCashAdvanceRequest, RejectCashAdvanceRequest, StoreCashAdvanceRequest, UpdateCashAdvanceRequest, UpdateReceiptRequest, ResubmitReceiptRequest (+4 more)
 
 ### Community 7 - "Receipt"
 Cohesion: 0.10
-Nodes (7): Receipt, ReceiptStatusObserver, duplicateReceiptExists(), validateDuplicateReceipt(), ReceiptOwnerUpdateTest, ReceiptStorageRetrievalTest, Illuminate\Database\Eloquent\SoftDeletes
+Nodes (5): Receipt, ReceiptStatusObserver, ReceiptOwnerUpdateTest, ReimbursementLogicTest, Illuminate\Database\Eloquent\SoftDeletes
 
 ### Community 8 - "CashAdvanceDetailsModal.vue"
 Cohesion: 0.06
 Nodes (33): Mock Receipt PNG Image, { addToast }, adminPassword, adminReviewNotes, auth, canAcknowledgeFromCurrentView, closeDetails(), confirmAcknowledge() (+25 more)
 
-### Community 9 - "CashAdvance"
-Cohesion: 0.11
-Nodes (4): CashAdvance, CashAdvancePolicy, PenaltyLogicTest, Illuminate\Auth\Access\HandlesAuthorization
+### Community 9 - "PayloadDecryptionService"
+Cohesion: 0.13
+Nodes (4): CryptoController, PayloadDecryptionService, Illuminate\Support\Facades\Config, Illuminate\Support\Facades\Log
 
 ### Community 10 - "dependencies"
 Cohesion: 0.05
@@ -283,21 +272,25 @@ Nodes (42): dependencies, chart.js, @headlessui/vue, lucide-vue-next, pinia, vue
 Cohesion: 0.07
 Nodes (32): { addToast }, allOcrComplete, buildUpdatePayload(), canSaveNew, close(), emit, handleRetryOcr(), isDirty (+24 more)
 
-### Community 12 - "Illuminate\Database\Eloquent\Model"
-Cohesion: 0.10
-Nodes (6): CashAdvanceApprovalAction, CashAdvanceDisbursement, CashAdvanceDocument, CashAdvanceStatusHistory, CashAdvanceService, Illuminate\Database\Eloquent\Model
+### Community 12 - "CashAdvance"
+Cohesion: 0.09
+Nodes (6): CashAdvanceController, CashAdvance, CashAdvanceApprovalAction, CashAdvanceDocument, CashAdvanceStatusHistory, CashAdvanceService
 
 ### Community 13 - "src/views/ReimbursementFormView.vue"
 Cohesion: 0.06
 Nodes (29): { addToast }, canProceed, cutoffPeriod, dismiss(), emit, fetching, forwardedReceiptCount, forwardedSource (+21 more)
 
+### Community 14 - "App\Modules\Ai\Contracts\OcrEngineInterface"
+Cohesion: 0.33
+Nodes (3): App\Modules\Ai\Contracts\OcrEngineInterface, TesseractOcrEngine, thiagoalessio\TesseractOCR\TesseractOCR
+
 ### Community 15 - "ImagePreviewModal.vue"
 Cohesion: 0.11
 Nodes (21): clampZoom(), close(), dragStart, emit, handleKeyDown(), handleWheel(), hasMoved, isDragging (+13 more)
 
-### Community 16 - "ExpenseCategory"
-Cohesion: 0.12
-Nodes (8): OcrCallbackController, PrsWebhookController, OcrCallbackRequest, ExpenseCategory, OcrCallbackService, Illuminate\Http\JsonResponse, Illuminate\Support\Facades\Validator, Illuminate\Validation\Rule
+### Community 16 - "Controller"
+Cohesion: 0.13
+Nodes (10): Controller, ExpenseCategoryController, OcrCallbackController, PrsReimbursementRequestController, PrsWebhookController, OcrCallbackRequest, OcrCallbackService, Illuminate\Http\JsonResponse (+2 more)
 
 ### Community 18 - "main.js"
 Cohesion: 0.22
@@ -311,9 +304,9 @@ Nodes (11): { activeStatus, statusTabs, filteredRows, activeMetrics }, { addToas
 Cohesion: 0.13
 Nodes (18): buildPrefilledOcrData(), emit, fileInput, files, handleConfirmDrop(), isDragging, isDropdownOpen, isProcessingAnyReceipt (+10 more)
 
-### Community 23 - "Illuminate\Support\Facades\DB"
-Cohesion: 0.14
-Nodes (13): App\Http\Controllers\Controller, App\Modules\AuditLogs\Services\AuditLogService, App\Modules\CashAdvances\Models\CashAdvance, App\Modules\Liquidations\Models\Liquidation, App\Modules\Reimbursements\Jobs\UpdatePrsReimbursementStatusJob, App\Modules\Reimbursements\Models\Receipt, App\Modules\Reimbursements\Models\Reimbursement, App\Modules\Shared\Services\PasswordVerificationService (+5 more)
+### Community 23 - "ReceiptService.php"
+Cohesion: 0.22
+Nodes (7): App\Modules\AuditLogs\Services\AuditLogService, App\Modules\Reimbursements\Jobs\DispatchReceiptToAiService, App\Modules\Reimbursements\Jobs\UpdatePrsReimbursementStatusJob, App\Modules\Reimbursements\Models\Reimbursement, App\Modules\Shared\Services\PasswordVerificationService, App\Modules\Shared\Traits\ValidatesReceiptDuplicates, Illuminate\Support\Facades\Bus
 
 ### Community 24 - "receiptUtils.js"
 Cohesion: 0.17
@@ -351,9 +344,13 @@ Nodes (17): devDependencies, concurrently, laravel-vite-plugin, tailwindcss, @ta
 Cohesion: 0.12
 Nodes (14): activeAdvances, auth, barData, barOptions, caStore, cutoffDays, cutoffHours, doughnutData (+6 more)
 
+### Community 30 - "ReimbursementPasswordVerificationTest"
+Cohesion: 0.11
+Nodes (6): AuditLog, ReimbursementPasswordVerificationTest, WarnReceiptDeletionTest, Illuminate\Foundation\Inspiring, Illuminate\Support\Facades\Artisan, Illuminate\Support\Facades\Schedule
+
 ### Community 31 - "ExpenseController"
 Cohesion: 0.12
-Nodes (4): ExpenseController, StoreReceiptRequest, UpdateReceiptRequest, Illuminate\Auth\Access\AuthorizationException
+Nodes (4): ExpenseController, StoreReceiptRequest, ExpenseService, Illuminate\Support\Facades\Route
 
 ### Community 32 - "src/views/admin/PolicyView.vue"
 Cohesion: 0.13
@@ -387,8 +384,12 @@ Nodes (10): addFiles(), canSubmit, dragOver, emit, fileInputRef, handleDrop(), h
 Cohesion: 0.15
 Nodes (11): { addToast }, auth, mobileOpen, navLinks, notif, notifOpen, pageTitle, route (+3 more)
 
+### Community 40 - "Illuminate\Support\Facades\DB"
+Cohesion: 0.11
+Nodes (3): normalizeLegacyScalarValues(), up(), Illuminate\Support\Facades\DB
+
 ### Community 43 - "AuthenticateWithExternalService.php"
-Cohesion: 0.29
+Cohesion: 0.27
 Nodes (6): AuthenticateAiServiceApi, AuthenticatePrsReimbursementApi, AuthenticateWithExternalService, Closure, Illuminate\Support\Facades\Auth, Symfony\Component\HttpFoundation\Response
 
 ### Community 44 - "DecisionConfirmationModal.vue"
@@ -408,12 +409,12 @@ Cohesion: 0.23
 Nodes (8): useNotificationStore, arrayFieldsReceipt, localStorageMock, scalarFieldsReceipt, useReceiptStore, getFileUrl(), canEditReceipt(), firstFilePathField()
 
 ### Community 48 - "Illuminate\Http\Request"
-Cohesion: 0.16
-Nodes (7): Controller, ExpenseCategoryController, PrsReimbursementRequestController, ReceiptController, AuthController, CryptoController, Illuminate\Http\Request
+Cohesion: 0.11
+Nodes (11): App\Http\Controllers\Controller, App\Modules\CashAdvances\Models\CashAdvance, App\Modules\Liquidations\Models\Liquidation, App\Modules\Reimbursements\Http\Requests\ResubmitReceiptRequest, App\Modules\Reimbursements\Http\Requests\StoreReceiptRequest, App\Modules\Reimbursements\Http\Requests\UpdateReceiptRequest, LiquidationController, ReceiptController (+3 more)
 
 ### Community 50 - "ReceiptResubmitOcrTest"
-Cohesion: 0.19
-Nodes (4): ReceiptResubmitOcrTest, ReceiptUploadTest, Illuminate\Http\UploadedFile, UploadedFile
+Cohesion: 0.18
+Nodes (5): ReceiptResubmitOcrTest, ReceiptUploadTest, Illuminate\Http\UploadedFile, Illuminate\Support\Facades\Queue, UploadedFile
 
 ### Community 51 - "ActionDropdownMenu.vue"
 Cohesion: 0.20
@@ -432,8 +433,12 @@ Cohesion: 0.24
 Nodes (6): useReimbursementDetails(), closeDetails(), hasProcessingReceipts(), openDetails(), startPolling(), stopPolling()
 
 ### Community 55 - "TestCase"
+Cohesion: 0.09
+Nodes (7): ExampleTest, PrsReimbursementApiTest, ReceiptStorageRetrievalTest, TestCase, Illuminate\Foundation\Testing\RefreshDatabase, Illuminate\Foundation\Testing\TestCase, Illuminate\Support\Facades\Http
+
+### Community 56 - "ReceiptFilteringTest"
 Cohesion: 0.14
-Nodes (8): ExampleTest, WarnReceiptDeletionTest, TestCase, Illuminate\Foundation\Testing\RefreshDatabase, Illuminate\Foundation\Testing\TestCase, Illuminate\Support\Facades\Http, Illuminate\Support\Facades\Queue, Illuminate\Support\Facades\Storage
+Nodes (5): App\Modules\Reimbursements\Models\Receipt, Receipt, User, ReceiptFilteringTest, Tests\TestCase
 
 ### Community 57 - "ReceiptViewModal.vue"
 Cohesion: 0.24
@@ -443,21 +448,21 @@ Nodes (9): actualSubtotal, canDelete, canEdit, close(), editReceipt(), emit, ima
 Cohesion: 0.27
 Nodes (10): Penalty Computation, Aging Tracker Countdown, Balance Variance Visual System, Daily Penalty 55 PHP, LIQUIDATED Status, OVERDUE Status, Reconciliation Lifecycle, UNLIQUIDATED Status (+2 more)
 
-### Community 59 - "ComputeDailyPenalties.php"
-Cohesion: 0.17
-Nodes (7): ComputeDailyPenalties, WarnReceiptDeletion, PenaltyRecord, NotificationDeliveryService, Carbon\Carbon, Command, Illuminate\Console\Command
+### Community 59 - "AuditLogService"
+Cohesion: 0.15
+Nodes (7): ComputeDailyPenalties, WarnReceiptDeletion, AuditLogService, PenaltyRecord, NotificationDeliveryService, Command, Illuminate\Console\Command
 
 ### Community 61 - "Liquidation"
-Cohesion: 0.14
-Nodes (4): App\Modules\Ai\Contracts\OcrEngineInterface, LiquidationController, Liquidation, LiquidationLogicTest
+Cohesion: 0.11
+Nodes (6): Liquidation, LiquidationLogicTest, PenaltyLogicTest, Carbon\Carbon, Illuminate\Support\Facades\Storage, Mockery
 
 ### Community 62 - "BaseButton.vue"
 Cohesion: 0.27
 Nodes (9): cancelHold(), emit, isHolding, progress, props, sizeClass, startHold(), updateProgress() (+1 more)
 
 ### Community 63 - "BaseUtilityToolbar.vue"
-Cohesion: 0.24
-Nodes (8): chooseCategory(), chooseStatus(), emit, hasFilters, isOpen, popoverWidthClass, props, root
+Cohesion: 0.14
+Nodes (13): chooseCategory(), chooseSort(), chooseStatus(), currentSortLabel, emit, hasFilters, hasSort, isOpen (+5 more)
 
 ### Community 64 - "DuplicateReceiptModal.vue"
 Cohesion: 0.20
@@ -467,9 +472,9 @@ Nodes (7): { addToast }, authStore, currentUser, customMessage, duplicateReceipt
 Cohesion: 0.22
 Nodes (6): currentStatusLabel, emit, handleRemoveReceipt(), isFormDisabled, props, reportAttachmentInput
 
-### Community 66 - "ReimbursementLogicTest"
-Cohesion: 0.12
-Nodes (3): ReceiptItem, ReimbursementLogicTest, Mockery
+### Community 66 - "Illuminate\Database\Eloquent\Model"
+Cohesion: 0.10
+Nodes (5): CashAdvanceDisbursement, ExpenseCategory, ReceiptItem, Illuminate\Database\Eloquent\Builder, Illuminate\Database\Eloquent\Model
 
 ### Community 67 - "ReimbursementDetailsModal.vue"
 Cohesion: 0.22
@@ -555,10 +560,6 @@ Nodes (7): Laravel Queues, main.js Entry Point, SERMS App Mount Point, Queue Wor
 Cohesion: 0.29
 Nodes (7): pestphp/pest-plugin, php-http/discovery, config, allow-plugins, optimize-autoloader, preferred-install, sort-packages
 
-### Community 88 - "Illuminate\Foundation\Http\FormRequest"
-Cohesion: 0.11
-Nodes (5): AcknowledgeCashAdvanceRequest, UpdateCashAdvanceRequest, ApproveReimbursementRequest, ResubmitReceiptRequest, Illuminate\Foundation\Http\FormRequest
-
 ### Community 89 - "BasePagination.vue"
 Cohesion: 0.33
 Nodes (6): emit, end, props, setPage(), start, totalPages
@@ -643,10 +644,6 @@ Nodes (4): MOCK_EXPENSE_LIMITS, MOCK_PENALTY_RULES, MOCK_POLICY_LOGS, usePolicyS
 Cohesion: 0.50
 Nodes (5): employeeAdvanceBadgeStatus(), employeeAdvanceStatus(), employeeFilteredAdvances, employeeLiquidationKpis, employeeSortValue()
 
-### Community 117 - "console.php"
-Cohesion: 0.50
-Nodes (3): Illuminate\Foundation\Inspiring, Illuminate\Support\Facades\Artisan, Illuminate\Support\Facades\Schedule
-
 ### Community 119 - "SBSI Logo"
 Cohesion: 0.83
 Nodes (4): SBSI Logo, SBSI Logo Short, Logo, SBSI Brand
@@ -688,12 +685,12 @@ Cohesion: 0.67
 Nodes (3): autoload-dev, psr-4, Tests\\
 
 ### Community 210 - "User"
-Cohesion: 0.14
-Nodes (7): ExpenseService, User, UserFactory, Collection, Illuminate\Database\Eloquent\Factories\Factory, Illuminate\Database\Eloquent\Factories\HasFactory, Illuminate\Foundation\Auth\User
+Cohesion: 0.16
+Nodes (6): CashAdvancePolicy, User, Collection, Illuminate\Auth\Access\HandlesAuthorization, Illuminate\Database\Eloquent\Factories\HasFactory, Illuminate\Foundation\Auth\User
 
 ### Community 214 - "ReimbursementController"
-Cohesion: 0.12
-Nodes (3): ReimbursementController, StoreReimbursementRequest, UpdateReimbursementRequest
+Cohesion: 0.09
+Nodes (6): ReimbursementController, ApproveReimbursementRequest, RejectReimbursementRequest, StoreReimbursementRequest, UpdateReimbursementRequest, Illuminate\Auth\Access\AuthorizationException
 
 ### Community 228 - "Role-Based Access Control"
 Cohesion: 0.50
@@ -720,9 +717,9 @@ Nodes (4): HTTP Error Codes 401 403 409, Role-Based Access Control, Session Time
   apps/web/public/mock_receipt.png · relation: may_contain
 
 ## Knowledge Gaps
-- **565 isolated node(s):** `name`, `version`, `private`, `type`, `dev` (+560 more)
+- **571 isolated node(s):** `props`, `isOpen`, `isSortOpen`, `root`, `hasFilters` (+566 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **50 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **37 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
