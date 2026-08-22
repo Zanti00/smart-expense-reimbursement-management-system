@@ -10,8 +10,15 @@ export const useCashAdvanceStore = defineStore("cashAdvance", () => {
     () => items.value.filter((i) => i.status === "pending").length,
   );
   const totalOutstanding = computed(() =>
-    items.value.reduce((s, i) => s + (Number(i.amount) || 0), 0),
-  ); // simplistic for now
+    items.value.reduce((s, i) => {
+      if (["rejected", "liquidated", "settled"].includes(i.status)) return s;
+      const bal =
+        i.outstanding_balance !== null && i.outstanding_balance !== undefined
+          ? Number(i.outstanding_balance)
+          : Number(i.balance ?? i.amount ?? 0);
+      return s + (isNaN(bal) ? 0 : Math.max(0, bal));
+    }, 0),
+  );
 
   function normalizeAdvance(item = {}) {
     const document = item.document || null;

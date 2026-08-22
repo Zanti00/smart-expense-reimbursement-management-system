@@ -4,6 +4,7 @@ import { useAuthStore } from "@/stores/auth";
 import { useReimbursementStore } from "@/stores/reimbursement";
 import { useCashAdvanceStore } from "@/stores/cashAdvance";
 import { useLiquidationStore } from "@/stores/liquidation";
+import { useReceiptStore } from "@/stores/receipts";
 import BaseKpiGrid from "@/components/base/BaseKpiGrid.vue";
 import SkeletonLoader from "@/components/base/SkeletonLoader.vue";
 import { formatPeso } from "@/utils/formatters";
@@ -47,13 +48,26 @@ const auth = useAuthStore();
 const rStore = useReimbursementStore();
 const caStore = useCashAdvanceStore();
 const liqStore = useLiquidationStore();
+const receiptsStore = useReceiptStore();
+
+const currentYear = new Date().getFullYear();
+const MONTH_LABELS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
 
 onMounted(async () => {
-  await Promise.all([rStore.fetchAll(), caStore.fetchAll(), liqStore.fetchSettlements()]);
+  const scope = auth.isAdmin ? "all" : "mine";
+  await Promise.all([
+    rStore.fetchAll(),
+    caStore.fetchAll(),
+    liqStore.fetchSettlements(),
+    receiptsStore.fetchAll({ scope, perPage: 100 }),
+  ]);
 });
 
 const isDashboardLoading = computed(
-  () => rStore.isLoading || caStore.isLoading || liqStore.isLoading,
+  () => rStore.isLoading || caStore.isLoading || liqStore.isLoading || receiptsStore.isLoading,
 );
 
 // ══════════════════════════════════════════════════
@@ -85,7 +99,9 @@ const employeeKpis = computed(() => [
   },
   {
     label: "Total Filed Cash Advance",
-    value: formatPeso(caStore.totalOutstanding),
+    value: formatPeso(
+      caStore.items.reduce((s, i) => s + (Number(i.amount) || 0), 0),
+    ),
     sub: "Total amount",
     icon: Banknote,
     iconBg: "bg-amber-100",
@@ -108,23 +124,40 @@ const employeeKpis = computed(() => [
   },
 ]);
 
-// Employee Bar Chart
+// Employee Bar Chart: Monthly Spending Trend for Reimbursement & My Expense
 const employeeBarData = computed(() => {
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
-  const reimbursementByMonth = [0, 0, 0, 0, 0, 0];
-  const expenseByMonth = [0, 0, 0, 0, 0, 0];
+  const reimbursementByMonth = new Array(12).fill(0);
+  const expenseByMonth = new Array(12).fill(0);
 
-  rStore.items.forEach((item) => {
-    if (!item.date && !item.created_at) return;
-    const date = new Date(item.date || item.created_at);
-    const month = date.getMonth();
-    if (month >= 0 && month < 6) {
-      reimbursementByMonth[month] += parseFloat(item.amount || 0);
+  // Standalone employee receipts / expenses
+  (receiptsStore.receipts || []).forEach((r) => {
+    if (r.isDeleted) return;
+    const dateStr = r.date || r.transactionDate || r.transaction_date || r.createdAt;
+    if (!dateStr) return;
+    const date = new Date(dateStr);
+    if (!isNaN(date.getTime()) && date.getFullYear() === currentYear) {
+      const month = date.getMonth();
+      if (month >= 0 && month < 12) {
+        expenseByMonth[month] += Number(r.amount) || 0;
+      }
+    }
+  });
+
+  // Reimbursements
+  (rStore.items || []).forEach((item) => {
+    const dateStr = item.date || item.created_at;
+    if (!dateStr) return;
+    const date = new Date(dateStr);
+    if (!isNaN(date.getTime()) && date.getFullYear() === currentYear) {
+      const month = date.getMonth();
+      if (month >= 0 && month < 12) {
+        reimbursementByMonth[month] += parseFloat(item.amount || 0);
+      }
     }
   });
 
   return {
-    labels: months,
+    labels: MONTH_LABELS,
     datasets: [
       {
         label: "My Expense",
@@ -146,21 +179,36 @@ const employeeBarData = computed(() => {
   };
 });
 
-// Employee Pie Chart
+// Employee Pie Chart: Spending by Category
 const employeePieData = computed(() => {
   const categoryMap = {};
 
-  rStore.items.forEach((item) => {
-    const catName =
-      item.expense_category?.name ||
-      item.expenseCategory?.name ||
-      item.category?.name ||
-      item.category ||
-      (item.receipts && item.receipts[0]?.category?.name) ||
-      "Other";
-    const amount = parseFloat(item.amount || 0);
-    categoryMap[catName] = (categoryMap[catName] || 0) + amount;
+  // Aggregate from receiptsStore
+  (receiptsStore.receipts || []).forEach((r) => {
+    if (r.isDeleted) return;
+    const catName = r.category || "Uncategorized";
+    const amount = Number(r.amount) || 0;
+    if (amount > 0) {
+      categoryMap[catName] = (categoryMap[catName] || 0) + amount;
+    }
   });
+
+  // Aggregate from reimbursements if no standalone receipts or to complement
+  if (Object.keys(categoryMap).length === 0) {
+    (rStore.items || []).forEach((item) => {
+      const catName =
+        item.expense_category?.name ||
+        item.expenseCategory?.name ||
+        item.category?.name ||
+        item.category ||
+        (item.receipts && item.receipts[0]?.category?.name) ||
+        "Other";
+      const amount = parseFloat(item.amount || 0);
+      if (amount > 0) {
+        categoryMap[catName] = (categoryMap[catName] || 0) + amount;
+      }
+    });
+  }
 
   const labels = Object.keys(categoryMap);
   const data = Object.values(categoryMap);
@@ -175,6 +223,8 @@ const employeePieData = computed(() => {
     "#7c3aed",
     "#ec4899",
     "#06b6d4",
+    "#f59e0b",
+    "#10b981",
   ];
 
   if (labels.length === 0 || total === 0) {
@@ -210,15 +260,27 @@ const employeePieData = computed(() => {
 // ══════════════════════════════════════════════════
 
 const adminKpis = computed(() => {
-  const pendingApproval = rStore.items.filter((i) => i.status === "pending").length;
-  const pendingCashAdvance = caStore.items.filter((i) => i.status === "pending").length;
-  const pendingLiquidating = liqStore.settlements.filter(
-    (i) => i.status === "pending"
+  const pendingApproval = rStore.items.filter((i) =>
+    ["pending", "submitted"].includes(String(i.status || "").toLowerCase()),
   ).length;
+  const pendingCashAdvance = caStore.items.filter(
+    (i) => String(i.status || "").toLowerCase() === "pending",
+  ).length;
+  const pendingLiquidating = liqStore.settlements.filter((i) =>
+    ["pending", "under-review"].includes(String(i.status || "").toLowerCase()),
+  ).length;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   const overdueLiquidation = caStore.items.filter((i) => {
-    if (!i.expected_liquidation_date && !i.dueDate) return false;
-    const due = new Date(i.expected_liquidation_date || i.dueDate);
-    return due < new Date() && ["disbursed", "signed", "approved"].includes(i.status);
+    const s = String(i.status || "").toLowerCase();
+    if (s === "overdue") return true;
+    if (!["disbursed", "signed", "approved"].includes(s)) return false;
+    const dueStr = i.expected_liquidation_date || i.dueDate;
+    if (!dueStr) return false;
+    const due = new Date(dueStr);
+    return !isNaN(due.getTime()) && due < today;
   }).length;
 
   return [
@@ -261,44 +323,89 @@ const adminKpis = computed(() => {
   ];
 });
 
-// Admin Bar Chart: Monthly Spending Trend (Reimbursement only)
+// Admin Bar Chart: Monthly Spending Trend (Reimbursements & Expenses)
 const adminBarData = computed(() => {
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
-  const monthlyAmounts = [0, 0, 0, 0, 0, 0];
+  const monthlyReimbursements = new Array(12).fill(0);
+  const monthlyExpenses = new Array(12).fill(0);
 
-  rStore.items.forEach((item) => {
+  (rStore.items || []).forEach((item) => {
     if (!item.date && !item.created_at) return;
     const date = new Date(item.date || item.created_at);
-    const month = date.getMonth();
-    if (month >= 0 && month < 6) {
-      monthlyAmounts[month] += parseFloat(item.amount || 0);
+    if (!isNaN(date.getTime()) && date.getFullYear() === currentYear) {
+      const month = date.getMonth();
+      if (month >= 0 && month < 12) {
+        monthlyReimbursements[month] += parseFloat(item.amount || 0);
+      }
     }
   });
 
+  (receiptsStore.receipts || []).forEach((r) => {
+    if (r.isDeleted) return;
+    const dateStr = r.date || r.transactionDate || r.transaction_date || r.createdAt;
+    if (!dateStr) return;
+    const date = new Date(dateStr);
+    if (!isNaN(date.getTime()) && date.getFullYear() === currentYear) {
+      const month = date.getMonth();
+      if (month >= 0 && month < 12) {
+        monthlyExpenses[month] += Number(r.amount) || 0;
+      }
+    }
+  });
+
+  const hasExpenses = monthlyExpenses.some((v) => v > 0);
+
+  const datasets = [
+    {
+      label: "Reimbursement",
+      data: monthlyReimbursements,
+      backgroundColor: "#2E85D8",
+      borderRadius: 4,
+      barPercentage: hasExpenses ? 0.6 : 0.5,
+      categoryPercentage: hasExpenses ? 0.7 : 0.6,
+    },
+  ];
+
+  if (hasExpenses) {
+    datasets.unshift({
+      label: "Expenses",
+      data: monthlyExpenses,
+      backgroundColor: "#059669",
+      borderRadius: 4,
+      barPercentage: 0.6,
+      categoryPercentage: 0.7,
+    });
+  }
+
   return {
-    labels: months,
-    datasets: [
-      {
-        label: "Reimbursement",
-        data: monthlyAmounts,
-        backgroundColor: "#2E85D8",
-        borderRadius: 4,
-        barPercentage: 0.5,
-        categoryPercentage: 0.6,
-      },
-    ],
+    labels: MONTH_LABELS,
+    datasets,
   };
 });
 
 // Admin Pie Chart: Cash Advance Status Distribution
 const adminCaStatusPieData = computed(() => {
-  const statuses = ["pending", "approved", "rejected", "disbursed", "signed", "liquidated"];
-  const labels = ["Pending", "Approved", "Rejected", "Disbursed", "Signed", "Liquidated"];
-  const colors = ["#D97706", "#059669", "#DC2626", "#2E85D8", "#252578", "#64748b"];
-  const data = statuses.map(
-    (s) => caStore.items.filter((i) => i.status === s).length
-  );
-  const total = data.reduce((a, b) => a + b, 0);
+  const statusConfig = {
+    pending: { label: "Pending", color: "#D97706" },
+    approved: { label: "Approved", color: "#059669" },
+    disbursed: { label: "Disbursed", color: "#2E85D8" },
+    signed: { label: "Signed", color: "#252578" },
+    "under-review": { label: "Under Review", color: "#7c3aed" },
+    liquidated: { label: "Liquidated", color: "#64748b" },
+    overdue: { label: "Overdue", color: "#DC2626" },
+    rejected: { label: "Rejected", color: "#ef4444" },
+    settled: { label: "Settled", color: "#10b981" },
+  };
+
+  const counts = {};
+  (caStore.items || []).forEach((item) => {
+    const s = String(item.status || "").toLowerCase();
+    if (s) {
+      counts[s] = (counts[s] || 0) + 1;
+    }
+  });
+
+  const activeKeys = Object.keys(counts).filter((k) => counts[k] > 0);
+  const total = activeKeys.reduce((s, k) => s + counts[k], 0);
 
   if (total === 0) {
     return {
@@ -313,6 +420,12 @@ const adminCaStatusPieData = computed(() => {
       ],
     };
   }
+
+  const labels = activeKeys.map(
+    (k) => statusConfig[k]?.label || k.charAt(0).toUpperCase() + k.slice(1),
+  );
+  const colors = activeKeys.map((k) => statusConfig[k]?.color || "#94a3b8");
+  const data = activeKeys.map((k) => counts[k]);
 
   return {
     labels,
@@ -330,14 +443,18 @@ const adminCaStatusPieData = computed(() => {
 
 // Admin Pie Chart: Advance vs Outstanding
 const totalCashAdvanceAmount = computed(() =>
-  caStore.items.reduce((s, i) => s + (Number(i.amount) || 0), 0)
+  (caStore.items || []).reduce((s, i) => s + (Number(i.amount) || 0), 0),
 );
 const totalOutstandingBalance = computed(() => caStore.totalOutstanding);
+const totalLiquidatedOrSettled = computed(() =>
+  Math.max(0, totalCashAdvanceAmount.value - totalOutstandingBalance.value),
+);
 const remainingOutstanding = computed(() => totalOutstandingBalance.value);
 
 const adminBalancePieData = computed(() => {
   const totalCA = totalCashAdvanceAmount.value;
   const totalOut = totalOutstandingBalance.value;
+  const settled = totalLiquidatedOrSettled.value;
 
   if (totalCA === 0 && totalOut === 0) {
     return {
@@ -354,11 +471,11 @@ const adminBalancePieData = computed(() => {
   }
 
   return {
-    labels: ["Total Cash Advance", "Outstanding Balance"],
+    labels: ["Liquidated / Settled", "Outstanding Balance"],
     datasets: [
       {
-        data: [totalCA, totalOut],
-        backgroundColor: ["#252578", "#DC2626"],
+        data: [settled, totalOut],
+        backgroundColor: ["#059669", "#DC2626"],
         borderWidth: 2,
         borderColor: "#ffffff",
         hoverOffset: 6,
@@ -378,18 +495,24 @@ const lineData = computed(() => {
   const labels = {
     day: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
     week: ["Week 1", "Week 2", "Week 3", "Week 4"],
-    month: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+    month: MONTH_LABELS,
   };
 
   const dayData = [0, 0, 0, 0, 0, 0, 0];
   const weekData = [0, 0, 0, 0];
-  const monthData = [0, 0, 0, 0, 0, 0];
+  const monthData = new Array(12).fill(0);
 
   liqStore.settlements.forEach((item) => {
     const amount = Number(item.total_expense_amount) || 0;
-    const dateStr = item.settlement_date || item.created_at || item.date;
+    const dateStr =
+      item.settlement_date ||
+      item.created_at ||
+      item.date ||
+      item.cash_advance?.expected_liquidation_date ||
+      item.cashAdvance?.expected_liquidation_date;
     if (!dateStr) return;
     const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return;
 
     const dayIdx = (date.getDay() + 6) % 7;
     dayData[dayIdx] += amount;
@@ -397,9 +520,11 @@ const lineData = computed(() => {
     const weekIdx = Math.min(Math.floor(date.getDate() / 7), 3);
     weekData[weekIdx] += amount;
 
-    const monthIdx = date.getMonth();
-    if (monthIdx >= 0 && monthIdx < 6) {
-      monthData[monthIdx] += amount;
+    if (date.getFullYear() === currentYear) {
+      const monthIdx = date.getMonth();
+      if (monthIdx >= 0 && monthIdx < 12) {
+        monthData[monthIdx] += amount;
+      }
     }
   });
 
@@ -454,12 +579,11 @@ const lineOptions = {
     y: {
       beginAtZero: true,
       suggestedMin: 0,
-      suggestedMax: 10000,
       grid: { color: "rgba(148,163,184,0.1)", borderDash: [4, 4] },
       ticks: {
         color: "#94a3b8",
         font: { family: "Poppins", size: 11 },
-        callback: (v) => `₱${(v / 1000).toFixed(0)}K`,
+        callback: (v) => (v >= 1000 ? `₱${(v / 1000).toFixed(0)}K` : `₱${v}`),
       },
     },
   },
@@ -501,12 +625,11 @@ const barOptions = {
     y: {
       beginAtZero: true,
       suggestedMin: 0,
-      suggestedMax: 10000,
       grid: { color: "rgba(148,163,184,0.1)", borderDash: [4, 4] },
       ticks: {
         color: "#94a3b8",
         font: { family: "Poppins", size: 11 },
-        callback: (v) => `₱${(v / 1000).toFixed(0)}K`,
+        callback: (v) => (v >= 1000 ? `₱${(v / 1000).toFixed(0)}K` : `₱${v}`),
       },
     },
   },
@@ -595,7 +718,7 @@ const pieOptionsWithCurrency = {
             <h3 class="text-sm font-medium text-slate-700">
               Monthly Spending Trend for Reimbursement and My Expense
             </h3>
-            <p class="text-xs text-slate-400 mt-0.5">January – June 2026</p>
+            <p class="text-xs text-slate-400 mt-0.5">January – December {{ currentYear }}</p>
           </div>
           <div v-if="isDashboardLoading" class="h-56">
             <SkeletonLoader variant="chart" />
@@ -608,7 +731,7 @@ const pieOptionsWithCurrency = {
         <div class="card p-6">
           <div class="mb-5">
             <h3 class="text-sm font-medium text-slate-700">Spending by Category</h3>
-            <p class="text-xs text-slate-400 mt-0.5">Reimbursement Spending by Category</p>
+            <p class="text-xs text-slate-400 mt-0.5">Expenses and reimbursement distribution</p>
           </div>
           <div v-if="isDashboardLoading" class="flex h-56 items-center justify-center">
             <div class="h-36 w-36 animate-pulse rounded-full bg-slate-200"></div>
@@ -665,7 +788,9 @@ const pieOptionsWithCurrency = {
       <div class="card p-6">
         <div class="mb-5">
           <h3 class="text-sm font-medium text-slate-700">Monthly Spending Trend</h3>
-          <p class="text-xs text-slate-400 mt-0.5">Total reimbursement disbursed across all employees</p>
+          <p class="text-xs text-slate-400 mt-0.5">
+            Total claims and expenses across organization — January – December {{ currentYear }}
+          </p>
         </div>
         <div v-if="isDashboardLoading" class="h-56">
           <SkeletonLoader variant="chart" />
