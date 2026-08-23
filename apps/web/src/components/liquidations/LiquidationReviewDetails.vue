@@ -1,5 +1,5 @@
 <script setup>
-import { Eye, FileText, Download } from "lucide-vue-next";
+import { Eye, Download } from "lucide-vue-next";
 import { formatPeso } from "@/utils/formatters";
 import StatusBadge from "@/components/base/StatusBadge.vue";
 
@@ -137,32 +137,13 @@ defineEmits(["view-receipt"]);
       </div>
     </section>
 
-    <section
-      v-if="reviewingCase.adminNote"
-      class="p-5 space-y-2 bg-white border rounded-xl border-slate-200"
-    >
-      <p class="text-xs font-medium text-slate-500">Admin Notes</p>
-      <p class="text-sm leading-relaxed text-slate-700">
-        {{ reviewingCase.adminNote }}
-      </p>
-    </section>
+
 
     <section
       v-if="reviewingCase.reportFilePath"
       class="p-5 space-y-4 bg-white border rounded-xl border-slate-200"
     >
-      <div class="flex items-center gap-3">
-        <span
-          class="inline-flex items-center justify-center w-10 h-10 rounded-lg shrink-0 bg-accent/10 text-accent"
-        >
-          <FileText class="w-5 h-5" />
-        </span>
-        <div>
-          <h3 class="text-base font-bold font-heading text-slate-800">
-            Report Letter Attachment
-          </h3>
-        </div>
-      </div>
+      <p class="text-[11px] text-slate-400 mb-2">Report Attachment</p>
       <a
         :href="getFileUrl(reviewingCase.reportFilePath)"
         target="_blank"

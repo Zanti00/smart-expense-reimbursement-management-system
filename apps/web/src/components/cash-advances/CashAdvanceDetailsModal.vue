@@ -13,7 +13,6 @@ import {
   Wallet,
   FileDown,
   Download,
-  Info,
   ShieldCheck,
   RotateCcw,
   FileText,
@@ -95,8 +94,6 @@ function closeDetails() {
 
 function outstandingBalance(record) {
   if (!record) return 0;
-  // balance is mapped from outstanding_balance (DB-authoritative).
-  // Falls back to full amount for pre-disbursement advances where balance is null.
   return Number(record.balance ?? record.amount ?? 0);
 }
 
@@ -110,6 +107,38 @@ function formatDateOnly(value) {
     day: "numeric",
     year: "numeric",
   }).format(date);
+}
+
+function normalizeStatus(status) {
+  const normalized = String(status || "").toLowerCase();
+  const statusMap = {
+    pending: "pending",
+    approved: "approved",
+    disbursed: "disbursed",
+    signed: "disbursed",
+    liquidated: "liquidated",
+    rejected: "rejected",
+  };
+  return statusMap[normalized] || normalized;
+}
+
+function isTimelineStepCompleted(stepIndex) {
+  const status = normalizeStatus(props.record?.status);
+  const order = ["pending", "approved", "disbursed", "liquidated"];
+  const currentIndex = order.indexOf(status);
+  if (status === "rejected") {
+    // If rejected, steps up to 1 (approved) are complete but with rejection at decision
+    return stepIndex <= 0;
+  }
+  return stepIndex < currentIndex;
+}
+
+function isTimelineStepCurrent(stepIndex) {
+  const status = normalizeStatus(props.record?.status);
+  const order = ["pending", "approved", "disbursed", "liquidated"];
+  const currentIndex = order.indexOf(status);
+  if (status === "rejected") return stepIndex === 1;
+  return stepIndex === currentIndex;
 }
 
 async function downloadDocument() {
@@ -288,196 +317,219 @@ async function confirmAcknowledge() {
 <template>
   <div v-if="isOpen && record">
     <div
-      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-[1px]"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
     >
+      <!-- ═══════════════ ADMIN VIEW ═══════════════ -->
       <div
         v-if="auth.isAdmin"
-        class="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl"
+        class="relative bg-white w-full max-w-[960px] rounded-3xl shadow-[0_20px_40px_-10px_rgba(0,0,0,0.1)] flex flex-col overflow-hidden max-h-[96vh]"
+        @click.stop
       >
-        <header
-          class="flex items-center justify-between border-b border-slate-200 bg-slate-50/80 px-6 py-4"
+        <!-- Close Button -->
+        <button
+          @click="closeDetails"
+          class="absolute top-2 right-2 text-slate-400 hover:bg-slate-100 transition-colors p-1.5 rounded-full flex items-center justify-center z-10"
         >
-          <h2 class="font-heading text-xl font-bold text-primary">
-            Review Cash Advance Request
-          </h2>
-          <button
-            class="inline-flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-danger"
-            type="button"
-            title="Close review"
-            @click="closeDetails"
-          >
-            <X class="h-5 w-5 stroke-[1.75]" />
-          </button>
-        </header>
+          <X class="w-4 h-4" />
+        </button>
 
-        <div class="flex-1 space-y-6 overflow-y-auto bg-slate-50/40 px-6 py-5">
-          <section
-            class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-          >
-            <div class="flex items-center gap-4">
-              <div
-                class="flex h-14 w-14 items-center justify-center rounded-full border-2 border-accent/20 bg-primary/10 font-heading text-sm font-bold text-primary"
-              >
-                {{
-                  record.requestedBy
-                    ?.split(" ")
-                    .map((part) => part[0])
-                    .join("")
-                    .slice(0, 2) || "EA"
-                }}
-              </div>
-              <div>
-                <p class="text-xs font-medium text-slate-500 mb-1">Requestor Name</p>
-                <h3 class="font-heading text-xl font-bold text-primary">
-                  {{ record.requestedBy }}
-                </h3>
-              </div>
-            </div>
-
-            <div class="sm:text-right">
-              <p class="text-xs font-medium text-slate-500 mb-2">Status</p>
-              <StatusBadge :status="record.status" />
-            </div>
-          </section>
-
-          <section
-            class="rounded-lg border border-accent/20 bg-primary/5 p-6 text-center"
-          >
-            <p class="text-xs font-medium text-slate-500 mb-2">Amount Requested</p>
-            <p
-              class="font-heading text-[40px] font-extrabold leading-tight text-primary"
-            >
-              {{ formatPeso(record.amount) }}
-            </p>
-          </section>
-
-          <section class="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div
-              class="rounded-lg border border-slate-200 bg-white p-4 md:col-span-2"
-            >
-              <p class="text-xs font-medium text-slate-500 mb-1">Purpose</p>
-              <p class="text-base leading-relaxed text-slate-800">
-                {{ record.purpose }}
+        <!-- Header -->
+        <div class="px-6 pt-8 pb-4 border-b border-slate-100 shrink-0">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-1">
+                Cash Advance Ref #{{ record.id }}
               </p>
+              <h2 class="text-2xl font-bold text-slate-800">
+                {{ formatPeso(record.amount) }}
+              </h2>
             </div>
-            <div class="rounded-lg border border-slate-200 bg-white p-4">
-              <p class="text-xs font-medium text-slate-500 mb-1">Date Requested</p>
-              <p class="text-base font-bold text-slate-800">
-                {{ record.date }}
-              </p>
-            </div>
-            <div class="rounded-lg border border-slate-200 bg-white p-4">
-              <p class="text-xs font-medium text-slate-500 mb-1">Settlement Due Date</p>
-              <p class="text-base font-bold text-slate-800">
-                {{ record.dueDate }}
-              </p>
-            </div>
-          </section>
+            <StatusBadge :status="record.status" />
+          </div>
+        </div>
 
-          <section
-            class="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-100 px-4 py-3"
-          >
-            <div class="flex items-center gap-3">
-              <Wallet class="h-5 w-5 text-accent" />
-              <span class="text-sm font-semibold text-slate-700"
-                >Current Outstanding Balance</span
-              >
-            </div>
-            <span class="font-heading text-xl font-bold text-primary">{{
-              formatPeso(outstandingBalance(record))
-            }}</span>
-          </section>
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+          <!-- Timeline -->
+          <section class="relative">
+            <div class="absolute top-4 left-4 right-4 h-0.5 bg-slate-100"></div>
 
-          <section
-            class="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white p-4"
-          >
-            <div class="flex min-w-0 items-center gap-4">
-              <span
-                class="inline-flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-md bg-red-50 text-danger"
-              >
-                <FileDown class="h-6 w-6" />
-              </span>
-              <div class="min-w-0">
-                <p class="truncate font-heading text-sm font-bold text-primary">
-                  {{ record.documentFileName }}
-                </p>
-                <p class="text-xs font-semibold text-slate-400">
-                  Uploaded Attachment
+            <div class="flex justify-between gap-2">
+              <!-- Step 1: Submitted -->
+              <div class="relative flex flex-col items-center text-center flex-1">
+                <div
+                  :class="[
+                    'h-8 w-8 rounded-full flex items-center justify-center ring-4 ring-white z-10 shrink-0 mb-2',
+                    isTimelineStepCompleted(0) || isTimelineStepCurrent(0)
+                      ? 'bg-emerald-500 text-white'
+                      : isTimelineStepCurrent(0)
+                        ? 'bg-amber-400 text-white animate-pulse'
+                        : 'bg-slate-200 text-slate-400'
+                  ]"
+                >
+                  <svg v-if="isTimelineStepCompleted(0) || isTimelineStepCurrent(0)" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                  <svg v-else-if="isTimelineStepCurrent(0)" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3" /><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" fill="none" /></svg>
+                  <span v-else class="text-[10px] font-bold">1</span>
+                </div>
+                <p class="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Submitted</p>
+                <p class="text-xs text-slate-700 font-medium truncate max-w-full px-1">
+                  {{ record.requestedBy || "Employee" }}
                 </p>
               </div>
+
+              <!-- Step 2: Approved -->
+              <div class="relative flex flex-col items-center text-center flex-1">
+                <div
+                  :class="[
+                    'h-8 w-8 rounded-full flex items-center justify-center ring-4 ring-white z-10 shrink-0 mb-2',
+                    normalizeStatus(record.status) === 'rejected'
+                      ? 'bg-red-500 text-white'
+                      : isTimelineStepCompleted(1)
+                        ? 'bg-emerald-500 text-white'
+                        : isTimelineStepCurrent(1)
+                          ? 'bg-amber-400 text-white animate-pulse'
+                          : 'bg-slate-200 text-slate-400'
+                  ]"
+                >
+                  <svg v-if="isTimelineStepCompleted(1) && normalizeStatus(record.status) !== 'rejected'" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                  <svg v-else-if="normalizeStatus(record.status) === 'rejected'" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                  <svg v-else-if="isTimelineStepCurrent(1)" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3" /><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" fill="none" /></svg>
+                  <span v-else class="text-[10px] font-bold">2</span>
+                </div>
+                <p class="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Approved</p>
+                <p class="text-xs font-medium truncate max-w-full px-1"
+                  :class="[
+                    normalizeStatus(record.status) === 'rejected' ? 'text-red-600' : '',
+                    isTimelineStepCompleted(1) && normalizeStatus(record.status) !== 'rejected' ? 'text-slate-700' : '',
+                    isTimelineStepCurrent(1) ? 'text-amber-600' : '',
+                    !isTimelineStepCompleted(1) && !isTimelineStepCurrent(1) && normalizeStatus(record.status) !== 'rejected' ? 'text-slate-400' : '',
+                  ]"
+                >
+                  {{ normalizeStatus(record.status) === 'rejected' ? 'Rejected' : isTimelineStepCompleted(1) ? 'Approved' : isTimelineStepCurrent(1) ? 'In Review' : 'Awaiting' }}
+                </p>
+              </div>
+
+              <!-- Step 3: Disbursed -->
+              <div class="relative flex flex-col items-center text-center flex-1">
+                <div
+                  :class="[
+                    'h-8 w-8 rounded-full flex items-center justify-center ring-4 ring-white z-10 shrink-0 mb-2',
+                    isTimelineStepCompleted(2)
+                      ? 'bg-emerald-500 text-white'
+                      : isTimelineStepCurrent(2)
+                        ? 'bg-amber-400 text-white animate-pulse'
+                        : 'bg-slate-200 text-slate-400'
+                  ]"
+                >
+                  <svg v-if="isTimelineStepCompleted(2)" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                  <svg v-else-if="isTimelineStepCurrent(2)" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3" /><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" fill="none" /></svg>
+                  <span v-else class="text-[10px] font-bold">3</span>
+                </div>
+                <p class="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Disbursed</p>
+                <p class="text-xs font-medium truncate max-w-full px-1"
+                  :class="[
+                    isTimelineStepCompleted(2) ? 'text-slate-700' : '',
+                    isTimelineStepCurrent(2) ? 'text-amber-600' : '',
+                    !isTimelineStepCompleted(2) && !isTimelineStepCurrent(2) ? 'text-slate-400' : '',
+                  ]"
+                >
+                  {{ isTimelineStepCompleted(2) ? 'Released' : isTimelineStepCurrent(2) ? 'Processing' : 'Pending' }}
+                </p>
+              </div>
+
+              <!-- Step 4: Liquidated -->
+              <div class="relative flex flex-col items-center text-center flex-1">
+                <div
+                  :class="[
+                    'h-8 w-8 rounded-full flex items-center justify-center ring-4 ring-white z-10 shrink-0 mb-2',
+                    isTimelineStepCompleted(3) || normalizeStatus(record.status) === 'liquidated'
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-slate-200 text-slate-400'
+                  ]"
+                >
+                  <svg v-if="isTimelineStepCompleted(3) || normalizeStatus(record.status) === 'liquidated'" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                  <span v-else class="text-[10px] font-bold">4</span>
+                </div>
+                <p class="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Liquidated</p>
+                <p class="text-xs font-medium truncate max-w-full px-1"
+                  :class="normalizeStatus(record.status) === 'liquidated' ? 'text-emerald-600' : 'text-slate-400'"
+                >
+                  {{ normalizeStatus(record.status) === 'liquidated' ? 'Complete' : 'Pending' }}
+                </p>
+              </div>
             </div>
-            <button
-              class="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100 text-primary transition-colors hover:bg-slate-200"
-              type="button"
-              title="Download request document"
+          </section>
+
+          <!-- Details Grid -->
+          <section class="grid grid-cols-2 gap-x-6 gap-y-3 pt-4 border-t border-slate-100">
+            <div>
+              <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-0.5">Requestor</p>
+              <p class="text-sm text-slate-700">{{ record.requestedBy || "--" }}</p>
+            </div>
+            <div>
+              <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-0.5">Date Requested</p>
+              <p class="text-sm text-slate-700">{{ formatDateOnly(record.date) }}</p>
+            </div>
+            <div class="col-span-2">
+              <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-0.5">Purpose</p>
+              <p class="text-sm text-slate-700">{{ record.purpose }}</p>
+            </div>
+            <div>
+              <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-0.5">Due Date</p>
+              <p class="text-sm text-slate-700">{{ record.dueDate || "--" }}</p>
+            </div>
+            <div>
+              <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-0.5">Outstanding Balance</p>
+              <p class="text-sm font-semibold text-primary">{{ formatPeso(outstandingBalance(record)) }}</p>
+            </div>
+          </section>
+
+          <!-- Document Attachment -->
+          <section v-if="documentData || record.documentFileName" class="pt-2 border-t border-slate-100">
+            <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-1">Document</p>
+            <a
+              class="inline-flex items-center gap-2 text-sm text-primary hover:underline cursor-pointer"
               @click="downloadDocument"
             >
-              <Download class="h-5 w-5" />
-            </button>
+              <FileText class="w-3.5 h-3.5" />
+              <span>{{ documentData ? documentData.file_name : record.documentFileName }}</span>
+              <Download class="w-3 h-3" />
+            </a>
           </section>
 
-          <section
-            class="rounded-r-lg border-l-4 border-accent bg-accent/10 p-4"
-          >
-            <div class="mb-2 flex items-center gap-2">
-              <Info class="h-4 w-4 text-accent" />
-              <h3 class="font-heading text-sm font-bold text-accent">
-                Important Information Guidelines
-              </h3>
-            </div>
-            <ul class="list-inside list-disc space-y-1 text-sm text-slate-700">
-              <li>
-                Advances over PHP 10,000 require Department Head digital
-                countersign.
-              </li>
-              <li>
-                Liquidation must be submitted within 5 business days
-                post-settlement.
-              </li>
-              <li>
-                Unliquidated advances will be deducted from next payroll cycle.
-              </li>
-            </ul>
+          <!-- Loading Document Skeleton -->
+          <section v-else-if="isLoadingDocument" class="pt-2 border-t border-slate-100">
+            <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-1">Document</p>
+            <div class="h-4 w-40 animate-pulse rounded bg-slate-200"></div>
           </section>
 
-          <section class="space-y-4" v-if="showSignatureSection">
-            <div
-              v-if="record.status === 'disbursed'"
-              class="flex items-start gap-3 rounded-lg border border-accent/20 bg-accent-50 p-4"
-            >
-              <ShieldCheck class="mt-0.5 h-5 w-5 flex-shrink-0 text-accent" />
-              <p class="text-sm leading-relaxed text-slate-800">
-                This certifies that I received the cash advance with amount of
-                <span class="font-bold text-primary">{{
-                  formatPeso(record.amount)
-                }}</span
-                >.
+          <!-- Signature Section -->
+          <section v-if="showSignatureSection" class="space-y-3 pt-3 border-t border-slate-100">
+            <div v-if="record.status === 'disbursed'">
+              <p class="text-sm text-slate-600 mb-3">
+                Employee certifies receipt of
+                <span class="font-semibold text-primary">{{ formatPeso(record.amount) }}</span>.
               </p>
             </div>
 
             <div>
-              <p class="text-xs font-medium text-slate-500">Employee Signature Verification Pad</p>
+              <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-2">Signature</p>
               <div
                 v-if="record.acknowledgedAt || record.signatureImage"
-                class="relative mt-2 flex h-36 w-full items-center justify-center overflow-hidden rounded-lg border border-slate-300 bg-white"
+                class="relative flex h-32 w-full items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white"
               >
                 <img
                   :src="record.signatureImage"
                   class="max-h-full max-w-full"
                   alt="Signature"
                 />
-                <div
-                  class="absolute bottom-2 right-3 flex items-center gap-1 rounded bg-white/80 px-2 py-1 text-accent"
-                >
-                  <ShieldCheck class="h-4 w-4" />
-                  <span class="text-[10px] font-bold uppercase tracking-widest"
-                    >Digitally Verified</span
-                  >
-                </div>
+                <span class="absolute bottom-2 right-3 text-[10px] font-medium text-emerald-600">
+                  Verified
+                </span>
               </div>
               <div
                 v-else-if="canAcknowledgeFromCurrentView"
-                class="relative mt-2 h-36 overflow-hidden rounded-lg border border-slate-300 bg-white"
+                class="relative h-32 overflow-hidden rounded-lg border border-slate-200 bg-white"
               >
                 <canvas
                   ref="signatureCanvas"
@@ -490,26 +542,22 @@ async function confirmAcknowledge() {
                 />
                 <span
                   v-if="!signatureStarted"
-                  class="pointer-events-none absolute inset-0 flex items-center justify-center text-xs font-semibold text-slate-400"
+                  class="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-slate-400"
                 >
-                  Draw your signature here using your mouse
+                  Draw your signature here
                 </span>
               </div>
 
-              <div
-                v-if="canAcknowledgeFromCurrentView"
-                class="mt-2 flex justify-end gap-3"
-              >
+              <div v-if="canAcknowledgeFromCurrentView" class="mt-2 flex justify-end gap-2">
                 <button
-                  class="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-600 transition-colors hover:bg-slate-100"
+                  class="px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
                   type="button"
                   @click="clearSignature"
                 >
-                  <RotateCcw class="h-4 w-4" />
-                  Clear Signature
+                  Clear
                 </button>
                 <button
-                  class="btn btn-cta min-h-[42px] disabled:cursor-not-allowed disabled:opacity-50"
+                  class="px-4 py-1.5 bg-primary text-white text-xs font-medium rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
                   type="button"
                   :disabled="!signatureStarted"
                   @click="showAcknowledgeModal = true"
@@ -521,260 +569,263 @@ async function confirmAcknowledge() {
           </section>
         </div>
 
+        <!-- Footer (Admin: Pending / Approved) -->
         <footer
-          class="flex flex-col items-center justify-between gap-3 border-t border-slate-200 bg-white p-5 sm:flex-row"
           v-if="['pending', 'approved'].includes(record.status)"
+          class="px-6 py-4 border-t border-slate-100 flex flex-col gap-3 sm:flex-row shrink-0"
         >
-          <div
-            class="text-sm font-semibold text-danger text-center sm:text-left"
+          <p
             v-if="isOwnSubmission"
+            class="text-sm text-danger text-center sm:text-left w-full"
           >
             You cannot process your own request.
-          </div>
-          <div v-else></div>
-          <div class="flex flex-col w-full sm:w-auto sm:flex-row gap-3">
+          </p>
+          <template v-else>
             <template v-if="record.status === 'pending'">
               <button
-                class="btn btn-secondary w-full !border-danger/30 !text-danger hover:!bg-danger/5 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
-                type="button"
-                :disabled="isOwnSubmission"
+                class="flex-1 py-2.5 border border-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
                 @click="requestConfirmation('reject')"
               >
                 Reject
               </button>
               <button
-                class="btn btn-cta min-h-[42px] w-full sm:w-auto disabled:cursor-not-allowed disabled:opacity-50"
-                type="button"
-                :disabled="isOwnSubmission"
+                class="flex-1 py-2.5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-sm flex items-center justify-center gap-2"
                 @click="requestConfirmation('approve')"
               >
-                <CheckCircle class="h-4 w-4" />
+                <CheckCircle class="w-4 h-4" />
                 Approve
               </button>
             </template>
             <template v-if="record.status === 'approved'">
               <button
-                class="btn btn-cta min-h-[42px] w-full sm:w-auto disabled:cursor-not-allowed disabled:opacity-50"
-                type="button"
-                :disabled="isOwnSubmission"
+                class="flex-1 py-2.5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-sm flex items-center justify-center gap-2"
                 @click="requestConfirmation('disburse')"
               >
-                <Wallet class="h-4 w-4" />
+                <Wallet class="w-4 h-4" />
                 Disburse
               </button>
             </template>
-          </div>
+          </template>
         </footer>
       </div>
 
+      <!-- ═══════════════ EMPLOYEE VIEW ═══════════════ -->
       <div
         v-else
-        class="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl"
+        class="relative bg-white w-full max-w-[960px] rounded-3xl shadow-[0_20px_40px_-10px_rgba(0,0,0,0.1)] flex flex-col overflow-hidden max-h-[96vh]"
+        @click.stop
       >
-        <header
-          class="flex items-center justify-between border-b border-slate-200 px-6 py-4"
+        <!-- Close Button -->
+        <button
+          @click="closeDetails"
+          class="absolute top-2 right-2 text-slate-400 hover:bg-slate-100 transition-colors p-1.5 rounded-full flex items-center justify-center z-10"
         >
-          <h2 class="font-heading text-xl font-bold text-primary">
-            {{ auth.isAdmin ? "Admin Details Review" : "Cash Advance Details" }}
-          </h2>
-          <button
-            class="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-danger"
-            type="button"
-            title="Close details"
-            @click="closeDetails"
-          >
-            <X class="h-5 w-5 stroke-[1.75]" />
-          </button>
-        </header>
+          <X class="w-4 h-4" />
+        </button>
 
-        <div class="flex-1 space-y-6 overflow-y-auto px-6 py-5">
-          <section class="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <div class="space-y-5">
-              <div>
-                <p
-                  class="mb-1 text-[11px] font-bold uppercase tracking-widest text-slate-500"
-                >
-                  Request ID
-                </p>
-                <p class="font-heading text-xl font-bold text-primary">
-                  {{ record.id }}
-                </p>
-              </div>
-              <div>
-                <p
-                  class="mb-1 text-[11px] font-bold uppercase tracking-widest text-slate-500"
-                >
-                  Amount Requested
-                </p>
-                <p
-                  class="font-heading text-3xl font-bold leading-tight text-primary"
-                >
-                  {{ formatPeso(record.amount) }}
-                </p>
-              </div>
-            </div>
-
-            <div class="flex flex-col items-start sm:items-end">
-              <p
-                class="mb-2 text-[11px] font-bold uppercase tracking-widest text-slate-500"
-              >
-                Status
-              </p>
-              <StatusBadge :status="record.status" />
-            </div>
-          </section>
-
-          <section
-            class="space-y-5 rounded-lg border border-slate-200 bg-slate-50/60 p-5"
-          >
+        <!-- Header -->
+        <div class="px-6 pt-8 pb-4 border-b border-slate-100 shrink-0">
+          <div class="flex items-start justify-between gap-4">
             <div>
-              <p
-                class="mb-1 text-[11px] font-bold uppercase tracking-widest text-slate-500"
-              >
-                Purpose
+              <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-1">
+                Cash Advance Ref #{{ record.id }}
               </p>
-              <p class="text-sm font-medium leading-relaxed text-slate-800">
-                {{ record.purpose }}
-              </p>
+              <h2 class="text-2xl font-bold text-slate-800">
+                {{ formatPeso(record.amount) }}
+              </h2>
             </div>
+            <StatusBadge :status="record.status" />
+          </div>
+        </div>
 
-            <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
-              <div>
-                <p
-                  class="mb-1 text-[11px] font-bold uppercase tracking-widest text-slate-500"
-                >
-                  Current Outstanding Balance
-                </p>
-                <p class="font-heading text-lg font-bold text-primary">
-                  {{ formatPeso(outstandingBalance(record)) }}
-                </p>
-              </div>
-              <div>
-                <p
-                  class="mb-1 text-[11px] font-bold uppercase tracking-widest text-slate-500"
-                >
-                  Settlement Due Date
-                </p>
-                <p class="text-sm font-semibold text-slate-800">
-                  {{ record.dueDate }}
-                </p>
-              </div>
-            </div>
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+          <!-- Timeline -->
+          <section class="relative">
+            <div class="absolute top-4 left-4 right-4 h-0.5 bg-slate-100"></div>
 
-            <div>
-              <p
-                class="mb-2 text-[11px] font-bold uppercase tracking-widest text-slate-500"
-              >
-                Request Document
-              </p>
-
-              <!-- Skeleton Loader -->
-              <div
-                v-if="isLoadingDocument"
-                class="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 animate-pulse"
-              >
-                <div class="flex min-w-0 items-center gap-3 w-full">
-                  <div
-                    class="h-10 w-10 flex-shrink-0 rounded-md bg-slate-200"
-                  ></div>
-                  <div class="h-4 w-1/2 rounded bg-slate-200"></div>
-                </div>
+            <div class="flex justify-between gap-2">
+              <!-- Step 1: Submitted -->
+              <div class="relative flex flex-col items-center text-center flex-1">
                 <div
-                  class="h-9 w-9 flex-shrink-0 rounded-full bg-slate-200"
-                ></div>
-              </div>
-
-              <!-- Loaded Document -->
-              <div
-                v-else-if="documentData || record.documentFileName"
-                class="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-slate-100 px-4 py-3"
-              >
-                <div class="flex min-w-0 items-center gap-3">
-                  <span
-                    class="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md bg-red-50 text-danger"
-                  >
-                    <FileDown class="h-5 w-5" />
-                  </span>
-                  <p class="truncate text-sm font-semibold text-slate-800">
-                    {{
-                      documentData
-                        ? documentData.file_name
-                        : record.documentFileName
-                    }}
-                  </p>
-                </div>
-                <button
-                  class="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-accent transition-colors hover:bg-accent-50"
-                  type="button"
-                  title="Download request document"
-                  @click="downloadDocument"
+                  :class="[
+                    'h-8 w-8 rounded-full flex items-center justify-center ring-4 ring-white z-10 shrink-0 mb-2',
+                    isTimelineStepCompleted(0) || isTimelineStepCurrent(0)
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-slate-200 text-slate-400'
+                  ]"
                 >
-                  <Download class="h-5 w-5" />
-                </button>
+                  <svg v-if="isTimelineStepCompleted(0) || isTimelineStepCurrent(0)" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                  <span v-else class="text-[10px] font-bold">1</span>
+                </div>
+                <p class="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Submitted</p>
+                <p class="text-xs text-slate-700 font-medium truncate max-w-full px-1">
+                  {{ record.requestedBy || "You" }}
+                </p>
               </div>
 
-              <!-- No Document Fallback -->
-              <div
-                v-else
-                class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500 italic"
-              >
-                No document attached
+              <!-- Step 2: Approved -->
+              <div class="relative flex flex-col items-center text-center flex-1">
+                <div
+                  :class="[
+                    'h-8 w-8 rounded-full flex items-center justify-center ring-4 ring-white z-10 shrink-0 mb-2',
+                    normalizeStatus(record.status) === 'rejected'
+                      ? 'bg-red-500 text-white'
+                      : isTimelineStepCompleted(1)
+                        ? 'bg-emerald-500 text-white'
+                        : isTimelineStepCurrent(1)
+                          ? 'bg-amber-400 text-white animate-pulse'
+                          : 'bg-slate-200 text-slate-400'
+                  ]"
+                >
+                  <svg v-if="isTimelineStepCompleted(1) && normalizeStatus(record.status) !== 'rejected'" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                  <svg v-else-if="normalizeStatus(record.status) === 'rejected'" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                  <svg v-else-if="isTimelineStepCurrent(1)" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3" /><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" fill="none" /></svg>
+                  <span v-else class="text-[10px] font-bold">2</span>
+                </div>
+                <p class="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Approved</p>
+                <p class="text-xs font-medium truncate max-w-full px-1"
+                  :class="[
+                    normalizeStatus(record.status) === 'rejected' ? 'text-red-600' : '',
+                    isTimelineStepCompleted(1) && normalizeStatus(record.status) !== 'rejected' ? 'text-slate-700' : '',
+                    isTimelineStepCurrent(1) ? 'text-amber-600' : '',
+                    !isTimelineStepCompleted(1) && !isTimelineStepCurrent(1) && normalizeStatus(record.status) !== 'rejected' ? 'text-slate-400' : '',
+                  ]"
+                >
+                  {{ normalizeStatus(record.status) === 'rejected' ? 'Rejected' : isTimelineStepCompleted(1) ? 'Approved' : isTimelineStepCurrent(1) ? 'Pending' : 'Awaiting' }}
+                </p>
+              </div>
+
+              <!-- Step 3: Disbursed -->
+              <div class="relative flex flex-col items-center text-center flex-1">
+                <div
+                  :class="[
+                    'h-8 w-8 rounded-full flex items-center justify-center ring-4 ring-white z-10 shrink-0 mb-2',
+                    isTimelineStepCompleted(2)
+                      ? 'bg-emerald-500 text-white'
+                      : isTimelineStepCurrent(2)
+                        ? 'bg-amber-400 text-white animate-pulse'
+                        : 'bg-slate-200 text-slate-400'
+                  ]"
+                >
+                  <svg v-if="isTimelineStepCompleted(2)" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                  <svg v-else-if="isTimelineStepCurrent(2)" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3" /><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" fill="none" /></svg>
+                  <span v-else class="text-[10px] font-bold">3</span>
+                </div>
+                <p class="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Disbursed</p>
+                <p class="text-xs font-medium truncate max-w-full px-1"
+                  :class="[
+                    isTimelineStepCompleted(2) ? 'text-slate-700' : '',
+                    isTimelineStepCurrent(2) ? 'text-amber-600' : '',
+                    !isTimelineStepCompleted(2) && !isTimelineStepCurrent(2) ? 'text-slate-400' : '',
+                  ]"
+                >
+                  {{ isTimelineStepCompleted(2) ? 'Released' : isTimelineStepCurrent(2) ? 'Processing' : 'Pending' }}
+                </p>
+              </div>
+
+              <!-- Step 4: Liquidated -->
+              <div class="relative flex flex-col items-center text-center flex-1">
+                <div
+                  :class="[
+                    'h-8 w-8 rounded-full flex items-center justify-center ring-4 ring-white z-10 shrink-0 mb-2',
+                    normalizeStatus(record.status) === 'liquidated'
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-slate-200 text-slate-400'
+                  ]"
+                >
+                  <svg v-if="normalizeStatus(record.status) === 'liquidated'" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                  <span v-else class="text-[10px] font-bold">4</span>
+                </div>
+                <p class="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Liquidated</p>
+                <p class="text-xs font-medium truncate max-w-full px-1"
+                  :class="normalizeStatus(record.status) === 'liquidated' ? 'text-emerald-600' : 'text-slate-400'"
+                >
+                  {{ normalizeStatus(record.status) === 'liquidated' ? 'Complete' : 'Pending' }}
+                </p>
               </div>
             </div>
           </section>
 
-          <section>
-            <h3 class="mb-2 font-heading text-sm font-bold text-primary">
-              Admin Notes
-            </h3>
-            <div
-              class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3"
+          <!-- Details Grid -->
+          <section class="grid grid-cols-2 gap-x-6 gap-y-3 pt-4 border-t border-slate-100">
+            <div>
+              <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-0.5">Request ID</p>
+              <p class="text-sm font-semibold text-primary">{{ record.id }}</p>
+            </div>
+            <div>
+              <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-0.5">Date Requested</p>
+              <p class="text-sm text-slate-700">{{ formatDateOnly(record.date) }}</p>
+            </div>
+            <div class="col-span-2">
+              <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-0.5">Purpose</p>
+              <p class="text-sm text-slate-700">{{ record.purpose }}</p>
+            </div>
+            <div>
+              <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-0.5">Outstanding Balance</p>
+              <p class="text-sm font-semibold text-primary">{{ formatPeso(outstandingBalance(record)) }}</p>
+            </div>
+            <div>
+              <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-0.5">Settlement Due Date</p>
+              <p class="text-sm text-slate-700">{{ record.dueDate || "--" }}</p>
+            </div>
+          </section>
+
+          <!-- Document -->
+          <section v-if="documentData || record.documentFileName" class="pt-2 border-t border-slate-100">
+            <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-1">Document</p>
+            <a
+              class="inline-flex items-center gap-2 text-sm text-primary hover:underline cursor-pointer"
+              @click="downloadDocument"
             >
-              <p class="text-sm font-medium leading-relaxed text-slate-800">
-                {{ record.adminNotes }}
-              </p>
-            </div>
+              <FileText class="w-3.5 h-3.5" />
+              <span>{{ documentData ? documentData.file_name : record.documentFileName }}</span>
+              <Download class="w-3 h-3" />
+            </a>
           </section>
 
-          <section
-            v-if="record.status === 'disbursed'"
-            class="space-y-4 rounded-lg border border-accent/20 bg-accent-50 p-5"
+          <!-- Loading Document Skeleton -->
+          <section v-else-if="isLoadingDocument" class="pt-2 border-t border-slate-100">
+            <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-1">Document</p>
+            <div class="h-4 w-40 animate-pulse rounded bg-slate-200"></div>
+          </section>
+
+          <!-- Admin Notes / Rejection -->
+          <div
+            v-if="record.adminNotes"
+            class="pt-2 border-t border-slate-100"
           >
-            <div class="flex items-start gap-3">
-              <ShieldCheck
-                class="mt-0.5 h-5 w-5 flex-shrink-0 text-accent"
-              />
-              <p class="text-sm leading-relaxed text-slate-800">
-                This certifies that I received the cash advance with amount of
-                <span class="font-bold text-primary">{{
-                  formatPeso(record.amount)
-                }}</span
-                >.
-              </p>
-            </div>
+            <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-1">
+              {{ normalizeStatus(record.status) === 'rejected' ? 'Rejection Reason' : 'Admin Notes' }}
+            </p>
+            <p class="text-sm text-slate-700">{{ record.adminNotes }}</p>
+          </div>
+
+          <!-- Signature Section (Employee Acknowledgment for Disbursed) -->
+          <section v-if="record.status === 'disbursed'" class="space-y-3 pt-3 border-t border-slate-100">
+            <p class="text-sm text-slate-600">
+              I certify that I received the cash advance of
+              <span class="font-semibold text-primary">{{ formatPeso(record.amount) }}</span>.
+            </p>
 
             <div>
+              <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-2">Signature</p>
               <div
                 v-if="record.acknowledgedAt"
-                class="relative h-36 overflow-hidden rounded-lg border border-slate-300 bg-white flex items-center justify-center"
+                class="relative flex h-32 w-full items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white"
               >
                 <img
                   :src="record.signatureImage"
                   class="max-h-full max-w-full"
                   alt="Signature"
                 />
-                <div
-                  class="absolute bottom-2 right-3 flex items-center gap-1 text-accent bg-white/80 px-2 py-1 rounded"
-                >
-                  <ShieldCheck class="h-4 w-4" />
-                  <span class="text-[10px] font-bold uppercase tracking-widest"
-                    >Digitally Verified</span
-                  >
-                </div>
+                <span class="absolute bottom-2 right-3 text-[10px] font-medium text-emerald-600">
+                  Verified
+                </span>
               </div>
               <div
                 v-else
-                class="relative h-36 overflow-hidden rounded-lg border border-slate-300 bg-white"
+                class="relative h-32 overflow-hidden rounded-lg border border-slate-200 bg-white"
               >
                 <canvas
                   ref="signatureCanvas"
@@ -787,25 +838,21 @@ async function confirmAcknowledge() {
                 />
                 <span
                   v-if="!signatureStarted"
-                  class="pointer-events-none absolute inset-0 flex items-center justify-center text-xs font-semibold text-slate-400"
+                  class="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-slate-400"
                 >
-                  Draw your signature here using your mouse
+                  Draw your signature here
                 </span>
               </div>
-              <div
-                v-if="!record.acknowledgedAt"
-                class="mt-2 flex justify-end gap-3"
-              >
+              <div v-if="!record.acknowledgedAt" class="mt-2 flex justify-end gap-2">
                 <button
-                  class="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-600 transition-colors hover:bg-slate-100"
+                  class="px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
                   type="button"
                   @click="clearSignature"
                 >
-                  <RotateCcw class="h-4 w-4" />
-                  Clear Signature
+                  Clear
                 </button>
                 <button
-                  class="btn btn-cta min-h-[42px] disabled:opacity-50 disabled:cursor-not-allowed"
+                  class="px-4 py-1.5 bg-primary text-white text-xs font-medium rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
                   type="button"
                   :disabled="!signatureStarted"
                   @click="showAcknowledgeModal = true"
@@ -817,24 +864,15 @@ async function confirmAcknowledge() {
           </section>
         </div>
 
-        <footer
-          class="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between"
-        >
+        <!-- Footer (Employee) -->
+        <footer class="px-6 py-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 shrink-0">
           <p>
-            <span class="font-bold uppercase tracking-widest"
-              >Requested Date</span
-            >
-            <span class="ml-2 font-semibold text-slate-800">{{
-              formatDateOnly(record.date)
-            }}</span>
+            <span class="font-bold uppercase tracking-widest">Requested</span>
+            <span class="ml-2 font-semibold text-slate-800">{{ formatDateOnly(record.date) }}</span>
           </p>
           <p>
-            <span class="font-bold uppercase tracking-widest"
-              >Last Updated</span
-            >
-            <span class="ml-2 font-semibold text-slate-800">{{
-              formatDateOnly(record.updatedAt)
-            }}</span>
+            <span class="font-bold uppercase tracking-widest">Updated</span>
+            <span class="ml-2 font-semibold text-slate-800">{{ formatDateOnly(record.updatedAt) }}</span>
           </p>
         </footer>
       </div>
@@ -847,9 +885,7 @@ async function confirmAcknowledge() {
       zIndexClass="z-[60]"
       contentClass="p-8 text-center"
     >
-      <div
-        class="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-primary"
-      >
+      <div class="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-primary">
         <ShieldCheck class="h-10 w-10" />
       </div>
 
@@ -889,183 +925,5 @@ async function confirmAcknowledge() {
       @close="cancelConfirmation"
       @confirm="confirmAdminDecision"
     />
-
-    <!-- Previous record details panel retained inactive for reference -->
-    <div
-      v-if="false && record"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-[1px] p-4"
-    >
-      <div
-        class="card p-0 w-full max-w-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]"
-      >
-        <div
-          class="bg-primary text-white px-6 py-4 flex items-center justify-between"
-        >
-          <div class="flex items-center gap-3">
-            <FileText class="w-5 h-5" />
-            <div>
-              <h3 class="text-xs font-bold uppercase tracking-widest">
-                Cash Advance / Settlement Documentation
-              </h3>
-              <p class="text-[10px] text-white/60 tracking-wider">
-                REF: {{ record.id }}
-              </p>
-            </div>
-          </div>
-          <button
-            class="text-white/50 hover:text-white transition-none"
-            @click="closeDetails"
-          >
-            <X class="w-5 h-5" />
-          </button>
-        </div>
-
-        <div class="flex-1 overflow-y-auto p-6 flex flex-col md:flex-row gap-6">
-          <div class="flex-1 space-y-4">
-            <div>
-              <p
-                class="text-[9px] font-bold text-slate-400 uppercase tracking-widest"
-              >
-                PURPOSE / DESCRIPTION
-              </p>
-              <p class="text-sm font-bold text-slate-800 uppercase">
-                {{ record.purpose }}
-              </p>
-            </div>
-            <div
-              class="grid grid-cols-2 gap-6 pt-2 border-t border-slate-100 mt-2"
-            >
-              <div>
-                <p
-                  class="text-[9px] font-bold text-slate-400 uppercase tracking-widest"
-                >
-                  AMOUNT ISSUED
-                </p>
-                <p
-                  class="text-lg font-bold text-primary"
-                >
-                  ₱{{ record.amount?.toLocaleString() }}
-                </p>
-              </div>
-              <div>
-                <p
-                  class="text-[9px] font-bold text-slate-400 uppercase tracking-widest"
-                >
-                  CURRENT OUTSTANDING
-                </p>
-                <p
-                  :class="[
-                    'text-lg font-bold',
-                    record.balance > 0 ? 'text-danger' : 'text-success',
-                  ]"
-                >
-                  ₱{{ record.balance?.toLocaleString() }}
-                </p>
-              </div>
-              <div>
-                <p
-                  class="text-[9px] font-bold text-slate-400 uppercase tracking-widest"
-                >
-                  REQUESTED BY
-                </p>
-                <p class="text-sm font-bold text-slate-700 uppercase">
-                  {{ record.requestedBy }}
-                </p>
-              </div>
-              <div>
-                <p
-                  class="text-[9px] font-bold text-slate-400 uppercase tracking-widest"
-                >
-                  SETTLEMENT DUE DATE
-                </p>
-                <p class="text-sm font-bold text-slate-700 uppercase">
-                  {{ record.dueDate }}
-                </p>
-              </div>
-              <div class="col-span-2 mt-4 flex flex-col items-start gap-1">
-                <p
-                  class="text-[9px] font-bold text-slate-400 uppercase tracking-widest"
-                >
-                  VERDICT / STATUS
-                </p>
-                <StatusBadge :status="record.status" />
-              </div>
-            </div>
-          </div>
-          <div
-            v-if="['pending', 'completed'].includes(record.status)"
-            class="w-full md:w-80 border border-slate-200 bg-clinical flex flex-col h-[400px]"
-          >
-            <div
-              class="p-2 border-b border-slate-200 bg-slate-50 flex items-center justify-between"
-            >
-              <div class="flex items-center gap-2">
-                <span class="w-1.5 h-1.5 bg-primary"></span>
-                <span
-                  class="text-[9px] font-bold text-slate-500 uppercase tracking-widest"
-                  >SCAN_TARGET: RECEIPT_01.PNG</span
-                >
-              </div>
-            </div>
-            <div
-              class="flex-1 p-2 flex items-center justify-center bg-slate-200/50 overflow-hidden relative group"
-            >
-              <img
-                src="/mock_receipt.png"
-                alt="Receipt Attachment"
-                class="max-w-full max-h-full object-contain border border-slate-300 shadow-md transform transition-transform duration-300 hover:scale-[1.02]"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div
-          v-if="auth.isAdmin && record.status === 'submitted'"
-          class="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-3 shadow-inner"
-        >
-          <button
-            class="btn btn-secondary !border-danger/30 !text-danger hover:!bg-danger/5 px-6"
-            @click="
-              closeDetails();
-              emit('reject', record.id, 'advance');
-            "
-          >
-            REJECT ADVANCE
-          </button>
-          <button
-            class="btn btn-cta px-6"
-            @click="
-              emit('approve-advance', record.id);
-              closeDetails();
-            "
-          >
-            APPROVE ADVANCE
-          </button>
-        </div>
-        <div
-          v-else-if="auth.isAdmin && record.status === 'pending'"
-          class="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-3 shadow-inner"
-        >
-          <button
-            class="btn btn-secondary !border-danger/30 !text-danger hover:!bg-danger/5 px-6"
-            @click="
-              closeDetails();
-              emit('reject', record.id, 'settlement');
-            "
-          >
-            REJECT LIQUIDATION
-          </button>
-          <button
-            class="btn btn-cta px-6"
-            @click="
-              emit('approve-settlement', record.id);
-              closeDetails();
-            "
-          >
-            APPROVE LIQUIDATION
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
