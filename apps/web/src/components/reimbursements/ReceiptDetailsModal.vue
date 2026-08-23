@@ -114,6 +114,13 @@ const receiptGrossSalesAmount = computed(() => receiptAmounts.value.gross);
 const receiptVatAmount = computed(() => receiptAmounts.value.vat);
 const receiptSubtotalAmount = computed(() => receiptAmounts.value.subtotal);
 
+const categoryName = computed(() => {
+  const cat = props.receipt?.expense_category ?? props.receipt?.category;
+  if (typeof cat === "string") return cat || "Expense";
+  if (cat && typeof cat === "object" && cat.name) return cat.name;
+  return "Expense";
+});
+
 const localReviewerNotes = computed({
   get: () => props.reviewerNotes,
   set: (val) => emit("update:reviewerNotes", val),
@@ -122,9 +129,8 @@ const localReviewerNotes = computed({
 watch(
   () => [props.receipt?.id, props.receipt?.vat_classification],
   ([, vatClassification]) => {
-    selectedVatClassification.value = normalizeVatClassification(
-      vatClassification,
-    );
+    selectedVatClassification.value =
+      normalizeVatClassification(vatClassification);
   },
   { immediate: true },
 );
@@ -158,9 +164,7 @@ watch(
                 <CalendarDays class="h-4 w-4" />
               </span>
               <div class="min-w-0">
-                <h3
-                  class="truncate font-heading text-lg font-bold text-white"
-                >
+                <h3 class="truncate font-heading text-lg font-bold text-white">
                   Receipt Details
                 </h3>
                 <p class="truncate text-xs font-semibold text-white/65">
@@ -200,13 +204,16 @@ watch(
                   <span
                     class="inline-flex rounded-md bg-accent-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-accent"
                   >
-                    {{ receipt?.category || "Expense" }}
+                    {{ categoryName }}
                   </span>
                 </div>
                 <div
                   class="overflow-hidden rounded-lg border border-slate-200 shadow-sm flex items-center justify-center bg-slate-50 flex-1 aspect-square lg:aspect-auto"
                 >
-                  <div v-if="isProcessing" class="h-full w-full animate-pulse bg-slate-200"></div>
+                  <div
+                    v-if="isProcessing"
+                    class="h-full w-full animate-pulse bg-slate-200"
+                  ></div>
                   <img
                     v-else-if="receipt?.file_url"
                     :src="receipt.file_url"
@@ -236,7 +243,10 @@ watch(
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <label class="space-y-1">
                     <span class="input-label">Invoice Number</span>
-                    <div v-if="isProcessing" class="h-10 w-full animate-pulse rounded-lg bg-slate-200"></div>
+                    <div
+                      v-if="isProcessing"
+                      class="h-10 w-full animate-pulse rounded-lg bg-slate-200"
+                    ></div>
                     <input
                       v-else
                       class="input bg-slate-50"
@@ -246,7 +256,10 @@ watch(
                   </label>
                   <label class="space-y-1">
                     <span class="input-label">Transaction Date</span>
-                    <div v-if="isProcessing" class="h-10 w-full animate-pulse rounded-lg bg-slate-200"></div>
+                    <div
+                      v-if="isProcessing"
+                      class="h-10 w-full animate-pulse rounded-lg bg-slate-200"
+                    ></div>
                     <span v-else class="relative block">
                       <input
                         class="input pr-10 bg-slate-50"
@@ -268,7 +281,10 @@ watch(
                     <span class="flex items-center justify-between gap-2">
                       <span class="input-label">TIN Number</span>
                     </span>
-                    <div v-if="isProcessing" class="h-10 w-full animate-pulse rounded-lg bg-slate-200"></div>
+                    <div
+                      v-if="isProcessing"
+                      class="h-10 w-full animate-pulse rounded-lg bg-slate-200"
+                    ></div>
                     <input
                       v-else
                       class="input bg-slate-50"
@@ -278,7 +294,10 @@ watch(
                   </label>
                   <label class="space-y-1">
                     <span class="input-label">Merchant Name</span>
-                    <div v-if="isProcessing" class="h-10 w-full animate-pulse rounded-lg bg-slate-200"></div>
+                    <div
+                      v-if="isProcessing"
+                      class="h-10 w-full animate-pulse rounded-lg bg-slate-200"
+                    ></div>
                     <input
                       v-else
                       class="input bg-slate-50"
@@ -290,12 +309,17 @@ watch(
                     <span class="flex items-center justify-between gap-2">
                       <span class="input-label">VAT Classification</span>
                     </span>
-                    <div v-if="isProcessing" class="h-10 w-full animate-pulse rounded-lg bg-slate-200"></div>
+                    <div
+                      v-if="isProcessing"
+                      class="h-10 w-full animate-pulse rounded-lg bg-slate-200"
+                    ></div>
                     <select
                       v-else
                       v-model="selectedVatClassification"
                       class="input bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                      :class="{ 'cursor-pointer bg-white': canEditVatClassification }"
+                      :class="{
+                        'cursor-pointer bg-white': canEditVatClassification,
+                      }"
                       :disabled="!canEditVatClassification || isSubmitting"
                     >
                       <option
@@ -309,7 +333,10 @@ watch(
                   </label>
                   <label class="space-y-1">
                     <span class="input-label">Currency</span>
-                    <div v-if="isProcessing" class="h-10 w-full animate-pulse rounded-lg bg-slate-200"></div>
+                    <div
+                      v-if="isProcessing"
+                      class="h-10 w-full animate-pulse rounded-lg bg-slate-200"
+                    ></div>
                     <input
                       v-else
                       class="input bg-slate-50 uppercase font-bold"
@@ -320,26 +347,41 @@ watch(
                 </div>
 
                 <!-- Order Items List -->
-                <div v-if="isProcessing" class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-                  <div class="border-b border-slate-200 bg-slate-50/50 px-5 py-3.5">
-                    <div class="h-3 w-24 animate-pulse rounded bg-slate-200"></div>
+                <div
+                  v-if="isProcessing"
+                  class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+                >
+                  <div
+                    class="border-b border-slate-200 bg-slate-50/50 px-5 py-3.5"
+                  >
+                    <div
+                      class="h-3 w-24 animate-pulse rounded bg-slate-200"
+                    ></div>
                   </div>
                   <ul class="divide-y divide-slate-100">
-                    <li class="flex items-center justify-between gap-4 px-5 py-4" v-for="i in 2" :key="i">
+                    <li
+                      class="flex items-center justify-between gap-4 px-5 py-4"
+                      v-for="i in 2"
+                      :key="i"
+                    >
                       <div class="flex items-center gap-3.5 w-full">
-                        <div class="h-9 w-9 shrink-0 animate-pulse rounded-full bg-slate-200"></div>
-                        <div class="h-4 w-1/3 animate-pulse rounded bg-slate-200"></div>
+                        <div
+                          class="h-9 w-9 shrink-0 animate-pulse rounded-full bg-slate-200"
+                        ></div>
+                        <div
+                          class="h-4 w-1/3 animate-pulse rounded bg-slate-200"
+                        ></div>
                       </div>
-                      <div class="h-4 w-16 animate-pulse rounded bg-slate-200"></div>
+                      <div
+                        class="h-4 w-16 animate-pulse rounded bg-slate-200"
+                      ></div>
                     </li>
                   </ul>
                 </div>
 
                 <div
                   class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
-                  v-else-if="
-                    receipt?.items && receipt.items.length > 0
-                  "
+                  v-else-if="receipt?.items && receipt.items.length > 0"
                 >
                   <div
                     class="border-b border-slate-200 bg-slate-50/50 px-5 py-3.5"
@@ -370,7 +412,9 @@ watch(
                       </div>
                       <div class="text-right">
                         <p class="font-heading text-sm font-bold text-primary">
-                          {{ formatAmount(item.price, receipt?.currency || "PHP") }}
+                          {{
+                            formatAmount(item.price, receipt?.currency || "PHP")
+                          }}
                         </p>
                       </div>
                     </li>
@@ -382,27 +426,41 @@ watch(
                 >
                   <label class="space-y-1">
                     <span class="input-label">Net Sales</span>
-                    <div v-if="isProcessing" class="h-10 w-full animate-pulse rounded-lg bg-slate-200"></div>
+                    <div
+                      v-if="isProcessing"
+                      class="h-10 w-full animate-pulse rounded-lg bg-slate-200"
+                    ></div>
                     <input
                       v-else
                       class="input font-semibold bg-slate-50"
                       disabled
                       :value="
                         hasReceiptGrossAmount
-                          ? formatAmount(receiptSubtotalAmount, receipt?.currency || 'PHP')
+                          ? formatAmount(
+                              receiptSubtotalAmount,
+                              receipt?.currency || 'PHP',
+                            )
                           : '--'
                       "
                     />
                   </label>
                   <label class="space-y-1">
                     <span class="input-label">Tax (VAT 12%)</span>
-                    <div v-if="isProcessing" class="h-10 w-full animate-pulse rounded-lg bg-slate-200"></div>
+                    <div
+                      v-if="isProcessing"
+                      class="h-10 w-full animate-pulse rounded-lg bg-slate-200"
+                    ></div>
                     <input
                       v-else
                       class="input font-semibold bg-slate-50"
                       disabled
                       :value="
-                        hasReceiptGrossAmount ? formatAmount(receiptVatAmount, receipt?.currency || 'PHP') : '--'
+                        hasReceiptGrossAmount
+                          ? formatAmount(
+                              receiptVatAmount,
+                              receipt?.currency || 'PHP',
+                            )
+                          : '--'
                       "
                     />
                   </label>
@@ -410,14 +468,20 @@ watch(
                     class="rounded-lg border border-accent/20 bg-accent-50 p-3"
                   >
                     <p class="input-label text-accent">Gross Sales</p>
-                    <div v-if="isProcessing" class="mt-1 h-7 w-24 animate-pulse rounded bg-accent/20"></div>
+                    <div
+                      v-if="isProcessing"
+                      class="mt-1 h-7 w-24 animate-pulse rounded bg-accent/20"
+                    ></div>
                     <p
                       v-else
                       class="mt-1 font-heading text-xl font-bold text-primary"
                     >
                       {{
                         hasReceiptGrossAmount
-                          ? formatAmount(receiptGrossSalesAmount, receipt?.currency || 'PHP')
+                          ? formatAmount(
+                              receiptGrossSalesAmount,
+                              receipt?.currency || "PHP",
+                            )
                           : "--"
                       }}
                     </p>
@@ -531,9 +595,7 @@ watch(
           v-else-if="receipt?.admin_notes"
           class="border-t border-slate-200 bg-slate-50 px-5 py-4"
         >
-          <p
-            class="text-xs font-bold text-slate-400 uppercase tracking-wider"
-          >
+          <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">
             Reviewer Notes
           </p>
           <p class="text-sm font-semibold text-slate-700 mt-1">
