@@ -1,15 +1,13 @@
 <script setup>
 import { computed } from "vue";
 import { useAuthStore } from "@/stores/auth";
-import { formatPeso, formatAmount } from "@/utils/formatters";
+import { formatAmount } from "@/utils/formatters";
 import StatusBadge from "@/components/base/StatusBadge.vue";
 import {
   X,
   FileText,
   Download,
   Eye,
-  XCircle,
-  CheckCircle,
   Wallet,
 } from "lucide-vue-next";
 
@@ -70,23 +68,12 @@ function normalizeStatus(status) {
   return statusMap[normalized] || normalized;
 }
 
-function statusLabel(status) {
-  const labels = {
-    pending: "Pending",
-    approved: "Approved",
-    rejected: "Rejected",
-    granted: "Granted",
-    processing: "Processing",
-  };
-  return labels[normalizeStatus(status)] || "Pending";
-}
-
 function getCutoffPeriod(date) {
   const submittedDate = new Date(date);
   if (Number.isNaN(submittedDate.getTime())) return date || "--";
-
   return submittedDate.toLocaleDateString("en-US", {
     month: "short",
+    day: "numeric",
     year: "numeric",
   });
 }
@@ -99,280 +86,277 @@ function categoryName(record) {
 <template>
   <Transition name="modal">
     <div
-      v-if="viewingRecord && !receiptDetailsOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-[1px]"
+      v-if="viewingRecord"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
     >
       <div
-        class="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl"
+        class="relative bg-white w-full max-w-[960px] rounded-3xl shadow-[0_20px_40px_-10px_rgba(0,0,0,0.1)] flex flex-col overflow-hidden max-h-[96vh]"
+        @click.stop
       >
-        <div
-          class="flex items-center justify-between border-b border-slate-200 px-6 py-4"
+        <!-- Close Button -->
+        <button
+          @click="emit('close')"
+          class="absolute top-2 right-2 text-slate-400 hover:bg-slate-100 transition-colors p-1.5 rounded-full flex items-center justify-center z-10"
         >
-          <div>
-            <h3 class="font-heading text-base font-bold text-slate-900">
-              Reimbursement Details
-            </h3>
-            <p class="text-xs text-slate-400 mt-0.5">
-              Ref #{{ viewingRecord.id }}
-            </p>
+          <X class="w-4 h-4" />
+        </button>
+
+        <!-- Header -->
+        <div class="px-6 pt-8 pb-4 border-b border-slate-100 shrink-0">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-1">
+                Reimbursement Ref #{{ viewingRecord.id }}
+              </p>
+              <h2 class="text-2xl font-bold text-slate-800">
+                {{ formatAmount(viewingRecord.amount || 0, viewingRecord.currency || 'PHP') }}
+              </h2>
+            </div>
+            <StatusBadge :status="viewingRecord.status" />
           </div>
-          <button
-            class="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-danger"
-            title="Close details"
-            @click="emit('close')"
-          >
-            <X class="h-5 w-5" />
-          </button>
         </div>
 
-        <div class="flex-1 overflow-y-auto p-6 scrollbar-thin">
-          <div
-            v-if="modalLoading"
-            class="flex flex-col items-center justify-center py-20"
-          >
-            <p class="text-xs text-slate-400 mt-2">Loading details...</p>
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+          <!-- Loading -->
+          <div v-if="modalLoading" class="flex items-center justify-center py-16">
+            <p class="text-sm text-slate-400">Loading...</p>
           </div>
-          <div v-else>
-            <div class="mb-8 grid grid-cols-1 gap-x-5 gap-y-6 sm:grid-cols-2">
-              <div class="flex flex-col gap-1">
-                <span class="kpi-label text-slate-400">Status</span>
-                <div>
-                  <StatusBadge :status="viewingRecord.status" />
-                </div>
-              </div>
-              <div class="flex flex-col gap-1">
-                <span class="kpi-label text-slate-400">Submitted By</span>
-                <span class="text-sm font-semibold text-slate-700">{{
-                  viewingRecord.user?.name ||
-                  viewingRecord.submitted_by_name ||
-                  "Employee"
-                }}</span>
-              </div>
-              <div class="flex flex-col gap-1">
-                <span class="kpi-label text-slate-400">Cutoff Period</span>
-                <span class="text-sm font-semibold text-slate-700">{{
-                  viewingRecord.cutoff_period ||
-                  getCutoffPeriod(viewingRecord.date)
-                }}</span>
-              </div>
-              <div class="flex flex-col gap-1">
-                <span class="kpi-label text-slate-400">Total Amount</span>
-                <span class="font-heading text-xl font-bold text-primary">{{
-                  formatAmount(viewingRecord.amount || 0, viewingRecord.currency || 'PHP')
-                }}</span>
-              </div>
-              <div class="flex flex-col gap-1 sm:col-span-2">
-                <span class="kpi-label text-slate-400">Description</span>
-                <span
-                  class="text-sm font-semibold text-slate-700 leading-relaxed"
-                  >{{ viewingRecord.description }}</span
-                >
-              </div>
 
-              <!-- Admin Notes for Rejected Requests (Employee Side) -->
-              <div
-                v-if="
-                  !auth.isAdmin &&
-                  normalizeStatus(viewingRecord.status) === 'rejected' &&
-                  viewingRecord.admin_notes
-                "
-                class="flex flex-col gap-1.5 sm:col-span-2 mt-2"
-              >
-                <span
-                  class="kpi-label text-slate-400 flex items-center gap-1.5"
-                >
-                  Rejection Reason
-                </span>
-                <div class="rounded-lg border p-3.5 shadow-sm">
-                  <p class="text-sm font-semibold leading-relaxed">
-                    {{ viewingRecord.admin_notes }}
+          <template v-else>
+            <!-- Timeline -->
+            <section class="relative">
+              <!-- Horizontal line -->
+              <div class="absolute top-4 left-4 right-4 h-0.5 bg-slate-100"></div>
+
+              <div class="flex justify-between gap-2">
+                <!-- Step 1: Submitted -->
+                <div class="relative flex flex-col items-center text-center flex-1">
+                  <div class="h-8 w-8 rounded-full bg-emerald-500 text-white flex items-center justify-center ring-4 ring-white z-10 shrink-0 mb-2">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                  </div>
+                  <p class="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Submitted</p>
+                  <p class="text-xs text-slate-700 font-medium truncate max-w-full px-1">
+                    {{ viewingRecord.user?.name || viewingRecord.submitted_by_name || "Employee" }}
+                  </p>
+                </div>
+
+                <!-- Step 2: Under Review -->
+                <div class="relative flex flex-col items-center text-center flex-1">
+                  <div
+                    :class="[
+                      'h-8 w-8 rounded-full flex items-center justify-center ring-4 ring-white z-10 shrink-0 mb-2',
+                      ['approved', 'granted', 'rejected'].includes(normalizeStatus(viewingRecord.status))
+                        ? 'bg-emerald-500 text-white'
+                        : normalizeStatus(viewingRecord.status) === 'pending'
+                          ? 'bg-amber-400 text-white animate-pulse'
+                          : 'bg-slate-200 text-slate-400'
+                    ]"
+                  >
+                    <svg v-if="['approved', 'granted', 'rejected'].includes(normalizeStatus(viewingRecord.status))" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    <svg v-else-if="normalizeStatus(viewingRecord.status) === 'pending'" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3" /><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" fill="none" /></svg>
+                    <span v-else class="text-[10px] font-bold">2</span>
+                  </div>
+                  <p class="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Review</p>
+                  <p class="text-xs font-medium truncate max-w-full px-1"
+                    :class="normalizeStatus(viewingRecord.status) === 'pending' ? 'text-amber-600' : 'text-slate-700'"
+                  >
+                    {{ normalizeStatus(viewingRecord.status) === 'pending' ? 'In Progress' : 'Reviewed' }}
+                  </p>
+                </div>
+
+                <!-- Step 3: Decision -->
+                <div class="relative flex flex-col items-center text-center flex-1">
+                  <div
+                    :class="[
+                      'h-8 w-8 rounded-full flex items-center justify-center ring-4 ring-white z-10 shrink-0 mb-2',
+                      normalizeStatus(viewingRecord.status) === 'approved' || normalizeStatus(viewingRecord.status) === 'granted'
+                        ? 'bg-emerald-500 text-white'
+                        : normalizeStatus(viewingRecord.status) === 'rejected'
+                          ? 'bg-red-500 text-white'
+                          : 'bg-slate-200 text-slate-400'
+                    ]"
+                  >
+                    <svg v-if="normalizeStatus(viewingRecord.status) === 'approved' || normalizeStatus(viewingRecord.status) === 'granted'" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    <svg v-else-if="normalizeStatus(viewingRecord.status) === 'rejected'" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    <span v-else class="text-[10px] font-bold">3</span>
+                  </div>
+                  <p class="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Decision</p>
+                  <p class="text-xs font-medium truncate max-w-full px-1"
+                    :class="[
+                      normalizeStatus(viewingRecord.status) === 'approved' || normalizeStatus(viewingRecord.status) === 'granted' ? 'text-emerald-600' : '',
+                      normalizeStatus(viewingRecord.status) === 'rejected' ? 'text-red-600' : '',
+                      normalizeStatus(viewingRecord.status) === 'pending' ? 'text-slate-400' : '',
+                    ]"
+                  >
+                    {{ normalizeStatus(viewingRecord.status) === 'approved' ? 'Approved' : normalizeStatus(viewingRecord.status) === 'granted' ? 'Granted' : normalizeStatus(viewingRecord.status) === 'rejected' ? 'Rejected' : 'Awaiting' }}
+                  </p>
+                </div>
+
+                <!-- Step 4: Released -->
+                <div class="relative flex flex-col items-center text-center flex-1">
+                  <div
+                    :class="[
+                      'h-8 w-8 rounded-full flex items-center justify-center ring-4 ring-white z-10 shrink-0 mb-2',
+                      normalizeStatus(viewingRecord.status) === 'granted'
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-slate-200 text-slate-400'
+                    ]"
+                  >
+                    <svg v-if="normalizeStatus(viewingRecord.status) === 'granted'" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    <span v-else class="text-[10px] font-bold">4</span>
+                  </div>
+                  <p class="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Released</p>
+                  <p class="text-xs font-medium truncate max-w-full px-1"
+                    :class="normalizeStatus(viewingRecord.status) === 'granted' ? 'text-emerald-600' : 'text-slate-400'"
+                  >
+                    {{ normalizeStatus(viewingRecord.status) === 'granted' ? 'Disbursed' : 'Pending' }}
                   </p>
                 </div>
               </div>
-            </div>
+            </section>
 
-            <!-- Report File Attachment -->
-            <div
-              v-if="
-                viewingRecord.report_url || viewingRecord.report_file_path
-              "
-              class="mb-8"
-            >
-              <h4 class="mb-2 text-xs font-semibold text-slate-500">
-                Report Attachment
-              </h4>
-              <div
-                class="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 transition-colors hover:border-slate-300"
-              >
-                <div class="flex min-w-0 items-center gap-3">
-                  <span
-                    class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-red-50 text-red-600"
-                  >
-                    <FileText class="h-5 w-5" />
-                  </span>
-                  <span class="truncate text-sm font-semibold text-slate-700"
-                    >Reimbursement_Report.pdf</span
-                  >
-                </div>
+            <!-- Request Details -->
+            <section class="grid grid-cols-2 gap-x-6 gap-y-3 pt-4 border-t border-slate-100">
+              <div>
+                <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-0.5">Submitted By</p>
+                <p class="text-sm text-slate-700">{{ viewingRecord.user?.name || viewingRecord.submitted_by_name || "Employee" }}</p>
+              </div>
+              <div>
+                <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-0.5">Period</p>
+                <p class="text-sm text-slate-700">{{ viewingRecord.cutoff_period || getCutoffPeriod(viewingRecord.date) }}</p>
+              </div>
+              <div v-if="viewingRecord.report_url || viewingRecord.report_file_path" class="col-span-2">
+                <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-1">Report</p>
                 <a
                   :href="viewingRecord.report_url"
                   target="_blank"
-                  class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-accent transition-colors hover:bg-accent-50"
-                  title="Download report"
+                  class="inline-flex items-center gap-2 text-sm text-primary hover:underline"
                 >
-                  <Download class="h-4 w-4" />
+                  <FileText class="w-3.5 h-3.5" />
+                  <span>Download Report</span>
+                  <Download class="w-3 h-3" />
                 </a>
               </div>
+            </section>
+
+            <!-- Rejection Reason -->
+            <div
+              v-if="!auth.isAdmin && normalizeStatus(viewingRecord.status) === 'rejected' && viewingRecord.admin_notes"
+              class="p-4 rounded-lg border border-red-100 bg-red-50"
+            >
+              <p class="text-[11px] text-red-400 uppercase tracking-wide mb-1">Rejection Reason</p>
+              <p class="text-sm text-red-700">{{ viewingRecord.admin_notes }}</p>
             </div>
 
-            <!-- Receipts Section -->
+            <!-- Receipts -->
             <div>
-              <div
-                class="mb-4 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-2"
-              >
-                <h4 class="font-heading text-base font-bold text-slate-900">
-                  Receipts ({{ activeReceiptItems.length }})
-                </h4>
-                <span class="text-xs font-medium text-slate-400"
-                  >Each receipt is reviewed and decided individually</span
-                >
-              </div>
+              <h3 class="text-sm font-medium text-slate-700 mb-3">
+                Receipts ({{ activeReceiptItems.length }})
+              </h3>
 
-              <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <article
                   v-for="receipt in activeReceiptItems"
                   :key="receipt.id"
-                  class="overflow-hidden rounded-xl border border-slate-200 bg-white transition-shadow hover:shadow-md flex flex-col"
+                  class="rounded-xl overflow-hidden border border-slate-200"
                 >
-                  <div
-                    class="aspect-[4/3] overflow-hidden bg-slate-100 flex items-center justify-center relative group"
-                  >
-                    <a
-                      v-if="receipt.file_url"
-                      :href="receipt.file_url"
-                      target="_blank"
-                      class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/50 text-white font-bold transition-all z-10 text-xs"
-                      >View Full Size</a
-                    >
+                  <!-- Receipt Image -->
+                  <div class="bg-slate-50 aspect-[4/3] flex items-center justify-center border-b border-slate-100 overflow-hidden">
                     <img
                       v-if="receipt.file_url"
                       :src="receipt.file_url"
-                      alt="Scanned receipt"
-                      class="h-full w-full object-cover object-top transition-transform duration-500 hover:scale-105"
+                      class="h-full w-full object-cover object-top"
+                      alt="Receipt"
                     />
-                    <div
-                      v-else
-                      class="flex flex-col items-center justify-center text-slate-400 py-10 text-center px-4"
-                    >
-                      <FileText class="w-8 h-8 mb-2 opacity-50" />
-                      <span class="text-xs font-medium">No Image Provided</span>
+                    <div v-else class="flex items-center gap-2 text-slate-300">
+                      <FileText class="w-4 h-4" />
+                      <span class="text-xs">No image</span>
                     </div>
                   </div>
-                  <div class="flex flex-col gap-3 p-4 flex-1 justify-between">
-                    <div>
-                      <div
-                        class="flex items-start justify-between gap-3 mb-1"
-                      >
-                        <h5
-                          class="truncate font-heading text-sm font-bold text-slate-900"
-                        >
+
+                  <!-- Receipt Info -->
+                  <div class="p-3 space-y-2.5">
+                    <div class="flex justify-between items-start gap-2">
+                      <div class="min-w-0">
+                        <p class="text-sm font-medium text-slate-800 truncate">
                           {{ receipt.vendor_name || "Receipt" }}
-                        </h5>
-                        <StatusBadge :status="receipt.status" />
+                        </p>
+                        <p class="text-xs text-slate-400 mt-0.5">
+                          Invoice: {{ receipt.invoice_number || "--" }}
+                        </p>
                       </div>
-                      <div
-                        class="flex items-center gap-1.5 text-xs text-slate-400 mb-2"
-                      >
-                        <span
-                          >Invoice: {{ receipt.invoice_number || "--" }}</span
-                        >
-                      </div>
+                      <StatusBadge :status="receipt.status" />
                     </div>
-                    <div
-                      class="flex items-center justify-between gap-3 pt-2 border-t border-slate-50"
-                    >
-                      <span
-                        class="inline-flex rounded-md bg-accent-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-accent"
-                        >{{ categoryName(receipt) }}</span
-                      >
-                      <span
-                        class="font-heading text-sm font-bold text-primary"
-                        >{{ formatAmount(receipt.total_amount || 0, receipt.currency || "PHP") }}</span
-                      >
+
+                    <div class="flex justify-between items-center">
+                      <span class="text-[10px] font-medium uppercase tracking-wide text-primary bg-primary/5 px-2 py-0.5 rounded">
+                        {{ categoryName(receipt) }}
+                      </span>
+                      <span class="text-sm font-semibold text-slate-800">
+                        {{ formatAmount(receipt.total_amount || 0, receipt.currency || "PHP") }}
+                      </span>
                     </div>
+
                     <button
-                      class="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold transition-colors"
-                      :class="receipt.status === 'processing' ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-accent-50 text-accent hover:bg-accent-100'"
+                      class="w-full py-2 bg-slate-50 text-slate-600 text-xs font-medium rounded-lg hover:bg-slate-100 transition-colors flex items-center justify-center gap-1.5"
+                      :class="receipt.status === 'processing' ? 'opacity-50 cursor-not-allowed' : ''"
                       :disabled="receipt.status === 'processing'"
                       @click="emit('view-receipt-details', receipt)"
                     >
-                      <Eye v-if="receipt.status !== 'processing'" class="h-3.5 w-3.5" />
+                      <Eye v-if="receipt.status !== 'processing'" class="w-3.5 h-3.5" />
                       {{ receipt.status === 'processing' ? 'Processing...' : 'Details' }}
                     </button>
                   </div>
-                </div>
+                </article>
               </div>
             </div>
-          </div>
+          </template>
         </div>
 
-        <!-- Admin Final Actions Footer -->
-        <div
-          v-if="
-            auth.isAdmin &&
-            viewingRecord &&
-            normalizeStatus(viewingRecord.status) === 'pending'
-          "
-          class="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-3"
+        <!-- Footer Actions (Admin: Pending) -->
+        <footer
+          v-if="auth.isAdmin && viewingRecord && normalizeStatus(viewingRecord.status) === 'pending'"
+          class="px-6 py-4 border-t border-slate-100 flex flex-col gap-3 sm:flex-row shrink-0"
         >
           <p
             v-if="isOwnSubmission"
-            class="mr-auto text-sm font-semibold text-danger"
+            class="text-sm text-danger text-center sm:text-left w-full"
           >
             You cannot process your own request.
           </p>
-          <button
-            class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 text-sm font-bold text-red-600 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
-            type="button"
-            :disabled="isOwnSubmission"
-            @click="emit('reject', viewingRecord.id)"
-          >
-            <XCircle class="w-4 h-4" /> Reject Claim
-          </button>
-          <button
-            class="btn btn-cta min-h-[42px] disabled:cursor-not-allowed disabled:opacity-60"
-            type="button"
-            :disabled="isOwnSubmission"
-            @click="emit('approve', viewingRecord.id)"
-          >
-            <CheckCircle class="w-4 h-4" /> Approve Claim
-          </button>
-        </div>
+          <template v-else>
+            <button
+              class="flex-1 py-2.5 border border-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
+              @click="emit('reject', viewingRecord.id)"
+            >
+              Reject Claim
+            </button>
+            <button
+              class="flex-1 py-2.5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-sm"
+              @click="emit('approve', viewingRecord.id)"
+            >
+              Approve Claim
+            </button>
+          </template>
+        </footer>
 
-        <!-- Admin Grant Footer (approved → granted) -->
-        <div
-          v-if="
-            auth.isAdmin &&
-            viewingRecord &&
-            normalizeStatus(viewingRecord.status) === 'approved'
-          "
-          class="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-3"
+        <!-- Footer Actions (Admin: Approved → Grant) -->
+        <footer
+          v-if="auth.isAdmin && viewingRecord && normalizeStatus(viewingRecord.status) === 'approved'"
+          class="px-6 py-4 border-t border-slate-100 shrink-0"
         >
-          <p
-            v-if="isOwnSubmission"
-            class="mr-auto text-sm font-semibold text-danger"
-          >
-            You cannot process your own request.
-          </p>
           <button
-            class="btn btn-cta min-h-[42px] disabled:cursor-not-allowed disabled:opacity-60"
-            type="button"
-            :disabled="isOwnSubmission"
+            v-if="!isOwnSubmission"
+            class="w-full py-2.5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-sm flex items-center justify-center gap-2"
             @click="emit('grant', viewingRecord.id)"
           >
             <Wallet class="w-4 h-4" /> Grant Claim
           </button>
-        </div>
+          <p v-else class="text-sm text-danger text-center">
+            You cannot process your own request.
+          </p>
+        </footer>
       </div>
     </div>
   </Transition>
