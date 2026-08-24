@@ -62,12 +62,13 @@ function normalizeStatus(status) {
 
 function getActions(row) {
   const status = normalizeStatus(row.displayStatus);
+  const isRevise = status === "revise";
+  const isRejected = status === "rejected";
   return [
     {
       label: "Edit",
       icon: Pencil,
-      visible:
-        !props.isAdmin && (status === "pending" || status === "rejected"),
+      visible: !props.isAdmin && (status === "pending" || isRevise),
       handler: () => emit("edit-request", row),
     },
     {

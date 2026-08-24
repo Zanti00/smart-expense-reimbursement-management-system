@@ -35,8 +35,8 @@ const { addToast } = useToast();
 
 const statusFilters = computed(() =>
   auth.isAdmin
-    ? ["All", "Pending", "Approved", "Rejected", "Granted"]
-    : ["All", "Pending", "Approved", "Rejected", "Granted"],
+    ? ["All", "Pending", "Revise", "Approved", "Rejected", "Granted"]
+    : ["All", "Pending", "Revise", "Approved", "Rejected", "Granted"],
 );
 
 const employeeReimbursementColumns = [
@@ -149,6 +149,7 @@ const {
   approvingId,
   rejectingId,
   grantingId,
+  revisionAction,
   rejectionComment,
   confirmPassword,
   isReviewSubmitting,
@@ -289,9 +290,10 @@ onMounted(() => store.fetchAll());
       :modal-loading="modalLoading"
       @close="closeDetails"
       @view-receipt-details="viewReceiptDetails"
-      @reject="openRejectModal"
+      @reject="(id, action) => openRejectModal(id, action || 'revise')"
       @approve="openApproveModal"
       @grant="openGrantModal"
+      @edit="handleEdit"
     />
 
     <!-- ── Single Receipt Details Modal ── -->
@@ -314,10 +316,10 @@ onMounted(() => store.fetchAll());
       @confirm-decision="confirmReceiptDecision"
     />
 
-    <!-- Approve / Reject / Grant Confirmation Modal -->
+    <!-- Approve / Revise / Reject / Grant Confirmation Modal -->
     <DecisionConfirmationModal
       :is-open="!!approvingId || !!rejectingId || !!grantingId"
-      :mode="grantingId ? 'grant' : approvingId ? 'approve' : 'reject'"
+      :mode="grantingId ? 'grant' : approvingId ? 'approve' : (revisionAction || 'revise')"
       :is-submitting="isReviewSubmitting"
       v-model:password="confirmPassword"
       v-model:comment="rejectionComment"

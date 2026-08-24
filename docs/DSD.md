@@ -74,6 +74,7 @@ Used exclusively in [`StatusBadge.vue`](../apps/web/src/components/base/StatusBa
 | `unliquidated` | `bg-amber-500` | Unliquidated |
 | `overpayment` | `bg-blue-500` | Overpayment |
 | `overdue` | `bg-red-600` | Overdue |
+| `revise` | `bg-orange-500` | Needs Revision |
 | `rejected` | `bg-red-600` | Rejected |
 | `reject` | `bg-red-600` | Reject |
 | `automatic-rejected` | `bg-red-600` | Auto Rejected |

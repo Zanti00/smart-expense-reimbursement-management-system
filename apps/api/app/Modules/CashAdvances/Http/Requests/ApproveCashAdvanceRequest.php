@@ -23,6 +23,7 @@ class ApproveCashAdvanceRequest extends FormRequest
     {
         return [
             'comment' => 'nullable|string',
+            'password' => 'required|string',
         ];
     }
 }

@@ -33,12 +33,12 @@ const emit = defineEmits(["view", "edit", "delete"]);
 
 function getActions(row) {
   const status = String(row.status || "").toLowerCase();
+  const isRevise = status === "revise";
   return [
     {
       label: "Edit",
       icon: Pencil,
-      visible:
-        !props.isAdmin && (status === "pending" || status === "rejected"),
+      visible: !props.isAdmin && (status === "pending" || isRevise),
       handler: () => emit("edit", row),
     },
     {
@@ -76,8 +76,8 @@ const sortedRows = computed(() => {
   const rows = [...props.rows];
   if (!sortKey.value) {
     return rows.sort((a, b) => {
-      const aTime = new Date(a.date || a.requested || a.submitted_at || a.created_at || 0).getTime();
-      const bTime = new Date(b.date || b.requested || b.submitted_at || b.created_at || 0).getTime();
+      const aTime = new Date(a.created_at || a.submitted_at || a.date || a.requested || 0).getTime();
+      const bTime = new Date(b.created_at || b.submitted_at || b.date || b.requested || 0).getTime();
       if (aTime !== bTime) return bTime - aTime;
       return (Number(b.id) || 0) - (Number(a.id) || 0);
     });
@@ -87,8 +87,8 @@ const sortedRows = computed(() => {
     const aValue = getSortValue(a, sortKey.value);
     const bValue = getSortValue(b, sortKey.value);
     if (aValue === bValue) {
-      const aTime = new Date(a.date || a.requested || a.submitted_at || a.created_at || 0).getTime();
-      const bTime = new Date(b.date || b.requested || b.submitted_at || b.created_at || 0).getTime();
+      const aTime = new Date(a.created_at || a.submitted_at || a.date || a.requested || 0).getTime();
+      const bTime = new Date(b.created_at || b.submitted_at || b.date || b.requested || 0).getTime();
       if (aTime !== bTime) return bTime - aTime;
       return (Number(b.id) || 0) - (Number(a.id) || 0);
     }
@@ -120,18 +120,21 @@ function getSortValue(row, key) {
   const value = row[key];
   if (key === "amount") return Number(value || 0);
   if (key === "requested") {
-    const raw = row.date || row.requested || row.submitted_at || row.created_at;
+    const raw = row.created_at || row.submitted_at || row.date || row.requested;
     const timestamp = new Date(raw).getTime();
     return Number.isNaN(timestamp)
       ? String(value || "").toLowerCase()
       : timestamp;
   }
   if (key === "dueDate") {
-    const raw = row.dueDate || row.expected_liquidation_date;
+    const raw = row.expected_liquidation_date || row.dueDate;
     const timestamp = new Date(raw).getTime();
     return Number.isNaN(timestamp)
       ? String(value || "").toLowerCase()
       : timestamp;
+  }
+  if (key === "id" || key === "actions") {
+    return Number(row.id || 0);
   }
   return String(value || "").toLowerCase();
 }
@@ -144,7 +147,7 @@ function toggleSort(column) {
     return;
   }
   sortKey.value = key;
-  sortDirection.value = "asc";
+  sortDirection.value = ["requested", "dueDate", "id", "actions"].includes(key) ? "desc" : "asc";
   currentPage.value = 1;
 }
 

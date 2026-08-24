@@ -14,6 +14,7 @@ import {
   receiptFinancials,
 } from "@/utils/receiptUtils";
 import CurrencySelect from "@/components/base/CurrencySelect.vue";
+import BaseReceiptImage from "@/components/base/BaseReceiptImage.vue";
 
 const props = defineProps({
   receipts: {
@@ -194,30 +195,13 @@ function removeReceiptItem(receipt, index) {
             <div
               class="relative aspect-[3/4] rounded-xl overflow-hidden border border-slate-200 bg-white shadow-sm flex items-center justify-center"
             >
-              <img
-                v-if="receipt.thumbnail || receipt.preview || receipt.filePath || receipt.file_url"
+              <BaseReceiptImage
                 :src="receipt.thumbnail || receipt.preview || receipt.filePath || receipt.file_url"
                 :alt="receipt.fileName || receipt.name || 'Receipt Image'"
-                class="w-full h-full object-contain"
+                :file-type="receipt.fileType"
+                img-class="w-full h-full object-contain"
+                icon-size-class="w-12 h-12 opacity-40"
               />
-              <div
-                v-else
-                class="flex flex-col items-center gap-2 text-slate-300"
-              >
-                <FileText
-                  v-if="
-                    receipt.fileType === 'pdf' ||
-                    receipt.fileType === 'application/pdf'
-                  "
-                  class="w-12 h-12 opacity-40"
-                />
-                <ImageIcon v-else class="w-12 h-12 opacity-40" />
-                <p
-                  class="text-[10px] font-semibold uppercase tracking-widest"
-                >
-                  No Preview
-                </p>
-              </div>
               <div
                 v-if="receipt.isUploading || receipt.isProcessing"
                 class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white/80 text-accent backdrop-blur-[1px]"

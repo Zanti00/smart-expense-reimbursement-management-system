@@ -62,11 +62,11 @@ defineEmits(['sort']);
             >
               <span>{{ column.label }}</span>
               <ChevronUp
-                v-if="sortKey === column.key && sortDirection === 'asc'"
+                v-if="sortKey === (column.sortKey || column.key) && sortDirection === 'asc'"
                 class="h-3.5 w-3.5 text-accent"
               />
               <ChevronDown
-                v-else-if="sortKey === column.key"
+                v-else-if="sortKey === (column.sortKey || column.key)"
                 class="h-3.5 w-3.5 text-accent"
               />
               <ChevronsUpDown v-else class="h-3.5 w-3.5 text-slate-300" />

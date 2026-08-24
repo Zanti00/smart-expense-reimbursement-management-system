@@ -18,6 +18,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [1.4.2] - 2026-08-24
+
+### Fixed
+- **Cash Advance Admin Password Bypass (Security):** Fixed critical authorization bypass where `POST /{id}/approve`, `POST /{id}/reject` (action=revise/reject), and `POST /{id}/disburse` proceeded without password verification, incorrectly incrementing `revision_count` and flipping status to `revise`/`rejected`/`approved`/`disbursed` even with wrong/empty password. Root cause was missing `PasswordVerificationService::verify()` in `CashAdvanceController`/`CashAdvanceService` and missing `password` validation in `Approve/Reject/DisburseCashAdvanceRequest` (so `validated()` stripped it), plus frontend `cashAdvance.js`/`CashAdvanceDetailsModal.vue` dropping `adminPassword`. Enforced strict `password: required|string` validation, added service-level guard `PasswordVerificationService::verify()` at top of `DB::transaction` BEFORE any `revision_count` increment/status update (abort with 422 `errors.password` preserving rollback), controller 422/403 handling, and frontend wiring `adminPassword.value` through `DecisionConfirmationModal` → store (with 422 `errors.password` toast, modal stays open). Behavior now matches `ReimbursementService`/`LiquidationController::audit` and `CashAdvanceService::deleteAdvance` correct pattern.
+
+### Changed
+- **Requests:** `ApproveCashAdvanceRequest`, `RejectCashAdvanceRequest`, `DisburseCashAdvanceRequest` now require `password`.
+- **Frontend:** `stores/cashAdvance.js` signatures `approveRequest(id,comment,password)`, `rejectRequest(id,comment,action,password)`, `disburseRequest(id,payload,password)` and `CashAdvanceDetailsModal.vue` `confirmAdminDecision()` now require and forward password, surfacing 422 password errors.
+
+## [1.4.1] - 2026-08-24
+
+### Fixed
+- **Cash Advance Revision 500 (ENUM truncation):** Fixed `SQLSTATE[01000]: Data truncated for column 'action'` when requesting revision (`POST /{id}/reject` action=`revise`). Root cause was `cash_advance_approval_actions.action` ENUM limited to `['approved','rejected']` while `CashAdvanceService::rejectAdvance()` correctly inserted `'revised'` (past tense consistent with `approved`/`rejected`) for counts 1-3. Added migration `2026_08_24_000003` to extend ENUM to `['approved','rejected','revised']`. Hardened `CashAdvanceService` with defensive `allowedActions` guard (422) and boundary try-catch with `Log::error` that converts enum violations to 422 while preserving `DB::transaction` rollback. Terminal 4th strike still forces `rejected`.
+
+### Changed
+- **CashAdvanceApprovalAction:** Added docblock for allowed actions and migration note.
+
+## [1.4.0] - 2026-08-24
+
+### Added
+- **Revise / 3-Strike Rejection Workflow:** Admins now choose `Revise` (needs revision) or `Reject` via dropdown for reimbursements, cash advances, and liquidations. Both actions set status to `revise` and increment `revision_count`; when `revision_count > 3` the system auto-transitions to terminal `rejected`. Added `revise` status badge (`bg-orange-500`, "Needs Revision"). Updated `StatusBadge.vue`, `DecisionConfirmationModal`, Pinia stores, and audit logs (`CLAIM_REVISED` / `CLAIM_REJECTED`).
+- **DB Migrations:** `revision_count` integer column added to `reimbursements`, `cash_advances`, and `liquidations` tables with threshold enforcement in services/controllers.
+
+### Changed
+- **Rejection Logic:** Former direct `status='rejected'` on admin action now maps to `status='revise'` until threshold exceeded. Employee self-edit now allowed on `pending` and `revise` (previously `pending`/`rejected`). `rejected` is system-derived only (terminal).
+- **Docs:** `SERMS.md` §7.3 badge map and `DSD.md` §2 status table updated to 23-status map including `revise`.
+
 ## [1.3.1] - 2026-08-19
 
 ### Added

@@ -13,6 +13,7 @@ use App\Modules\AuditLogs\Services\AuditLogService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+use Carbon\Carbon;
 
 class LiquidationController extends Controller
 {
@@ -24,30 +25,148 @@ class LiquidationController extends Controller
     }
 
     /**
+     * CashAdvance relations needed for Unified Roadmap when accessed via liquidation
+     */
+    private const CASH_ADVANCE_ROADMAP_WITH = [
+        'requester',
+        'approvalActions.approver',
+        'statusHistory.changedBy',
+        'statusHistory.user',
+        'disbursement.disbursedBy',
+        'penalties',
+        'liquidations',
+        'document',
+    ];
+
+    private function enrichCashAdvanceForRoadmap(?CashAdvance $advance): ?CashAdvance
+    {
+        if (!$advance) {
+            return null;
+        }
+        // Ensure penalties_total - use withSum if available else collection sum
+        if ($advance->relationLoaded('penalties')) {
+            $penaltiesTotal = $advance->penalties->sum(fn ($p) => (float) ($p->penalty_amount ?? 0));
+            $advance->setAttribute('penalties_total', (float) $penaltiesTotal);
+            $advance->setAttribute('penalties_sum', (float) $penaltiesTotal);
+        } elseif (!isset($advance->penalties_total)) {
+            $advance->setAttribute('penalties_total', (float) \App\Modules\Liquidations\Models\PenaltyRecord::where('cash_advance_id', $advance->id)->sum('penalty_amount'));
+            $advance->setAttribute('penalties_sum', (float) $advance->penalties_total);
+        }
+
+        // days_overdue
+        $due = $advance->expected_liquidation_date;
+        $daysOverdue = 0;
+        if ($due) {
+            $today = Carbon::now()->startOfDay();
+            $dueDate = Carbon::parse($due)->startOfDay();
+            $isTerminal = in_array($advance->status, ['liquidated', 'settled', 'rejected']);
+            $isAuditing = in_array($advance->status, ['pending', 'under-review', 'approved']);
+            if ($today->gt($dueDate) && !$isTerminal && !$isAuditing) {
+                $daysOverdue = $today->diffInDays($dueDate);
+            } elseif ($advance->relationLoaded('penalties') && $advance->penalties->isNotEmpty()) {
+                $maxDays = $advance->penalties->max('days_overdue');
+                if ($maxDays) {
+                    $daysOverdue = max($daysOverdue, (int) $maxDays);
+                }
+            }
+        } elseif ($advance->relationLoaded('penalties') && $advance->penalties->isNotEmpty()) {
+            $daysOverdue = (int) ($advance->penalties->max('days_overdue') ?? $advance->penalties->count());
+        }
+        $advance->setAttribute('days_overdue', (int) $daysOverdue);
+
+        // linked_liquidation aliases
+        if ($advance->relationLoaded('liquidations')) {
+            $latest = $advance->liquidations->sortByDesc('created_at')->sortByDesc('id')->first();
+            $advance->setAttribute('linked_liquidation', $latest);
+            $advance->setAttribute('latest_liquidation', $latest);
+            $advance->setAttribute('liquidation', $latest);
+        }
+
+        // status_history normalized for roadmap
+        if ($advance->relationLoaded('statusHistory')) {
+            $history = $advance->statusHistory->sortBy('changed_at')->sortBy('id')->map(function ($h) {
+                $actor = $h->relationLoaded('changedBy') && $h->changedBy ? $h->changedBy : ($h->relationLoaded('user') ? $h->user : null);
+                return [
+                    'id' => $h->id,
+                    'cash_advance_id' => $h->cash_advance_id,
+                    'from_status' => $h->from_status,
+                    'to_status' => $h->to_status,
+                    'status' => $h->to_status,
+                    'changed_by' => $actor ? ['id' => $actor->id, 'name' => $actor->name, 'email' => $actor->email] : null,
+                    'changed_by_id' => $h->changed_by,
+                    'actor' => $actor?->name,
+                    'user' => $actor ? ['id' => $actor->id, 'name' => $actor->name, 'email' => $actor->email] : null,
+                    'changed_at' => $h->changed_at ?? $h->created_at,
+                    'created_at' => $h->created_at,
+                ];
+            })->values();
+            $advance->setAttribute('status_history', $history);
+        }
+
+        // Ensure outstanding_balance / expected_liquidation_date present
+        $advance->setAttribute('balance', $advance->outstanding_balance !== null ? (float) $advance->outstanding_balance : (float) ($advance->amount ?? 0));
+        $advance->setAttribute('outstanding_balance', $advance->outstanding_balance);
+        $advance->setAttribute('expected_liquidation_date', $advance->expected_liquidation_date);
+
+        return $advance;
+    }
+
+    private function hydrateLiquidation(Liquidation $liq): Liquidation
+    {
+        // Hydrate receipts
+        $receiptIds = $liq->reimbursement_ids ?? [];
+        if (is_array($receiptIds) && !empty($receiptIds)) {
+            $liq->setAttribute('receipts', Receipt::whereIn('id', $receiptIds)->with('items')->get());
+        } else {
+            $liq->setAttribute('receipts', collect());
+        }
+
+        // Enrich nested cashAdvance for Unified Roadmap (no extra fetch)
+        if ($liq->relationLoaded('cashAdvance') && $liq->cashAdvance) {
+            $this->enrichCashAdvanceForRoadmap($liq->cashAdvance);
+            // Also compute overpayment / aging on liquidation itself for frontend convenience
+            $ca = $liq->cashAdvance;
+            $overpayment = 0;
+            $expense = (float) ($liq->total_expense_amount ?? 0);
+            $snapshot = (float) ($liq->outstanding_balance ?? $ca->outstanding_balance ?? $ca->amount ?? 0);
+            if ($expense > $snapshot) {
+                $overpayment = $expense - $snapshot;
+            }
+            $liq->setAttribute('overpayment_amount', (float) $overpayment);
+            $liq->setAttribute('overpaymentAmount', (float) $overpayment);
+            $liq->setAttribute('penalties_total', (float) ($ca->penalties_total ?? 0));
+            $liq->setAttribute('days_overdue', (int) ($ca->days_overdue ?? 0));
+            // Ensure liquidation calc variance fields present
+            $liq->setAttribute('variance', $snapshot - $expense);
+        }
+
+        return $liq;
+    }
+
+    /**
      * List all liquidations.
      */
     public function index(Request $request)
     {
         $user = $request->user();
 
+        $with = array_merge(['user', 'cashAdvance'], array_map(fn($r) => "cashAdvance.$r", self::CASH_ADVANCE_ROADMAP_WITH));
+
         if (!$request->user()->can('serms.liquidations.manage')) {
             $liquidations = Liquidation::where('user_id', $user->id)
-                ->with(['user', 'cashAdvance'])
+                ->with($with)
+                ->orderByDesc('created_at')
+                ->orderByDesc('id')
                 ->get();
         } else {
-            $liquidations = Liquidation::with(['user', 'cashAdvance'])->get();
+            $liquidations = Liquidation::with($with)
+                ->orderByDesc('created_at')
+                ->orderByDesc('id')
+                ->get();
         }
 
-        // Hydrate associated receipts dynamically from JSON column
         foreach ($liquidations as $liq) {
-            $receiptIds = $liq->reimbursement_ids ?? [];
-            if (is_array($receiptIds) && !empty($receiptIds)) {
-                $liq->receipts = Receipt::whereIn('id', $receiptIds)
-                    ->with('items')
-                    ->get();
-            } else {
-                $liq->receipts = [];
-            }
+            $this->hydrateLiquidation($liq);
         }
 
         return response()->json($liquidations);
@@ -274,21 +393,14 @@ class LiquidationController extends Controller
     public function show(Request $request, $id)
     {
         $user = $request->user();
-        $liquidation = Liquidation::with(['user', 'cashAdvance'])->findOrFail($id);
+        $with = array_merge(['user', 'cashAdvance'], array_map(fn($r) => "cashAdvance.$r", self::CASH_ADVANCE_ROADMAP_WITH));
+        $liquidation = Liquidation::with($with)->findOrFail($id);
 
         if (!$request->user()->can('serms.liquidations.manage') && $liquidation->user_id !== $user->id) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
-        // Hydrate associated receipts
-        $receiptIds = $liquidation->reimbursement_ids ?? [];
-        if (is_array($receiptIds) && !empty($receiptIds)) {
-            $liquidation->receipts = Receipt::whereIn('id', $receiptIds)
-                ->with('items')
-                ->get();
-        } else {
-            $liquidation->receipts = [];
-        }
+        $this->hydrateLiquidation($liquidation);
 
         return response()->json($liquidation);
     }
@@ -305,9 +417,9 @@ class LiquidationController extends Controller
         }
 
         $validated = $request->validate([
-            'status' => 'required|in:approved,rejected',
+            'status' => 'required|in:approved,revise,rejected',
             'password' => 'required|string',
-            'admin_note' => 'nullable|string|min:10|required_if:status,rejected',
+            'admin_note' => 'nullable|string|min:10|required_if:status,revise|required_if:status,rejected',
         ]);
 
         return DB::transaction(function () use ($user, $id, $validated, $request) {
@@ -357,23 +469,32 @@ class LiquidationController extends Controller
 
                 $actionType = 'LIQUIDATION_APPROVED';
             } else {
+                // 3-strike workflow: both 'revise' and 'rejected' increment revision_count
+                // Admin's choice maps to 'revise' until threshold exceeded, then auto 'rejected' (terminal)
+                $currentCount = (int) ($liquidation->revision_count ?? 0);
+                $newCount = $currentCount + 1;
+                $requestedStatus = $validated['status']; // 'revise' or 'rejected'
+                $finalStatus = $newCount > 3 ? 'rejected' : 'revise';
+                $isTerminal = $finalStatus === 'rejected';
+
                 $liquidation->update([
-                    'status'     => 'rejected',
-                    'admin_note' => $validated['admin_note'],
+                    'status'         => $finalStatus,
+                    'revision_count' => $newCount,
+                    'admin_note'     => $validated['admin_note'],
                 ]);
 
                 if (!empty($receiptIds)) {
                     Receipt::whereIn('id', $receiptIds)->update([
-                        'status' => 'rejected',
+                        'status' => $finalStatus,
                         'admin_notes' => $validated['admin_note'],
                     ]);
                 }
 
-                // Balance unchanged on rejection — no payment was accepted.
+                // Balance unchanged on revise/rejection — no payment was accepted.
                 // The cash advance returns to incomplete state.
                 $advance->update(['status' => 'incomplete']);
 
-                $actionType = 'LIQUIDATION_REJECTED';
+                $actionType = $isTerminal ? 'LIQUIDATION_REJECTED' : 'LIQUIDATION_REVISED';
             }
 
             // Record status history for cash advance
@@ -415,8 +536,12 @@ class LiquidationController extends Controller
             return response()->json(['message' => 'Forbidden. You do not own this liquidation.'], 403);
         }
 
-        if (!in_array($liquidation->status, ['pending', 'rejected'])) {
-            return response()->json(['message' => 'Only pending or rejected liquidations can be edited.'], 409);
+        if ($liquidation->status === 'rejected') {
+            return response()->json(['message' => 'Rejected liquidations (exceeded revision limit) cannot be edited.'], 409);
+        }
+
+        if (!in_array($liquidation->status, ['pending', 'revise'])) {
+            return response()->json(['message' => 'Only pending or revise liquidations can be edited.'], 409);
         }
 
         $validated = $request->validate([
@@ -487,8 +612,8 @@ class LiquidationController extends Controller
                 $liquidation->shortfall_explanation = $validated['shortfall_explanation'];
             }
 
-            // Reset rejected → pending on re-submission
-            if ($liquidation->status === 'rejected') {
+            // Reset revise → pending on re-submission (rejected terminal stays rejected)
+            if ($liquidation->status === 'revise') {
                 $liquidation->status = 'pending';
             }
 

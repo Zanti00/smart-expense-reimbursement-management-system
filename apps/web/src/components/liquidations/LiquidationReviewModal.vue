@@ -1,7 +1,11 @@
 <script setup>
+import { computed } from "vue";
 import { X, XCircle, ShieldCheck, Eye, FileText, Download } from "lucide-vue-next";
 import { formatPeso } from "@/utils/formatters";
 import StatusBadge from "@/components/base/StatusBadge.vue";
+import BaseReceiptImage from "@/components/base/BaseReceiptImage.vue";
+import UnifiedRoadmapStepper from "@/components/base/UnifiedRoadmapStepper.vue";
+import { useLiquidationStore } from "@/stores/liquidation";
 
 const props = defineProps({
   isOpen: {
@@ -42,37 +46,80 @@ const props = defineProps({
   },
 });
 
-defineEmits(["close", "view-receipt", "reject", "approve"]);
+const emit = defineEmits(["close", "view-receipt", "reject", "approve", "navigate"]);
 
-function normalizeStatus(status) {
-  const normalized = String(status || "").toLowerCase();
-  const statusMap = {
-    submitted: "submitted",
-    "under review": "under_review",
-    "in review": "under_review",
-    pending: "under_review",
-    liquidated: "settled",
-    settled: "settled",
-    rejected: "rejected",
-    approved: "decision",
+const liqStore = useLiquidationStore();
+
+/* Bridge unified roadmap props from reviewingCase */
+const roadmapCashAdvance = computed(() => {
+  const rc = props.reviewingCase || {};
+  // reviewingCase may have cash_advance nested from backend via liqStore raw, or mapped fields
+  if (rc.cash_advance) return rc.cash_advance;
+  if (rc.cashAdvance) return rc.cashAdvance;
+  // fallback fabricate minimal cash-advance shape
+  return {
+    id: rc.cash_advance_id ?? rc.cashAdvanceId ?? rc.advanceId ?? rc.id,
+    status: rc.cashAdvanceStatus || rc.advanceStatus || "signed",
+    amount: rc.cashAdvanceAmount,
+    balance: rc.outstandingBalance,
+    expected_liquidation_date: rc.dueDate,
+    dueDate: rc.dueDate,
+    pending: false,
   };
-  return statusMap[normalized] || normalized;
-}
+});
 
-function isStepCompleted(stepIndex) {
-  const status = normalizeStatus(props.reviewStatus);
-  const order = ["submitted", "under_review", "decision", "settled"];
-  const currentIndex = order.indexOf(status);
-  if (status === "rejected" && stepIndex <= 2) return true;
-  return stepIndex <= currentIndex;
-}
+const roadmapLiquidation = computed(() => {
+  const rc = props.reviewingCase || {};
+  // raw settlement if available via liqStore
+  const raw = liqStore.settlements.find(
+    (s) => `LIQ-${String(s.id).padStart(3, "0")}` === rc.id || String(s.id) === String(rc.databaseId)
+  );
+  if (raw) {
+    return {
+      id: raw.id,
+      status: raw.status,
+      revision_count: raw.revision_count,
+      total_expense_amount: raw.total_expense_amount,
+      penalties: raw.penalties,
+    };
+  }
+  return {
+    id: rc.databaseId ?? rc.id,
+    status: props.reviewStatus,
+    revision_count: rc.revision_count,
+    total_expense_amount: rc.submittedReceiptTotal ?? rc.acceptedTotal,
+    penalties: rc.penalties,
+  };
+});
 
-function isStepCurrent(stepIndex) {
-  const status = normalizeStatus(props.reviewStatus);
-  const order = ["submitted", "under_review", "decision", "settled"];
-  const currentIndex = order.indexOf(status);
-  if (status === "rejected") return stepIndex === 2;
-  return stepIndex === currentIndex;
+const roadmapHistory = computed(() => {
+  const rc = props.reviewingCase || {};
+  return rc.status_history || rc.statusHistory || rc.history || rc.audit_logs || [];
+});
+
+const roadmapPenalties = computed(() => {
+  const rc = props.reviewingCase || {};
+  if (Array.isArray(rc.penalties)) return rc.penalties;
+  if (Array.isArray(roadmapCashAdvance.value?.penalties)) return roadmapCashAdvance.value.penalties;
+  return [];
+});
+
+const roadmapAging = computed(() => {
+  try {
+    return liqStore.calculateAging(roadmapCashAdvance.value || {});
+  } catch {
+    return null;
+  }
+});
+
+const roadmapOverpayment = computed(() => {
+  const total = Number(roadmapLiquidation.value?.total_expense_amount ?? 0);
+  const bal = Number(roadmapCashAdvance.value?.amount ?? roadmapCashAdvance.value?.balance ?? props.reviewingCase?.cashAdvanceAmount ?? 0);
+  return Math.max(0, total - bal);
+});
+
+function handleRoadmapNavigate(payload) {
+  emit("navigate", payload);
 }
 </script>
 
@@ -111,96 +158,20 @@ function isStepCurrent(stepIndex) {
 
         <!-- Content -->
         <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-          <!-- Timeline -->
-          <section class="relative">
-            <div class="absolute top-4 left-4 right-4 h-0.5 bg-slate-100"></div>
-
-            <div class="flex justify-between gap-2">
-              <!-- Step 1: Submitted -->
-              <div class="relative flex flex-col items-center text-center flex-1">
-                <div class="h-8 w-8 rounded-full bg-emerald-500 text-white flex items-center justify-center ring-4 ring-white z-10 shrink-0 mb-2">
-                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
-                </div>
-                <p class="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Submitted</p>
-                <p class="text-xs text-slate-700 font-medium truncate max-w-full px-1">
-                  {{ reviewingCase.requestorName || "Employee" }}
-                </p>
-              </div>
-
-              <!-- Step 2: Under Review -->
-              <div class="relative flex flex-col items-center text-center flex-1">
-                <div
-                  :class="[
-                    'h-8 w-8 rounded-full flex items-center justify-center ring-4 ring-white z-10 shrink-0 mb-2',
-                    isStepCompleted(1)
-                      ? 'bg-emerald-500 text-white'
-                      : isStepCurrent(1)
-                        ? 'bg-amber-400 text-white animate-pulse'
-                        : 'bg-slate-200 text-slate-400'
-                  ]"
-                >
-                  <svg v-if="isStepCompleted(1)" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
-                  <svg v-else-if="isStepCurrent(1)" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3" /><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" fill="none" /></svg>
-                  <span v-else class="text-[10px] font-bold">2</span>
-                </div>
-                <p class="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Under Review</p>
-                <p class="text-xs font-medium truncate max-w-full px-1"
-                  :class="isStepCurrent(1) ? 'text-amber-600' : 'text-slate-700'"
-                >
-                  {{ isStepCurrent(1) ? 'In Progress' : isStepCompleted(1) ? 'Reviewed' : 'Awaiting' }}
-                </p>
-              </div>
-
-              <!-- Step 3: Decision -->
-              <div class="relative flex flex-col items-center text-center flex-1">
-                <div
-                  :class="[
-                    'h-8 w-8 rounded-full flex items-center justify-center ring-4 ring-white z-10 shrink-0 mb-2',
-                    normalizeStatus(reviewStatus) === 'rejected'
-                      ? 'bg-red-500 text-white'
-                      : isStepCompleted(2)
-                        ? 'bg-emerald-500 text-white'
-                        : 'bg-slate-200 text-slate-400'
-                  ]"
-                >
-                  <svg v-if="isStepCompleted(2) && normalizeStatus(reviewStatus) !== 'rejected'" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
-                  <svg v-else-if="normalizeStatus(reviewStatus) === 'rejected'" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                  <span v-else class="text-[10px] font-bold">3</span>
-                </div>
-                <p class="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Decision</p>
-                <p class="text-xs font-medium truncate max-w-full px-1"
-                  :class="[
-                    normalizeStatus(reviewStatus) === 'rejected' ? 'text-red-600' : '',
-                    isStepCompleted(2) && normalizeStatus(reviewStatus) !== 'rejected' ? 'text-emerald-600' : '',
-                    !isStepCompleted(2) && normalizeStatus(reviewStatus) !== 'rejected' ? 'text-slate-400' : '',
-                  ]"
-                >
-                  {{ normalizeStatus(reviewStatus) === 'rejected' ? 'Rejected' : isStepCompleted(2) ? 'Approved' : 'Awaiting' }}
-                </p>
-              </div>
-
-              <!-- Step 4: Settled -->
-              <div class="relative flex flex-col items-center text-center flex-1">
-                <div
-                  :class="[
-                    'h-8 w-8 rounded-full flex items-center justify-center ring-4 ring-white z-10 shrink-0 mb-2',
-                    isStepCompleted(3)
-                      ? 'bg-emerald-500 text-white'
-                      : 'bg-slate-200 text-slate-400'
-                  ]"
-                >
-                  <svg v-if="isStepCompleted(3)" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
-                  <span v-else class="text-[10px] font-bold">4</span>
-                </div>
-                <p class="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Settled</p>
-                <p class="text-xs font-medium truncate max-w-full px-1"
-                  :class="isStepCompleted(3) ? 'text-emerald-600' : 'text-slate-400'"
-                >
-                  {{ isStepCompleted(3) ? 'Complete' : 'Pending' }}
-                </p>
-              </div>
-            </div>
-          </section>
+          <div v-if="String(reviewStatus).toLowerCase() === 'revise'" class="p-3 rounded-lg border border-orange-200 bg-orange-50">
+            <p class="text-[11px] text-orange-600 uppercase tracking-wide font-bold">Needs Revision — Attempt {{ reviewingCase.revision_count || 1 }}/3</p>
+            <p class="text-sm text-orange-800 mt-1">{{ reviewingCase.adminNote || 'Please revise per admin feedback.' }}</p>
+          </div>
+          <!-- UNIFIED 8-step Roadmap -->
+          <UnifiedRoadmapStepper
+            :cash-advance="roadmapCashAdvance"
+            :liquidation="roadmapLiquidation"
+            :status-history="roadmapHistory"
+            :penalties="roadmapPenalties"
+            :overpayment-amount="roadmapOverpayment"
+            :aging="roadmapAging"
+            @navigate="handleRoadmapNavigate"
+          />
 
           <!-- Details Grid -->
           <section class="grid grid-cols-2 gap-x-6 gap-y-3 pt-4 border-t border-slate-100">
@@ -235,18 +206,13 @@ function isStepCurrent(stepIndex) {
                 class="rounded-xl overflow-hidden border border-slate-200"
               >
                 <!-- Receipt Image -->
-                <div class="bg-slate-50 aspect-[4/3] flex items-center justify-center border-b border-slate-100 overflow-hidden">
-                  <img
-                    v-if="receipt.filePath"
-                    :src="getFileUrl(receipt.filePath)"
-                    class="h-full w-full object-cover object-top"
-                    alt="Receipt"
-                  />
-                  <div v-else class="flex items-center gap-2 text-slate-300">
-                    <FileText class="w-4 h-4" />
-                    <span class="text-xs">No image</span>
-                  </div>
-                </div>
+                <BaseReceiptImage
+                  :src="receipt.filePath ? getFileUrl(receipt.filePath) : null"
+                  :alt="receipt.merchantName || 'Receipt'"
+                  :file-type="receipt.fileType"
+                  img-class="h-full w-full object-cover object-top"
+                  container-class="bg-slate-50 aspect-[4/3] flex items-center justify-center border-b border-slate-100 overflow-hidden"
+                />
 
                 <!-- Receipt Info -->
                 <div class="p-3 space-y-2.5">
@@ -325,14 +291,16 @@ function isStepCurrent(stepIndex) {
               You cannot process your own liquidation settlement.
             </p>
             <div class="flex gap-2">
-              <button
-                class="flex-1 sm:flex-none py-2.5 px-5 border border-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
-                type="button"
+              <select
+                @change="$emit('reject', $event.target.value); $event.target.value=''"
+                class="flex-1 sm:flex-none py-2.5 px-4 border border-slate-200 text-slate-700 text-sm font-medium rounded-lg bg-white hover:bg-slate-50 transition-colors text-center"
                 :disabled="isReviewingOwnLiquidation"
-                @click="$emit('reject')"
+                value=""
               >
-                Reject
-              </button>
+                <option value="" disabled selected>Actions ▾</option>
+                <option value="revise">Request Revision</option>
+                <option value="reject">Reject</option>
+              </select>
               <button
                 class="flex-1 sm:flex-none py-2.5 px-5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
                 type="button"

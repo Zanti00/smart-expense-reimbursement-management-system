@@ -22,6 +22,7 @@ class RejectReimbursementRequest extends FormRequest
         return [
             'comment' => 'required|string|min:5|max:255',
             'password' => 'nullable|string',
+            'action' => 'sometimes|string|in:revise,reject',
         ];
     }
 }

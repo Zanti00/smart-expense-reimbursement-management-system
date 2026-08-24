@@ -8,6 +8,7 @@ export function useCashAdvanceList(store, auth) {
     const baseTabs = [
       "All",
       "Pending",
+      "Revise",
       "Approved",
       "Disbursed",
       "Signed",

@@ -41,7 +41,9 @@ export function useLiquidationDecisions(liqStore, addToast, reviewingCase, refre
     rejectingId.value = null;
   }
 
-  function openRejectModal() {
+  const revisionAction = ref("revise");
+
+  function openRejectModal(action = "revise") {
     if (isReviewingOwnLiquidation()) {
       addToast({
         title: "Action Not Allowed",
@@ -51,6 +53,7 @@ export function useLiquidationDecisions(liqStore, addToast, reviewingCase, refre
       return;
     }
 
+    revisionAction.value = action;
     confirmPassword.value = "";
     rejectionComment.value = "";
     rejectingId.value = reviewingCase.value?.databaseId || null;
@@ -122,7 +125,7 @@ export function useLiquidationDecisions(liqStore, addToast, reviewingCase, refre
     if (!confirmPassword.value?.trim()) {
       addToast({
         title: "Validation Error",
-        message: "Password is required to reject this settlement.",
+        message: `Password is required to ${revisionAction.value} this settlement.`,
         type: "danger",
       });
       return;
@@ -130,21 +133,22 @@ export function useLiquidationDecisions(liqStore, addToast, reviewingCase, refre
     if (rejectionComment.value.length < 5) {
       addToast({
         title: "Validation Error",
-        message: "Rejection comment must be at least 5 characters.",
+        message: `${revisionAction.value === "revise" ? "Revision" : "Rejection"} comment must be at least 5 characters.`,
         type: "danger",
       });
       return;
     }
     isReviewSubmitting.value = true;
     try {
-      await liqStore.auditSettlement(rejectingId.value, {
-        status: "rejected",
+      const result = await liqStore.auditSettlement(rejectingId.value, {
+        status: revisionAction.value,
         password: confirmPassword.value,
         admin_note: rejectionComment.value,
       });
+      const isRejected = result?.status === "rejected";
       addToast({
-        title: "Settlement Rejected",
-        message: "The liquidation settlement was successfully rejected.",
+        title: isRejected ? "Settlement Rejected" : "Settlement Returned for Revision",
+        message: isRejected ? "The liquidation settlement was rejected (exceeded revision limit)." : "The liquidation settlement was returned for revision.",
         type: "success",
       });
 
@@ -166,6 +170,7 @@ export function useLiquidationDecisions(liqStore, addToast, reviewingCase, refre
   return {
     approvingId,
     rejectingId,
+    revisionAction,
     rejectionComment,
     confirmPassword,
     isReviewSubmitting,

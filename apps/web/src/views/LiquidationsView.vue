@@ -37,6 +37,8 @@ import {
   CheckCircle,
   Eye,
   FilePieChart,
+  Pencil,
+  Trash2,
   Upload,
   Wallet,
 } from "lucide-vue-next";
@@ -84,13 +86,14 @@ const {
   dismissWithConfirm,
 } = useUnsavedChanges(isDirty, submitted);
 
-const sortKey = ref("id");
-const sortDirection = ref("asc");
+const sortKey = ref("dateSubmitted");
+const sortDirection = ref("desc");
 const reviewingCase = ref(null);
 
 const {
   approvingId,
   rejectingId,
+  revisionAction,
   confirmPassword,
   rejectionComment,
   isReviewSubmitting,
@@ -338,10 +341,11 @@ const employeeFilteredAdvances = computed(() => {
 const tableColumns = [
   { key: "purpose", label: "Purpose" },
   { key: "requestorName", label: "Requestor Name" },
+  { key: "dateSubmitted", label: "Date Submitted" },
   { key: "dueDate", label: "Due Date" },
   { key: "cashAdvanceAmount", label: "Cash Advance Amount", align: "right" },
   { key: "status", label: "Status", align: "center" },
-  { key: "actions", label: "Actions", align: "center" },
+  { key: "actions", sortKey: "databaseId", label: "Actions", align: "center" },
 ];
 
 function categoryName(record, fallback = "Expense") {
@@ -442,6 +446,9 @@ const sourceCases = computed(() => {
       adminNote: item.admin_note || "",
       reportFilePath: item.report_file_path || null,
       status: displayStatus,
+      createdAt: item.created_at || item.createdAt || null,
+      submittedAt: item.submitted_at || item.submittedAt || item.created_at || null,
+      dateSubmitted: item.submitted_at || item.created_at || item.date || null,
     };
   });
 
@@ -506,10 +513,24 @@ const filteredRows = computed(() => {
 
 const sortedRows = computed(() => {
   const rows = [...filteredRows.value];
+  if (!sortKey.value) {
+    return rows.sort((a, b) => {
+      const aTime = new Date(a.dateSubmitted || a.createdAt || a.submittedAt || 0).getTime();
+      const bTime = new Date(b.dateSubmitted || b.createdAt || b.submittedAt || 0).getTime();
+      if (aTime !== bTime) return bTime - aTime;
+      return (Number(b.databaseId) || 0) - (Number(a.databaseId) || 0);
+    });
+  }
+
   return rows.sort((a, b) => {
     const aValue = getSortValue(a, sortKey.value);
     const bValue = getSortValue(b, sortKey.value);
-    if (aValue === bValue) return 0;
+    if (aValue === bValue) {
+      const aTime = new Date(a.dateSubmitted || a.createdAt || a.submittedAt || 0).getTime();
+      const bTime = new Date(b.dateSubmitted || b.createdAt || b.submittedAt || 0).getTime();
+      if (aTime !== bTime) return bTime - aTime;
+      return (Number(b.databaseId) || 0) - (Number(a.databaseId) || 0);
+    }
     const result = aValue > bValue ? 1 : -1;
     return sortDirection.value === "asc" ? result : -result;
   });
@@ -814,14 +835,49 @@ async function confirmDeleteLiquidation(password) {
 }
 
 function getActions(row) {
+  const status = String(row.status || "").toLowerCase();
+  const isRevise = status === "revise";
+  const isRejected = status === "rejected";
   return [
+    {
+      label: "Edit",
+      icon: Pencil,
+      visible: !auth.isAdmin && (status === "pending" || isRevise),
+      handler: () => handleEditLiquidation(row),
+    },
     {
       label: "View",
       icon: Eye,
       visible: true,
       handler: () => openReview(row),
     },
+    {
+      label: "Delete",
+      icon: Trash2,
+      visible: !auth.isAdmin && status === "pending",
+      variant: "danger",
+      handler: () => handleDeleteLiquidationForRow(row),
+    },
   ];
+}
+
+function handleEditLiquidation(row) {
+  // Locate the parent cash advance for this liquidation and open the settlement form in edit mode
+  const advId = row.cash_advance_id ?? row.cashAdvanceId;
+  const adv = store.items.find((a) => String(a.id) === String(advId));
+  if (adv) {
+    selectAdvance(adv);
+  } else {
+    // Fallback: fabricate minimal advance so form can still load existing liquidation
+    selectAdvance({ id: advId, amount: row.cashAdvanceAmount, outstanding_balance: row.outstandingBalance });
+  }
+  // Scroll to settlement form for immediate editing
+  setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
+}
+
+function handleDeleteLiquidationForRow(row) {
+  deletingLiqId.value = row.id;
+  isDeleteLiqModalOpen.value = true;
 }
 
 function selectAdvance(adv) {
@@ -993,21 +1049,32 @@ function isPastDue(value) {
 
 
 function toggleSort(column) {
-  if (sortKey.value === column.key) {
+  const key = column.sortKey || column.key;
+  if (sortKey.value === key) {
     sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc";
     currentPage.value = 1;
     return;
   }
-  sortKey.value = column.key;
-  sortDirection.value = "asc";
+  sortKey.value = key;
+  sortDirection.value = ["dateSubmitted", "dueDate", "databaseId", "id", "actions"].includes(key) ? "desc" : "asc";
   currentPage.value = 1;
 }
 
 function getSortValue(row, key) {
   if (["cashAdvanceAmount", "outstandingBalance"].includes(key))
     return Number(row[key] || 0);
-  if (["dueDate"].includes(key)) return new Date(row[key] || 0).getTime();
-  if (key === "actions") return row.id;
+  if (["dueDate"].includes(key)) {
+    const timestamp = new Date(row[key] || 0).getTime();
+    return Number.isNaN(timestamp) ? 0 : timestamp;
+  }
+  if (["dateSubmitted", "createdAt", "submittedAt", "date"].includes(key)) {
+    const raw = row.dateSubmitted || row.createdAt || row.submittedAt || row.dueDate || 0;
+    const timestamp = new Date(raw).getTime();
+    return Number.isNaN(timestamp) ? 0 : timestamp;
+  }
+  if (["id", "databaseId", "actions"].includes(key)) {
+    return Number(row.databaseId || String(row.id || "").replace(/\D/g, "") || 0);
+  }
   return String(row[key] || "").toLowerCase();
 }
 
@@ -1211,6 +1278,11 @@ function finalizeLiquidation() {
             row.requestorName
           }}</span>
         </template>
+        <template #cell-dateSubmitted="{ row }">
+          <span class="text-sm text-slate-500">{{
+            formatDate(row.dateSubmitted || row.createdAt)
+          }}</span>
+        </template>
         <template #cell-dueDate="{ row }">
           <span class="text-sm text-slate-500">{{
             formatDate(row.dueDate)
@@ -1250,7 +1322,7 @@ function finalizeLiquidation() {
 
       @close="closeReview"
       @view-receipt="viewReceiptDetails"
-      @reject="openRejectModal"
+      @reject="(action) => openRejectModal(action || 'revise')"
       @approve="openApproveModal"
     />
 
@@ -1271,14 +1343,14 @@ function finalizeLiquidation() {
     <DecisionConfirmationModal
       v-if="auth.isAdmin && !showAdminRequestForm"
       :is-open="!!approvingId || !!rejectingId"
-      :mode="approvingId ? 'approve' : 'reject'"
+      :mode="approvingId ? 'approve' : (revisionAction || 'revise')"
       :is-submitting="isReviewSubmitting"
       :min-comment-length="10"
       title="Liquidation Settlement Audit"
       :description="
         approvingId
           ? 'Are you sure you want to approve this liquidation settlement? This will mark the cash advance as settled.'
-          : 'Please provide a comment to authorize rejecting this liquidation settlement.'
+          : (revisionAction === 'revise' ? 'Please provide instructions to request revision of this liquidation settlement.' : 'Please provide a comment to authorize rejecting this liquidation settlement.')
       "
       v-model:password="confirmPassword"
       v-model:comment="rejectionComment"

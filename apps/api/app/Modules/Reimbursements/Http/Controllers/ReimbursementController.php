@@ -94,22 +94,25 @@ class ReimbursementController extends Controller
     }
 
     /**
-     * Reject claim.
+     * Reject / Revise claim — dropdown action.
      */
     public function reject(RejectReimbursementRequest $request, $id)
     {
         try {
+            $action = $request->validated('action', 'revise');
             $reimbursement = $this->service->rejectReimbursement(
                 $request->user(),
                 (int)$id,
                 $request->validated('comment'),
                 $request->validated('password'),
                 $request->ip(),
-                $request
+                $request,
+                $action
             );
 
+            $isRejected = $reimbursement->status === 'rejected';
             return response()->json([
-                'message' => 'Reimbursement request rejected.',
+                'message' => $isRejected ? 'Reimbursement request rejected (exceeded revision limit).' : 'Reimbursement returned for revision.',
                 'data' => $reimbursement,
             ]);
         } catch (AuthorizationException $e) {

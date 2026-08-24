@@ -3,6 +3,7 @@ import { computed } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { formatAmount } from "@/utils/formatters";
 import StatusBadge from "@/components/base/StatusBadge.vue";
+import BaseReceiptImage from "@/components/base/BaseReceiptImage.vue";
 import {
   X,
   FileText,
@@ -32,6 +33,7 @@ const emit = defineEmits([
   "reject",
   "approve",
   "grant",
+  "edit",
 ]);
 
 const auth = useAuthStore();
@@ -127,7 +129,7 @@ function categoryName(record) {
             <!-- Timeline -->
             <section class="relative">
               <!-- Horizontal line -->
-              <div class="absolute top-4 left-4 right-4 h-0.5 bg-slate-100"></div>
+              <div class="absolute top-4 -translate-y-1/2 left-[16.66%] right-[16.66%] h-0.5 bg-slate-100"></div>
 
               <div class="flex justify-between gap-2">
                 <!-- Step 1: Submitted -->
@@ -240,12 +242,22 @@ function categoryName(record) {
               </div>
             </section>
 
-            <!-- Rejection Reason -->
+            <!-- Needs Revision Banner (employee) -->
+            <div
+              v-if="!auth.isAdmin && normalizeStatus(viewingRecord.status) === 'revise'"
+              class="p-4 rounded-lg border border-orange-200 bg-orange-50"
+            >
+              <p class="text-[11px] text-orange-600 uppercase tracking-wide mb-1 font-bold">Needs Revision — Attempt {{ viewingRecord.revision_count || 1 }}/3 <span v-if="(viewingRecord.revision_count || 1) >= 3" class="text-red-600">(final attempt)</span></p>
+              <p class="text-sm text-orange-800">{{ viewingRecord.admin_notes || viewingRecord.rejection_comment || 'Please revise your submission per admin feedback.' }}</p>
+              <p class="text-[11px] text-orange-700/70 mt-2">Edit your request and resubmit — it will return to Pending.</p>
+            </div>
+
+            <!-- Rejection Reason (terminal) -->
             <div
               v-if="!auth.isAdmin && normalizeStatus(viewingRecord.status) === 'rejected' && viewingRecord.admin_notes"
               class="p-4 rounded-lg border border-red-100 bg-red-50"
             >
-              <p class="text-[11px] text-red-400 uppercase tracking-wide mb-1">Rejection Reason</p>
+              <p class="text-[11px] text-red-400 uppercase tracking-wide mb-1">Rejection Reason — Revision limit exceeded ({{ viewingRecord.revision_count || 4 }}/3)</p>
               <p class="text-sm text-red-700">{{ viewingRecord.admin_notes }}</p>
             </div>
 
@@ -262,18 +274,13 @@ function categoryName(record) {
                   class="rounded-xl overflow-hidden border border-slate-200"
                 >
                   <!-- Receipt Image -->
-                  <div class="bg-slate-50 aspect-[4/3] flex items-center justify-center border-b border-slate-100 overflow-hidden">
-                    <img
-                      v-if="receipt.file_url"
-                      :src="receipt.file_url"
-                      class="h-full w-full object-cover object-top"
-                      alt="Receipt"
-                    />
-                    <div v-else class="flex items-center gap-2 text-slate-300">
-                      <FileText class="w-4 h-4" />
-                      <span class="text-xs">No image</span>
-                    </div>
-                  </div>
+                  <BaseReceiptImage
+                    :src="receipt.file_url"
+                    :alt="receipt.vendor_name || 'Receipt'"
+                    :file-type="receipt.file_type"
+                    img-class="h-full w-full object-cover object-top"
+                    container-class="bg-slate-50 aspect-[4/3] flex items-center justify-center border-b border-slate-100 overflow-hidden"
+                  />
 
                   <!-- Receipt Info -->
                   <div class="p-3 space-y-2.5">
@@ -314,9 +321,9 @@ function categoryName(record) {
           </template>
         </div>
 
-        <!-- Footer Actions (Admin: Pending) -->
+        <!-- Footer Actions (Admin: Pending/Revise) -->
         <footer
-          v-if="auth.isAdmin && viewingRecord && normalizeStatus(viewingRecord.status) === 'pending'"
+          v-if="auth.isAdmin && viewingRecord && ['pending','revise'].includes(normalizeStatus(viewingRecord.status))"
           class="px-6 py-4 border-t border-slate-100 flex flex-col gap-3 sm:flex-row shrink-0"
         >
           <p
@@ -326,12 +333,17 @@ function categoryName(record) {
             You cannot process your own request.
           </p>
           <template v-else>
-            <button
-              class="flex-1 py-2.5 border border-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
-              @click="emit('reject', viewingRecord.id)"
-            >
-              Reject Claim
-            </button>
+            <div class="flex-1">
+              <select
+                @change="emit('reject', viewingRecord.id, ($event.target.value)); $event.target.value=''"
+                class="w-full py-2.5 border border-slate-200 text-slate-700 text-sm font-medium rounded-lg bg-white hover:bg-slate-50 transition-colors text-center"
+                value=""
+              >
+                <option value="" disabled selected>Actions ▾</option>
+                <option value="revise">Request Revision</option>
+                <option value="reject">Reject</option>
+              </select>
+            </div>
             <button
               class="flex-1 py-2.5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-sm"
               @click="emit('approve', viewingRecord.id)"
@@ -356,6 +368,22 @@ function categoryName(record) {
           <p v-else class="text-sm text-danger text-center">
             You cannot process your own request.
           </p>
+        </footer>
+
+        <!-- Footer Actions (Employee: Revise → Edit) -->
+        <footer
+          v-if="!auth.isAdmin && viewingRecord && normalizeStatus(viewingRecord.status) === 'revise'"
+          class="px-6 py-4 border-t border-orange-100 bg-orange-50/30 shrink-0 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <p class="text-sm text-orange-800 text-center sm:text-left">
+            Ready to revise? Edit your submission and it will return to Pending.
+          </p>
+          <button
+            class="px-5 py-2.5 bg-orange-500 text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition-colors shadow-sm whitespace-nowrap"
+            @click="emit('edit', viewingRecord.id)"
+          >
+            Edit & Resubmit
+          </button>
         </footer>
       </div>
     </div>

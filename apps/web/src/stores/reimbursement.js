@@ -100,14 +100,14 @@ export const useReimbursementStore = defineStore("reimbursement", () => {
     }
   }
 
-  async function reject(id, comment, password) {
+  async function reject(id, comment, password, action = "revise") {
     isLoading.value = true;
     try {
       const response = await apiFetch(
         `/api/serms/reimbursements/${id}/reject`,
         {
           method: "POST",
-          body: JSON.stringify({ comment, password }),
+          body: JSON.stringify({ comment, password, action }),
         },
       );
       if (!response.ok) {
@@ -126,6 +126,10 @@ export const useReimbursementStore = defineStore("reimbursement", () => {
     } finally {
       isLoading.value = false;
     }
+  }
+
+  async function revise(id, comment, password) {
+    return reject(id, comment, password, "revise");
   }
 
   async function updateNotes(id, notes) {
@@ -244,6 +248,7 @@ export const useReimbursementStore = defineStore("reimbursement", () => {
     submit,
     approve,
     reject,
+    revise,
     grant,
     updateNotes,
     updateRequest,

@@ -90,6 +90,8 @@ Detailed, canonical operational guardrails are defined in **[`docs/SERMS.md`](SE
 5. **Client-Side Payload Encryption ([Build.md §5](Build.md#5-development-guardrails)):** Pre-encrypt sensitive PII and financial mutations using AES-256-GCM + RSA wrapper before network transmission.
 6. **Database-Driven Analytics ([Build.md §5](Build.md#5-development-guardrails)):** Leverage database aggregate queries (`SUM`, `COUNT`, `GROUP BY`) rather than in-memory math loops.
 7. **Git Inspection & Historical Context ([Build.md §5](Build.md#5-development-guardrails)):** Check Git in read-only mode for context (no unapproved write/push actions) and consult **[`docs/CHANGELOG.md`](CHANGELOG.md)** for project evolution history.
+8. **Judicious Browser Testing & Interactive Debugging ([Build.md §5](Build.md#5-development-guardrails)):** Use browser testing (`browser_subagent`, DevTools, screenshot and DOM verification) **judiciously and only when strictly applicable** (e.g., complex multi-step flows, visual regressions). Avoid slow browser agent sessions for simple UI tweaks or non-visual logic where faster unit tests suffice.
+9. **Proactive Skill & Workflow Ingestion ([Build.md §5](Build.md#5-development-guardrails)):** Actively ingest and leverage applicable skills from `.agents/skills/` (TDD, systematic debugging, planning, verification) before executing specialized tasks.
 
 ### 3. Architecture & Execution Flow
 

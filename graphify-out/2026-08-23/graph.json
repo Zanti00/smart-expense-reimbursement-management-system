@@ -5342,10 +5342,10 @@
       "source_location": "L18",
       "_callable": true,
       "_origin": "ast",
+      "id": "apps_web_src_views_dashboardview_test_render",
       "community": 234,
       "community_name": "DashboardView.test.js",
-      "norm_label": "render()",
-      "id": "apps_web_src_views_dashboardview_test_render"
+      "norm_label": "render()"
     },
     {
       "label": "buildDefaultItems()",
@@ -10305,17 +10305,6 @@
     },
     {
       "label": "pinia",
-      "file_type": "code",
-      "source_file": "apps/web/package.json",
-      "source_location": "L16",
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "SERMS Master Specification",
-      "norm_label": "pinia",
-      "id": "apps_web_package_dependencies_pinia"
-    },
-    {
-      "label": "pinia",
       "file_type": "concept",
       "source_file": "apps/web/package.json",
       "source_location": "L16",
@@ -11083,6 +11072,17 @@
       "community_name": "dependencies",
       "norm_label": "lucide-vue-next",
       "id": "apps_web_package_dependencies_lucide_vue_next"
+    },
+    {
+      "label": "pinia",
+      "file_type": "code",
+      "source_file": "apps/web/package.json",
+      "source_location": "L16",
+      "_origin": "ast",
+      "community": 10,
+      "community_name": "dependencies",
+      "norm_label": "pinia",
+      "id": "apps_web_package_dependencies_pinia"
     },
     {
       "label": "vue",
@@ -15196,15 +15196,26 @@
       "id": "apps_api_database_migrations_2026_06_18_000003_drop_category_from_reimbursements_table"
     },
     {
+      "label": "vue",
+      "file_type": "code",
+      "source_file": "vue",
+      "confidence": "EXTRACTED",
+      "_origin": "ast",
+      "id": "vue",
+      "community": 234,
+      "community_name": "DashboardView.test.js",
+      "norm_label": "vue"
+    },
+    {
       "label": "DashboardView.test.js",
       "file_type": "code",
       "source_file": "apps/web/src/views/DashboardView.test.js",
       "source_location": "L1",
       "_origin": "ast",
+      "id": "apps_web_src_views_dashboardview_test",
       "community": 234,
       "community_name": "DashboardView.test.js",
-      "norm_label": "dashboardview.test.js",
-      "id": "apps_web_src_views_dashboardview_test"
+      "norm_label": "dashboardview.test.js"
     },
     {
       "label": "receiptUtils.js",
@@ -15597,10 +15608,10 @@
       "source_file": "apps/web/src/components/reimbursements/ReceiptDetailsModal.vue",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal",
       "community": 27,
       "community_name": "ReceiptDetailsModal.vue",
-      "norm_label": "receiptdetailsmodal.vue"
+      "norm_label": "receiptdetailsmodal.vue",
+      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal"
     },
     {
       "label": "auth",
@@ -15608,10 +15619,10 @@
       "source_file": "apps/web/src/components/reimbursements/ReceiptDetailsModal.vue",
       "source_location": "L52",
       "_origin": "ast",
-      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_auth",
       "community": 27,
       "community_name": "ReceiptDetailsModal.vue",
-      "norm_label": "auth"
+      "norm_label": "auth",
+      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_auth"
     },
     {
       "label": "canEditVatClassification",
@@ -15619,21 +15630,10 @@
       "source_file": "apps/web/src/components/reimbursements/ReceiptDetailsModal.vue",
       "source_location": "L81",
       "_origin": "ast",
-      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_caneditvatclassification",
       "community": 27,
       "community_name": "ReceiptDetailsModal.vue",
-      "norm_label": "caneditvatclassification"
-    },
-    {
-      "label": "categoryName",
-      "file_type": "code",
-      "source_file": "apps/web/src/components/reimbursements/ReceiptDetailsModal.vue",
-      "source_location": "L117",
-      "_origin": "ast",
-      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_categoryname",
-      "community": 27,
-      "community_name": "ReceiptDetailsModal.vue",
-      "norm_label": "categoryname"
+      "norm_label": "caneditvatclassification",
+      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_caneditvatclassification"
     },
     {
       "label": "emit",
@@ -15641,10 +15641,10 @@
       "source_file": "apps/web/src/components/reimbursements/ReceiptDetailsModal.vue",
       "source_location": "L43",
       "_origin": "ast",
-      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_emit",
       "community": 27,
       "community_name": "ReceiptDetailsModal.vue",
-      "norm_label": "emit"
+      "norm_label": "emit",
+      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_emit"
     },
     {
       "label": "hasReceiptGrossAmount",
@@ -15652,10 +15652,10 @@
       "source_file": "apps/web/src/components/reimbursements/ReceiptDetailsModal.vue",
       "source_location": "L103",
       "_origin": "ast",
-      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_hasreceiptgrossamount",
       "community": 27,
       "community_name": "ReceiptDetailsModal.vue",
-      "norm_label": "hasreceiptgrossamount"
+      "norm_label": "hasreceiptgrossamount",
+      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_hasreceiptgrossamount"
     },
     {
       "label": "hasVatClassification",
@@ -15663,10 +15663,10 @@
       "source_file": "apps/web/src/components/reimbursements/ReceiptDetailsModal.vue",
       "source_location": "L88",
       "_origin": "ast",
-      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_hasvatclassification",
       "community": 27,
       "community_name": "ReceiptDetailsModal.vue",
-      "norm_label": "hasvatclassification"
+      "norm_label": "hasvatclassification",
+      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_hasvatclassification"
     },
     {
       "label": "isApproveDisabled",
@@ -15674,10 +15674,10 @@
       "source_file": "apps/web/src/components/reimbursements/ReceiptDetailsModal.vue",
       "source_location": "L89",
       "_origin": "ast",
-      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_isapprovedisabled",
       "community": 27,
       "community_name": "ReceiptDetailsModal.vue",
-      "norm_label": "isapprovedisabled"
+      "norm_label": "isapprovedisabled",
+      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_isapprovedisabled"
     },
     {
       "label": "isConfirmDecisionDisabled",
@@ -15685,10 +15685,10 @@
       "source_file": "apps/web/src/components/reimbursements/ReceiptDetailsModal.vue",
       "source_location": "L96",
       "_origin": "ast",
-      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_isconfirmdecisiondisabled",
       "community": 27,
       "community_name": "ReceiptDetailsModal.vue",
-      "norm_label": "isconfirmdecisiondisabled"
+      "norm_label": "isconfirmdecisiondisabled",
+      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_isconfirmdecisiondisabled"
     },
     {
       "label": "isOwnSubmission",
@@ -15696,10 +15696,10 @@
       "source_file": "apps/web/src/components/reimbursements/ReceiptDetailsModal.vue",
       "source_location": "L62",
       "_origin": "ast",
-      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_isownsubmission",
       "community": 27,
       "community_name": "ReceiptDetailsModal.vue",
-      "norm_label": "isownsubmission"
+      "norm_label": "isownsubmission",
+      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_isownsubmission"
     },
     {
       "label": "isProcessing",
@@ -15707,10 +15707,10 @@
       "source_file": "apps/web/src/components/reimbursements/ReceiptDetailsModal.vue",
       "source_location": "L61",
       "_origin": "ast",
-      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_isprocessing",
       "community": 27,
       "community_name": "ReceiptDetailsModal.vue",
-      "norm_label": "isprocessing"
+      "norm_label": "isprocessing",
+      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_isprocessing"
     },
     {
       "label": "isReviewableReceipt",
@@ -15718,21 +15718,21 @@
       "source_file": "apps/web/src/components/reimbursements/ReceiptDetailsModal.vue",
       "source_location": "L78",
       "_origin": "ast",
-      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_isreviewablereceipt",
       "community": 27,
       "community_name": "ReceiptDetailsModal.vue",
-      "norm_label": "isreviewablereceipt"
+      "norm_label": "isreviewablereceipt",
+      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_isreviewablereceipt"
     },
     {
       "label": "localReviewerNotes",
       "file_type": "code",
       "source_file": "apps/web/src/components/reimbursements/ReceiptDetailsModal.vue",
-      "source_location": "L124",
+      "source_location": "L117",
       "_origin": "ast",
-      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_localreviewernotes",
       "community": 27,
       "community_name": "ReceiptDetailsModal.vue",
-      "norm_label": "localreviewernotes"
+      "norm_label": "localreviewernotes",
+      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_localreviewernotes"
     },
     {
       "label": "props",
@@ -15740,10 +15740,10 @@
       "source_file": "apps/web/src/components/reimbursements/ReceiptDetailsModal.vue",
       "source_location": "L20",
       "_origin": "ast",
-      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_props",
       "community": 27,
       "community_name": "ReceiptDetailsModal.vue",
-      "norm_label": "props"
+      "norm_label": "props",
+      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_props"
     },
     {
       "label": "receiptAmounts",
@@ -15751,10 +15751,10 @@
       "source_file": "apps/web/src/components/reimbursements/ReceiptDetailsModal.vue",
       "source_location": "L110",
       "_origin": "ast",
-      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_receiptamounts",
       "community": 27,
       "community_name": "ReceiptDetailsModal.vue",
-      "norm_label": "receiptamounts"
+      "norm_label": "receiptamounts",
+      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_receiptamounts"
     },
     {
       "label": "receiptGrossSalesAmount",
@@ -15762,10 +15762,10 @@
       "source_file": "apps/web/src/components/reimbursements/ReceiptDetailsModal.vue",
       "source_location": "L113",
       "_origin": "ast",
-      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_receiptgrosssalesamount",
       "community": 27,
       "community_name": "ReceiptDetailsModal.vue",
-      "norm_label": "receiptgrosssalesamount"
+      "norm_label": "receiptgrosssalesamount",
+      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_receiptgrosssalesamount"
     },
     {
       "label": "receiptSubtotalAmount",
@@ -15773,10 +15773,10 @@
       "source_file": "apps/web/src/components/reimbursements/ReceiptDetailsModal.vue",
       "source_location": "L115",
       "_origin": "ast",
-      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_receiptsubtotalamount",
       "community": 27,
       "community_name": "ReceiptDetailsModal.vue",
-      "norm_label": "receiptsubtotalamount"
+      "norm_label": "receiptsubtotalamount",
+      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_receiptsubtotalamount"
     },
     {
       "label": "receiptVatAmount",
@@ -15784,10 +15784,10 @@
       "source_file": "apps/web/src/components/reimbursements/ReceiptDetailsModal.vue",
       "source_location": "L114",
       "_origin": "ast",
-      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_receiptvatamount",
       "community": 27,
       "community_name": "ReceiptDetailsModal.vue",
-      "norm_label": "receiptvatamount"
+      "norm_label": "receiptvatamount",
+      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_receiptvatamount"
     },
     {
       "label": "selectedVatClassification",
@@ -15795,10 +15795,10 @@
       "source_file": "apps/web/src/components/reimbursements/ReceiptDetailsModal.vue",
       "source_location": "L59",
       "_origin": "ast",
-      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_selectedvatclassification",
       "community": 27,
       "community_name": "ReceiptDetailsModal.vue",
-      "norm_label": "selectedvatclassification"
+      "norm_label": "selectedvatclassification",
+      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_selectedvatclassification"
     },
     {
       "label": "TAX_CLASSIFICATIONS",
@@ -15806,10 +15806,10 @@
       "source_file": "apps/web/src/components/reimbursements/ReceiptDetailsModal.vue",
       "source_location": "L54",
       "_origin": "ast",
-      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_tax_classifications",
       "community": 27,
       "community_name": "ReceiptDetailsModal.vue",
-      "norm_label": "tax_classifications"
+      "norm_label": "tax_classifications",
+      "id": "apps_web_src_components_reimbursements_receiptdetailsmodal_tax_classifications"
     },
     {
       "label": "api/package.json",
@@ -16015,10 +16015,10 @@
       "source_file": "apps/web/src/views/DashboardView.vue",
       "source_location": "L1",
       "_origin": "ast",
+      "id": "apps_web_src_views_dashboardview",
       "community": 29,
       "community_name": "DashboardView.vue",
-      "norm_label": "dashboardview.vue",
-      "id": "apps_web_src_views_dashboardview"
+      "norm_label": "dashboardview.vue"
     },
     {
       "label": "adminBalancePieData",
@@ -16026,10 +16026,10 @@
       "source_file": "apps/web/src/views/DashboardView.vue",
       "source_location": "L454",
       "_origin": "ast",
+      "id": "apps_web_src_views_dashboardview_adminbalancepiedata",
       "community": 29,
       "community_name": "DashboardView.vue",
-      "norm_label": "adminbalancepiedata",
-      "id": "apps_web_src_views_dashboardview_adminbalancepiedata"
+      "norm_label": "adminbalancepiedata"
     },
     {
       "label": "adminBarData",
@@ -16037,10 +16037,10 @@
       "source_file": "apps/web/src/views/DashboardView.vue",
       "source_location": "L327",
       "_origin": "ast",
+      "id": "apps_web_src_views_dashboardview_adminbardata",
       "community": 29,
       "community_name": "DashboardView.vue",
-      "norm_label": "adminbardata",
-      "id": "apps_web_src_views_dashboardview_adminbardata"
+      "norm_label": "adminbardata"
     },
     {
       "label": "adminCaStatusPieData",
@@ -16048,10 +16048,10 @@
       "source_file": "apps/web/src/views/DashboardView.vue",
       "source_location": "L386",
       "_origin": "ast",
+      "id": "apps_web_src_views_dashboardview_admincastatuspiedata",
       "community": 29,
       "community_name": "DashboardView.vue",
-      "norm_label": "admincastatuspiedata",
-      "id": "apps_web_src_views_dashboardview_admincastatuspiedata"
+      "norm_label": "admincastatuspiedata"
     },
     {
       "label": "adminKpis",
@@ -16059,10 +16059,10 @@
       "source_file": "apps/web/src/views/DashboardView.vue",
       "source_location": "L262",
       "_origin": "ast",
+      "id": "apps_web_src_views_dashboardview_adminkpis",
       "community": 29,
       "community_name": "DashboardView.vue",
-      "norm_label": "adminkpis",
-      "id": "apps_web_src_views_dashboardview_adminkpis"
+      "norm_label": "adminkpis"
     },
     {
       "label": "auth",
@@ -16070,10 +16070,10 @@
       "source_file": "apps/web/src/views/DashboardView.vue",
       "source_location": "L47",
       "_origin": "ast",
+      "id": "apps_web_src_views_dashboardview_auth",
       "community": 29,
       "community_name": "DashboardView.vue",
-      "norm_label": "auth",
-      "id": "apps_web_src_views_dashboardview_auth"
+      "norm_label": "auth"
     },
     {
       "label": "barOptions",
@@ -16081,10 +16081,10 @@
       "source_file": "apps/web/src/views/DashboardView.vue",
       "source_location": "L592",
       "_origin": "ast",
+      "id": "apps_web_src_views_dashboardview_baroptions",
       "community": 29,
       "community_name": "DashboardView.vue",
-      "norm_label": "baroptions",
-      "id": "apps_web_src_views_dashboardview_baroptions"
+      "norm_label": "baroptions"
     },
     {
       "label": "caStore",
@@ -16092,10 +16092,10 @@
       "source_file": "apps/web/src/views/DashboardView.vue",
       "source_location": "L49",
       "_origin": "ast",
+      "id": "apps_web_src_views_dashboardview_castore",
       "community": 29,
       "community_name": "DashboardView.vue",
-      "norm_label": "castore",
-      "id": "apps_web_src_views_dashboardview_castore"
+      "norm_label": "castore"
     },
     {
       "label": "currentYear",
@@ -16103,10 +16103,10 @@
       "source_file": "apps/web/src/views/DashboardView.vue",
       "source_location": "L53",
       "_origin": "ast",
+      "id": "apps_web_src_views_dashboardview_currentyear",
       "community": 29,
       "community_name": "DashboardView.vue",
-      "norm_label": "currentyear",
-      "id": "apps_web_src_views_dashboardview_currentyear"
+      "norm_label": "currentyear"
     },
     {
       "label": "employeeBarData",
@@ -16114,10 +16114,10 @@
       "source_file": "apps/web/src/views/DashboardView.vue",
       "source_location": "L128",
       "_origin": "ast",
+      "id": "apps_web_src_views_dashboardview_employeebardata",
       "community": 29,
       "community_name": "DashboardView.vue",
-      "norm_label": "employeebardata",
-      "id": "apps_web_src_views_dashboardview_employeebardata"
+      "norm_label": "employeebardata"
     },
     {
       "label": "employeeKpis",
@@ -16125,10 +16125,10 @@
       "source_file": "apps/web/src/views/DashboardView.vue",
       "source_location": "L77",
       "_origin": "ast",
+      "id": "apps_web_src_views_dashboardview_employeekpis",
       "community": 29,
       "community_name": "DashboardView.vue",
-      "norm_label": "employeekpis",
-      "id": "apps_web_src_views_dashboardview_employeekpis"
+      "norm_label": "employeekpis"
     },
     {
       "label": "employeePieData",
@@ -16136,10 +16136,10 @@
       "source_file": "apps/web/src/views/DashboardView.vue",
       "source_location": "L183",
       "_origin": "ast",
+      "id": "apps_web_src_views_dashboardview_employeepiedata",
       "community": 29,
       "community_name": "DashboardView.vue",
-      "norm_label": "employeepiedata",
-      "id": "apps_web_src_views_dashboardview_employeepiedata"
+      "norm_label": "employeepiedata"
     },
     {
       "label": "isDashboardLoading",
@@ -16147,10 +16147,10 @@
       "source_file": "apps/web/src/views/DashboardView.vue",
       "source_location": "L69",
       "_origin": "ast",
+      "id": "apps_web_src_views_dashboardview_isdashboardloading",
       "community": 29,
       "community_name": "DashboardView.vue",
-      "norm_label": "isdashboardloading",
-      "id": "apps_web_src_views_dashboardview_isdashboardloading"
+      "norm_label": "isdashboardloading"
     },
     {
       "label": "lineData",
@@ -16158,10 +16158,10 @@
       "source_file": "apps/web/src/views/DashboardView.vue",
       "source_location": "L494",
       "_origin": "ast",
+      "id": "apps_web_src_views_dashboardview_linedata",
       "community": 29,
       "community_name": "DashboardView.vue",
-      "norm_label": "linedata",
-      "id": "apps_web_src_views_dashboardview_linedata"
+      "norm_label": "linedata"
     },
     {
       "label": "lineOptions",
@@ -16169,10 +16169,10 @@
       "source_file": "apps/web/src/views/DashboardView.vue",
       "source_location": "L558",
       "_origin": "ast",
+      "id": "apps_web_src_views_dashboardview_lineoptions",
       "community": 29,
       "community_name": "DashboardView.vue",
-      "norm_label": "lineoptions",
-      "id": "apps_web_src_views_dashboardview_lineoptions"
+      "norm_label": "lineoptions"
     },
     {
       "label": "liqStore",
@@ -16180,10 +16180,10 @@
       "source_file": "apps/web/src/views/DashboardView.vue",
       "source_location": "L50",
       "_origin": "ast",
+      "id": "apps_web_src_views_dashboardview_liqstore",
       "community": 29,
       "community_name": "DashboardView.vue",
-      "norm_label": "liqstore",
-      "id": "apps_web_src_views_dashboardview_liqstore"
+      "norm_label": "liqstore"
     },
     {
       "label": "liquidationGranularity",
@@ -16191,10 +16191,10 @@
       "source_file": "apps/web/src/views/DashboardView.vue",
       "source_location": "L492",
       "_origin": "ast",
+      "id": "apps_web_src_views_dashboardview_liquidationgranularity",
       "community": 29,
       "community_name": "DashboardView.vue",
-      "norm_label": "liquidationgranularity",
-      "id": "apps_web_src_views_dashboardview_liquidationgranularity"
+      "norm_label": "liquidationgranularity"
     },
     {
       "label": "MONTH_LABELS",
@@ -16202,10 +16202,10 @@
       "source_file": "apps/web/src/views/DashboardView.vue",
       "source_location": "L54",
       "_origin": "ast",
+      "id": "apps_web_src_views_dashboardview_month_labels",
       "community": 29,
       "community_name": "DashboardView.vue",
-      "norm_label": "month_labels",
-      "id": "apps_web_src_views_dashboardview_month_labels"
+      "norm_label": "month_labels"
     },
     {
       "label": "pieOptions",
@@ -16213,10 +16213,10 @@
       "source_file": "apps/web/src/views/DashboardView.vue",
       "source_location": "L638",
       "_origin": "ast",
+      "id": "apps_web_src_views_dashboardview_pieoptions",
       "community": 29,
       "community_name": "DashboardView.vue",
-      "norm_label": "pieoptions",
-      "id": "apps_web_src_views_dashboardview_pieoptions"
+      "norm_label": "pieoptions"
     },
     {
       "label": "pieOptionsWithCurrency",
@@ -16224,10 +16224,10 @@
       "source_file": "apps/web/src/views/DashboardView.vue",
       "source_location": "L671",
       "_origin": "ast",
+      "id": "apps_web_src_views_dashboardview_pieoptionswithcurrency",
       "community": 29,
       "community_name": "DashboardView.vue",
-      "norm_label": "pieoptionswithcurrency",
-      "id": "apps_web_src_views_dashboardview_pieoptionswithcurrency"
+      "norm_label": "pieoptionswithcurrency"
     },
     {
       "label": "receiptsStore",
@@ -16235,10 +16235,10 @@
       "source_file": "apps/web/src/views/DashboardView.vue",
       "source_location": "L51",
       "_origin": "ast",
+      "id": "apps_web_src_views_dashboardview_receiptsstore",
       "community": 29,
       "community_name": "DashboardView.vue",
-      "norm_label": "receiptsstore",
-      "id": "apps_web_src_views_dashboardview_receiptsstore"
+      "norm_label": "receiptsstore"
     },
     {
       "label": "remainingOutstanding",
@@ -16246,10 +16246,10 @@
       "source_file": "apps/web/src/views/DashboardView.vue",
       "source_location": "L452",
       "_origin": "ast",
+      "id": "apps_web_src_views_dashboardview_remainingoutstanding",
       "community": 29,
       "community_name": "DashboardView.vue",
-      "norm_label": "remainingoutstanding",
-      "id": "apps_web_src_views_dashboardview_remainingoutstanding"
+      "norm_label": "remainingoutstanding"
     },
     {
       "label": "rStore",
@@ -16257,10 +16257,10 @@
       "source_file": "apps/web/src/views/DashboardView.vue",
       "source_location": "L48",
       "_origin": "ast",
+      "id": "apps_web_src_views_dashboardview_rstore",
       "community": 29,
       "community_name": "DashboardView.vue",
-      "norm_label": "rstore",
-      "id": "apps_web_src_views_dashboardview_rstore"
+      "norm_label": "rstore"
     },
     {
       "label": "totalCashAdvanceAmount",
@@ -16268,10 +16268,10 @@
       "source_file": "apps/web/src/views/DashboardView.vue",
       "source_location": "L445",
       "_origin": "ast",
+      "id": "apps_web_src_views_dashboardview_totalcashadvanceamount",
       "community": 29,
       "community_name": "DashboardView.vue",
-      "norm_label": "totalcashadvanceamount",
-      "id": "apps_web_src_views_dashboardview_totalcashadvanceamount"
+      "norm_label": "totalcashadvanceamount"
     },
     {
       "label": "totalLiquidatedOrSettled",
@@ -16279,10 +16279,10 @@
       "source_file": "apps/web/src/views/DashboardView.vue",
       "source_location": "L449",
       "_origin": "ast",
+      "id": "apps_web_src_views_dashboardview_totalliquidatedorsettled",
       "community": 29,
       "community_name": "DashboardView.vue",
-      "norm_label": "totalliquidatedorsettled",
-      "id": "apps_web_src_views_dashboardview_totalliquidatedorsettled"
+      "norm_label": "totalliquidatedorsettled"
     },
     {
       "label": "totalOutstandingBalance",
@@ -16290,10 +16290,10 @@
       "source_file": "apps/web/src/views/DashboardView.vue",
       "source_location": "L448",
       "_origin": "ast",
+      "id": "apps_web_src_views_dashboardview_totaloutstandingbalance",
       "community": 29,
       "community_name": "DashboardView.vue",
-      "norm_label": "totaloutstandingbalance",
-      "id": "apps_web_src_views_dashboardview_totaloutstandingbalance"
+      "norm_label": "totaloutstandingbalance"
     },
     {
       "label": "NotificationsServiceProvider.php",
@@ -19969,10 +19969,10 @@
       "source_file": "apps/web/src/stores/cashAdvance.js",
       "source_location": "L1",
       "_origin": "ast",
+      "id": "apps_web_src_stores_cashadvance",
       "community": 69,
       "community_name": "apiFetch",
-      "norm_label": "cashadvance.js",
-      "id": "apps_web_src_stores_cashadvance"
+      "norm_label": "cashadvance.js"
     },
     {
       "label": "useCashAdvanceStore",
@@ -19980,10 +19980,10 @@
       "source_file": "apps/web/src/stores/cashAdvance.js",
       "source_location": "L5",
       "_origin": "ast",
+      "id": "apps_web_src_stores_cashadvance_usecashadvancestore",
       "community": 69,
       "community_name": "apiFetch",
-      "norm_label": "usecashadvancestore",
-      "id": "apps_web_src_stores_cashadvance_usecashadvancestore"
+      "norm_label": "usecashadvancestore"
     },
     {
       "label": "liquidation.js",
@@ -28760,12 +28760,12 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "apps/web/src/components/reimbursements/ReceiptDetailsModal.vue",
-      "source_location": "L126",
+      "source_location": "L119",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "apps_web_src_components_reimbursements_receiptdetailsmodal_localreviewernotes",
-      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_emit",
-      "confidence_score": 1.0
+      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_emit"
     },
     {
       "relation": "calls",
@@ -37319,9 +37319,9 @@
       "source_location": "L3",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "apps_web_src_stores_cashadvance",
-      "target": "apps_web_src_stores_auth_useauthstore"
+      "target": "apps_web_src_stores_auth_useauthstore",
+      "confidence_score": 1.0
     },
     {
       "relation": "imports",
@@ -37331,9 +37331,9 @@
       "source_location": "L4",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "apps_web_src_stores_cashadvance",
-      "target": "apps_web_src_utils_apifetch_apifetch"
+      "target": "apps_web_src_utils_apifetch_apifetch",
+      "confidence_score": 1.0
     },
     {
       "relation": "imports",
@@ -37739,9 +37739,9 @@
       "source_location": "L3",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "apps_web_src_stores_cashadvance",
-      "target": "apps_web_src_stores_auth"
+      "target": "apps_web_src_stores_auth",
+      "confidence_score": 1.0
     },
     {
       "relation": "imports_from",
@@ -37751,9 +37751,9 @@
       "source_location": "L4",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "apps_web_src_stores_cashadvance",
-      "target": "apps_web_src_utils_apifetch"
+      "target": "apps_web_src_utils_apifetch",
+      "confidence_score": 1.0
     },
     {
       "relation": "imports_from",
@@ -45811,9 +45811,9 @@
       "source_location": "L103",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "apps_web_src_components_reimbursements_receiptdetailsmodal",
-      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_hasreceiptgrossamount",
-      "confidence_score": 1.0
+      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_hasreceiptgrossamount"
     },
     {
       "relation": "contains",
@@ -45822,9 +45822,9 @@
       "source_location": "L110",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "apps_web_src_components_reimbursements_receiptdetailsmodal",
-      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_receiptamounts",
-      "confidence_score": 1.0
+      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_receiptamounts"
     },
     {
       "relation": "contains",
@@ -45833,9 +45833,9 @@
       "source_location": "L113",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "apps_web_src_components_reimbursements_receiptdetailsmodal",
-      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_receiptgrosssalesamount",
-      "confidence_score": 1.0
+      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_receiptgrosssalesamount"
     },
     {
       "relation": "contains",
@@ -45844,9 +45844,9 @@
       "source_location": "L114",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "apps_web_src_components_reimbursements_receiptdetailsmodal",
-      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_receiptvatamount",
-      "confidence_score": 1.0
+      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_receiptvatamount"
     },
     {
       "relation": "contains",
@@ -45855,9 +45855,9 @@
       "source_location": "L115",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "apps_web_src_components_reimbursements_receiptdetailsmodal",
-      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_receiptsubtotalamount",
-      "confidence_score": 1.0
+      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_receiptsubtotalamount"
     },
     {
       "relation": "contains",
@@ -45866,20 +45866,9 @@
       "source_location": "L117",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "apps_web_src_components_reimbursements_receiptdetailsmodal",
-      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_categoryname",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "apps/web/src/components/reimbursements/ReceiptDetailsModal.vue",
-      "source_location": "L124",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "apps_web_src_components_reimbursements_receiptdetailsmodal",
-      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_localreviewernotes",
-      "confidence_score": 1.0
+      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_localreviewernotes"
     },
     {
       "relation": "contains",
@@ -45888,9 +45877,9 @@
       "source_location": "L20",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "apps_web_src_components_reimbursements_receiptdetailsmodal",
-      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_props",
-      "confidence_score": 1.0
+      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_props"
     },
     {
       "relation": "contains",
@@ -45899,9 +45888,9 @@
       "source_location": "L43",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "apps_web_src_components_reimbursements_receiptdetailsmodal",
-      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_emit",
-      "confidence_score": 1.0
+      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_emit"
     },
     {
       "relation": "contains",
@@ -45910,9 +45899,9 @@
       "source_location": "L52",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "apps_web_src_components_reimbursements_receiptdetailsmodal",
-      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_auth",
-      "confidence_score": 1.0
+      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_auth"
     },
     {
       "relation": "contains",
@@ -45921,9 +45910,9 @@
       "source_location": "L54",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "apps_web_src_components_reimbursements_receiptdetailsmodal",
-      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_tax_classifications",
-      "confidence_score": 1.0
+      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_tax_classifications"
     },
     {
       "relation": "contains",
@@ -45932,9 +45921,9 @@
       "source_location": "L59",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "apps_web_src_components_reimbursements_receiptdetailsmodal",
-      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_selectedvatclassification",
-      "confidence_score": 1.0
+      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_selectedvatclassification"
     },
     {
       "relation": "contains",
@@ -45943,9 +45932,9 @@
       "source_location": "L61",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "apps_web_src_components_reimbursements_receiptdetailsmodal",
-      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_isprocessing",
-      "confidence_score": 1.0
+      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_isprocessing"
     },
     {
       "relation": "contains",
@@ -45954,9 +45943,9 @@
       "source_location": "L62",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "apps_web_src_components_reimbursements_receiptdetailsmodal",
-      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_isownsubmission",
-      "confidence_score": 1.0
+      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_isownsubmission"
     },
     {
       "relation": "contains",
@@ -45965,9 +45954,9 @@
       "source_location": "L78",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "apps_web_src_components_reimbursements_receiptdetailsmodal",
-      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_isreviewablereceipt",
-      "confidence_score": 1.0
+      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_isreviewablereceipt"
     },
     {
       "relation": "contains",
@@ -45976,9 +45965,9 @@
       "source_location": "L81",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "apps_web_src_components_reimbursements_receiptdetailsmodal",
-      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_caneditvatclassification",
-      "confidence_score": 1.0
+      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_caneditvatclassification"
     },
     {
       "relation": "contains",
@@ -45987,9 +45976,9 @@
       "source_location": "L88",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "apps_web_src_components_reimbursements_receiptdetailsmodal",
-      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_hasvatclassification",
-      "confidence_score": 1.0
+      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_hasvatclassification"
     },
     {
       "relation": "contains",
@@ -45998,9 +45987,9 @@
       "source_location": "L89",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "apps_web_src_components_reimbursements_receiptdetailsmodal",
-      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_isapprovedisabled",
-      "confidence_score": 1.0
+      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_isapprovedisabled"
     },
     {
       "relation": "contains",
@@ -46009,9 +45998,9 @@
       "source_location": "L96",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "apps_web_src_components_reimbursements_receiptdetailsmodal",
-      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_isconfirmdecisiondisabled",
-      "confidence_score": 1.0
+      "target": "apps_web_src_components_reimbursements_receiptdetailsmodal_isconfirmdecisiondisabled"
     },
     {
       "relation": "contains",
@@ -47142,9 +47131,9 @@
       "source_location": "L5",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "apps_web_src_stores_cashadvance",
-      "target": "apps_web_src_stores_cashadvance_usecashadvancestore"
+      "target": "apps_web_src_stores_cashadvance_usecashadvancestore",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -48451,9 +48440,9 @@
       "source_location": "L128",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "apps_web_src_views_dashboardview",
-      "target": "apps_web_src_views_dashboardview_employeebardata"
+      "target": "apps_web_src_views_dashboardview_employeebardata",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -48462,9 +48451,9 @@
       "source_location": "L183",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "apps_web_src_views_dashboardview",
-      "target": "apps_web_src_views_dashboardview_employeepiedata"
+      "target": "apps_web_src_views_dashboardview_employeepiedata",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -48473,9 +48462,9 @@
       "source_location": "L262",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "apps_web_src_views_dashboardview",
-      "target": "apps_web_src_views_dashboardview_adminkpis"
+      "target": "apps_web_src_views_dashboardview_adminkpis",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -48484,9 +48473,9 @@
       "source_location": "L327",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "apps_web_src_views_dashboardview",
-      "target": "apps_web_src_views_dashboardview_adminbardata"
+      "target": "apps_web_src_views_dashboardview_adminbardata",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -48495,9 +48484,9 @@
       "source_location": "L386",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "apps_web_src_views_dashboardview",
-      "target": "apps_web_src_views_dashboardview_admincastatuspiedata"
+      "target": "apps_web_src_views_dashboardview_admincastatuspiedata",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -48506,9 +48495,9 @@
       "source_location": "L445",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "apps_web_src_views_dashboardview",
-      "target": "apps_web_src_views_dashboardview_totalcashadvanceamount"
+      "target": "apps_web_src_views_dashboardview_totalcashadvanceamount",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -48517,9 +48506,9 @@
       "source_location": "L448",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "apps_web_src_views_dashboardview",
-      "target": "apps_web_src_views_dashboardview_totaloutstandingbalance"
+      "target": "apps_web_src_views_dashboardview_totaloutstandingbalance",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -48528,9 +48517,9 @@
       "source_location": "L449",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "apps_web_src_views_dashboardview",
-      "target": "apps_web_src_views_dashboardview_totalliquidatedorsettled"
+      "target": "apps_web_src_views_dashboardview_totalliquidatedorsettled",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -48539,9 +48528,9 @@
       "source_location": "L452",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "apps_web_src_views_dashboardview",
-      "target": "apps_web_src_views_dashboardview_remainingoutstanding"
+      "target": "apps_web_src_views_dashboardview_remainingoutstanding",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -48550,9 +48539,9 @@
       "source_location": "L454",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "apps_web_src_views_dashboardview",
-      "target": "apps_web_src_views_dashboardview_adminbalancepiedata"
+      "target": "apps_web_src_views_dashboardview_adminbalancepiedata",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -48561,9 +48550,9 @@
       "source_location": "L47",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "apps_web_src_views_dashboardview",
-      "target": "apps_web_src_views_dashboardview_auth"
+      "target": "apps_web_src_views_dashboardview_auth",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -48572,9 +48561,9 @@
       "source_location": "L48",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "apps_web_src_views_dashboardview",
-      "target": "apps_web_src_views_dashboardview_rstore"
+      "target": "apps_web_src_views_dashboardview_rstore",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -48583,9 +48572,9 @@
       "source_location": "L49",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "apps_web_src_views_dashboardview",
-      "target": "apps_web_src_views_dashboardview_castore"
+      "target": "apps_web_src_views_dashboardview_castore",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -48594,9 +48583,9 @@
       "source_location": "L492",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "apps_web_src_views_dashboardview",
-      "target": "apps_web_src_views_dashboardview_liquidationgranularity"
+      "target": "apps_web_src_views_dashboardview_liquidationgranularity",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -48605,9 +48594,9 @@
       "source_location": "L494",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "apps_web_src_views_dashboardview",
-      "target": "apps_web_src_views_dashboardview_linedata"
+      "target": "apps_web_src_views_dashboardview_linedata",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -48616,9 +48605,9 @@
       "source_location": "L50",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "apps_web_src_views_dashboardview",
-      "target": "apps_web_src_views_dashboardview_liqstore"
+      "target": "apps_web_src_views_dashboardview_liqstore",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -48627,9 +48616,9 @@
       "source_location": "L51",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "apps_web_src_views_dashboardview",
-      "target": "apps_web_src_views_dashboardview_receiptsstore"
+      "target": "apps_web_src_views_dashboardview_receiptsstore",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -48638,9 +48627,9 @@
       "source_location": "L53",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "apps_web_src_views_dashboardview",
-      "target": "apps_web_src_views_dashboardview_currentyear"
+      "target": "apps_web_src_views_dashboardview_currentyear",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -48649,9 +48638,9 @@
       "source_location": "L54",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "apps_web_src_views_dashboardview",
-      "target": "apps_web_src_views_dashboardview_month_labels"
+      "target": "apps_web_src_views_dashboardview_month_labels",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -48660,9 +48649,9 @@
       "source_location": "L558",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "apps_web_src_views_dashboardview",
-      "target": "apps_web_src_views_dashboardview_lineoptions"
+      "target": "apps_web_src_views_dashboardview_lineoptions",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -48671,9 +48660,9 @@
       "source_location": "L592",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "apps_web_src_views_dashboardview",
-      "target": "apps_web_src_views_dashboardview_baroptions"
+      "target": "apps_web_src_views_dashboardview_baroptions",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -48682,9 +48671,9 @@
       "source_location": "L638",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "apps_web_src_views_dashboardview",
-      "target": "apps_web_src_views_dashboardview_pieoptions"
+      "target": "apps_web_src_views_dashboardview_pieoptions",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -48693,9 +48682,9 @@
       "source_location": "L671",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "apps_web_src_views_dashboardview",
-      "target": "apps_web_src_views_dashboardview_pieoptionswithcurrency"
+      "target": "apps_web_src_views_dashboardview_pieoptionswithcurrency",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -48704,9 +48693,9 @@
       "source_location": "L69",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "apps_web_src_views_dashboardview",
-      "target": "apps_web_src_views_dashboardview_isdashboardloading"
+      "target": "apps_web_src_views_dashboardview_isdashboardloading",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -48715,9 +48704,9 @@
       "source_location": "L77",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "apps_web_src_views_dashboardview",
-      "target": "apps_web_src_views_dashboardview_employeekpis"
+      "target": "apps_web_src_views_dashboardview_employeekpis",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -48726,9 +48715,9 @@
       "source_location": "L51",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "apps_web_src_views_dashboardview_test",
-      "target": "apps_web_src_views_dashboardview_test_render"
+      "target": "apps_web_src_views_dashboardview_test_render",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -51237,6 +51226,15 @@
       "confidence_score": 1.0,
       "source": "opencode_plugins_graphify",
       "target": "opencode_plugins_graphify_graphifyplugin"
+    },
+    {
+      "relation": "dynamic_import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/views/DashboardView.test.js",
+      "_origin": "ast",
+      "source": "apps_web_src_views_dashboardview_test",
+      "target": "vue",
+      "confidence_score": 1.0
     },
     {
       "relation": "implements",
@@ -61581,5 +61579,5 @@
       "source_file": ".github/ISSUE_TEMPLATE/bug_report.md"
     }
   ],
-  "built_at_commit": "3afc252577d67f301c5bc3152d2818a71579ab12"
+  "built_at_commit": "904d2ba092217be57c3a6a3e1fa868bc45f37126"
 }

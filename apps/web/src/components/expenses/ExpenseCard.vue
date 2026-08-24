@@ -13,6 +13,7 @@ import {
 import { formatPeso as formatCurrency, formatDate } from "@/utils/formatters";
 import { canEditReceipt, canDeleteReceipt } from "@/utils/receiptUtils";
 import StatusBadge from "@/components/base/StatusBadge.vue";
+import BaseReceiptImage from "@/components/base/BaseReceiptImage.vue";
 
 const props = defineProps({
   expense: {
@@ -28,7 +29,6 @@ const props = defineProps({
 defineEmits(["select", "view", "delete", "edit", "forward-reimbursement"]);
 
 const isMenuOpen = ref(false);
-const imageError = ref(false);
 const canEdit = computed(() => canEditReceipt(props.expense));
 const canDelete = computed(() => canDeleteReceipt(props.expense));
 </script>
@@ -63,35 +63,12 @@ const canDelete = computed(() => canDeleteReceipt(props.expense));
     <div
       class="flex-shrink-0 w-full overflow-hidden border-b aspect-square bg-slate-50 border-slate-100"
     >
-      <img
-        v-if="expense.thumbnail && !imageError"
+      <BaseReceiptImage
         :src="expense.thumbnail"
-        :alt="expense.fileName"
-        class="object-cover w-full h-full transition-transform duration-500 opacity-100 group-hover:scale-105"
-        @error="imageError = true"
+        :alt="expense.fileName || expense.vendorName || 'Receipt'"
+        :file-type="expense.fileType"
+        img-class="object-cover w-full h-full transition-transform duration-500 opacity-100 group-hover:scale-105"
       />
-      <div
-        v-else
-        class="flex flex-col items-center justify-center w-full h-full gap-2"
-      >
-        <div
-          class="flex items-center justify-center w-12 h-12 rounded-2xl bg-primary/5"
-        >
-          <FileText
-            v-if="
-              expense.fileType === 'application/pdf' ||
-              expense.fileType === 'pdf'
-            "
-            class="w-6 h-6 text-primary/40"
-          />
-          <ImageIcon v-else class="w-6 h-6 text-primary/40" />
-        </div>
-        <p
-          class="text-[10px] text-slate-300 font-semibold uppercase tracking-widest"
-        >
-          No Preview
-        </p>
-      </div>
     </div>
 
     <!-- Card Body -->

@@ -19,6 +19,7 @@ const config = {
   unliquidated: { bg: 'bg-amber-500',   label: 'Unliquidated' },
   overpayment:  { bg: 'bg-blue-500',    label: 'Overpayment' },
   overdue:      { bg: 'bg-red-600',     label: 'Overdue' },
+  revise:      { bg: 'bg-orange-500',  label: 'Needs Revision' },
   rejected:     { bg: 'bg-red-600',     label: 'Rejected' },
   reject:       { bg: 'bg-red-600',     label: 'Reject' },
   'automatic-rejected': { bg: 'bg-red-600', label: 'Auto Rejected' },

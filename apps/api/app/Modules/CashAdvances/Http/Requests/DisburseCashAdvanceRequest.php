@@ -24,6 +24,7 @@ class DisburseCashAdvanceRequest extends FormRequest
         return [
             'channel' => 'required|string|max:100',
             'reference' => 'required|string|max:100',
+            'password' => 'required|string',
         ];
     }
 }

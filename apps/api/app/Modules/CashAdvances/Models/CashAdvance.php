@@ -15,6 +15,7 @@ class CashAdvance extends Model
         'expected_disbursement_date',
         'expected_liquidation_date',
         'status',
+        'revision_count',
         'signature',
         'acknowledged_at',
     ];
@@ -33,6 +34,11 @@ class CashAdvance extends Model
     }
 
     public function document()
+    {
+        return $this->hasOne(CashAdvanceDocument::class);
+    }
+
+    public function documents()
     {
         return $this->hasOne(CashAdvanceDocument::class);
     }

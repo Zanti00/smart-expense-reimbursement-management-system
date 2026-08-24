@@ -41,11 +41,14 @@ function getSortValue(row, key) {
     return Number(value || 0);
   }
   if (["dateSubmitted"].includes(key)) {
-    const raw = value || row.date || row.submitted_at || row.created_at;
+    const raw = row.created_at || row.submitted_at || row.date || value;
     const timestamp = new Date(raw).getTime();
     return Number.isNaN(timestamp)
       ? String(value || "").toLowerCase()
       : timestamp;
+  }
+  if (["id"].includes(key)) {
+    return Number(row.id || 0);
   }
   return String(value || "").toLowerCase();
 }
@@ -126,8 +129,8 @@ export function useReimbursementFilters(store) {
     const rows = [...filteredTableRows.value];
     if (!sortKey.value) {
       return rows.sort((a, b) => {
-        const aTime = new Date(a.dateSubmitted || a.created_at || 0).getTime();
-        const bTime = new Date(b.dateSubmitted || b.created_at || 0).getTime();
+        const aTime = new Date(a.created_at || a.submitted_at || a.dateSubmitted || a.date || 0).getTime();
+        const bTime = new Date(b.created_at || b.submitted_at || b.dateSubmitted || b.date || 0).getTime();
         if (aTime !== bTime) return bTime - aTime;
         return (Number(b.id) || 0) - (Number(a.id) || 0);
       });
@@ -137,8 +140,8 @@ export function useReimbursementFilters(store) {
       const aValue = getSortValue(a, sortKey.value);
       const bValue = getSortValue(b, sortKey.value);
       if (aValue === bValue) {
-        const aTime = new Date(a.dateSubmitted || a.created_at || 0).getTime();
-        const bTime = new Date(b.dateSubmitted || b.created_at || 0).getTime();
+        const aTime = new Date(a.created_at || a.submitted_at || a.dateSubmitted || a.date || 0).getTime();
+        const bTime = new Date(b.created_at || b.submitted_at || b.dateSubmitted || b.date || 0).getTime();
         if (aTime !== bTime) return bTime - aTime;
         return (Number(b.id) || 0) - (Number(a.id) || 0);
       }
@@ -172,7 +175,7 @@ export function useReimbursementFilters(store) {
       return;
     }
     sortKey.value = key;
-    sortDirection.value = "asc";
+    sortDirection.value = ["dateSubmitted", "id"].includes(key) ? "desc" : "asc";
     currentPage.value = 1;
   }
 

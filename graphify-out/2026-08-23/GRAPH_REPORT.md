@@ -1,7 +1,7 @@
-# Graph Report - smart-expense-management-system  (2026-08-23)
+# Graph Report - smart-expense-management-system  (2026-08-22)
 
 ## Corpus Check
-- 305 files · ~174,400 words
+- 305 files · ~174,350 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `3afc2525`
+- Built from commit: `904d2ba0`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -224,7 +224,7 @@
 
 ### Community 0 - "SERMS Master Specification"
 Cohesion: 0.07
-Nodes (80): A-09 Fullstack Reusability Rule, Ai Module, pinia, audit_logs table, AuditLogService, AuditLogs Module, SSO Authentication Flow, BaseButton.vue (+72 more)
+Nodes (79): A-09 Fullstack Reusability Rule, Ai Module, audit_logs table, AuditLogService, AuditLogs Module, SSO Authentication Flow, BaseButton.vue, BaseKpiGrid.vue (+71 more)
 
 ### Community 1 - "LiquidationsView.vue"
 Cohesion: 0.03
@@ -272,7 +272,7 @@ Nodes (33): Mock Receipt PNG Image, { addToast }, adminPassword, adminReviewNote
 
 ### Community 10 - "dependencies"
 Cohesion: 0.05
-Nodes (41): dependencies, chart.js, @headlessui/vue, lucide-vue-next, vue, vue3-lottie, vue-chartjs, vue-router (+33 more)
+Nodes (42): dependencies, chart.js, @headlessui/vue, lucide-vue-next, pinia, vue, vue3-lottie, vue-chartjs (+34 more)
 
 ### Community 11 - "ReceiptUploadModal.vue"
 Cohesion: 0.07
@@ -344,7 +344,7 @@ Nodes (15): { addToast }, adminReimbursementColumns, {
 
 ### Community 27 - "ReceiptDetailsModal.vue"
 Cohesion: 0.11
-Nodes (19): auth, canEditVatClassification, categoryName, emit, hasReceiptGrossAmount, hasVatClassification, isApproveDisabled, isConfirmDecisionDisabled (+11 more)
+Nodes (18): auth, canEditVatClassification, emit, hasReceiptGrossAmount, hasVatClassification, isApproveDisabled, isConfirmDecisionDisabled, isOwnSubmission (+10 more)
 
 ### Community 28 - "devDependencies"
 Cohesion: 0.11
@@ -707,7 +707,7 @@ Nodes (4): HTTP Error Codes 401 403 409, Role-Based Access Control, Session Time
   apps/web/public/mock_receipt.png · relation: may_contain
 
 ## Knowledge Gaps
-- **590 isolated node(s):** `props`, `auth`, `TAX_CLASSIFICATIONS`, `selectedVatClassification`, `isProcessing` (+585 more)
+- **589 isolated node(s):** `auth`, `rStore`, `caStore`, `liqStore`, `receiptsStore` (+584 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **53 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 

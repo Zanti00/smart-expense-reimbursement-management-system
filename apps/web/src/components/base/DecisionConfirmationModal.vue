@@ -10,7 +10,7 @@ const props = defineProps({
     default: false,
   },
   mode: {
-    type: String, // 'approve' | 'reject' | 'disburse' | 'grant'
+    type: String, // 'approve' | 'revise' | 'reject' | 'disburse' | 'grant'
     required: true,
   },
   isSubmitting: {
@@ -124,6 +124,18 @@ const config = computed(() => {
       proceedBtnClass: "btn-primary",
     };
   }
+  if (props.mode === "revise") {
+    return {
+      icon: AlertTriangle,
+      iconWrapperClass: "bg-orange-50 text-orange-600 border border-orange-200",
+      title: props.title || "Request Revision",
+      promptTitle: "Confirm Revision Request",
+      promptMessage:
+        props.description ||
+        "Are you sure you want to return this request for revision? The applicant will be asked to revise and resubmit. After 3 revisions, it will be automatically rejected.",
+      proceedBtnClass: "btn-cta",
+    };
+  }
   return {
     icon: XCircle,
     iconWrapperClass: "bg-red-50 text-red-600 border border-red-200",
@@ -131,7 +143,7 @@ const config = computed(() => {
     promptTitle: "Confirm Rejection",
     promptMessage:
       props.description ||
-      "Are you sure you want to reject this request? This action will decline the submission and cannot be undone.",
+      "Are you sure you want to reject this request? This will count toward the 3-strike limit; after 3 returns it becomes automatically rejected.",
     proceedBtnClass: "btn-danger",
   };
 });
@@ -164,25 +176,25 @@ function handleFinalConfirm() {
       <div
         class="flex h-9 w-9 items-center justify-center rounded-lg"
         :class="
-          isConfirmStep && mode === 'reject'
+          isConfirmStep && (mode === 'reject' || mode === 'revise')
             ? 'bg-amber-50 text-amber-600 border border-amber-200'
             : config.iconWrapperClass
         "
       >
         <AlertTriangle
-          v-if="isConfirmStep && mode === 'reject'"
+          v-if="isConfirmStep && (mode === 'reject' || mode === 'revise')"
           class="w-5 h-5"
         />
         <component :is="config.icon" v-else class="w-5 h-5" />
       </div>
       <div>
         <h3 class="font-heading text-sm font-bold text-slate-800">
-          {{ isConfirmStep && mode === 'reject' ? config.promptTitle : config.title }}
+          {{ isConfirmStep && (mode === 'reject' || mode === 'revise') ? config.promptTitle : config.title }}
         </h3>
         <p class="text-[11px] text-slate-500 font-medium">
           {{
-            mode === 'reject' && !isConfirmStep
-              ? 'Provide a rejection justification'
+            (mode === 'reject' || mode === 'revise') && !isConfirmStep
+              ? (mode === 'revise' ? 'Provide revision instructions' : 'Provide a rejection justification')
               : 'Action Confirmation'
           }}
         </p>
@@ -191,22 +203,22 @@ function handleFinalConfirm() {
 
     <!-- Content Area -->
     <div class="p-5 flex flex-col gap-4">
-      <!-- REJECT: Step 1 (Enter Rejection Comment) -->
-      <template v-if="mode === 'reject' && !isConfirmStep">
+      <!-- REJECT/REVISE: Step 1 (Enter Comment) -->
+      <template v-if="(mode === 'reject' || mode === 'revise') && !isConfirmStep">
         <p class="text-sm font-medium text-slate-600 leading-relaxed">
-          Please provide a specific reason for rejecting this request. The applicant will be notified of this comment.
+          {{ mode === 'revise' ? 'Please provide clear instructions for the applicant to revise and resubmit.' : 'Please provide a specific reason for rejecting this request. The applicant will be notified of this comment.' }}
         </p>
 
         <div class="input-wrapper">
           <label class="input-label mb-1 block">
-            Rejection Comment <span class="text-danger">*</span>
+            {{ mode === 'revise' ? 'Revision Instructions' : 'Rejection Comment' }} <span class="text-danger">*</span>
           </label>
           <textarea
             v-model="localComment"
             rows="3"
             :maxlength="maxCommentLength"
             class="input !font-sans resize-none"
-            placeholder="Explain the reason for rejecting..."
+            :placeholder="mode === 'revise' ? 'Explain what needs to be revised...' : 'Explain the reason for rejecting...'"
           />
           <div
             class="text-[10px] font-bold uppercase tracking-widest flex justify-between mt-1"
@@ -243,25 +255,26 @@ function handleFinalConfirm() {
             Cancel
           </button>
           <button
-            class="btn btn-danger min-h-9 px-4"
+            class="btn min-h-9 px-4"
+            :class="mode === 'revise' ? 'btn-cta' : 'btn-danger'"
             type="button"
             :disabled="isRejectNextDisabled"
             @click="handleRejectNext"
           >
-            Confirm Reject
+            {{ mode === 'revise' ? 'Confirm Revise' : 'Confirm Reject' }}
           </button>
         </div>
       </template>
 
-      <!-- REJECT: Step 2 (Confirmation Popup + Password) -->
-      <template v-else-if="mode === 'reject' && isConfirmStep">
+      <!-- REJECT/REVISE: Step 2 (Confirmation Popup + Password) -->
+      <template v-else-if="(mode === 'reject' || mode === 'revise') && isConfirmStep">
         <div class="rounded-xl border border-amber-200 bg-amber-50/60 p-4 space-y-2">
           <p class="text-sm font-semibold text-slate-800 leading-relaxed">
             {{ config.promptMessage }}
           </p>
           <div v-if="localComment" class="mt-2 pt-2 border-t border-amber-200/60">
             <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">
-              Rejection Reason:
+              {{ mode === 'revise' ? 'Revision Instructions:' : 'Rejection Reason:' }}
             </p>
             <p class="text-xs text-slate-700 italic bg-white/70 rounded p-2 border border-amber-100 break-words">
               "{{ localComment }}"

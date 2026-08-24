@@ -2,10 +2,12 @@
 import { computed, ref, watch } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { useCashAdvanceStore } from "@/stores/cashAdvance";
+import { useLiquidationStore } from "@/stores/liquidation";
 import { useToast } from "@/composables/useToast";
 import BaseModal from "@/components/base/BaseModal.vue";
 import StatusBadge from "@/components/base/StatusBadge.vue";
 import DecisionConfirmationModal from "@/components/base/DecisionConfirmationModal.vue";
+import UnifiedRoadmapStepper from "@/components/base/UnifiedRoadmapStepper.vue";
 import { formatPeso } from "@/utils/formatters";
 import {
   X,
@@ -29,11 +31,84 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["close"]);
+const emit = defineEmits(["close", "view-liquidation", "view-cash-advance"]);
 
 const auth = useAuthStore();
 const store = useCashAdvanceStore();
+const liquidationStore = useLiquidationStore();
 const { addToast } = useToast();
+
+/** Unified roadmap helpers */
+const linkedLiquidation = computed(() => {
+  if (!props.record) return null;
+  const found = liquidationStore.settlements.find(
+    (s) => String(s.cash_advance_id) === String(props.record.id),
+  );
+  if (found) return found;
+  return props.record.liquidation || props.record.settlement || null;
+});
+
+const roadmapHistory = computed(() => {
+  const raw =
+    props.record?.status_history ||
+    props.record?.statusHistory ||
+    props.record?.approval_actions ||
+    props.record?.audit_logs ||
+    props.record?.history ||
+    [];
+  if (Array.isArray(raw)) return raw;
+  if (raw && typeof raw === "object") return [raw];
+  return [];
+});
+
+const roadmapPenalties = computed(() => {
+  if (props.record?.penalties && Array.isArray(props.record.penalties))
+    return props.record.penalties;
+  if (Array.isArray(props.record?.penalty_logs)) return props.record.penalty_logs;
+  return [];
+});
+
+const roadmapAging = computed(() => {
+  if (!props.record) return null;
+  try {
+    return liquidationStore.calculateAging(props.record);
+  } catch {
+    return null;
+  }
+});
+
+const roadmapOverpayment = computed(() => {
+  const liq = linkedLiquidation.value;
+  if (!liq) return 0;
+  const total = Number(
+    liq.total_expense_amount ?? liq.totalExpenseAmount ?? liq.total_amount ?? 0,
+  );
+  const bal = Number(props.record?.balance ?? props.record?.amount ?? 0);
+  return Math.max(0, total - bal);
+});
+
+function handleRoadmapNavigate(payload) {
+  const step = payload?.step;
+  if (!step) return;
+  if (step.domain === "liquidation") {
+    if (!linkedLiquidation.value) {
+      addToast({
+        message: "No liquidation submitted yet for this advance.",
+        type: "info",
+      });
+      return;
+    }
+    emit("view-liquidation", {
+      cashAdvanceId: props.record?.id,
+      liquidation: linkedLiquidation.value,
+      step,
+    });
+    // also close details so parent can open liquidation review
+    // keep open for now — parent decides
+  } else {
+    emit("view-cash-advance", { step, record: props.record });
+  }
+}
 
 const signatureCanvas = ref(null);
 const isSigning = ref(false);
@@ -84,6 +159,11 @@ watch(
       documentData.value = props.record?.document || null;
       adminPassword.value = "";
       clearSignature();
+      if (liquidationStore.settlements.length === 0) {
+        try {
+          await liquidationStore.fetchSettlements();
+        } catch {}
+      }
     }
   },
 );
@@ -113,6 +193,7 @@ function normalizeStatus(status) {
   const normalized = String(status || "").toLowerCase();
   const statusMap = {
     pending: "pending",
+    revise: "revise",
     approved: "approved",
     disbursed: "disbursed",
     signed: "disbursed",
@@ -175,7 +256,7 @@ async function downloadDocument() {
 function requestConfirmation(action) {
   if (
     isOwnSubmission.value &&
-    ["approve", "reject", "disburse"].includes(action)
+    ["approve", "revise", "reject", "disburse"].includes(action)
   ) {
     addToast({
       message: "You cannot process your own request.",
@@ -196,27 +277,39 @@ async function confirmAdminDecision() {
 
   const id = props.record.id;
 
+  if (!adminPassword.value?.trim()) {
+    addToast({ message: "Password is required to confirm this action.", type: "error" });
+    return;
+  }
+
   try {
     isAdminDecisionSubmitting.value = true;
     if (confirmationAction.value === "approve") {
-      await store.approveRequest(id, adminReviewNotes.value);
-    } else if (confirmationAction.value === "reject") {
-      const reason = adminReviewNotes.value || "Rejected by admin";
-      await store.rejectRequest(id, reason);
+      await store.approveRequest(id, adminReviewNotes.value, adminPassword.value);
+    } else if (confirmationAction.value === "revise" || confirmationAction.value === "reject") {
+      const reason = adminReviewNotes.value || (confirmationAction.value === "revise" ? "Revision requested by admin" : "Rejected by admin");
+      await store.rejectRequest(id, reason, confirmationAction.value, adminPassword.value);
     } else if (confirmationAction.value === "disburse") {
-      await store.disburseRequest(id, {
-        channel: "System Disbursement",
-        reference: `REF-${id}-${Date.now()}`
-      });
+      await store.disburseRequest(
+        id,
+        {
+          channel: "System Disbursement",
+          reference: `REF-${id}-${Date.now()}`,
+        },
+        adminPassword.value,
+      );
     }
 
     addToast({
       message: `Request successfully ${confirmationAction.value}d`,
       type: "success",
     });
+    adminPassword.value = "";
     confirmationAction.value = "";
     closeDetails();
   } catch (error) {
+    // Keep modal open so user can correct password; surface 422 password error via toast.
+    // Store already extracts errorData.errors?.password[0] into error.message.
     addToast({ message: error.message || "Action failed", type: "error" });
   } finally {
     isAdminDecisionSubmitting.value = false;
@@ -350,115 +443,24 @@ async function confirmAcknowledge() {
 
         <!-- Content -->
         <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-          <!-- Timeline -->
-          <section class="relative">
-            <div class="absolute top-4 left-4 right-4 h-0.5 bg-slate-100"></div>
-
-            <div class="flex justify-between gap-2">
-              <!-- Step 1: Submitted -->
-              <div class="relative flex flex-col items-center text-center flex-1">
-                <div
-                  :class="[
-                    'h-8 w-8 rounded-full flex items-center justify-center ring-4 ring-white z-10 shrink-0 mb-2',
-                    isTimelineStepCompleted(0) || isTimelineStepCurrent(0)
-                      ? 'bg-emerald-500 text-white'
-                      : isTimelineStepCurrent(0)
-                        ? 'bg-amber-400 text-white animate-pulse'
-                        : 'bg-slate-200 text-slate-400'
-                  ]"
-                >
-                  <svg v-if="isTimelineStepCompleted(0) || isTimelineStepCurrent(0)" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
-                  <svg v-else-if="isTimelineStepCurrent(0)" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3" /><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" fill="none" /></svg>
-                  <span v-else class="text-[10px] font-bold">1</span>
-                </div>
-                <p class="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Submitted</p>
-                <p class="text-xs text-slate-700 font-medium truncate max-w-full px-1">
-                  {{ record.requestedBy || "Employee" }}
-                </p>
-              </div>
-
-              <!-- Step 2: Approved -->
-              <div class="relative flex flex-col items-center text-center flex-1">
-                <div
-                  :class="[
-                    'h-8 w-8 rounded-full flex items-center justify-center ring-4 ring-white z-10 shrink-0 mb-2',
-                    normalizeStatus(record.status) === 'rejected'
-                      ? 'bg-red-500 text-white'
-                      : isTimelineStepCompleted(1)
-                        ? 'bg-emerald-500 text-white'
-                        : isTimelineStepCurrent(1)
-                          ? 'bg-amber-400 text-white animate-pulse'
-                          : 'bg-slate-200 text-slate-400'
-                  ]"
-                >
-                  <svg v-if="isTimelineStepCompleted(1) && normalizeStatus(record.status) !== 'rejected'" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
-                  <svg v-else-if="normalizeStatus(record.status) === 'rejected'" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                  <svg v-else-if="isTimelineStepCurrent(1)" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3" /><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" fill="none" /></svg>
-                  <span v-else class="text-[10px] font-bold">2</span>
-                </div>
-                <p class="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Approved</p>
-                <p class="text-xs font-medium truncate max-w-full px-1"
-                  :class="[
-                    normalizeStatus(record.status) === 'rejected' ? 'text-red-600' : '',
-                    isTimelineStepCompleted(1) && normalizeStatus(record.status) !== 'rejected' ? 'text-slate-700' : '',
-                    isTimelineStepCurrent(1) ? 'text-amber-600' : '',
-                    !isTimelineStepCompleted(1) && !isTimelineStepCurrent(1) && normalizeStatus(record.status) !== 'rejected' ? 'text-slate-400' : '',
-                  ]"
-                >
-                  {{ normalizeStatus(record.status) === 'rejected' ? 'Rejected' : isTimelineStepCompleted(1) ? 'Approved' : isTimelineStepCurrent(1) ? 'In Review' : 'Awaiting' }}
-                </p>
-              </div>
-
-              <!-- Step 3: Disbursed -->
-              <div class="relative flex flex-col items-center text-center flex-1">
-                <div
-                  :class="[
-                    'h-8 w-8 rounded-full flex items-center justify-center ring-4 ring-white z-10 shrink-0 mb-2',
-                    isTimelineStepCompleted(2)
-                      ? 'bg-emerald-500 text-white'
-                      : isTimelineStepCurrent(2)
-                        ? 'bg-amber-400 text-white animate-pulse'
-                        : 'bg-slate-200 text-slate-400'
-                  ]"
-                >
-                  <svg v-if="isTimelineStepCompleted(2)" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
-                  <svg v-else-if="isTimelineStepCurrent(2)" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3" /><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" fill="none" /></svg>
-                  <span v-else class="text-[10px] font-bold">3</span>
-                </div>
-                <p class="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Disbursed</p>
-                <p class="text-xs font-medium truncate max-w-full px-1"
-                  :class="[
-                    isTimelineStepCompleted(2) ? 'text-slate-700' : '',
-                    isTimelineStepCurrent(2) ? 'text-amber-600' : '',
-                    !isTimelineStepCompleted(2) && !isTimelineStepCurrent(2) ? 'text-slate-400' : '',
-                  ]"
-                >
-                  {{ isTimelineStepCompleted(2) ? 'Released' : isTimelineStepCurrent(2) ? 'Processing' : 'Pending' }}
-                </p>
-              </div>
-
-              <!-- Step 4: Liquidated -->
-              <div class="relative flex flex-col items-center text-center flex-1">
-                <div
-                  :class="[
-                    'h-8 w-8 rounded-full flex items-center justify-center ring-4 ring-white z-10 shrink-0 mb-2',
-                    isTimelineStepCompleted(3) || normalizeStatus(record.status) === 'liquidated'
-                      ? 'bg-emerald-500 text-white'
-                      : 'bg-slate-200 text-slate-400'
-                  ]"
-                >
-                  <svg v-if="isTimelineStepCompleted(3) || normalizeStatus(record.status) === 'liquidated'" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
-                  <span v-else class="text-[10px] font-bold">4</span>
-                </div>
-                <p class="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Liquidated</p>
-                <p class="text-xs font-medium truncate max-w-full px-1"
-                  :class="normalizeStatus(record.status) === 'liquidated' ? 'text-emerald-600' : 'text-slate-400'"
-                >
-                  {{ normalizeStatus(record.status) === 'liquidated' ? 'Complete' : 'Pending' }}
-                </p>
-              </div>
-            </div>
-          </section>
+          <div v-if="normalizeStatus(record.status) === 'revise'" class="p-3 rounded-lg border border-orange-200 bg-orange-50">
+            <p class="text-[11px] text-orange-600 uppercase tracking-wide font-bold">Needs Revision — Attempt {{ record.revision_count || 1 }}/3</p>
+            <p class="text-sm text-orange-800 mt-1">{{ record.adminNotes || 'Awaiting employee revision.' }}</p>
+          </div>
+          <div v-else-if="normalizeStatus(record.status) === 'rejected'" class="p-3 rounded-lg border border-red-100 bg-red-50">
+            <p class="text-[11px] text-red-600 uppercase tracking-wide font-bold">Rejected — Revision limit exceeded ({{ record.revision_count || 4 }}/3)</p>
+            <p class="text-sm text-red-700 mt-1">{{ record.adminNotes || 'Terminal rejection.' }}</p>
+          </div>
+          <!-- UNIFIED 8-step Roadmap -->
+          <UnifiedRoadmapStepper
+            :cash-advance="record"
+            :liquidation="linkedLiquidation"
+            :status-history="roadmapHistory"
+            :penalties="roadmapPenalties"
+            :overpayment-amount="roadmapOverpayment"
+            :aging="roadmapAging"
+            @navigate="handleRoadmapNavigate"
+          />
 
           <!-- Details Grid -->
           <section class="grid grid-cols-2 gap-x-6 gap-y-3 pt-4 border-t border-slate-100">
@@ -581,13 +583,18 @@ async function confirmAcknowledge() {
             You cannot process your own request.
           </p>
           <template v-else>
-            <template v-if="record.status === 'pending'">
-              <button
-                class="flex-1 py-2.5 border border-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
-                @click="requestConfirmation('reject')"
-              >
-                Reject
-              </button>
+            <template v-if="['pending','revise'].includes(record.status)">
+              <div class="flex-1">
+                <select
+                  @change="requestConfirmation($event.target.value); $event.target.value=''"
+                  class="w-full py-2.5 border border-slate-200 text-slate-700 text-sm font-medium rounded-lg bg-white hover:bg-slate-50 transition-colors text-center"
+                  value=""
+                >
+                  <option value="" disabled selected>Actions ▾</option>
+                  <option value="revise">Request Revision</option>
+                  <option value="reject">Reject</option>
+                </select>
+              </div>
               <button
                 class="flex-1 py-2.5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-sm flex items-center justify-center gap-2"
                 @click="requestConfirmation('approve')"
@@ -640,112 +647,26 @@ async function confirmAcknowledge() {
 
         <!-- Content -->
         <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-          <!-- Timeline -->
-          <section class="relative">
-            <div class="absolute top-4 left-4 right-4 h-0.5 bg-slate-100"></div>
-
-            <div class="flex justify-between gap-2">
-              <!-- Step 1: Submitted -->
-              <div class="relative flex flex-col items-center text-center flex-1">
-                <div
-                  :class="[
-                    'h-8 w-8 rounded-full flex items-center justify-center ring-4 ring-white z-10 shrink-0 mb-2',
-                    isTimelineStepCompleted(0) || isTimelineStepCurrent(0)
-                      ? 'bg-emerald-500 text-white'
-                      : 'bg-slate-200 text-slate-400'
-                  ]"
-                >
-                  <svg v-if="isTimelineStepCompleted(0) || isTimelineStepCurrent(0)" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
-                  <span v-else class="text-[10px] font-bold">1</span>
-                </div>
-                <p class="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Submitted</p>
-                <p class="text-xs text-slate-700 font-medium truncate max-w-full px-1">
-                  {{ record.requestedBy || "You" }}
-                </p>
-              </div>
-
-              <!-- Step 2: Approved -->
-              <div class="relative flex flex-col items-center text-center flex-1">
-                <div
-                  :class="[
-                    'h-8 w-8 rounded-full flex items-center justify-center ring-4 ring-white z-10 shrink-0 mb-2',
-                    normalizeStatus(record.status) === 'rejected'
-                      ? 'bg-red-500 text-white'
-                      : isTimelineStepCompleted(1)
-                        ? 'bg-emerald-500 text-white'
-                        : isTimelineStepCurrent(1)
-                          ? 'bg-amber-400 text-white animate-pulse'
-                          : 'bg-slate-200 text-slate-400'
-                  ]"
-                >
-                  <svg v-if="isTimelineStepCompleted(1) && normalizeStatus(record.status) !== 'rejected'" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
-                  <svg v-else-if="normalizeStatus(record.status) === 'rejected'" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                  <svg v-else-if="isTimelineStepCurrent(1)" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3" /><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" fill="none" /></svg>
-                  <span v-else class="text-[10px] font-bold">2</span>
-                </div>
-                <p class="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Approved</p>
-                <p class="text-xs font-medium truncate max-w-full px-1"
-                  :class="[
-                    normalizeStatus(record.status) === 'rejected' ? 'text-red-600' : '',
-                    isTimelineStepCompleted(1) && normalizeStatus(record.status) !== 'rejected' ? 'text-slate-700' : '',
-                    isTimelineStepCurrent(1) ? 'text-amber-600' : '',
-                    !isTimelineStepCompleted(1) && !isTimelineStepCurrent(1) && normalizeStatus(record.status) !== 'rejected' ? 'text-slate-400' : '',
-                  ]"
-                >
-                  {{ normalizeStatus(record.status) === 'rejected' ? 'Rejected' : isTimelineStepCompleted(1) ? 'Approved' : isTimelineStepCurrent(1) ? 'Pending' : 'Awaiting' }}
-                </p>
-              </div>
-
-              <!-- Step 3: Disbursed -->
-              <div class="relative flex flex-col items-center text-center flex-1">
-                <div
-                  :class="[
-                    'h-8 w-8 rounded-full flex items-center justify-center ring-4 ring-white z-10 shrink-0 mb-2',
-                    isTimelineStepCompleted(2)
-                      ? 'bg-emerald-500 text-white'
-                      : isTimelineStepCurrent(2)
-                        ? 'bg-amber-400 text-white animate-pulse'
-                        : 'bg-slate-200 text-slate-400'
-                  ]"
-                >
-                  <svg v-if="isTimelineStepCompleted(2)" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
-                  <svg v-else-if="isTimelineStepCurrent(2)" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3" /><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" fill="none" /></svg>
-                  <span v-else class="text-[10px] font-bold">3</span>
-                </div>
-                <p class="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Disbursed</p>
-                <p class="text-xs font-medium truncate max-w-full px-1"
-                  :class="[
-                    isTimelineStepCompleted(2) ? 'text-slate-700' : '',
-                    isTimelineStepCurrent(2) ? 'text-amber-600' : '',
-                    !isTimelineStepCompleted(2) && !isTimelineStepCurrent(2) ? 'text-slate-400' : '',
-                  ]"
-                >
-                  {{ isTimelineStepCompleted(2) ? 'Released' : isTimelineStepCurrent(2) ? 'Processing' : 'Pending' }}
-                </p>
-              </div>
-
-              <!-- Step 4: Liquidated -->
-              <div class="relative flex flex-col items-center text-center flex-1">
-                <div
-                  :class="[
-                    'h-8 w-8 rounded-full flex items-center justify-center ring-4 ring-white z-10 shrink-0 mb-2',
-                    normalizeStatus(record.status) === 'liquidated'
-                      ? 'bg-emerald-500 text-white'
-                      : 'bg-slate-200 text-slate-400'
-                  ]"
-                >
-                  <svg v-if="normalizeStatus(record.status) === 'liquidated'" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
-                  <span v-else class="text-[10px] font-bold">4</span>
-                </div>
-                <p class="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Liquidated</p>
-                <p class="text-xs font-medium truncate max-w-full px-1"
-                  :class="normalizeStatus(record.status) === 'liquidated' ? 'text-emerald-600' : 'text-slate-400'"
-                >
-                  {{ normalizeStatus(record.status) === 'liquidated' ? 'Complete' : 'Pending' }}
-                </p>
-              </div>
-            </div>
-          </section>
+          <!-- Needs Revision Banner (employee + admin) -->
+          <div v-if="normalizeStatus(record.status) === 'revise'" class="p-3 rounded-lg border border-orange-200 bg-orange-50">
+            <p class="text-[11px] text-orange-600 uppercase tracking-wide font-bold">Needs Revision — Attempt {{ record.revision_count || 1 }}/3</p>
+            <p class="text-sm text-orange-800 mt-1">{{ record.adminNotes || 'Please revise per admin feedback and resubmit.' }}</p>
+            <p v-if="!auth.isAdmin" class="text-[11px] text-orange-700/70 mt-1">Edit your request via the pencil icon — it will return to Pending.</p>
+          </div>
+          <div v-else-if="normalizeStatus(record.status) === 'rejected'" class="p-3 rounded-lg border border-red-100 bg-red-50">
+            <p class="text-[11px] text-red-600 uppercase tracking-wide font-bold">Rejected — Revision limit exceeded ({{ record.revision_count || 4 }}/3)</p>
+            <p class="text-sm text-red-700 mt-1">{{ record.adminNotes || 'This request can no longer be edited.' }}</p>
+          </div>
+          <!-- UNIFIED 8-step Roadmap -->
+          <UnifiedRoadmapStepper
+            :cash-advance="record"
+            :liquidation="linkedLiquidation"
+            :status-history="roadmapHistory"
+            :penalties="roadmapPenalties"
+            :overpayment-amount="roadmapOverpayment"
+            :aging="roadmapAging"
+            @navigate="handleRoadmapNavigate"
+          />
 
           <!-- Details Grid -->
           <section class="grid grid-cols-2 gap-x-6 gap-y-3 pt-4 border-t border-slate-100">

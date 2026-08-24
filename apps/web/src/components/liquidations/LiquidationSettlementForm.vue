@@ -8,10 +8,13 @@ import {
   Upload,
   AlertTriangle,
   AlertCircle,
+  ArrowRight,
 } from "lucide-vue-next";
 import BaseButton from "@/components/base/BaseButton.vue";
 import FileUpload from "@/components/base/FileUpload.vue";
 import ScannedReceiptsList from "@/components/reimbursements/ScannedReceiptsList.vue";
+import UnifiedRoadmapStepper from "@/components/base/UnifiedRoadmapStepper.vue";
+import { useLiquidationStore } from "@/stores/liquidation";
 import { formatPeso } from "@/utils/formatters";
 
 const props = defineProps({
@@ -104,6 +107,10 @@ const isFormDisabled = computed(() => {
       .trim()
       .replace(/[\s/_-]+/g, "-");
 
+  const existingStatus = normalize(props.existingLiquidation?.status);
+  // revise is explicitly editable — not disabled
+  if (existingStatus === "revise") return false;
+
   const disabledStatuses = [
     "pending",
     "liquidated",
@@ -112,7 +119,6 @@ const isFormDisabled = computed(() => {
     "pending-under-review",
   ];
 
-  const existingStatus = normalize(props.existingLiquidation?.status);
   const advanceStatus = normalize(props.selectedAdvance?.status);
 
   if (existingStatus && disabledStatuses.includes(existingStatus)) {
@@ -133,10 +139,39 @@ const currentStatusLabel = computed(() => {
     "";
   const key = String(status).toLowerCase().trim().replace(/[\s/_-]+/g, "-");
   if (key === "under-review" || key === "pending" || key === "pending-under-review") return "Under Review";
+  if (key === "revise") return "Needs Revision";
   if (key === "liquidated") return "Liquidated";
   if (key === "approved") return "Approved";
   if (key === "rejected") return "Rejected";
   return status || "Read-only";
+});
+
+/* Mini roadmap bridge */
+const liqStore = useLiquidationStore();
+const roadmapCashAdvance = computed(() => props.selectedAdvance || null);
+const roadmapLiquidation = computed(() => {
+  if (props.existingLiquidation) return props.existingLiquidation;
+  // fabricate pending liquidation shape from form state
+  if (!props.selectedAdvance) return null;
+  return {
+    status: props.liquidationStatus === "Overpayment" ? "approved" : props.liquidationStatus === "Liquidated" ? "liquidated" : props.liquidationStatus === "Incomplete" ? "pending" : "pending",
+    total_expense_amount: props.totalExpenseAmount,
+    revision_count: 0,
+  };
+});
+const roadmapHistory = computed(() => {
+  const sa = props.selectedAdvance;
+  if (!sa) return [];
+  return sa.status_history || sa.statusHistory || sa.history || sa.audit_logs || [];
+});
+const roadmapPenalties = computed(() => {
+  const sa = props.selectedAdvance;
+  if (sa?.penalties && Array.isArray(sa.penalties)) return sa.penalties;
+  return [];
+});
+const roadmapAging = computed(() => {
+  if (!props.selectedAdvance) return null;
+  try { return liqStore.calculateAging(props.selectedAdvance); } catch { return null; }
 });
 
 function handleRemoveReceipt(receiptToRemove) {
@@ -232,9 +267,37 @@ function attachmentFileSize(file) {
       </div>
     </div>
 
+    <!-- Mini Unified Roadmap (serpentine progress snapshot) -->
+    <UnifiedRoadmapStepper
+      v-if="selectedAdvance"
+      :cash-advance="roadmapCashAdvance"
+      :liquidation="roadmapLiquidation"
+      :status-history="roadmapHistory"
+      :penalties="roadmapPenalties"
+      :overpayment-amount="overpaymentAmount"
+      :aging="roadmapAging"
+      layout="serpentine"
+      class="!p-2"
+    />
+
+    <!-- Needs Revision Banner -->
+    <div
+      v-if="String(existingLiquidation?.status || '').toLowerCase() === 'revise'"
+      class="flex flex-col gap-1 rounded-lg border border-orange-200 bg-orange-50 p-3"
+    >
+      <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-orange-700">
+        <AlertTriangle class="h-4 w-4 shrink-0" />
+        <span>Needs Revision — Attempt {{ existingLiquidation?.revision_count || 1 }}/3</span>
+      </div>
+      <p class="text-sm text-orange-800">
+        {{ existingLiquidation?.admin_note || existingLiquidation?.adminNote || 'Please revise per admin feedback and resubmit.' }}
+      </p>
+      <p class="text-xs text-orange-700/70">Edit the receipts below and click Update — it will return to Pending.</p>
+    </div>
+
     <!-- Status Banner for Disabled / Read-Only View -->
     <div
-      v-if="isFormDisabled"
+      v-else-if="isFormDisabled"
       class="flex items-center gap-2.5 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs font-medium text-slate-600"
     >
       <AlertCircle class="h-4 w-4 shrink-0 text-slate-500" />
@@ -401,22 +464,25 @@ function attachmentFileSize(file) {
     <section
       v-if="overpaymentAmount > 0"
       class="p-4 border rounded-xl border-accent/20 bg-accent-50"
+      aria-label="Step 9 overpayment forward to reimbursement"
     >
       <div
         class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
       >
         <div>
-          <p class="text-base font-bold font-heading text-primary">
-            Overpayment Can Be Reimbursed
+          <p class="inline-flex items-center gap-2 text-base font-bold font-heading text-primary">
+            <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-white">9</span>
+            Overpayment → Forward to Reimbursement
           </p>
           <p class="mt-1 text-sm leading-relaxed text-slate-600">
-            Any excess amount spent beyond the cash advance can be filed as a
+            Step <span class="font-bold text-primary">9</span> — Any excess amount spent beyond the cash advance can be filed as a
             reimbursement. Current excess amount:
             <span class="font-bold text-primary">{{
               formatPeso(overpaymentAmount)
             }}</span
             >.
           </p>
+          <p class="mt-1 text-[11px] text-slate-400">Shows as optional step 9 in the roadmap above. Click below to create a reimbursement linked to this advance.</p>
         </div>
         <button
           class="btn btn-cta min-h-[42px] w-full shrink-0 sm:w-fit"

@@ -4,6 +4,7 @@ import { useReceiptStore } from "@/stores/receipts";
 import { useToast } from "@/composables/useToast";
 import ConfirmModal from "@/components/base/ConfirmModal.vue";
 import CurrencySelect from "@/components/base/CurrencySelect.vue";
+import BaseReceiptImage from "@/components/base/BaseReceiptImage.vue";
 import { useUnsavedChanges } from "@/composables/useUnsavedChanges";
 import {
   buildReceiptUploadFormPrefill,
@@ -720,30 +721,16 @@ function formatCurrency(amount) {
               <div
                 class="w-full aspect-[3/4] bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden relative"
               >
-                <!-- Preview of the existing on-file receipt image (read-only) -->
-                <div v-if="uploadFilePreview" class="w-full h-full">
-                  <img
-                    :src="uploadFilePreview"
-                    alt="Receipt preview"
-                    class="w-full h-full object-cover"
-                  />
-                </div>
-                <!-- PDF or no-file placeholder -->
-                <div
-                  v-else
-                  class="w-full h-full flex flex-col items-center justify-center gap-3 text-slate-400"
-                >
-                  <div
-                    class="w-16 h-16 rounded-2xl bg-primary/5 flex items-center justify-center"
-                  >
-                    <FileText class="w-7 h-7 text-primary/40" />
-                  </div>
-                  <p
-                    class="text-[10px] text-slate-300 font-semibold uppercase tracking-widest text-center px-4"
-                  >
-                    {{ receiptToEdit ? "Receipt on file" : "No file" }}
-                  </p>
-                </div>
+                <!-- Preview of the existing on-file receipt image (read-only) with error fallback -->
+                <BaseReceiptImage
+                  :src="uploadFilePreview"
+                  alt="Receipt preview"
+                  :file-type="receiptToEdit?.fileType"
+                  img-class="w-full h-full object-cover"
+                  icon-size-class="w-7 h-7 text-primary/40"
+                  badge-size-class="w-16 h-16 rounded-2xl"
+                  :no-preview-text="receiptToEdit ? 'Receipt on file' : 'No file'"
+                />
                 <div
                   v-if="receiptsStore.isSaving"
                   class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-white/85 text-accent backdrop-blur-[1px]"

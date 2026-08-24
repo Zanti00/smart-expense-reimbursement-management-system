@@ -2,6 +2,7 @@
 import { Eye, Download } from "lucide-vue-next";
 import { formatPeso } from "@/utils/formatters";
 import StatusBadge from "@/components/base/StatusBadge.vue";
+import BaseReceiptImage from "@/components/base/BaseReceiptImage.vue";
 
 defineProps({
   reviewingCase: {
@@ -94,13 +95,13 @@ defineEmits(["view-receipt"]);
           :key="receipt.id"
           class="overflow-hidden transition-shadow bg-white border rounded-xl border-slate-200 hover:shadow-md"
         >
-          <div class="aspect-[4/5] overflow-hidden bg-slate-100">
-            <img
-              :src="getFileUrl(receipt.filePath)"
-              alt="Scanned receipt"
-              class="object-cover object-top w-full h-full transition-transform duration-500 hover:scale-105"
-            />
-          </div>
+          <BaseReceiptImage
+            :src="receipt.filePath ? getFileUrl(receipt.filePath) : null"
+            :alt="receipt.merchantName || 'Scanned receipt'"
+            :file-type="receipt.fileType"
+            img-class="object-cover object-top w-full h-full transition-transform duration-500 hover:scale-105"
+            container-class="aspect-[4/5] overflow-hidden bg-slate-100"
+          />
           <div class="flex flex-col gap-3 p-5">
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">

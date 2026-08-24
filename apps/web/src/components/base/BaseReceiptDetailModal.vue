@@ -2,11 +2,8 @@
 import { computed, ref } from "vue";
 import { formatAmount } from "@/utils/formatters";
 import StatusBadge from "@/components/base/StatusBadge.vue";
-import {
-  X,
-  FileText,
-  Image as ImageIcon,
-} from "lucide-vue-next";
+import BaseReceiptImage from "@/components/base/BaseReceiptImage.vue";
+import { X } from "lucide-vue-next";
 
 const props = defineProps({
   isOpen: {
@@ -21,8 +18,6 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["close"]);
-
-const imageError = ref(false);
 
 const hasItems = computed(() => props.receipt?.items?.length > 0);
 
@@ -58,17 +53,14 @@ const subtotal = computed(() => {
 
         <!-- Left Column: Image -->
         <div class="w-full md:w-5/12 bg-gradient-to-b from-slate-100 to-slate-50 rounded-2xl flex items-center justify-center p-4 shrink-0 relative overflow-hidden min-h-[360px]">
-          <img
-            v-if="receipt.imageUrl && !imageError"
+          <BaseReceiptImage
             :src="receipt.imageUrl"
-            class="w-full h-full object-contain rounded-md"
-            alt="Receipt"
-            @error="imageError = true"
+            :alt="receipt.vendor || 'Receipt'"
+            :file-type="receipt.fileType"
+            img-class="w-full h-full object-contain rounded-md"
+            icon-size-class="w-10 h-10"
+            badge-size-class="w-16 h-16 rounded-2xl"
           />
-          <div v-else class="flex flex-col items-center gap-2 text-slate-300">
-            <FileText class="w-12 h-12" />
-            <span class="text-xs text-slate-400">No preview</span>
-          </div>
         </div>
 
         <!-- Right Column: Content -->

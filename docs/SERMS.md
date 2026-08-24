@@ -252,8 +252,9 @@ sequenceDiagram
 | `unliquidated` | `bg-amber-700` | Unliquidated | Disbursed but not liquidated |
 | `overpayment` | `bg-rose-500` | Overpayment | Variance indicates overpayment |
 | `overdue` | `bg-rose-600` | Overdue | Past 7-day grace period |
-| `rejected` | `bg-rose-600` | Rejected | Rejected request |
-| `reject` | `bg-rose-600` | Rejected | Direct reject |
+| `revise` | `bg-orange-500` | Needs Revision | Admin returned request for employee revision (counts toward 3-strike limit) |
+| `rejected` | `bg-rose-600` | Rejected | Terminal rejection after >3 revise/reject cycles or final admin action |
+| `reject` | `bg-rose-600` | Rejected | Direct reject (alias, increments revision counter) |
 | `automatic-rejected` | `bg-rose-700` | Automatic Rejected | Policy/cutoff engine rejection |
 | `final-rejected` | `bg-rose-800` | Final Rejected | Irreversible rejection |
 | `pending-admin-re-review`| `bg-purple-600` | Pending Admin Re-Review | Re-submitted claim awaiting admin review |
@@ -291,6 +292,8 @@ sequenceDiagram
 7. **Context Gathering Before Action:** If a user's prompt or task lacks sufficient clarity or context, AI agents and developers must interview the user or ask clarifying questions via the `/grill-me` interface before proceeding.
 8. **Cross-Project Access Rule for Sister Repositories:** AI agents and subagents are permitted to access, inspect, and search sister repositories (`capstone-auth-module`, `capstone-azure-infra`, `ocr-pipeline`, `CMS`, `PRS`, `TS`) in **read and search mode only** (`view_file`, `grep_search`, `list_dir`) for additional architecture or integration context. Agents must **NEVER modify, write, delete, or push code to any other repository** without explicit user permission.
 9. **Documentation Change Log Rule:** Every documentation change in `docs/` or `documentations/` must be recorded in `docs/CHANGELOG.md`.
+10. **Proactive Skill & Workflow Ingestion (`.agents/skills/`):** AI agents and subagents must actively check and leverage applicable skills from `.agents/skills/` (and built-in skills) before executing specialized tasks. When authoring features or bug fixes, utilize `test-driven-development`; for investigating errors or unexpected behavior, invoke `systematic-debugging`; for exploring requirements or creative design, use `brainstorming`; for multi-step implementation tasks, follow `writing-plans` and `executing-plans`; and before claiming completion, always invoke `verification-before-completion`. Agents must read the relevant `SKILL.md` before proceeding.
+11. **Judicious Browser Testing (`browser_subagent`):** AI agents must use `browser_subagent` and browser-driven testing judiciously and **only when strictly applicable** (e.g., complex multi-step interactive workflows, visual regression, or interactive modal flows that cannot be verified faster via automated component/unit tests). Avoid launching slow browser subagents for simple UI tweaks, logic edits, or non-visual tasks where faster local verification suffices.
 
 ---
 
