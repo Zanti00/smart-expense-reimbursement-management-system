@@ -18,6 +18,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [1.5.0] - 2026-08-26
+
+### Added
+- **Liquidation OCR Pipeline Integration:** Liquidation receipt uploads now call the real `ocr-pipeline` (`AsyncOcrEngineInterface` / `AiServiceOcrEngine`) instead of `TesseractOcrEngine` placeholder (`Fake Vendor (Mocked AI)` / 1250.00). Added `LiquidationController::scan` async dispatch (Supabase store → `Receipt(status=processing)` → `Bus::dispatch(DispatchReceiptToAiService)` → `POST /api/ocr/process`), plus `GET /liquidations/receipts/{id}` (polling) and `POST /liquidations/receipts/{id}/retry-ocr`. Added `LiquidationOcrCallbackController` + `POST /liquidations/receipts/{id}/ocr-callback` (`auth.ai-service-api`) reusing `OcrCallbackService` for vendor/tin/total/VAT/items hydration. Frontend `FileUpload.vue` `simulateOCR` now handles `processing` → 3s polling (via `GET /reimbursements/receipts/{id}` with liquidation fallback), surfaces `rejected`/`failed` with `Retry OCR`, blocks submit while `ocrStatus === 'processing'` (`LiquidationsView::isReceiptOcrProcessing` → `hasIncompleteReceiptFields`), and displays confidence badge.
+
+### Changed
+- **LiquidationController:** Removed sync `OcrEngineInterface::extractReceiptData(tempPaths)` fake; now uses `ValidatesReceiptDuplicates` guard + `AsyncOcrEngine` dispatch with audit `RECEIPT_CREATED` / `RECEIPT_OCR_RETRY`. Duplicate uploads clean up Supabase objects before 422.
+- **FileUpload.vue:** Rewrote `simulateOCR` to `hydrateEntry`/`startPolling`/`retryOcr` lifecycle, 422 duplicate vs quality branching, `pollTimers` map, `onBeforeUnmount` cleanup, `Retry OCR` button, processing/rejected/failed UI states.
+- **LiquidationsView.vue:** Added `isReceiptOcrProcessing` computed to gate liquidation submit during OCR.
+
+### Fixed
+- **LiquidationsServiceProvider:** Now aliases `auth.ai-service-api` so liquidation callback route is resolvable regardless of provider boot order.
+
 ## [1.4.2] - 2026-08-24
 
 ### Fixed

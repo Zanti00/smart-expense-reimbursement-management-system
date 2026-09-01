@@ -95,7 +95,8 @@ class CashAdvanceService
 
             $currentCount = (int) ($advance->revision_count ?? 0);
             $newCount = $currentCount + 1;
-            $newStatus = $newCount > 3 ? 'rejected' : 'revise';
+            // 2 revises allowed (<=2 revise, >=3 rejected) — 1st/2nd = revise, 3rd = terminal rejected, 3 total
+            $newStatus = $newCount <= 2 ? 'revise' : 'rejected';
             $fromStatus = $advance->status;
 
             $advance->update([
@@ -104,8 +105,8 @@ class CashAdvanceService
             ]);
 
             // Map request action (present tense: revise/reject) to stored action (past tense: revised/rejected).
-            // Terminal 4th strike (newCount > 3) always forces 'rejected' regardless of $action input —
-            // system outcome overrides admin intent to enforce hard revocation cap.
+            // Terminal 3rd strike (newCount >=3 / <=2 allowed) — 2 strikes revise, 3rd rejected, 3 total — always forces 'rejected' regardless of $action input —
+            // system outcome overrides admin intent to enforce hard revocation cap (2 revises allowed: 1st-2nd revise, 3rd rejected, 3 total).
             $actionValue = $newStatus === 'rejected' ? 'rejected' : ($action === 'revise' ? 'revised' : 'rejected');
 
             // Defensive guard: fail fast with 422 instead of 500 if DB enum is out-of-sync.
@@ -222,7 +223,7 @@ class CashAdvanceService
     /**
      * Update a pending or revise cash advance (employee self-edit).
      *
-     * Resets revise → pending with status history entry. Terminal rejected (>3 strikes) cannot be edited.
+     * Resets revise → pending with status history entry. Terminal rejected (>=3 strikes / >2) cannot be edited — 2 revises allowed (<=2 revise, >=3 rejected), 3rd = terminal rejected, 3 total.
      */
     public function updateAdvance(CashAdvance $advance, User $user, array $data, array $files = [])
     {

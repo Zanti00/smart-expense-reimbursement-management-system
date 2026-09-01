@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onBeforeUnmount } from 'vue'
 import {
   AlertTriangle,
   FileText,
@@ -8,7 +8,8 @@ import {
   UploadCloud,
   X,
   Layers,
-  ChevronDown
+  ChevronDown,
+  RefreshCw
 } from 'lucide-vue-next'
 import { apiFetch } from '../../utils/apiFetch'
 import { cleanName, tinFor, formatDateForInput } from '../../utils/receiptUtils'
@@ -33,6 +34,7 @@ const uploadMode = ref('single')
 const showDropConfirmModal = ref(false)
 const pendingDropFiles = ref([])
 const isDropdownOpen = ref(false)
+const pollTimers = new Map()
 
 const isProcessingAnyReceipt = computed(() =>
   files.value.some((entry) => entry.ocrStatus === 'processing'),
@@ -167,8 +169,131 @@ function triggerFileInput(mode) {
   fileInput.value?.click()
 }
 
+function hydrateEntry(entry, ocrData) {
+  entry.ocrStatus = 'done'
+  entry.id = ocrData.id
+  // confidence from pipeline is 0-1; legacy fallback was 0-100
+  let rawConf = ocrData.ocr_confidence_score ?? ocrData.confidence ?? 85
+  if (rawConf > 0 && rawConf <= 1) rawConf = rawConf * 100
+  const confidence = Math.round(rawConf)
+  entry.ocrData = {
+    id: ocrData.id,
+    amount: ocrData.total_amount ?? ocrData.amount ?? entry.ocrData.amount ?? '',
+    vat: ocrData.vat_amount ?? ocrData.vat ?? entry.ocrData.vat ?? '',
+    tin: ocrData.tin ?? entry.ocrData.tin ?? '',
+    vendor: ocrData.vendor_name ?? ocrData.vendor ?? entry.ocrData.vendor ?? '',
+    invoiceNumber: ocrData.invoice_number ?? ocrData.invoiceNumber ?? entry.ocrData.invoiceNumber ?? '',
+    date: formatDateForInput(ocrData.transaction_date ?? ocrData.date ?? entry.ocrData.date),
+    location: ocrData.location ?? entry.location ?? '',
+    confidence,
+    file_path: ocrData.file_path,
+    file_hash: ocrData.file_hash,
+    file_type: ocrData.file_type,
+    file_size_bytes: ocrData.file_size_bytes,
+    rejection_code: ocrData.rejection_code,
+    rejection_reason: ocrData.rejection_reason,
+  }
+  entry.merchantName = entry.ocrData.vendor
+  entry.date = entry.ocrData.date
+  entry.tin = entry.ocrData.tin
+  entry.invoiceNumber = entry.ocrData.invoiceNumber
+  entry.location = entry.ocrData.location
+  entry.amount = Number(entry.ocrData.amount) || 0
+  entry.tax = entry.ocrData.vat ? String(entry.ocrData.vat) : '0.00'
+  entry.subtotal = (Math.max(Number(entry.amount || 0) - Number(entry.tax || 0), 0)).toFixed(2)
+  entry.thumbnail = entry.previews?.[0] || null
+  emit('ocr-result', entry.ocrData)
+  emit('update:modelValue', files.value)
+}
+
+function startPolling(entry) {
+  if (!entry?.id) return
+  const key = String(entry.id)
+  if (pollTimers.has(key)) return
+  const timer = setInterval(async () => {
+    try {
+      // Primary: reimbursement receipt endpoint (shared receipt table)
+      let data = null
+      let res = await apiFetch(`/api/serms/reimbursements/receipts/${entry.id}`, { method: 'GET' })
+      if (res.ok) {
+        const json = await res.json()
+        data = json.data ?? json
+      } else {
+        // Fallback: liquidation receipt endpoint
+        const alt = await apiFetch(`/api/serms/liquidations/receipts/${entry.id}`, { method: 'GET' })
+        if (alt.ok) {
+          const json = await alt.json()
+          data = json.data ?? json
+        } else {
+          return
+        }
+      }
+
+      const status = String(data.status || '').toLowerCase()
+      if (status !== 'processing' && status !== 'pending-ocr' && status !== '') {
+        clearInterval(timer)
+        pollTimers.delete(key)
+
+        if (status === 'failed') {
+          entry.ocrStatus = 'failed'
+          entry.rejectionCode = data.rejection_code || 'ocr_failed'
+          entry.rejectionReason = data.rejection_reason || 'OCR processing failed. You can retry OCR.'
+          emit('update:modelValue', files.value)
+          emit('upload-error', { type: 'failed', message: entry.rejectionReason, code: entry.rejectionCode, entry })
+          return
+        }
+
+        if (status === 'rejected') {
+          const isDup =
+            data.rejection_code === 'duplicate' ||
+            data.is_duplicate === true ||
+            String(data.rejection_reason || '').toLowerCase().includes('duplicate')
+          entry.ocrStatus = 'rejected'
+          entry.rejectionCode = data.rejection_code || (isDup ? 'duplicate' : 'quality_failed')
+          entry.rejectionReason = data.rejection_reason || data.error || 'Receipt rejected.'
+          if (isDup) {
+            window.dispatchEvent(new CustomEvent('receipt-duplicate-detected', { detail: { receiptId: data.id, message: entry.rejectionReason } }))
+          }
+          emit('update:modelValue', files.value)
+          emit('upload-error', { type: isDup ? 'duplicate' : 'quality', message: entry.rejectionReason, code: entry.rejectionCode, entry })
+          return
+        }
+
+        // processed / flagged / pending — hydrate with OCR results
+        hydrateEntry(entry, data)
+      }
+    } catch (e) {
+      console.error('Polling error for liquidation receipt', entry.id, e)
+    }
+  }, 3000)
+  pollTimers.set(key, timer)
+}
+
+async function retryOcr(entry) {
+  if (!entry?.id) return
+  entry.ocrStatus = 'processing'
+  entry.rejectionCode = null
+  entry.rejectionReason = null
+  emit('update:modelValue', files.value)
+  try {
+    const res = await apiFetch(`/api/serms/liquidations/receipts/${entry.id}/retry-ocr`, { method: 'POST' })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      throw new Error(body.message || 'Retry OCR failed')
+    }
+    startPolling(entry)
+  } catch (e) {
+    console.error('Retry OCR failed', e)
+    entry.ocrStatus = 'failed'
+    entry.rejectionReason = e.message || 'Retry OCR failed.'
+    emit('update:modelValue', files.value)
+    emit('upload-error', { type: 'failed', message: entry.rejectionReason, entry })
+  }
+}
+
 async function simulateOCR(entry) {
   entry.ocrStatus = 'processing'
+  emit('update:modelValue', files.value)
   try {
     const formData = new FormData()
     entry.pages.forEach(file => {
@@ -181,51 +306,86 @@ async function simulateOCR(entry) {
     })
 
     if (!response.ok) {
-      throw new Error('OCR Scan failed')
+      const errorBody = await response.json().catch(() => ({}))
+      const rawMsg = errorBody.message || errorBody.msg || ''
+      const hasDuplicate =
+        errorBody?.errors?.file_hash ||
+        (rawMsg && rawMsg.toLowerCase().includes('duplicate')) ||
+        String(JSON.stringify(errorBody.errors || '')).toLowerCase().includes('duplicate')
+
+      if (response.status === 422) {
+        if (hasDuplicate) {
+          entry.ocrStatus = 'rejected'
+          entry.rejectionCode = 'duplicate'
+          entry.rejectionReason = errorBody.message || errorBody?.errors?.file_hash?.[0] || 'Duplicate receipt detected.'
+          window.dispatchEvent(new CustomEvent('receipt-duplicate-detected', { detail: { receiptId: entry.id, message: entry.rejectionReason } }))
+          emit('update:modelValue', files.value)
+          emit('upload-error', { type: 'duplicate', message: entry.rejectionReason, code: 'duplicate', entry })
+          return
+        }
+        // Quality or other validation rejection
+        entry.ocrStatus = 'rejected'
+        entry.rejectionCode = errorBody.rejection_code || 'quality_failed'
+        entry.rejectionReason = errorBody.rejection_reason || errorBody.message || 'Image quality is too low for accurate OCR.'
+        emit('update:modelValue', files.value)
+        emit('upload-error', { type: 'quality', message: entry.rejectionReason, code: entry.rejectionCode, entry })
+        return
+      }
+
+      throw new Error(rawMsg || 'OCR scan failed')
     }
 
     const result = await response.json()
     const ocrData = result.data
 
-    entry.ocrStatus = 'done'
-    entry.id = ocrData.id
-    entry.ocrData = {
-      id: ocrData.id,
-      amount: ocrData.total_amount || entry.ocrData.amount || '',
-      vat: ocrData.vat_amount || entry.ocrData.vat || '',
-      tin: ocrData.tin || entry.ocrData.tin || '',
-      vendor: ocrData.vendor_name || entry.ocrData.vendor || '',
-      invoiceNumber: ocrData.invoice_number || entry.ocrData.invoiceNumber || '',
-      date: formatDateForInput(ocrData.transaction_date || entry.ocrData.date),
-      location: ocrData.location || entry.location || '',
-      confidence: Math.round(ocrData.ocr_confidence_score || 85),
-      file_path: ocrData.file_path,
-      file_hash: ocrData.file_hash,
-      file_type: ocrData.file_type,
-      file_size_bytes: ocrData.file_size_bytes,
+    // Backend now returns 201 with status=processing for async pipeline.
+    // If still processing, keep spinner and start polling; else hydrate immediately (fallback/failed)
+    const status = String(ocrData.status || '').toLowerCase()
+    if (status === 'processing') {
+      entry.id = ocrData.id
+      entry.ocrData = { ...entry.ocrData, id: ocrData.id }
+      emit('update:modelValue', files.value)
+      startPolling(entry)
+      return
     }
-    entry.merchantName = entry.ocrData.vendor
-    entry.date = entry.ocrData.date
-    entry.tin = entry.ocrData.tin
-    entry.invoiceNumber = entry.ocrData.invoiceNumber
-    entry.location = entry.ocrData.location
-    entry.amount = Number(entry.ocrData.amount) || 0
-    entry.tax = entry.ocrData.vat ? String(entry.ocrData.vat) : '0.00'
-    entry.subtotal = (Math.max(Number(entry.amount || 0) - Number(entry.tax || 0), 0)).toFixed(2)
-    entry.thumbnail = entry.previews?.[0] || null
 
-    emit('ocr-result', entry.ocrData)
-    emit('update:modelValue', files.value)
+    if (status === 'failed' || status === 'rejected') {
+      entry.id = ocrData.id
+      entry.ocrStatus = status === 'failed' ? 'failed' : 'rejected'
+      entry.rejectionCode = ocrData.rejection_code || (status === 'failed' ? 'ocr_failed' : 'quality_failed')
+      entry.rejectionReason = ocrData.rejection_reason || `Receipt ${status}.`
+      emit('update:modelValue', files.value)
+      emit('upload-error', { type: status === 'failed' ? 'failed' : 'quality', message: entry.rejectionReason, code: entry.rejectionCode, entry })
+      return
+    }
+
+    // Immediate data (should be rare — hydrates directly without polling)
+    hydrateEntry(entry, ocrData)
   } catch (error) {
     console.error('OCR processing failed:', error)
-    entry.ocrStatus = 'failed'
-    entry.ocrData = buildPrefilledOcrData(entry.pages[0])
+    // Keep entry but surface as failed so user can retry; preserve file previews
+    if (entry.ocrStatus === 'processing') entry.ocrStatus = 'failed'
+    else entry.ocrStatus = 'failed'
+    entry.rejectionReason = error.message || 'OCR processing failed.'
+    entry.ocrData = entry.ocrData || buildPrefilledOcrData(entry.pages[0])
     emit('update:modelValue', files.value)
+    emit('upload-error', { type: 'failed', message: entry.rejectionReason, entry })
   }
 }
 
+onBeforeUnmount(() => {
+  pollTimers.forEach(clearInterval)
+  pollTimers.clear()
+})
+
+defineExpose({ retryOcr, startPolling, hydrateEntry })
+
 function removeFile(index) {
   const entry = files.value[index]
+  if (entry?.id && pollTimers.has(String(entry.id))) {
+    clearInterval(pollTimers.get(String(entry.id)))
+    pollTimers.delete(String(entry.id))
+  }
   if (entry?.previews) {
     entry.previews.forEach(preview => {
       if (preview) URL.revokeObjectURL(preview)
@@ -462,23 +622,42 @@ function onFileInput(event) {
               class="h-2.5 w-2.5 rounded-full border-2 border-current border-t-transparent animate-spin"
               aria-hidden="true"
             />
-            Processing...
+            Processing — OCR running...
+          </div>
+          <div v-else-if="entry.ocrStatus === 'rejected'" class="mt-1 flex flex-col gap-1">
+            <span class="text-xs font-semibold text-amber-600">Rejected: {{ entry.rejectionReason || entry.rejectionCode || 'Image quality issue' }}</span>
+            <span v-if="entry.rejectionCode === 'duplicate'" class="text-[10px] text-amber-500">Duplicate receipt detected.</span>
+          </div>
+          <div v-else-if="entry.ocrStatus === 'failed'" class="mt-1 flex flex-col gap-1">
+            <span class="text-xs font-semibold text-danger">OCR failed: {{ entry.rejectionReason || 'Could not process. Please retry.' }}</span>
           </div>
           <div v-else-if="entry.ocrStatus === 'done' && entry.ocrData" class="mt-1 flex flex-wrap items-center gap-2">
             <span class="text-xs font-medium text-slate-600">
               PHP {{ Number(entry.ocrData.amount).toLocaleString() }}
             </span>
+            <span v-if="entry.ocrData.confidence" class="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700">{{ entry.ocrData.confidence }}% confidence</span>
           </div>
         </div>
 
-        <button
-          class="inline-flex h-8 w-fit shrink-0 items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-2.5 text-xs font-bold text-danger transition-colors hover:bg-red-100"
-          type="button"
-          @click="removeFile(index)"
-        >
-          <Trash2 class="h-3.5 w-3.5" />
-          Delete
-        </button>
+        <div class="flex shrink-0 items-center gap-1.5">
+          <button
+            v-if="entry.ocrStatus === 'failed' || entry.ocrStatus === 'rejected'"
+            class="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 text-xs font-bold text-amber-700 transition-colors hover:bg-amber-100"
+            type="button"
+            @click="retryOcr(entry)"
+          >
+            <RefreshCw class="h-3.5 w-3.5" />
+            Retry OCR
+          </button>
+          <button
+            class="inline-flex h-8 w-fit shrink-0 items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-2.5 text-xs font-bold text-danger transition-colors hover:bg-red-100"
+            type="button"
+            @click="removeFile(index)"
+          >
+            <Trash2 class="h-3.5 w-3.5" />
+            Delete
+          </button>
+        </div>
       </div>
     </TransitionGroup>
 

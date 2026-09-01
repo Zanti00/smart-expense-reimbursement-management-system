@@ -179,11 +179,11 @@ class ReimbursementService
     }
 
     /**
-     * Reject / Revise claim — 3-strike workflow.
+     * Reject / Revise claim — 3-strike workflow (2 revises + 1 terminal = 3 total).
      *
      * Admin chooses `revise` or `reject` via dropdown. Both increment `revision_count`
-     * and map to status `revise` until threshold (>3) where system auto-flips to `rejected` (terminal).
-     * `rejected` is never set directly; it is system-derived only.
+     * and map to status `revise` until threshold (2 revises allowed (<=2 revise, >=3 rejected) — 1st/2nd = revise, 3rd = terminal rejected, 3 total) where system auto-flips to `rejected` (terminal).
+     * `rejected` is never set directly; it is system-derived only. 2 revises allowed (<=2 revise, >=3 rejected) — 1st/2nd = revise, 3rd = terminal rejected, 3 total.
      */
     public function rejectReimbursement(User $user, int $id, string $comment, ?string $password, string $ipAddress, Request $requestContext, string $action = 'revise')
     {
@@ -211,7 +211,8 @@ class ReimbursementService
 
             $currentCount = (int) ($reimbursement->revision_count ?? 0);
             $newCount = $currentCount + 1;
-            $newStatus = $newCount > 3 ? 'rejected' : 'revise';
+            // 2 revises allowed (<=2 revise, >=3 rejected) — 1st/2nd = revise, 3rd = terminal rejected, 3 total
+            $newStatus = $newCount <= 2 ? 'revise' : 'rejected';
             $isTerminal = $newStatus === 'rejected';
 
             $reimbursement->update([

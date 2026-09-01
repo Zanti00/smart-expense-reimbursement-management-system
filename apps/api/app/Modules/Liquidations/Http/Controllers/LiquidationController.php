@@ -7,22 +7,21 @@ use Illuminate\Http\Request;
 use App\Modules\Liquidations\Models\Liquidation;
 use App\Modules\CashAdvances\Models\CashAdvance;
 use App\Modules\Reimbursements\Models\Receipt;
-use App\Modules\Ai\Contracts\OcrEngineInterface;
+use App\Modules\Ai\Contracts\AsyncOcrEngineInterface;
 use App\Modules\Shared\Services\PasswordVerificationService;
 use App\Modules\AuditLogs\Services\AuditLogService;
+use App\Modules\Reimbursements\Jobs\DispatchReceiptToAiService;
+use App\Modules\Shared\Traits\ValidatesReceiptDuplicates;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Carbon\Carbon;
 
 class LiquidationController extends Controller
 {
-    protected OcrEngineInterface $ocrEngine;
-
-    public function __construct(OcrEngineInterface $ocrEngine)
-    {
-        $this->ocrEngine = $ocrEngine;
-    }
+    use ValidatesReceiptDuplicates;
 
     /**
      * CashAdvance relations needed for Unified Roadmap when accessed via liquidation
@@ -173,83 +172,222 @@ class LiquidationController extends Controller
     }
 
     /**
-     * Scan a receipt image/pdf and extract OCR fields synchronously.
+     * Scan receipt image(s) and dispatch to the real async OCR pipeline.
+     *
+     * Mirrors Reimbursements\ReceiptService::storeReceipt — stores files on
+     * Supabase, creates a Receipt in `processing` state, and dispatches
+     * DispatchReceiptToAiService via AsyncOcrEngineInterface. The AI service
+     * downloads from Supabase and POSTs results back to the OCR callback
+     * endpoint (reimbursement or liquidation), where OcrCallbackService applies
+     * vendor_name / total_amount / tin etc.
      */
     public function scan(Request $request)
     {
         $request->validate([
-            'files' => 'required|array',
+            'files' => 'required|array|min:1',
             'files.*' => 'required|file|mimes:jpeg,png,pdf|max:2048',
         ]);
 
         $files = $request->file('files');
-        
-        $tempPaths = [];
+
         $filePaths = [];
         $fileHashes = [];
         $fileTypes = [];
         $fileSizes = [];
 
         foreach ($files as $file) {
-            // Save file to a temp path for Tesseract engine execution
-            $tempPath = tempnam(sys_get_temp_dir(), 'ocr_') . '.' . $file->extension();
-            file_put_contents($tempPath, file_get_contents($file->getRealPath()));
-            $tempPaths[] = $tempPath;
-
-            // Upload/store in Supabase bucket
-            $path = $file->store('receipts', 'supabase');
-            $filePaths[] = $path;
-            
-            $fileHashes[] = hash_file('sha256', $file->getRealPath());
-            
             $fileType = $file->extension();
             if ($fileType === 'jpg') {
                 $fileType = 'jpeg';
             }
+
+            // Store on Supabase (same disk as reimbursements)
+            try {
+                $path = $file->store('receipts', 'supabase');
+            } catch (\Throwable $e) {
+                Log::error('LiquidationController@scan: Supabase store failed', [
+                    'file' => $file->getClientOriginalName(),
+                    'error' => $e->getMessage(),
+                ]);
+                throw $e;
+            }
+            $filePaths[] = $path;
+            $fileHashes[] = hash_file('sha256', $file->getRealPath());
             $fileTypes[] = $fileType;
-            
             $fileSizes[] = $file->getSize();
         }
 
-        $extractedData = $this->ocrEngine->extractReceiptData($tempPaths);
-        
-        foreach ($tempPaths as $tempPath) {
-            @unlink($tempPath);
+        // Duplicate guard — same as ReceiptService::storeReceipt
+        try {
+            $this->validateDuplicateReceipt($fileHashes);
+        } catch (ValidationException $e) {
+            // Best-effort cleanup of just-uploaded objects so duplicates don't orphan files
+            foreach ($filePaths as $path) {
+                try {
+                    Storage::disk('supabase')->delete($path);
+                } catch (\Throwable $ignored) {
+                    Log::warning('LiquidationController@scan: failed to cleanup duplicate upload', ['path' => $path]);
+                }
+            }
+            throw $e;
         }
 
-        // Store the receipt in database with temporary "processing" status
-        $receipt = Receipt::create([
-            'uploaded_by' => $request->user()->id,
-            'file_path' => $filePaths,
-            'file_hash' => $fileHashes,
-            'file_type' => $fileTypes,
-            'file_size_bytes' => $fileSizes,
-            'vendor_name' => $extractedData['vendor_name'] ?? null,
-            'transaction_date' => $extractedData['transaction_date'] ?? null,
-            'total_amount' => $extractedData['total_amount'] ?? null,
-            'vat_amount' => $extractedData['vat_amount'] ?? null,
-            'tin' => $extractedData['tin'] ?? null,
-            'invoice_number' => $extractedData['invoice_number'] ?? null,
-            'ocr_confidence_score' => $extractedData['ocr_confidence_score'] ?? 85.00,
-            'ocr_flagged' => ($extractedData['ocr_confidence_score'] ?? 85.00) < 80,
-            'status' => 'processing',
-        ]);
-
-        return response()->json([
-            'data' => [
-                'id' => $receipt->id,
-                'vendor_name' => $receipt->vendor_name,
-                'transaction_date' => $receipt->transaction_date ? $receipt->transaction_date->format('Y-m-d') : null,
-                'total_amount' => $receipt->total_amount,
-                'vat_amount' => $receipt->vat_amount,
-                'tin' => $receipt->tin,
-                'invoice_number' => $receipt->invoice_number,
-                'ocr_confidence_score' => $receipt->ocr_confidence_score,
+        try {
+            $receipt = Receipt::create([
+                'uploaded_by' => $request->user()->id,
                 'file_path' => $filePaths,
                 'file_hash' => $fileHashes,
                 'file_type' => $fileTypes,
                 'file_size_bytes' => $fileSizes,
-            ]
+                'ocr_flagged' => false,
+                'status' => 'processing',
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('LiquidationController@scan: failed to create receipt row', [
+                'error' => $e->getMessage(),
+            ]);
+            // Cleanup storage on DB failure
+            foreach ($filePaths as $path) {
+                try { Storage::disk('supabase')->delete($path); } catch (\Throwable $ignored) {}
+            }
+            throw $e;
+        }
+
+        // Dispatch async OCR (sync connection runs inline if no worker, matching ReceiptService)
+        $connection = config('services.ai_service.ocr_queue_connection', 'sync');
+        try {
+            $job = (new DispatchReceiptToAiService($receipt))->onConnection($connection);
+            Bus::dispatch($job);
+        } catch (\Throwable $e) {
+            Log::error('LiquidationController@scan: failed to dispatch OCR job', [
+                'receipt_id' => $receipt->id,
+                'connection' => $connection,
+                'error' => $e->getMessage(),
+            ]);
+
+            // Leave receipt in a clear `failed` state so the UI can offer Retry
+            try {
+                $receipt->update([
+                    'status' => 'failed',
+                    'ocr_flagged' => true,
+                    'rejection_code' => 'ocr_failed',
+                    'rejection_reason' => 'OCR could not be started. Please retry OCR.',
+                ]);
+            } catch (\Throwable $ignored) {}
+
+            // Don't swallow — let caller see the failure via the row's failed status
+            // but still return 201 so the frontend can poll/retry.
+        }
+
+        // Audit log — every DB mutation requires it
+        try {
+            AuditLogService::log(
+                actorId: $request->user()->id,
+                actorRole: $request->user()->role,
+                actionType: 'RECEIPT_CREATED',
+                entityType: 'receipt',
+                entityId: $receipt->id,
+                beforeState: null,
+                afterState: $receipt->fresh()->load('items')->toArray(),
+                ipAddress: $request->ip()
+            );
+        } catch (\Throwable $e) {
+            Log::warning('LiquidationController@scan: audit log failed', ['receipt_id' => $receipt->id, 'error' => $e->getMessage()]);
+        }
+
+        $fresh = $receipt->fresh();
+
+        return response()->json([
+            'message' => 'Receipt uploaded for OCR processing.',
+            'data' => [
+                'id' => $fresh->id,
+                'status' => $fresh->status,
+                'vendor_name' => $fresh->vendor_name,
+                'transaction_date' => $fresh->transaction_date ? $fresh->transaction_date->format('Y-m-d') : null,
+                'total_amount' => $fresh->total_amount,
+                'vat_amount' => $fresh->vat_amount,
+                'tin' => $fresh->tin,
+                'invoice_number' => $fresh->invoice_number,
+                'ocr_confidence_score' => $fresh->ocr_confidence_score,
+                'ocr_flagged' => (bool) $fresh->ocr_flagged,
+                'rejection_code' => $fresh->rejection_code,
+                'rejection_reason' => $fresh->rejection_reason,
+                'file_path' => $filePaths,
+                'file_hash' => $fileHashes,
+                'file_type' => $fileTypes,
+                'file_size_bytes' => $fileSizes,
+            ],
+        ], 201);
+    }
+
+    /**
+     * Polling endpoint for a single liquidation receipt.
+     * Mirrors ReceiptController@show but scoped to liquidations.
+     */
+    public function showReceipt(Request $request, $id)
+    {
+        $receipt = Receipt::with(['category', 'items', 'uploader'])->findOrFail($id);
+
+        $canManage = $request->user()->can('serms.reimbursements.manage')
+            || $request->user()->can('serms.liquidations.manage');
+
+        if (!$canManage && (int) $receipt->uploaded_by !== (int) $request->user()->id) {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        return response()->json(['data' => $receipt]);
+    }
+
+    /**
+     * Retry OCR for a liquidation receipt.
+     */
+    public function retryOcr(Request $request, $id)
+    {
+        $receipt = Receipt::findOrFail($id);
+
+        $canManage = $request->user()->can('serms.liquidations.manage')
+            || $request->user()->can('serms.reimbursements.manage');
+
+        if ((int) $receipt->uploaded_by !== (int) $request->user()->id && !$canManage) {
+            return response()->json(['message' => 'Forbidden. You can only retry your own receipts.'], 403);
+        }
+
+        $beforeState = $receipt->toArray();
+
+        $receipt->update([
+            'status' => 'processing',
+            'ocr_flagged' => false,
+            'rejection_code' => null,
+            'rejection_reason' => null,
+        ]);
+
+        try {
+            DispatchReceiptToAiService::dispatch($receipt);
+        } catch (\Throwable $e) {
+            Log::error('LiquidationController@retryOcr: dispatch failed', ['receipt_id' => $receipt->id, 'error' => $e->getMessage()]);
+            $receipt->update([
+                'status' => 'failed',
+                'ocr_flagged' => true,
+                'rejection_code' => 'ocr_failed',
+                'rejection_reason' => 'OCR retry could not be started. Please try again.',
+            ]);
+            return response()->json(['message' => 'OCR retry failed.', 'data' => $receipt->fresh()], 500);
+        }
+
+        AuditLogService::log(
+            actorId: $request->user()->id,
+            actorRole: $request->user()->role,
+            actionType: 'RECEIPT_OCR_RETRY',
+            entityType: 'receipt',
+            entityId: $receipt->id,
+            beforeState: $beforeState,
+            afterState: $receipt->fresh()->toArray(),
+            ipAddress: $request->ip()
+        );
+
+        return response()->json([
+            'message' => 'OCR reprocessing started.',
+            'data' => $receipt->fresh()->load(['category', 'items', 'uploader']),
         ]);
     }
 
@@ -469,12 +607,13 @@ class LiquidationController extends Controller
 
                 $actionType = 'LIQUIDATION_APPROVED';
             } else {
-                // 3-strike workflow: both 'revise' and 'rejected' increment revision_count
+                // 3-strike workflow (2 revises + 1 terminal = 3 total): both 'revise' and 'rejected' increment revision_count
                 // Admin's choice maps to 'revise' until threshold exceeded, then auto 'rejected' (terminal)
+                // 2 revises allowed (<=2 revise, >=3 rejected) — 1st/2nd = revise, 3rd = terminal rejected, 3 total
                 $currentCount = (int) ($liquidation->revision_count ?? 0);
                 $newCount = $currentCount + 1;
                 $requestedStatus = $validated['status']; // 'revise' or 'rejected'
-                $finalStatus = $newCount > 3 ? 'rejected' : 'revise';
+                $finalStatus = $newCount <= 2 ? 'revise' : 'rejected';
                 $isTerminal = $finalStatus === 'rejected';
 
                 $liquidation->update([

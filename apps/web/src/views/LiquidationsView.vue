@@ -176,8 +176,15 @@ const totalExpenseAmount = computed(() =>
   ),
 );
 
-const hasIncompleteReceiptFields = computed(() =>
-  receipts.value.some((receipt) => {
+const isReceiptOcrProcessing = computed(() =>
+  receipts.value.some((r) => r.ocrStatus === 'processing'),
+);
+
+const hasIncompleteReceiptFields = computed(() => {
+  if (isReceiptOcrProcessing.value) return true;
+  return receipts.value.some((receipt) => {
+    // Block submit while OCR status is not done
+    if (receipt.ocrStatus && receipt.ocrStatus !== 'done') return true;
     const ocrData = receipt.ocrData || {};
     const amount = Number(ocrData.amount);
 
@@ -190,8 +197,8 @@ const hasIncompleteReceiptFields = computed(() =>
       !Number.isFinite(amount) ||
       amount <= 0
     );
-  }),
-);
+  });
+});
 
 const agingInfo = computed(() => {
   if (!selectedAdvance.value) return null;

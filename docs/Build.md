@@ -258,7 +258,8 @@ onMounted(() => {
 - **Reusability & Anti-Duplication Rule — Frontend (AI & Developer Rule):** Developers and subagents must thoroughly scan the codebase for pre-existing reusable components (in `src/components/base/`), composables (in `src/composables/`), utility helpers, and functions before creating new ones. If no existing reusable component or utility exists for a recurring UI/logic pattern, create a clean, reusable abstraction first rather than writing duplicated or inline one-off implementations.
 - **Reusability & Anti-Duplication Rule — Backend (AI & Developer Rule):** Before implementing new API routes or controllers, check if an existing endpoint, module controller action, service method, or repository query already fulfills or can be extended to fulfill the requirement. Reuse existing endpoints and services rather than creating duplicate routes, controllers, or redundant database queries.
 - **Cross-Project Access Rule for Sister Repositories (AI & Subagent Rule):** AI agents and subagents are permitted to access, inspect, and search sister repositories (`capstone-auth-module`, `capstone-azure-infra`, `ocr-pipeline`, `CMS`, `PRS`, `TS`) whenever they need additional architecture, schema, route contracts, or infrastructure context. However, agents are **strictly restricted to READ and SEARCH operations only** (e.g. `view_file`, `grep_search`, `list_dir`). AI agents must **NEVER modify, write to, delete, or commit/push changes to any other project** unless explicitly instructed and permitted by the user.
-- **Browser Testing & Interactive Debugging (GEMINI & AI Agents Rule):** Gemini and AI agents MUST prioritize using browser testing (`browser_subagent`, DevTools, interactive browser actions, DOM/console log inspection, network payload checking, and screenshot verification) when debugging frontend issues, interactive modals, responsive UI layouts, and user workflows as long as it is applicable.
+- **Browser Testing & Interactive Debugging (GEMINI & AI Agents Rule):** Use browser testing (`browser_subagent`, DevTools, interactive browser actions, DOM/console log inspection, network payload checking, and screenshot verification) **judiciously and only when strictly applicable** (e.g., complex multi-step interactive workflows, visual regression, or DOM/CSS layout verification that cannot be validated via faster Vitest/PHPUnit tests). Do NOT run heavy browser subagents for simple UI tweaks, static logic, or non-visual tasks where faster local verification suffices, avoiding unnecessary testing delays and token consumption.
+- **Proactive Skill & Workflow Ingestion (AI & Subagent Rule):** AI agents and subagents must actively check and leverage applicable skills from `.agents/skills/` (and built-in skills) before executing specialized tasks. When authoring features or bug fixes, utilize `test-driven-development`; for investigating errors or unexpected behavior, invoke `systematic-debugging`; for exploring requirements or creative design, use `brainstorming`; for multi-step implementation tasks, follow `writing-plans` and `executing-plans`; and before claiming completion, always invoke `verification-before-completion`. Agents must read the relevant `SKILL.md` before proceeding.
 - **Role-Based Debugging Credentials (AI Subagents & Developers):** When debugging or testing user roles, permissions, approval workflows, and multi-tenant views, subagents and developers must use the official seeded test credentials documented in the *Seeded Test Accounts & Debugging Credentials* section below.
 - **Always maintain the Documentation Change Log (AI & Developer Rule):** Always append a change log entry in [`docs/CHANGELOG.md`](CHANGELOG.md) whenever creating, modifying, or updating documentation guides or specifications in either `docs/` or `documentations/`.
 
@@ -287,7 +288,21 @@ When debugging authentication, role-based access control (RBAC), approval thresh
 
 ---
 
-## 7. Document Materialization
+## 7. Definition of Done
+
+- [ ] Code conforms to `A-09` reusability constraints (no duplicate components or utility helpers).
+- [ ] Every database mutation has a corresponding `AuditLogService::log()` call in the same database transaction.
+- [ ] System boundary operations feature explicit `try-catch` blocks with logging/rethrowing and zero silent error swallowing.
+- [ ] Sensitive inputs are encrypted on the client side and verified/decrypted server-side.
+- [ ] Export actions for reports are written to the audit logs with filters used.
+- [ ] Pre-aggregated database aggregation is used for dashboard visual components.
+- [ ] Applicable skills from `.agents/skills/` (e.g., `test-driven-development`, `systematic-debugging`, `writing-plans`, `verification-before-completion`) were engaged where relevant.
+- [ ] Documentation changes in `docs/` or `documentations/` are recorded in the Changelog in `docs/CHANGELOG.md`.
+- [ ] All unit and integration tests (PHPUnit / Vitest) run without failure.
+
+---
+
+## 8. Document Materialization
 
 This guide serves as the source of truth for repository setup. 
 
@@ -296,4 +311,5 @@ This guide serves as the source of truth for repository setup.
 | `docs/Build.md` | [`AGENTS.md`](../AGENTS.md) | Copy exact contents on save |
 
 Re-materialize this guide whenever stack versions, directory structures, or base components change.
+
 
