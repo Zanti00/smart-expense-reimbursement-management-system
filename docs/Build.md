@@ -1,16 +1,18 @@
 # Project Build Guide
 
-**Project:** Smart Expense & Reimbursement Management System (SERMS)
-**Date:** 2026-08-17
-**Version:** 1.3
-**Owner:** SERMS Engineering Team
-**Status:** Draft
-**Last reconciled:** 2026-08-17 (established SERMS.md as canonical single source of truth for all documents and requirements)
-**Canonical:** [SERMS.md](SERMS.md) · **PRD:** [PRD.md](PRD.md) · **SDD:** [SDD.md](SDD.md) · **DSD:** [DSD.md](DSD.md) · **SAD:** [SAD.md](SAD.md) · **CHANGELOG:** [CHANGELOG.md](CHANGELOG.md)
+**Project:** Smart Expense & Reimbursement Management System (SERMS)  
+**Client / Partner:** Science Biotech Specialties Inc. (SBSI) — [https://sbsi.com.ph/about-us/](https://sbsi.com.ph/about-us/)  
+**Academic Context:** 3rd & 4th Year Capstone Project (Capstone 1: Ended July 2026 · Capstone 2: September–December 2026)  
+**Date:** 2026-09-01  
+**Version:** 1.5.1  
+**Owner:** SERMS Engineering Team  
+**Status:** Active  
+**Last reconciled:** 2026-09-01 (Documentation suite refactor & standardization of 'What this is' sections across all docs)  
+**Canonical Spec:** [SERMS.md](SERMS.md) · **Related Docs:** [index.md](index.md) · [PRD.md](PRD.md) · [SAD.md](SAD.md) · [SDD.md](SDD.md) · [DSD.md](DSD.md) · [OPS.md](OPS.md) · [QAD.md](QAD.md) · [CHANGELOG.md](CHANGELOG.md) · [AGENTS.md](../AGENTS.md)
 
 ---
 
-> **What this is:** The operating manual for whoever **builds** SERMS — human or AI agent, on any IDE. The primary master specification is **[`docs/SERMS.md`](SERMS.md)**; this guide specifies *how we actually work in this repository*: step-by-step setup, running locally, pinned tech stacks, golden-path implementation patterns, and development guardrails. **It is the canonical build source; it materializes to the project-root [`AGENTS.md`](../AGENTS.md)**.
+> **What this is:** The developer operating manual and repository build guide for whoever builds or maintains SERMS — human engineers or AI agents on any IDE. It details environment setup (Docker & local), pinned stack dependencies, golden-path backend/frontend implementation patterns, non-negotiable development guardrails, seeded test accounts, and the Definition of Done. **This guide materializes directly to the project-root [`AGENTS.md`](../AGENTS.md)**.
 
 ---
 
@@ -261,6 +263,7 @@ onMounted(() => {
 - **Browser Testing & Interactive Debugging (GEMINI & AI Agents Rule):** Use browser testing (`browser_subagent`, DevTools, interactive browser actions, DOM/console log inspection, network payload checking, and screenshot verification) **judiciously and only when strictly applicable** (e.g., complex multi-step interactive workflows, visual regression, or DOM/CSS layout verification that cannot be validated via faster Vitest/PHPUnit tests). Do NOT run heavy browser subagents for simple UI tweaks, static logic, or non-visual tasks where faster local verification suffices, avoiding unnecessary testing delays and token consumption.
 - **Proactive Skill & Workflow Ingestion (AI & Subagent Rule):** AI agents and subagents must actively check and leverage applicable skills from `.agents/skills/` (and built-in skills) before executing specialized tasks. When authoring features or bug fixes, utilize `test-driven-development`; for investigating errors or unexpected behavior, invoke `systematic-debugging`; for exploring requirements or creative design, use `brainstorming`; for multi-step implementation tasks, follow `writing-plans` and `executing-plans`; and before claiming completion, always invoke `verification-before-completion`. Agents must read the relevant `SKILL.md` before proceeding.
 - **Role-Based Debugging Credentials (AI Subagents & Developers):** When debugging or testing user roles, permissions, approval workflows, and multi-tenant views, subagents and developers must use the official seeded test credentials documented in the *Seeded Test Accounts & Debugging Credentials* section below.
+- **Medium Date Formatting Standard (AI & Subagent Rule):** Whenever creating, displaying, or formatting human-readable dates across UI components, templates, notifications, documentation, or subagent conversational responses, AI subagents and developers must always use the **Medium Date Format** (e.g., `Sept 1, 2026`, `Oct 14, 2026`, `Jan 15, 2026`) instead of numerical or raw ISO formats (such as `2026-09-01` or `09/01/2026`). Internal storage/database layers may continue to persist standard ISO `YYYY-MM-DD`, but all human-facing presentation layers must strictly use the medium date format.
 - **Always maintain the Documentation Change Log (AI & Developer Rule):** Always append a change log entry in [`docs/CHANGELOG.md`](CHANGELOG.md) whenever creating, modifying, or updating documentation guides or specifications in either `docs/` or `documentations/`.
 
 ---

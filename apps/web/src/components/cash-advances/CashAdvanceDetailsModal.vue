@@ -8,7 +8,7 @@ import BaseModal from "@/components/base/BaseModal.vue";
 import StatusBadge from "@/components/base/StatusBadge.vue";
 import DecisionConfirmationModal from "@/components/base/DecisionConfirmationModal.vue";
 import UnifiedRoadmapStepper from "@/components/base/UnifiedRoadmapStepper.vue";
-import { formatPeso } from "@/utils/formatters";
+import { formatPeso, formatDate } from "@/utils/formatters";
 import {
   X,
   CheckCircle,
@@ -179,14 +179,8 @@ function outstandingBalance(record) {
 
 function formatDateOnly(value) {
   if (!value) return "--";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  }).format(date);
+  const formatted = formatDate(value);
+  return formatted === "—" ? "--" : formatted;
 }
 
 function normalizeStatus(status) {
@@ -478,7 +472,7 @@ async function confirmAcknowledge() {
             </div>
             <div>
               <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-0.5">Due Date</p>
-              <p class="text-sm text-slate-700">{{ record.dueDate || "--" }}</p>
+              <p class="text-sm text-slate-700">{{ formatDateOnly(record.dueDate) }}</p>
             </div>
             <div>
               <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-0.5">Outstanding Balance</p>
@@ -688,7 +682,7 @@ async function confirmAcknowledge() {
             </div>
             <div>
               <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-0.5">Settlement Due Date</p>
-              <p class="text-sm text-slate-700">{{ record.dueDate || "--" }}</p>
+              <p class="text-sm text-slate-700">{{ formatDateOnly(record.dueDate) }}</p>
             </div>
           </section>
 

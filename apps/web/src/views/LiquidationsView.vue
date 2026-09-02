@@ -440,6 +440,14 @@ const sourceCases = computed(() => {
         item.cash_advance?.user_id ??
         item.cash_advance?.userId,
       requestorName: item.user?.name || item.cash_advance?.user?.name || "",
+      dateOfAdvances:
+        item.cash_advance?.date ||
+        item.cash_advance?.created_at ||
+        item.cash_advance?.disbursed_at ||
+        item.cashAdvance?.date ||
+        item.date_of_advances ||
+        item.dateOfAdvances ||
+        null,
       dueDate:
         item.cash_advance?.expected_liquidation_date ||
         item.cash_advance?.dueDate,

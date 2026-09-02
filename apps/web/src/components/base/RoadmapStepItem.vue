@@ -5,7 +5,7 @@ import {
   X,
   AlertTriangle,
 } from "lucide-vue-next";
-import { formatPeso } from "@/utils/formatters";
+import { formatPeso, formatDate } from "@/utils/formatters";
 
 const props = defineProps({
   step: {
@@ -54,13 +54,8 @@ function isClickable(state) {
 
 function formatDateOnly(value) {
   if (!value) return null;
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return String(value);
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(d);
+  const formatted = formatDate(value);
+  return formatted === "—" ? null : formatted;
 }
 
 function circleClasses(state, step) {

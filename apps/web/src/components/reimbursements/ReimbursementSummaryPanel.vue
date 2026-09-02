@@ -1,5 +1,5 @@
 <script setup>
-import { formatAmount } from "@/utils/formatters";
+import { formatAmount, formatCutoffPeriod } from "@/utils/formatters";
 
 const props = defineProps({
   receiptCount: {
@@ -61,7 +61,7 @@ const props = defineProps({
               : 'text-danger font-bold'
           "
         >
-          {{ cutoffPeriod || "Not selected" }}
+          {{ (cutoffPeriod && formatCutoffPeriod(cutoffPeriod) !== '—') ? formatCutoffPeriod(cutoffPeriod) : (cutoffPeriod || "Not selected") }}
         </span>
       </div>
       <div class="flex justify-between items-center pt-2">

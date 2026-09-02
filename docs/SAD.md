@@ -3,12 +3,16 @@
 **Project:** Smart Expense & Reimbursement Management System (SERMS)  
 **Client / Partner:** Science Biotech Specialties Inc. (SBSI) — [https://sbsi.com.ph/about-us/](https://sbsi.com.ph/about-us/)  
 **Academic Context:** 3rd & 4th Year Capstone Project (Capstone 1: Ended July 2026 · Capstone 2: September–December 2026)  
-**Date:** 2026-08-17  
-**Version:** 1.3  
+**Date:** 2026-09-01  
+**Version:** 1.5.1  
 **Owner:** SERMS Engineering & Architecture Council  
 **Status:** Active  
-**Last reconciled:** 2026-08-17 (Updated multi-system Capstone ecosystem, `ocr-pipeline`, `capstone-azure-infra`, 1.5B LLM constraints, and Redis/MongoDB override register)  
-**Canonical Spec:** [SERMS.md](SERMS.md) · **Related Docs:** [index.md](index.md) · [PRD.md](PRD.md) · [SDD.md](SDD.md) · [DSD.md](DSD.md) · [Build.md](Build.md) · [OPS.md](OPS.md) · [QAD.md](QAD.md) · [CHANGELOG.md](CHANGELOG.md)
+**Last reconciled:** 2026-09-01 (Documentation suite refactor & standardization of 'What this is' sections across all docs)  
+**Canonical Spec:** [SERMS.md](SERMS.md) · **Related Docs:** [index.md](index.md) · [PRD.md](PRD.md) · [SDD.md](SDD.md) · [DSD.md](DSD.md) · [Build.md](Build.md) · [OPS.md](OPS.md) · [QAD.md](QAD.md) · [CHANGELOG.md](CHANGELOG.md) · [AGENTS.md](../AGENTS.md)
+
+---
+
+> **What this is:** The Software Architecture Document (SAD) defining the high-level structural blueprint, Modular Monolith architectural pattern, technology stack decisions, cross-system component communications (via `capstone-auth-module` SSO, `ocr-pipeline`, and `capstone-azure-infra`), Service Level Objectives (SLOs), and the AI governance / development execution model.
 
 ---
 

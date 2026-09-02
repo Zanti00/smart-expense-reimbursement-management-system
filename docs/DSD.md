@@ -1,12 +1,19 @@
 # Design System Document (DSD)
 
-**System Name:** SERMS Clinical Visual System
-**Date:** 2026-08-17
-**Version:** 1.2
-**Owner:** SERMS Engineering Team
-**Status:** Draft
-**Last reconciled:** 2026-08-17 — updated status badge mapping and typography system specifications
-**SDD:** [SDD.md](SDD.md) · **PRD:** [PRD.md](PRD.md)
+**Project:** Smart Expense & Reimbursement Management System (SERMS)  
+**System Name:** SERMS Clinical Visual System  
+**Client / Partner:** Science Biotech Specialties Inc. (SBSI) — [https://sbsi.com.ph/about-us/](https://sbsi.com.ph/about-us/)  
+**Academic Context:** 3rd & 4th Year Capstone Project (Capstone 1: Ended July 2026 · Capstone 2: September–December 2026)  
+**Date:** 2026-09-01  
+**Version:** 1.5.1  
+**Owner:** SERMS Engineering Team  
+**Status:** Active  
+**Last reconciled:** 2026-09-01 (Documentation suite refactor & standardization of 'What this is' sections across all docs)  
+**Canonical Spec:** [SERMS.md](SERMS.md) · **Related Docs:** [index.md](index.md) · [PRD.md](PRD.md) · [SAD.md](SAD.md) · [SDD.md](SDD.md) · [Build.md](Build.md) · [OPS.md](OPS.md) · [QAD.md](QAD.md) · [CHANGELOG.md](CHANGELOG.md) · [AGENTS.md](../AGENTS.md)
+
+---
+
+> **What this is:** The Design System Document (DSD) establishing the clinical visual design language, brand primitives, palette tokens, typography stack, component border and surface cleanliness constraints, and technical specifications for reusable UI components (`BaseButton`, `BaseTable`, `BaseModal`, `StatusBadge`, `OCRField`, `BaseKpiGrid`, `.card`, `.input`) in the Vue 3 frontend.
 
 ---
 
@@ -142,6 +149,7 @@ Defined in `index.css` under `@layer components` to prevent ad-hoc inline font d
 - **KPI labels** use `--font-primary` at `11px` (`text-[11px]`), `font-medium`, `uppercase`, `tracking-[0.02em]`, `text-slate-500`. Class: `.kpi-label`
 - **KPI values** use `--font-primary` at `text-2xl`, `font-bold`, `text-primary`. Class: `.kpi-value`
 - **Financial amounts** in table cells and OCR cards always combine `font-mono` with the `tabular-nums` utility (`font-variant-numeric: tabular-nums`) to ensure vertical decimal alignment.
+- **Date Display Standards:** All human-facing dates rendered across tables, cards, metadata rows, notifications, and status timestamps must strictly use the **Medium Date Format** (e.g. `Sept 1, 2026`, `Oct 14, 2026`, `Jan 15, 2026`) instead of numerical or raw formats (e.g., `YYYY-MM-DD` or `MM/DD/YYYY`).
 
 ---
 

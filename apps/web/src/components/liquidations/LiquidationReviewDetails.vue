@@ -1,6 +1,6 @@
 <script setup>
 import { Eye, Download } from "lucide-vue-next";
-import { formatPeso } from "@/utils/formatters";
+import { formatPeso, formatDate } from "@/utils/formatters";
 import StatusBadge from "@/components/base/StatusBadge.vue";
 import BaseReceiptImage from "@/components/base/BaseReceiptImage.vue";
 
@@ -27,7 +27,7 @@ defineProps({
   },
   formatDateOnly: {
     type: Function,
-    required: true,
+    default: formatDate,
   },
 });
 

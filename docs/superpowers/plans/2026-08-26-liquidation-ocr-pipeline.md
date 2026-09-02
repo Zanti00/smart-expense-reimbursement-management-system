@@ -1,5 +1,7 @@
 # Liquidation OCR Pipeline Integration Implementation Plan
 
+> **What this is:** The detailed implementation plan and task execution specification for integrating the real asynchronous OCR pipeline (`ocr-pipeline`) into the SERMS Liquidation module.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace the placeholder/fake OCR in the liquidation module with the real async OCR pipeline (ocr-pipeline) so that receipt uploads in liquidation forms are processed by the external AI service via `AsyncOcrEngineInterface`.

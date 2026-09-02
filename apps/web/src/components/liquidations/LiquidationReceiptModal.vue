@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from "vue";
-import { formatPeso } from "@/utils/formatters";
+import { formatPeso, formatDate } from "@/utils/formatters";
 import BaseReceiptDetailModal from "@/components/base/BaseReceiptDetailModal.vue";
 import { CheckCircle, XCircle } from "lucide-vue-next";
 
@@ -20,7 +20,7 @@ const normalizedReceipt = computed(() => {
   return {
     imageUrl: props.getFileUrl(props.receipt.filePath) || null,
     invoiceNumber: props.receipt.invoiceNumber || "--",
-    date: props.receipt.transactionDate ? new Date(props.receipt.transactionDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "--",
+    date: formatDate(props.receipt.transactionDate || props.receipt.transaction_date || props.receipt.date),
     vendor: props.receipt.merchantName || "Unknown Vendor",
     category: props.receipt.category || "—",
     tin: props.receipt.tinNumber || "—",

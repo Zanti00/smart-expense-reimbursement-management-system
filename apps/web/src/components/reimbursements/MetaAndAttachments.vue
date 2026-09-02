@@ -1,9 +1,10 @@
 <script setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { ChevronDown, FileText, UploadCloud, X } from "lucide-vue-next";
 import { useToast } from "@/composables/useToast";
+import { formatCutoffPeriod } from "@/utils/formatters";
 
-defineProps({
+const props = defineProps({
   cutoffPeriod: {
     type: String,
     required: true,
@@ -16,14 +17,30 @@ defineProps({
 
 const emit = defineEmits(["update:cutoffPeriod", "update:reportFile"]);
 
-const CUTOFF_OPTIONS = [
-  "Jan 01 - Jan 15, 2025",
-  "Jan 16 - Jan 31, 2025",
-  "Feb 01 - Feb 15, 2025",
-  "Feb 16 - Feb 28, 2025",
-  "Mar 01 - Mar 15, 2025",
-  "Mar 16 - Mar 31, 2025",
+const DEFAULT_CUTOFF_OPTIONS = [
+  "Jun 01 - Jun 15, 2026",
+  "Jun 16 - Jun 30, 2026",
+  "Jul 01 - Jul 15, 2026",
+  "Jul 16 - Jul 31, 2026",
+  "Aug 01 - Aug 15, 2026",
+  "Aug 16 - Aug 31, 2026",
+  "Sep 01 - Sep 15, 2026",
+  "Sep 16 - Sep 30, 2026",
+  "Oct 01 - Oct 15, 2026",
+  "Oct 16 - Oct 31, 2026",
+  "Nov 01 - Nov 15, 2026",
+  "Nov 16 - Nov 30, 2026",
+  "Dec 01 - Dec 15, 2026",
+  "Dec 16 - Dec 31, 2026",
 ];
+
+const cutoffOptions = computed(() => {
+  const options = [...DEFAULT_CUTOFF_OPTIONS];
+  if (props.cutoffPeriod && !options.includes(props.cutoffPeriod)) {
+    options.unshift(props.cutoffPeriod);
+  }
+  return options;
+});
 
 const reportDrag = ref(false);
 const reportInput = ref(null);
@@ -95,8 +112,8 @@ function removeReportFile() {
             :class="cutoffPeriod ? 'text-slate-700' : 'text-slate-400'"
           >
             <option value="" disabled>Select cutoff period</option>
-            <option v-for="opt in CUTOFF_OPTIONS" :key="opt" :value="opt">
-              {{ opt }}
+            <option v-for="opt in cutoffOptions" :key="opt" :value="opt">
+              {{ formatCutoffPeriod(opt) !== "—" ? formatCutoffPeriod(opt) : opt }}
             </option>
           </select>
           <ChevronDown

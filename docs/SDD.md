@@ -3,12 +3,16 @@
 **Project:** Smart Expense & Reimbursement Management System (SERMS)  
 **Client / Partner:** Science Biotech Specialties Inc. (SBSI) — [https://sbsi.com.ph/about-us/](https://sbsi.com.ph/about-us/)  
 **Academic Context:** 3rd & 4th Year Capstone Project (Capstone 1: Ended July 2026 · Capstone 2: September–December 2026)  
-**Date:** 2026-08-17  
-**Version:** 1.3  
+**Date:** 2026-09-01  
+**Version:** 1.5.1  
 **Owner:** SERMS Engineering Team  
 **Status:** Active  
-**Last reconciled:** 2026-08-17 (Updated client constraints, 1.5B model limit, Redis/MongoDB override register, and Capstone ecosystem)  
-**Canonical Spec:** [SERMS.md](SERMS.md) · **PRD:** [PRD.md](PRD.md) · **SAD:** [SAD.md](SAD.md) · **DSD:** [DSD.md](DSD.md) · **Build:** [Build.md](Build.md) · **OPS:** [OPS.md](OPS.md) · **CHANGELOG:** [CHANGELOG.md](CHANGELOG.md)
+**Last reconciled:** 2026-09-01 (Documentation suite refactor & standardization of 'What this is' sections across all docs)  
+**Canonical Spec:** [SERMS.md](SERMS.md) · **Related Docs:** [index.md](index.md) · [PRD.md](PRD.md) · [SAD.md](SAD.md) · [DSD.md](DSD.md) · [Build.md](Build.md) · [OPS.md](OPS.md) · [QAD.md](QAD.md) · [CHANGELOG.md](CHANGELOG.md) · [AGENTS.md](../AGENTS.md)
+
+---
+
+> **What this is:** The System Design Document (SDD) providing low-level engineering specifications for SERMS. It covers the 9 self-contained domain modules (`CashAdvances`, `Reimbursements`, `Expenses`, `Liquidations`, `AuditLogs`, `Notifications`, `Ai`, `Users`, `Shared`), the database entity-relationship schema, client-side pre-encryption protocols (AES-256-GCM + RSA-OAEP), asynchronous OCR pipeline sequence, REST API conventions, and RBAC authorization policies.
 
 ---
 
@@ -139,7 +143,7 @@ app/Modules/{ModuleName}/
 | `CashAdvances` | `/api/cash-advances`<br>`App\Modules\CashAdvances` | `CashAdvanceController`<br>`CashAdvanceService` | `CalculateOverdueCashAdvancesJob` | Cash advance request lifecycle (submission, policy threshold validation, accounting approval/rejection, disbursement logging, and employee acknowledgment). |
 | `Reimbursements` | `/api/reimbursements`<br>`App\Modules\Reimbursements` | `ReimbursementController`<br>`ReceiptController`<br>`ExpenseCategoryController`<br>`PrsReimbursementRequestController`<br>`PrsWebhookController`<br>`OcrCallbackController`<br>`ReimbursementService`<br>`ReceiptService` | `UpdatePrsReimbursementStatusJob`<br>`DispatchReceiptToAiService` | Reimbursement claim lifecycle, multi-receipt uploading & OCR dispatch, 90-day duplicate checking, BIR VAT classification, PRS status sync, and approval workflows. |
 | `Expenses` | `/api/expenses`<br>`App\Modules\Expenses` | `ExpenseController`<br>`ExpenseService` | — | Generic expense logging, line-item recording, receipt linkage, and expense category association. |
-| `Liquidations` | `/api/liquidations`<br>`App\Modules\Liquidations` | `LiquidationController` | `CalculateDailyPenaltiesJob` | Cash advance liquidation reports, receipt item matching & scanning, variance/shortfall computation, accounting audit verification, and daily penalty accruals. |
+| `Liquidations` | `/api/liquidations`<br>`App\Modules\Liquidations` | `LiquidationController`<br>`LiquidationOcrCallbackController` | `CalculateDailyPenaltiesJob`<br>`DispatchReceiptToAiService` | Cash advance liquidation reports, receipt item matching & scanning, variance/shortfall computation, accounting audit verification, and daily penalty accruals. |
 | `AuditLogs` | `App\Modules\AuditLogs` | `AuditLogService` | — | Centralized append-only audit trail logging (`AuditLogService::log()`) and compliance export action tracking. |
 | `Notifications` | `App\Modules\Notifications` | `NotificationDeliveryService` | — | Template-based in-app notification dispatching, failed attempt logging, and role-based hierarchy resolution. |
 | `Ai` | `App\Modules\Ai` | `AiServiceOcrEngine`<br>`TesseractOcrEngine` | — | OCR contract bindings (`OcrEngineInterface`, `AsyncOcrEngineInterface`), external OCR service communication, payload signing, and webhook validation. |
@@ -154,7 +158,7 @@ app/Modules/{ModuleName}/
 | `NotificationDeliveryService::send()` | `App\Modules\Notifications\Services\NotificationDeliveryService` | `CashAdvances`, `Reimbursements`, `Liquidations` | Template-gated notification dispatcher |
 | `PayloadDecryptionService` | `App\Modules\Shared\Services\PayloadDecryptionService` | `Shared` (`DecryptPayloadMiddleware`) | Server-side RSA-OAEP private key and AES-256-GCM decryption for sensitive client payloads |
 | `PasswordVerificationService` | `App\Modules\Shared\Services\PasswordVerificationService` | `Shared` (`AuthController`) | Proxies high-security password verification requests to `capstone-auth-module` |
-| `AiServiceOcrEngine` | `App\Modules\Ai\Services\AiServiceOcrEngine` | `Reimbursements` | Asynchronous external AI OCR service client executing `POST /api/ocr` |
+| `AiServiceOcrEngine` | `App\Modules\Ai\Services\AiServiceOcrEngine` | `Reimbursements`, `Liquidations` | Asynchronous external AI OCR service client executing `POST /api/ocr` |
 | `TesseractOcrEngine` | `App\Modules\Ai\Services\TesseractOcrEngine` | `Ai` / Fallback | Local OCR fallback engine implementing `OcrEngineInterface` |
 
 ---
@@ -182,6 +186,7 @@ erDiagram
         date expected_disbursement_date
         date expected_liquidation_date
         enum status
+        integer revision_count
         string signature
         datetime acknowledged_at
     }
@@ -260,6 +265,7 @@ erDiagram
         enum status
         decimal total_amount
         bigint expense_category_id FK
+        integer revision_count
         boolean is_request
         string prs_source_id
     }
@@ -277,6 +283,7 @@ erDiagram
         json reimbursement_ids
         decimal total_expense_amount
         decimal outstanding_balance
+        integer revision_count
         text shortfall_explanation
         string report_file_path
         text admin_note

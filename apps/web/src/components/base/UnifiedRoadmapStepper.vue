@@ -14,7 +14,7 @@ import {
   ArrowDown,
   CircleDot,
 } from "lucide-vue-next";
-import { formatPeso } from "@/utils/formatters";
+import { formatPeso, formatDate } from "@/utils/formatters";
 import RoadmapStepItem from "./RoadmapStepItem.vue";
 
 const props = defineProps({
@@ -62,13 +62,8 @@ function normalize(val) {
 
 function formatDateOnly(value) {
   if (!value) return null;
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return String(value);
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(d);
+  const formatted = formatDate(value);
+  return formatted === "—" ? null : formatted;
 }
 
 function formatActorName(actor) {

@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth'
 import BaseButton from '@/components/base/BaseButton.vue'
 import SkeletonLoader from '@/components/base/SkeletonLoader.vue'
 import { Plus, Trash2, Save, X, Clock } from 'lucide-vue-next'
+import { formatDate } from '@/utils/formatters'
 
 const policyStore = usePolicyStore()
 const authStore = useAuthStore()
@@ -63,10 +64,6 @@ async function submitPenalty() {
 
 async function deleteLimit(id) {
   await policyStore.deleteLimitRule(id, authStore.user)
-}
-
-function formatDate(ds) {
-  return new Date(ds).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
 }
 </script>
 

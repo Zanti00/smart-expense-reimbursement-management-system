@@ -3,12 +3,16 @@
 **Project:** Smart Expense & Reimbursement Management System (SERMS)  
 **Client / Partner:** Science Biotech Specialties Inc. (SBSI) — [https://sbsi.com.ph/about-us/](https://sbsi.com.ph/about-us/)  
 **Academic Context:** 3rd & 4th Year Capstone Project (Capstone 1: Completed July 2026 · Capstone 2: September–December 2026)  
-**Date:** 2026-08-17  
-**Version:** 1.3  
+**Date:** 2026-09-01  
+**Version:** 1.5.1  
 **Owner:** SERMS Engineering & Architecture Council (Capstone Team)  
 **Status:** Canonical Source of Truth  
-**Last reconciled:** 2026-08-17 (Consolidated client background, capstone ecosystem, Azure student infra, 1.5B LLM limits, and Redis/MongoDB override statuses)  
-**Related Docs:** [index.md](index.md) · [PRD.md](PRD.md) · [SAD.md](SAD.md) · [SDD.md](SDD.md) · [DSD.md](DSD.md) · [Build.md](Build.md) · [OPS.md](OPS.md) · [QAD.md](QAD.md) · [CHANGELOG.md](CHANGELOG.md) · [AGENTS.md](../AGENTS.md)
+**Last reconciled:** 2026-09-01 (Documentation suite refactor & standardization of 'What this is' sections across all docs)  
+**Canonical Spec:** [SERMS.md](SERMS.md) · **Related Docs:** [index.md](index.md) · [PRD.md](PRD.md) · [SAD.md](SAD.md) · [SDD.md](SDD.md) · [DSD.md](DSD.md) · [Build.md](Build.md) · [OPS.md](OPS.md) · [QAD.md](QAD.md) · [CHANGELOG.md](CHANGELOG.md) · [AGENTS.md](../AGENTS.md)
+
+---
+
+> **What this is:** The canonical, authoritative Master Single Source of Truth for the Smart Expense & Reimbursement Management System (SERMS). It unifies product requirements (PRD), software architecture (SAD), modular system design and crypto protocols (SDD), clinical design system (DSD), build operations and agent guardrails (Build/AGENTS), cloud infrastructure (OPS), QA testing datasets (QAD), and historical context (CHANGELOG) into a single overarching reference. All other documentation files and code implementations derive from and must align with this document.
 
 ---
 
@@ -233,7 +237,7 @@ sequenceDiagram
   - Body Text: `.text-body` (`text-sm text-slate-600 dark:text-slate-300 font-sans leading-relaxed`)
   - Numerical Values: `.text-value` (`font-mono text-sm font-medium tabular-nums`)
 
-### 7.3 Complete 22-Status Badge Map
+### 7.3 Complete 23-Status Badge Map
 
 | Status Key | Background Class | Display Label | Context |
 |---|---|---|---|
@@ -294,6 +298,7 @@ sequenceDiagram
 9. **Documentation Change Log Rule:** Every documentation change in `docs/` or `documentations/` must be recorded in `docs/CHANGELOG.md`.
 10. **Proactive Skill & Workflow Ingestion (`.agents/skills/`):** AI agents and subagents must actively check and leverage applicable skills from `.agents/skills/` (and built-in skills) before executing specialized tasks. When authoring features or bug fixes, utilize `test-driven-development`; for investigating errors or unexpected behavior, invoke `systematic-debugging`; for exploring requirements or creative design, use `brainstorming`; for multi-step implementation tasks, follow `writing-plans` and `executing-plans`; and before claiming completion, always invoke `verification-before-completion`. Agents must read the relevant `SKILL.md` before proceeding.
 11. **Judicious Browser Testing (`browser_subagent`):** AI agents must use `browser_subagent` and browser-driven testing judiciously and **only when strictly applicable** (e.g., complex multi-step interactive workflows, visual regression, or interactive modal flows that cannot be verified faster via automated component/unit tests). Avoid launching slow browser subagents for simple UI tweaks, logic edits, or non-visual tasks where faster local verification suffices.
+12. **Medium Date Formatting Standard (AI & Subagent Rule):** Whenever creating, displaying, or formatting human-readable dates across UI components, templates, notifications, documentation, or subagent conversational responses, AI subagents and developers must always use the **Medium Date Format** (e.g., `Sept 1, 2026`, `Oct 14, 2026`, `Jan 15, 2026`) instead of numerical or raw ISO formats (such as `2026-09-01` or `09/01/2026`). Internal database storage retains standard ISO `YYYY-MM-DD`, while all human-facing presentation layers strictly employ the medium date format.
 
 ---
 

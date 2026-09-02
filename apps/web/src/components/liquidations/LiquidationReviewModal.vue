@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from "vue";
 import { X, XCircle, ShieldCheck, Eye, FileText, Download } from "lucide-vue-next";
-import { formatPeso } from "@/utils/formatters";
+import { formatPeso, formatDate } from "@/utils/formatters";
 import StatusBadge from "@/components/base/StatusBadge.vue";
 import BaseReceiptImage from "@/components/base/BaseReceiptImage.vue";
 import UnifiedRoadmapStepper from "@/components/base/UnifiedRoadmapStepper.vue";
@@ -42,7 +42,7 @@ const props = defineProps({
   },
   formatDateOnly: {
     type: Function,
-    required: true,
+    default: formatDate,
   },
 });
 

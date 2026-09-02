@@ -3,12 +3,16 @@
 **Project:** Smart Expense & Reimbursement Management System (SERMS)  
 **Client / Partner:** Science Biotech Specialties Inc. (SBSI) — [https://sbsi.com.ph/about-us/](https://sbsi.com.ph/about-us/)  
 **Academic Context:** 3rd & 4th Year Capstone Project (Capstone 1: Ended July 2026 · Capstone 2: September–December 2026)  
-**Date:** 2026-08-17  
-**Version:** 1.1  
+**Date:** 2026-09-01  
+**Version:** 1.5.1  
 **Owner:** SERMS Operations & Infrastructure Team  
 **Status:** Active  
-**Last reconciled:** 2026-08-17 (Added Azure for Students infra topology, SBSI server constraints, 1.5B LLM ceiling, and Redis/MongoDB override register)  
-**Canonical Spec:** [SERMS.md](SERMS.md) · **Related Docs:** [index.md](index.md) · [PRD.md](PRD.md) · [SAD.md](SAD.md) · [SDD.md](SDD.md) · [Build.md](Build.md) · [QAD.md](QAD.md) · [CHANGELOG.md](CHANGELOG.md)
+**Last reconciled:** 2026-09-01 (Documentation suite refactor & standardization of 'What this is' sections across all docs)  
+**Canonical Spec:** [SERMS.md](SERMS.md) · **Related Docs:** [index.md](index.md) · [PRD.md](PRD.md) · [SAD.md](SAD.md) · [SDD.md](SDD.md) · [DSD.md](DSD.md) · [Build.md](Build.md) · [QAD.md](QAD.md) · [CHANGELOG.md](CHANGELOG.md) · [AGENTS.md](../AGENTS.md)
+
+---
+
+> **What this is:** The Operations & Observability Runbook (OPS) detailing the cloud hosting topology on Microsoft Azure (Azure for Students via `capstone-azure-infra`), SBSI server resource constraints, Service Level Objectives (SLOs), logging and telemetry architectures, alerting matrices, incident severity ladders, disaster recovery runbooks, and routine operational turnover checklists.
 
 ---
 

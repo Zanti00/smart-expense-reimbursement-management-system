@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from "vue";
-import { formatAmount, formatDate as formatDateBase } from "@/utils/formatters";
+import { formatAmount, formatDate } from "@/utils/formatters";
 import { canEditReceipt, canDeleteReceipt } from "@/utils/receiptUtils";
 import BaseReceiptDetailModal from "@/components/base/BaseReceiptDetailModal.vue";
 import ImagePreviewModal from "@/components/base/ImagePreviewModal.vue";
@@ -26,17 +26,13 @@ function editReceipt() {
   close();
 }
 
-function formatDate(dateStr) {
-  return formatDateBase(dateStr, { year: "numeric", month: "long", day: "numeric" });
-}
-
 /** Normalize receipt to the shared shape */
 const normalizedReceipt = computed(() => {
   if (!props.receipt) return null;
   return {
     imageUrl: props.receipt.thumbnail || null,
     invoiceNumber: props.receipt.invoiceNumber || props.receipt.fileName,
-    date: formatDate(props.receipt.date),
+    date: formatDate(props.receipt.date || props.receipt.transaction_date || props.receipt.transactionDate),
     vendor: props.receipt.vendorName || "Unknown Vendor",
     category: props.receipt.category || "—",
     tin: props.receipt.tin || "—",

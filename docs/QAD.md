@@ -1,12 +1,18 @@
 # QA & Test Plan (QAD): Smart Expense & Reimbursement Management System (SERMS)
 
-**Project:** Smart Expense & Reimbursement Management System (SERMS)
-**Date:** 2026-08-17
-**Version:** 1.1
-**Owner:** SERMS Engineering Team
-**Status:** Draft
-**Last reconciled:** 2026-08-17 (added sample receipt upload testing method and dataset guide for AI subagents & QA)
-**Related Docs:** [index.md](index.md) · [PRD.md](PRD.md) · [SAD.md](SAD.md) · [SDD.md](SDD.md) · [DSD.md](DSD.md) · [Build.md](Build.md) · [OPS.md](OPS.md) · [CHANGELOG.md](CHANGELOG.md)
+**Project:** Smart Expense & Reimbursement Management System (SERMS)  
+**Client / Partner:** Science Biotech Specialties Inc. (SBSI) — [https://sbsi.com.ph/about-us/](https://sbsi.com.ph/about-us/)  
+**Academic Context:** 3rd & 4th Year Capstone Project (Capstone 1: Ended July 2026 · Capstone 2: September–December 2026)  
+**Date:** 2026-09-01  
+**Version:** 1.5.1  
+**Owner:** SERMS Engineering Team  
+**Status:** Active  
+**Last reconciled:** 2026-09-01 (Documentation suite refactor & standardization of 'What this is' sections across all docs)  
+**Canonical Spec:** [SERMS.md](SERMS.md) · **Related Docs:** [index.md](index.md) · [PRD.md](PRD.md) · [SAD.md](SAD.md) · [SDD.md](SDD.md) · [DSD.md](DSD.md) · [Build.md](Build.md) · [OPS.md](OPS.md) · [CHANGELOG.md](CHANGELOG.md) · [AGENTS.md](../AGENTS.md)
+
+---
+
+> **What this is:** The Quality Assurance & Test Engineering Manual (QAD) defining test scopes, backend/frontend coverage targets (80% overall, 95%+ compliance math), test environments, testing procedures with real receipt image fixtures (`docs/receipts/`), core happy/sad/adversarial test matrices, bug triage protocols, and release verification gates.
 
 ---
 

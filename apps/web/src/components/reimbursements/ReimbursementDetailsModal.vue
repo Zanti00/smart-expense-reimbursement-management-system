@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from "vue";
 import { useAuthStore } from "@/stores/auth";
-import { formatAmount } from "@/utils/formatters";
+import { formatAmount, formatDate, formatCutoffPeriod } from "@/utils/formatters";
 import StatusBadge from "@/components/base/StatusBadge.vue";
 import BaseReceiptImage from "@/components/base/BaseReceiptImage.vue";
 import {
@@ -34,6 +34,7 @@ const emit = defineEmits([
   "approve",
   "grant",
   "edit",
+  "forward-receipts",
 ]);
 
 const auth = useAuthStore();
@@ -70,14 +71,19 @@ function normalizeStatus(status) {
   return statusMap[normalized] || normalized;
 }
 
-function getCutoffPeriod(date) {
-  const submittedDate = new Date(date);
-  if (Number.isNaN(submittedDate.getTime())) return date || "--";
-  return submittedDate.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+function getCutoffPeriod(recordOrDate) {
+  if (!recordOrDate) return "--";
+  const val =
+    typeof recordOrDate === "object"
+      ? recordOrDate.cutoff_period ||
+        recordOrDate.cutoffPeriod ||
+        recordOrDate.date ||
+        recordOrDate.created_at ||
+        recordOrDate.dateSubmitted ||
+        recordOrDate.submitted_at
+      : recordOrDate;
+  const res = formatCutoffPeriod(val);
+  return res === "—" ? "--" : res;
 }
 
 function categoryName(record) {
@@ -226,7 +232,7 @@ function categoryName(record) {
               </div>
               <div>
                 <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-0.5">Period</p>
-                <p class="text-sm text-slate-700">{{ viewingRecord.cutoff_period || getCutoffPeriod(viewingRecord.date) }}</p>
+                <p class="text-sm text-slate-700">{{ getCutoffPeriod(viewingRecord) }}</p>
               </div>
               <div v-if="viewingRecord.report_url || viewingRecord.report_file_path" class="col-span-2">
                 <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-1">Report</p>

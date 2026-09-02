@@ -1,12 +1,18 @@
 # Changelog — SERMS
 
-**Project:** Smart Expense & Reimbursement Management System (SERMS)
-**Date:** 2026-08-17
-**Version:** 1.3
-**Owner:** SERMS Engineering Team
-**Status:** Active
-**Last reconciled:** 2026-08-17 (Added SBSI client details, Capstone multi-system ecosystem, Azure student infra, 1.5B LLM limits, and Redis/MongoDB override register)
-**Related Docs:** [SERMS.md](SERMS.md) · [index.md](index.md) · [PRD.md](PRD.md) · [SAD.md](SAD.md) · [SDD.md](SDD.md) · [DSD.md](DSD.md) · [Build.md](Build.md) · [OPS.md](OPS.md) · [QAD.md](QAD.md)
+**Project:** Smart Expense & Reimbursement Management System (SERMS)  
+**Client / Partner:** Science Biotech Specialties Inc. (SBSI) — [https://sbsi.com.ph/about-us/](https://sbsi.com.ph/about-us/)  
+**Academic Context:** 3rd & 4th Year Capstone Project (Capstone 1: Ended July 2026 · Capstone 2: September–December 2026)  
+**Date:** 2026-09-01  
+**Version:** 1.5.1  
+**Owner:** SERMS Engineering Team  
+**Status:** Active  
+**Last reconciled:** 2026-09-01 (Documentation suite refactor & standardization of 'What this is' sections across all docs)  
+**Canonical Spec:** [SERMS.md](SERMS.md) · **Related Docs:** [index.md](index.md) · [PRD.md](PRD.md) · [SAD.md](SAD.md) · [SDD.md](SDD.md) · [DSD.md](DSD.md) · [Build.md](Build.md) · [OPS.md](OPS.md) · [QAD.md](QAD.md) · [AGENTS.md](../AGENTS.md)
+
+---
+
+> **What this is:** The chronological ledger and historical archive of all notable feature additions, architectural decision records (ADRs), security mitigations, database migrations, breaking changes, and documentation revisions across the SERMS lifecycle, structured in accordance with Keep a Changelog and Semantic Versioning.
 
 ---
 
@@ -15,6 +21,18 @@ All notable changes, architectural decisions, and documentation updates for the 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 > **Note for AI Subagents & Developers:** Always consult this file when you need chronological historical context, previous architectural pivots, or design rationale before modifying codebase features or documentation guides.
+
+---
+
+## [1.5.1] - 2026-09-01
+
+### Changed
+- **Documentation Suite Refactor & Standardization:** Added prominent, standardized `> **What this is:**` sections across all 10 core documentation files in `docs/` (`index.md`, `SERMS.md`, `PRD.md`, `SAD.md`, `SDD.md`, `DSD.md`, `Build.md`, `OPS.md`, `QAD.md`, `CHANGELOG.md`), detailing the exact role, purpose, audience, and canonical hierarchy of each document.
+- **Header Metadata Alignment:** Standardized metadata blocks across all documentation files with uniform Project, Client/Partner (SBSI), Academic Context (Capstone 1 & 2), Date, Version (1.5.1), Status, Canonical Spec links, and Related Docs cross-references.
+- **Index & Link Integrity:** Corrected relative links in `docs/index.md` (e.g., `PR_GUIDE.md` -> `../documentations/PR_GUIDE.md`), updated document suite tables with latest version numbers and last reconciled dates.
+- **Schema & Component Specifications:** Reconciled `revision_count` column and asynchronous OCR callback services in `docs/SDD.md` and updated 23-status badge mapping in `docs/SERMS.md` and `docs/DSD.md`.
+- **Root AGENTS Materialization:** Re-materialized `../AGENTS.md` from `docs/Build.md` to guarantee perfect synchronization across developer and AI agent entrypoints.
+- **Medium Date Formatting Standard (AI & Subagent Rule):** Added mandatory instruction across `docs/Build.md`, `AGENTS.md`, `docs/SERMS.md`, `docs/DSD.md`, and `.agents/rules/` requiring AI subagents and developers to format and display human-readable dates in the **Medium Date Format** (e.g. `Sept 1, 2026`).
 
 ---
 

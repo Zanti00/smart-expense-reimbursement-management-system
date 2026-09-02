@@ -50,7 +50,7 @@ Missing data must trigger clarification requests instead of assumptions.
 ### Response Standards
 
 - Currency: `PHP 1,250.00`
-- Date: `YYYY-MM-DD`
+- Date: Medium Date format (e.g. `Sept 1, 2026` / `MMM D, YYYY` for all human-facing presentation, UI components, notifications, and AI responses; standard ISO `YYYY-MM-DD` for internal DB storage)
 - Timestamp: ISO 8601 with timezone
 - Use system enum values only.
 
