@@ -34,7 +34,6 @@ SERMS is a high-precision, Modular Monolith financial compliance application bui
 - **Immutability:** Never run updates or deletes on the `audit_logs` or `penalties` tables.
 - **Errors:** All authorization violations must return `403 Forbidden`, authentication failures must return `401 Unauthorized`, and duplicate conflicts must return `409 Conflict`.
 - **Historical Context (AI Subagent Rule):** AI subagents and developers must check [`docs/CHANGELOG.md`](docs/CHANGELOG.md) whenever historical context, past design decisions, or background on previous modifications is needed before making changes.
-- **Error Handling (AI Rule):** Implement explicit `try-catch` blocks at system execution & integration boundaries (Supabase storage, OCR queue tasks, external HTTP APIs, filesystem I/O, background jobs). Never use empty or silent `catch` blocks—log actionable context and re-throw, map to domain exceptions, or return formatted HTTP 4xx/5xx responses. Never catch and swallow exceptions inside `DB::transaction()` blocks without rethrowing to guarantee atomic database rollbacks. Allow unhandled internal runtime errors to bubble up to Laravel's centralized Exception Handler or Vue's global error handler.
 - **Git Operations (AI Rule):** AI agents are encouraged to check and inspect Git (e.g., `git log`, `git diff`, `git status`) in read-only mode to gather context and information about the latest changes. However, AI agents must never write, commit, alter Git history, or push to Git without explicit user permission. Always ask the user before performing any mutating Git actions.
 - **Context Gathering (AI Rule):** If you think a user's prompt or task lacks sufficient context, details, or information, AI agents and developers must ask questions or interview the user via the `/grill-me` skill interface about the given task/prompt to deepen understanding and avoid hallucinations before proceeding.
 - **Reusability & Anti-Duplication Rule — Frontend (AI & Developer Rule):** Developers and subagents must thoroughly scan the codebase for pre-existing reusable components (in `src/components/base/`), composables (in `src/composables/`), utility helpers, and functions before creating new ones. If no existing reusable component or utility exists for a recurring UI/logic pattern, create a clean, reusable abstraction first rather than writing duplicated or inline one-off implementations.
@@ -76,7 +75,7 @@ When debugging authentication, role-based access control (RBAC), approval thresh
 - [ ] Export actions for reports are written to the audit logs with filters used.
 - [ ] Pre-aggregated database aggregation is used for dashboard visual components.
 - [ ] Applicable skills from `.agents/skills/` (e.g., `test-driven-development`, `systematic-debugging`, `writing-plans`, `verification-before-completion`) were engaged where relevant.
-- [ ] Documentation changes in `docs/` or `documentations/` are recorded in the Changelog in `docs/CHANGELOG.md`.
+- [ ] Documentation changes in `docs/` or `documentations/` are recorded in the Changelog in `docs/DOC_CHANGELOG.md`.
 - [ ] All unit and integration tests (PHPUnit / Vitest) run without failure.
 
 ## graphify

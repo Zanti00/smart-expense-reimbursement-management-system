@@ -3,11 +3,11 @@
 **Project:** Smart Expense & Reimbursement Management System (SERMS)  
 **Client / Partner:** Science Biotech Specialties Inc. (SBSI) — [https://sbsi.com.ph/about-us/](https://sbsi.com.ph/about-us/)  
 **Academic Context:** 3rd & 4th Year Capstone Project (Capstone 1: Ended July 2026 · Capstone 2: September–December 2026)  
-**Date:** 2026-09-01  
-**Version:** 1.5.1  
+**Date:** 2026-09-03  
+**Version:** 1.5.2  
 **Owner:** SERMS Engineering Team  
 **Status:** Active  
-**Last reconciled:** 2026-09-01 (Documentation suite refactor & standardization of 'What this is' sections across all docs)  
+**Last reconciled:** 2026-09-03 (Transferred error handling architecture patterns and rules to Build Guide)  
 **Canonical Spec:** [SERMS.md](SERMS.md) · **Related Docs:** [index.md](index.md) · [PRD.md](PRD.md) · [SAD.md](SAD.md) · [SDD.md](SDD.md) · [DSD.md](DSD.md) · [OPS.md](OPS.md) · [QAD.md](QAD.md) · [CHANGELOG.md](CHANGELOG.md) · [AGENTS.md](../AGENTS.md)
 
 ---
@@ -170,6 +170,41 @@ class ExpenseService
 
             return $receipt;
         });
+    }
+}
+```
+
+#### 3. Error Handling & Boundary Resilience Pattern (Enforces Atomic Rollbacks + Actionable Logging)
+```php
+namespace App\Modules\Expenses\Services;
+
+use App\Modules\Shared\Exceptions\ExternalServiceException;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Throwable;
+
+class ReceiptProcessingService
+{
+    public function processExternalBoundary(string $filePath): array
+    {
+        // Explicit try-catch at integration/system execution boundaries (Supabase, OCR queue, external APIs)
+        try {
+            return DB::transaction(function () use ($filePath) {
+                // Perform state mutations inside transaction
+                // ...
+                return ['status' => 'processed'];
+            });
+        } catch (Throwable $e) {
+            // NEVER silently swallow exceptions inside DB transactions or system boundaries
+            Log::error('System boundary operation failed', [
+                'file_path' => $filePath,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            // Re-throw or map to domain exception to preserve atomic rollback
+            throw new ExternalServiceException('Failed processing receipt boundary operation: ' . $e->getMessage(), previous: $e);
+        }
     }
 }
 ```

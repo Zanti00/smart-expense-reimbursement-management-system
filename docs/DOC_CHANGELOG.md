@@ -24,6 +24,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [1.5.2] - 2026-09-03
+
+### Changed
+- **Error Handling Architecture Transfer:** Transferred and centralized the explicit boundary `try-catch`, database transaction integrity, and error handling rules from [`AGENTS.md`](../AGENTS.md) into [`docs/Build.md`](Build.md). Added a dedicated backend Golden-Path code pattern (`#### 3. Error Handling & Boundary Resilience Pattern`) showcasing proper exception handling, actionable contextual logging, and re-throwing to preserve atomic `DB::transaction` rollbacks.
+
+---
+
 ## [1.5.1] - 2026-09-01
 
 ### Changed
