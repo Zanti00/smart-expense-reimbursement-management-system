@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from "vue";
 import { formatPeso, formatAmount, formatDate } from "@/utils/formatters";
+import StatusBadge from "@/components/base/StatusBadge.vue";
 import BasePagination from "@/components/base/BasePagination.vue";
 import {
   ChevronUp,
@@ -17,8 +18,8 @@ const props = defineProps({
   rows: { type: Array, required: true },
   totalRows: { type: Number, required: true },
   columns: { type: Array, required: true },
-  sortKey: { type: String, default: "" },
-  sortDirection: { type: String, default: "asc" },
+  sortKey: { type: String, default: "dateSubmitted" },
+  sortDirection: { type: String, default: "desc" },
   isAdmin: { type: Boolean, default: false },
   currentPage: { type: Number, required: true },
   pageSize: { type: Number, default: 10 },
@@ -61,12 +62,13 @@ function normalizeStatus(status) {
 
 function getActions(row) {
   const status = normalizeStatus(row.displayStatus);
+  const isRevise = status === "revise";
+  const isRejected = status === "rejected";
   return [
     {
       label: "Edit",
       icon: Pencil,
-      visible:
-        !props.isAdmin && (status === "pending" || status === "rejected"),
+      visible: !props.isAdmin && (status === "pending" || isRevise),
       handler: () => emit("edit-request", row),
     },
     {
@@ -83,19 +85,6 @@ function getActions(row) {
       handler: () => emit("delete-request", row),
     },
   ];
-}
-
-function statusClass(status) {
-  const classes = {
-    approved: "bg-success text-white border border-success",
-    pending: "bg-yellow-100 text-yellow-800 border border-yellow-200",
-    rejected: "bg-[#FEF2F2] text-[#B91C1C] border border-red-200",
-    granted: "bg-[#F0FDFA] text-[#0D9488] border border-teal-100",
-  };
-  return (
-    classes[normalizeStatus(status)] ||
-    "bg-slate-100 text-slate-600 border border-slate-200"
-  );
 }
 
 const tableMinWidth = computed(() => "min-w-full");
@@ -242,14 +231,7 @@ const tableMinWidth = computed(() => "min-w-full");
                 {{ row.submittedBy }}
               </td>
               <td class="px-5 py-5 text-center">
-                <span
-                  :class="[
-                    'inline-flex rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide',
-                    statusClass(row.displayStatus),
-                  ]"
-                >
-                  {{ row.displayStatusLabel }}
-                </span>
+                <StatusBadge :status="row.displayStatus" />
               </td>
               <td class="px-5 py-5 text-center">
                 <ActionDropdownMenu :actions="getActions(row)" />

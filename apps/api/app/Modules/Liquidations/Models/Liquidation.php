@@ -12,6 +12,7 @@ class Liquidation extends Model
         'cash_advance_id',
         'user_id',
         'status',
+        'revision_count',
         'reimbursement_ids',
         'total_expense_amount',
         'outstanding_balance',

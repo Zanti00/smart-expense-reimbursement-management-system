@@ -29,11 +29,15 @@ class ReimbursementService
      */
     public function listReimbursements(User $user, bool $canManage)
     {
+        $query = Reimbursement::with(['receipts.category', 'user', 'expenseCategory'])
+            ->orderByDesc('created_at')
+            ->orderByDesc('id');
+
         if (!$canManage) {
-            return Reimbursement::with(['receipts.category', 'user', 'expenseCategory'])->where('user_id', $user->id)->get();
+            $query->where('user_id', $user->id);
         }
 
-        return Reimbursement::with(['receipts.category', 'user', 'expenseCategory'])->get();
+        return $query->get();
     }
 
     /**
@@ -132,11 +136,11 @@ class ReimbursementService
     /**
      * Approve claim.
      */
-    public function approveReimbursement(User $user, int $id, string $password, string $ipAddress, Request $requestContext)
+    public function approveReimbursement(User $user, int $id, ?string $password, string $ipAddress, Request $requestContext)
     {
         return DB::transaction(function () use ($user, $id, $password, $ipAddress, $requestContext) {
-            // Verify password against external auth service
-            if (!PasswordVerificationService::verify($requestContext, $password)) {
+            // Verify password against external auth service if provided
+            if (!empty($password) && !PasswordVerificationService::verify($requestContext, $password)) {
                 throw ValidationException::withMessages([
                     'password' => ['Invalid password. Please try again.']
                 ]);
@@ -175,13 +179,17 @@ class ReimbursementService
     }
 
     /**
-     * Reject claim.
+     * Reject / Revise claim — 3-strike workflow (2 revises + 1 terminal = 3 total).
+     *
+     * Admin chooses `revise` or `reject` via dropdown. Both increment `revision_count`
+     * and map to status `revise` until threshold (2 revises allowed (<=2 revise, >=3 rejected) — 1st/2nd = revise, 3rd = terminal rejected, 3 total) where system auto-flips to `rejected` (terminal).
+     * `rejected` is never set directly; it is system-derived only. 2 revises allowed (<=2 revise, >=3 rejected) — 1st/2nd = revise, 3rd = terminal rejected, 3 total.
      */
-    public function rejectReimbursement(User $user, int $id, string $comment, string $password, string $ipAddress, Request $requestContext)
+    public function rejectReimbursement(User $user, int $id, string $comment, ?string $password, string $ipAddress, Request $requestContext, string $action = 'revise')
     {
-        return DB::transaction(function () use ($user, $id, $comment, $password, $ipAddress, $requestContext) {
-            // Verify password against external auth service
-            if (!PasswordVerificationService::verify($requestContext, $password)) {
+        return DB::transaction(function () use ($user, $id, $comment, $password, $ipAddress, $requestContext, $action) {
+            // Verify password against external auth service if provided
+            if (!empty($password) && !PasswordVerificationService::verify($requestContext, $password)) {
                 throw ValidationException::withMessages([
                     'password' => ['Invalid password. Please try again.']
                 ]);
@@ -194,20 +202,35 @@ class ReimbursementService
                 throw new \Illuminate\Auth\Access\AuthorizationException('Conflict. Self-rejection/approval is prohibited.');
             }
 
+            // Only pending or revise can be returned; approved/granted/rejected are terminal for this action
+            if (!in_array($reimbursement->status, ['pending', 'revise'])) {
+                throw new \Illuminate\Auth\Access\AuthorizationException('Only pending or revise reimbursements can be revised/rejected.');
+            }
+
             $beforeState = $reimbursement->toArray();
+
+            $currentCount = (int) ($reimbursement->revision_count ?? 0);
+            $newCount = $currentCount + 1;
+            // 2 revises allowed (<=2 revise, >=3 rejected) — 1st/2nd = revise, 3rd = terminal rejected, 3 total
+            $newStatus = $newCount <= 2 ? 'revise' : 'rejected';
+            $isTerminal = $newStatus === 'rejected';
+
             $reimbursement->update([
-                'status' => 'rejected',
+                'status' => $newStatus,
+                'revision_count' => $newCount,
                 'admin_notes' => $comment,
                 'rejection_comment' => $comment,
             ]);
-            $this->updateReceiptStatuses($reimbursement->receipts()->pluck('receipts.id')->all(), 'rejected');
+            $this->updateReceiptStatuses($reimbursement->receipts()->pluck('receipts.id')->all(), $newStatus);
             $afterState = $reimbursement->toArray();
 
-            // Immutable Audit Log
+            // Immutable Audit Log — distinguish revise vs terminal rejected
+            $actionType = $isTerminal ? 'CLAIM_REJECTED' : ($action === 'revise' ? 'CLAIM_REVISED' : 'CLAIM_REJECTED');
+
             AuditLogService::log(
                 actorId: $user->id,
                 actorRole: $user->role,
-                actionType: 'CLAIM_REJECTED',
+                actionType: $actionType,
                 entityType: 'reimbursement',
                 entityId: $reimbursement->id,
                 beforeState: $beforeState,
@@ -220,11 +243,69 @@ class ReimbursementService
     }
 
     /**
+     * Backwards-compatible alias for revise flow.
+     */
+    public function reviseReimbursement(User $user, int $id, string $comment, ?string $password, string $ipAddress, Request $requestContext)
+    {
+        return $this->rejectReimbursement($user, $id, $comment, $password, $ipAddress, $requestContext, 'revise');
+    }
+
+    /**
+     * Grant (disburse) a previously approved claim.
+     */
+    public function grantReimbursement(User $user, int $id, ?string $password, string $ipAddress, Request $requestContext)
+    {
+        return DB::transaction(function () use ($user, $id, $password, $ipAddress, $requestContext) {
+            // Verify password against external auth service if provided
+            if (!empty($password) && !PasswordVerificationService::verify($requestContext, $password)) {
+                throw ValidationException::withMessages([
+                    'password' => ['Invalid password. Please try again.']
+                ]);
+            }
+
+            $reimbursement = Reimbursement::findOrFail($id);
+
+            // Status guard: only approved reimbursements can be granted
+            if ($reimbursement->status !== 'approved') {
+                throw new \Illuminate\Auth\Access\AuthorizationException('Only approved reimbursements can be granted.');
+            }
+
+            // Self-grant check
+            if ($reimbursement->user_id === $user->id) {
+                throw new \Illuminate\Auth\Access\AuthorizationException('Self-grant is prohibited.');
+            }
+
+            $beforeState = $reimbursement->toArray();
+            $reimbursement->update(['status' => 'granted']);
+            $this->updateReceiptStatuses($reimbursement->receipts()->pluck('receipts.id')->all(), 'granted');
+            $afterState = $reimbursement->toArray();
+
+            // Immutable Audit Log
+            AuditLogService::log(
+                actorId: $user->id,
+                actorRole: $user->role,
+                actionType: 'CLAIM_GRANTED',
+                entityType: 'reimbursement',
+                entityId: $reimbursement->id,
+                beforeState: $beforeState,
+                afterState: $afterState,
+                ipAddress: $ipAddress
+            );
+
+            if ($reimbursement->is_request == 1 && !empty($reimbursement->source_submission_id)) {
+                UpdatePrsReimbursementStatusJob::dispatch($reimbursement->source_submission_id);
+            }
+
+            return $reimbursement;
+        });
+    }
+
+    /**
      * Update reimbursement details.
      *
      * Supports two modes:
      * 1. Admin: update admin_notes / status (existing behaviour)
-     * 2. Employee self-edit: update fields when status is pending or rejected
+     * 2. Employee self-edit: update fields when status is pending or revise
      */
     public function updateReimbursement(User $user, int $id, array $data, bool $canManage, $reportFile = null)
     {
@@ -232,8 +313,11 @@ class ReimbursementService
 
         // Admin mode — existing behaviour
         if ($canManage && ($user->id !== $reimbursement->user_id)) {
+            if (!empty($data['status']) && $data['status'] === 'granted') {
+                throw new \Illuminate\Auth\Access\AuthorizationException('Use POST /{id}/grant with password verification.');
+            }
             $reimbursement->update($data);
-            if (!empty($data['status']) && in_array($data['status'], ['pending', 'approved', 'rejected'])) {
+            if (!empty($data['status']) && in_array($data['status'], ['pending', 'approved', 'revise', 'rejected'])) {
                 $this->updateReceiptStatuses(
                     $reimbursement->receipts()->pluck('receipts.id')->all(),
                     $data['status'],
@@ -242,13 +326,17 @@ class ReimbursementService
             return $reimbursement;
         }
 
-        // Employee self-edit mode
+         // Employee self-edit mode
         if ($reimbursement->user_id !== $user->id) {
             throw new \Illuminate\Auth\Access\AuthorizationException('Forbidden. You do not own this reimbursement.');
         }
 
-        if (!in_array($reimbursement->status, ['pending', 'rejected'])) {
-            throw new \Illuminate\Auth\Access\AuthorizationException('Only pending or rejected reimbursements can be edited.');
+        if ($reimbursement->status === 'rejected') {
+            throw new \Illuminate\Auth\Access\AuthorizationException('Rejected reimbursements (exceeded revision limit) cannot be edited.');
+        }
+
+        if (!in_array($reimbursement->status, ['pending', 'revise'])) {
+            throw new \Illuminate\Auth\Access\AuthorizationException('Only pending or revise reimbursements can be edited.');
         }
 
         return DB::transaction(function () use ($reimbursement, $user, $data, $reportFile) {
@@ -309,8 +397,8 @@ class ReimbursementService
                 'report_file_path' => $reportPath,
             ], fn($v) => $v !== null);
 
-            // Reset rejected → pending on re-submission
-            if ($reimbursement->status === 'rejected') {
+            // Reset revise → pending on re-submission (rejected terminal cannot be reset)
+            if ($reimbursement->status === 'revise') {
                 $updatePayload['status'] = 'pending';
                 $updatePayload['rejection_comment'] = null;
                 $this->updateReceiptStatuses($reimbursement->receipts()->pluck('receipts.id')->all(), 'pending');

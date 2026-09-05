@@ -4,11 +4,13 @@ import { useAuthStore } from "./auth";
 import { useNotificationStore } from "./notification";
 import { apiFetch } from "../utils/apiFetch";
 import { getFileUrl } from "../utils/fileUtils";
+import { canEditReceipt, firstFilePathField } from "../utils/receiptUtils";
 
 export const useReceiptStore = defineStore("receipts", () => {
   const auth = useAuthStore();
 
   const receipts = ref([]);
+  const reReviewReceipts = ref([]);
   const categories = ref([]);
   const isLoading = ref(false);
   const isSaving = ref(false);
@@ -27,6 +29,7 @@ export const useReceiptStore = defineStore("receipts", () => {
     uploader: "",
     category: "",
     status: "",
+    sort: "newest",
     amountRange: { min: null, max: null },
   });
 
@@ -82,8 +85,52 @@ export const useReceiptStore = defineStore("receipts", () => {
       });
     }
 
-    // Sorting by newest
-    return filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+    const sort = filters.value.sort || "newest";
+    return filtered.sort((a, b) => {
+      switch (sort) {
+        case "oldest": {
+          const byCreated = new Date(a.createdAt) - new Date(b.createdAt);
+          if (byCreated !== 0) return byCreated;
+          return Number(a.dbId) - Number(b.dbId);
+        }
+        case "name-asc": {
+          const res = (a.vendorName || "").localeCompare(b.vendorName || "");
+          if (res !== 0) return res;
+          return Number(a.dbId) - Number(b.dbId);
+        }
+        case "name-desc": {
+          const res = (b.vendorName || "").localeCompare(a.vendorName || "");
+          if (res !== 0) return res;
+          return Number(b.dbId) - Number(a.dbId);
+        }
+        case "price-desc": {
+          const res = (b.amount || 0) - (a.amount || 0);
+          if (res !== 0) return res;
+          return Number(b.dbId) - Number(a.dbId);
+        }
+        case "price-asc": {
+          const res = (a.amount || 0) - (b.amount || 0);
+          if (res !== 0) return res;
+          return Number(a.dbId) - Number(b.dbId);
+        }
+        case "category-asc": {
+          const res = (a.category || "").localeCompare(b.category || "");
+          if (res !== 0) return res;
+          return Number(a.dbId) - Number(b.dbId);
+        }
+        case "status-asc": {
+          const res = (a.status || "").localeCompare(b.status || "");
+          if (res !== 0) return res;
+          return Number(a.dbId) - Number(b.dbId);
+        }
+        case "newest":
+        default: {
+          const byCreated = new Date(b.createdAt) - new Date(a.createdAt);
+          if (byCreated !== 0) return byCreated;
+          return Number(b.dbId) - Number(a.dbId);
+        }
+      }
+    });
   });
 
   /**
@@ -124,14 +171,17 @@ export const useReceiptStore = defineStore("receipts", () => {
     const reimbursementCount = Number(
       r.reimbursements_count ?? r.reimbursements?.length ?? 0,
     );
+    const fileUrl =
+      firstFilePathField(r.file_url) || firstFilePathField(r.file_path) || "";
 
     return {
       id: `RCPT-2026-${String(r.id).padStart(3, "0")}`,
       dbId: r.id,
       uploader: r.uploader?.name || auth.user?.name || "Unknown",
-      fileName: (r.file_path || "").split("/").pop() || "N/A",
-      fileType: r.file_type,
-      fileSize: r.file_size_bytes,
+      fileName:
+        String(firstFilePathField(r.file_path) || "").split("/").pop() || "N/A",
+      fileType: firstFilePathField(r.file_type),
+      fileSize: Number(firstFilePathField(r.file_size_bytes)) || 0,
       date: r.transaction_date || r.created_at,
       amount: Number(r.total_amount) || 0,
       category: r.category?.name || "Uncategorized",
@@ -148,8 +198,8 @@ export const useReceiptStore = defineStore("receipts", () => {
           : r.system_rejected_at || null,
       modifiedAfterSystemRejection: !!r.modified_after_system_rejection,
       adminNotes: r.admin_notes || "",
-      hash: r.file_hash,
-      thumbnail: getFileUrl(r.file_url || r.file_path) || null,
+      hash: firstFilePathField(r.file_hash),
+      thumbnail: getFileUrl(fileUrl) || null,
       isDeleted: !!r.deleted_at,
       reimbursementCount,
       isReimbursed: reimbursementCount > 0,
@@ -162,6 +212,9 @@ export const useReceiptStore = defineStore("receipts", () => {
       location: r.location || null,
       ocrConfidenceScore: r.ocr_confidence_score,
       ocrFlagged: r.ocr_flagged,
+      rejectionCode: r.rejection_code || null,
+      rejectionReason: r.rejection_reason || null,
+      duplicateSimilarity: r.duplicate_similarity ?? null,
       createdAt: r.created_at,
       items: r.items || [],
     };
@@ -200,6 +253,9 @@ export const useReceiptStore = defineStore("receipts", () => {
    */
   async function fetchAll(params = {}) {
     isLoading.value = true;
+    if (params.sort !== undefined) {
+      filters.value.sort = params.sort;
+    }
     try {
       const query = new URLSearchParams();
       query.set("page", String(params.page || 1));
@@ -211,6 +267,8 @@ export const useReceiptStore = defineStore("receipts", () => {
       if (params.category && params.category !== "All") {
         query.set("category", params.category);
       }
+      if (params.scope) query.set("scope", params.scope);
+      if (params.sort) query.set("sort", params.sort);
 
       const response = await apiFetch(`/api/serms/reimbursements/receipts?${query.toString()}`, {
         credentials: "include",
@@ -233,6 +291,29 @@ export const useReceiptStore = defineStore("receipts", () => {
       console.error("Failed to fetch receipts from database:", e);
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  /**
+   * Fetch receipts awaiting admin re-review (all users), for the admin panel.
+   */
+  async function fetchReReviewReceipts() {
+    try {
+      const query = new URLSearchParams();
+      query.set("page", "1");
+      query.set("per_page", "100");
+      query.set("status", "pending-admin-re-review");
+      query.set("scope", "all");
+
+      const response = await apiFetch(`/api/serms/reimbursements/receipts?${query.toString()}`, {
+        credentials: "include",
+      });
+      if (response.ok) {
+        const data = await response.json();
+        reReviewReceipts.value = (data.data || []).map(mapReceipt);
+      }
+    } catch (e) {
+      console.error("Failed to fetch receipts pending re-review:", e);
     }
   }
 
@@ -306,9 +387,9 @@ export const useReceiptStore = defineStore("receipts", () => {
       throw new Error("Receipt not found.");
     }
 
-    if (String(rx.status || "").toLowerCase() !== "processed") {
+    if (!canEditReceipt(rx)) {
       isSaving.value = false;
-      throw new Error("Only receipts with processed status can be edited.");
+      throw new Error("This receipt's current status does not allow editing.");
     }
 
     const previousStatus = rx.status;
@@ -372,8 +453,166 @@ export const useReceiptStore = defineStore("receipts", () => {
     }
   }
 
+  /**
+   * Re-run the OCR pipeline for an existing receipt.
+   *
+   * @param {number|string} id - The receipt's backend (db) id
+   * @returns {Promise<object>} The updated mapped receipt (status back to processing)
+   */
+  async function retryOcr(id) {
+    isSaving.value = true;
+
+    const rx = receipts.value.find((r) => r.dbId === id);
+
+    try {
+      const response = await apiFetch(
+        `/api/serms/reimbursements/receipts/${id}/retry-ocr`,
+        {
+          method: "POST",
+          credentials: "include",
+        },
+      );
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.message || `Retry OCR failed (Status ${response.status})`);
+      }
+
+      const resData = await response.json();
+      if (rx) Object.assign(rx, mapReceipt(resData.data));
+      return rx ?? resData.data;
+    } finally {
+      isSaving.value = false;
+    }
+  }
+
+  /**
+   * Re-fetch a single receipt from the API and sync it into the local store.
+   *
+   * Used by the edit modal to poll for OCR completion after Retry OCR: the
+   * external AI service updates the DB via its webhook callback, but the open
+   * modal holds a reference to the local mapped object and won't learn the new
+   * status until something re-reads it. This GETs the receipt, finds the local
+   * item by `dbId`, and `Object.assign`s the mapped data into it so existing
+   * references (including `props.receiptToEdit` in the modal) stay in sync and
+   * reactive. Uses no `isSaving` flag so it never clobbers save spinners.
+   *
+   * @param {number|string} id - The receipt's backend (db) id
+   * @returns {Promise<object>} The updated mapped receipt (existing local item
+   *   mutated in place), or the fetched mapped data when no local item exists.
+   */
+  async function refreshReceipt(id) {
+    try {
+      const response = await apiFetch(
+        `/api/serms/reimbursements/receipts/${id}`,
+        {
+          credentials: "include",
+        },
+      );
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(
+          errData.message ||
+            `Failed to refresh receipt (Status ${response.status})`,
+        );
+      }
+
+      const resData = await response.json();
+      const mapped = mapReceipt(resData.data);
+
+      const rx = receipts.value.find((r) => r.dbId === id);
+      if (rx) {
+        Object.assign(rx, mapped);
+        return rx;
+      }
+      return mapped;
+    } catch (error) {
+      console.error("Failed to refresh receipt:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update an existing receipt's editable fields via PATCH.
+   * Used by the OCR-driven expense upload flow to persist user corrections
+   * after the backend has extracted the initial data.
+   *
+   * @param {number|string} id - The receipt's backend (db) id
+   * @param {object} payload - Editable fields (snake_case backend names)
+   * @returns {Promise<object>} The updated mapped receipt
+   */
+  async function updateReceipt(id, payload) {
+    isSaving.value = true;
+
+    const formData = new FormData();
+    // Skip null/undefined AND empty strings: the backend's `numeric`/`date`/
+    // `exists` rules reject "" (e.g. an unextracted total_amount), and we want
+    // to leave those columns untouched rather than overwrite them with blanks.
+    const shouldAppend = (v) => v != null && v !== "";
+    if (shouldAppend(payload.expense_category_id))
+      formData.append("expense_category_id", payload.expense_category_id);
+    if (shouldAppend(payload.vendor_name))
+      formData.append("vendor_name", payload.vendor_name);
+    if (shouldAppend(payload.transaction_date))
+      formData.append("transaction_date", payload.transaction_date);
+    if (shouldAppend(payload.total_amount))
+      formData.append("total_amount", payload.total_amount);
+    if (shouldAppend(payload.vat_amount))
+      formData.append("vat_amount", payload.vat_amount);
+    if (shouldAppend(payload.tin)) formData.append("tin", payload.tin);
+    if (shouldAppend(payload.invoice_number))
+      formData.append("invoice_number", payload.invoice_number);
+    if (shouldAppend(payload.vat_classification))
+      formData.append("vat_classification", payload.vat_classification);
+    if (shouldAppend(payload.currency))
+      formData.append("currency", payload.currency);
+    if (shouldAppend(payload.location))
+      formData.append("location", payload.location);
+    if (shouldAppend(payload.status))
+      formData.append("status", payload.status);
+    if (payload.items && Array.isArray(payload.items)) {
+      formData.append("items", JSON.stringify(payload.items));
+    }
+
+    try {
+      const response = await apiFetch(
+        `/api/serms/reimbursements/receipts/${id}`,
+        {
+          method: "PATCH",
+          credentials: "include",
+          body: formData,
+        },
+      );
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.message || "Failed to update receipt.");
+      }
+
+      const res = await response.json();
+      const mapped = mapReceipt(res.data);
+
+      const index = receipts.value.findIndex((r) => r.dbId === mapped.dbId);
+      if (index !== -1) {
+        receipts.value[index] = mapped;
+      } else {
+        receipts.value.unshift(mapped);
+      }
+
+      return mapped;
+    } catch (error) {
+      console.error("Receipt update failed:", error);
+      throw error;
+    } finally {
+      isSaving.value = false;
+    }
+  }
+
   async function finalizeReReview(id, decision, adminNotes) {
-    const rx = receipts.value.find((r) => r.id === id);
+    const rx =
+      receipts.value.find((r) => r.id === id) ||
+      reReviewReceipts.value.find((r) => r.id === id);
     if (!rx) throw new Error("Receipt not found.");
     if (!adminNotes || adminNotes.trim().length < 10) {
       throw new Error("Admin notes must be at least 10 characters.");
@@ -387,6 +626,7 @@ export const useReceiptStore = defineStore("receipts", () => {
       finalDecision: decision,
       finalDecisionAt: new Date().toISOString(),
     });
+    reReviewReceipts.value = reReviewReceipts.value.filter((r) => r.id !== id);
     return rx;
   }
 
@@ -483,12 +723,14 @@ export const useReceiptStore = defineStore("receipts", () => {
       uploader: "",
       category: "",
       status: "",
+      sort: "newest",
       amountRange: { min: null, max: null },
     };
   }
 
   return {
     receipts,
+    reReviewReceipts,
     categories,
     isLoading,
     isSaving,
@@ -497,9 +739,13 @@ export const useReceiptStore = defineStore("receipts", () => {
     pagination,
     visibleReceipts,
     fetchAll,
+    fetchReReviewReceipts,
     fetchCategories,
     uploadReceipt,
     resubmitReceipt,
+    retryOcr,
+    refreshReceipt,
+    updateReceipt,
     finalizeReReview,
     simulateUpload,
     softDelete,

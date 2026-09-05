@@ -30,4 +30,9 @@ class CashAdvanceStatusHistory extends Model
     {
         return $this->belongsTo(User::class, 'changed_by');
     }
+
+    public function changedBy()
+    {
+        return $this->belongsTo(User::class, 'changed_by');
+    }
 }

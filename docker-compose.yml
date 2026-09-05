@@ -119,7 +119,7 @@ services:
       - AI_SERVICE_API_KEY=ocr-callback-key-change-me
       - AI_SERVICE_CALLBACK_BASE_URL=http://serms_api:8000
       - AI_SERVICE_TIMEOUT=10
-    command: php artisan queue:work --sleep=3 --tries=3
+    command: php artisan queue:work --sleep=1 --tries=3
 
   web:
     build:

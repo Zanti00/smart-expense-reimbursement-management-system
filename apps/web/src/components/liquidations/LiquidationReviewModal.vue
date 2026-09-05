@@ -1,9 +1,13 @@
 <script setup>
-import { FileText, X, XCircle, ShieldCheck } from "lucide-vue-next";
-import { formatPeso } from "@/utils/formatters";
-import LiquidationReviewDetails from "@/components/liquidations/LiquidationReviewDetails.vue";
+import { computed } from "vue";
+import { X, XCircle, ShieldCheck, Eye, FileText, Download } from "lucide-vue-next";
+import { formatPeso, formatDate } from "@/utils/formatters";
+import StatusBadge from "@/components/base/StatusBadge.vue";
+import BaseReceiptImage from "@/components/base/BaseReceiptImage.vue";
+import UnifiedRoadmapStepper from "@/components/base/UnifiedRoadmapStepper.vue";
+import { useLiquidationStore } from "@/stores/liquidation";
 
-defineProps({
+const props = defineProps({
   isOpen: {
     type: Boolean,
     required: true,
@@ -38,119 +42,287 @@ defineProps({
   },
   formatDateOnly: {
     type: Function,
-    required: true,
-  },
-  statusBadgeClass: {
-    type: Function,
-    required: true,
+    default: formatDate,
   },
 });
 
-defineEmits(["close", "view-receipt", "reject", "approve"]);
+const emit = defineEmits(["close", "view-receipt", "reject", "approve", "navigate"]);
+
+const liqStore = useLiquidationStore();
+
+/* Bridge unified roadmap props from reviewingCase */
+const roadmapCashAdvance = computed(() => {
+  const rc = props.reviewingCase || {};
+  // reviewingCase may have cash_advance nested from backend via liqStore raw, or mapped fields
+  if (rc.cash_advance) return rc.cash_advance;
+  if (rc.cashAdvance) return rc.cashAdvance;
+  // fallback fabricate minimal cash-advance shape
+  return {
+    id: rc.cash_advance_id ?? rc.cashAdvanceId ?? rc.advanceId ?? rc.id,
+    status: rc.cashAdvanceStatus || rc.advanceStatus || "signed",
+    amount: rc.cashAdvanceAmount,
+    balance: rc.outstandingBalance,
+    expected_liquidation_date: rc.dueDate,
+    dueDate: rc.dueDate,
+    pending: false,
+  };
+});
+
+const roadmapLiquidation = computed(() => {
+  const rc = props.reviewingCase || {};
+  // raw settlement if available via liqStore
+  const raw = liqStore.settlements.find(
+    (s) => `LIQ-${String(s.id).padStart(3, "0")}` === rc.id || String(s.id) === String(rc.databaseId)
+  );
+  if (raw) {
+    return {
+      id: raw.id,
+      status: raw.status,
+      revision_count: raw.revision_count,
+      total_expense_amount: raw.total_expense_amount,
+      penalties: raw.penalties,
+    };
+  }
+  return {
+    id: rc.databaseId ?? rc.id,
+    status: props.reviewStatus,
+    revision_count: rc.revision_count,
+    total_expense_amount: rc.submittedReceiptTotal ?? rc.acceptedTotal,
+    penalties: rc.penalties,
+  };
+});
+
+const roadmapHistory = computed(() => {
+  const rc = props.reviewingCase || {};
+  return rc.status_history || rc.statusHistory || rc.history || rc.audit_logs || [];
+});
+
+const roadmapPenalties = computed(() => {
+  const rc = props.reviewingCase || {};
+  if (Array.isArray(rc.penalties)) return rc.penalties;
+  if (Array.isArray(roadmapCashAdvance.value?.penalties)) return roadmapCashAdvance.value.penalties;
+  return [];
+});
+
+const roadmapAging = computed(() => {
+  try {
+    return liqStore.calculateAging(roadmapCashAdvance.value || {});
+  } catch {
+    return null;
+  }
+});
+
+const roadmapOverpayment = computed(() => {
+  const total = Number(roadmapLiquidation.value?.total_expense_amount ?? 0);
+  const bal = Number(roadmapCashAdvance.value?.amount ?? roadmapCashAdvance.value?.balance ?? props.reviewingCase?.cashAdvanceAmount ?? 0);
+  return Math.max(0, total - bal);
+});
+
+function handleRoadmapNavigate(payload) {
+  emit("navigate", payload);
+}
 </script>
 
 <template>
-  <div
-    v-if="isOpen && reviewingCase"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-2 backdrop-blur-[1px] sm:p-4"
-  >
+  <Transition name="modal">
     <div
-      class="flex max-h-[calc(100dvh-1rem)] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl sm:max-h-[90vh]"
+      v-if="isOpen && reviewingCase"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
     >
-      <header
-        class="flex items-center justify-between px-4 py-4 border-b border-slate-200 bg-slate-50/80 sm:px-6"
+      <div
+        class="relative bg-white w-full max-w-[960px] rounded-3xl shadow-[0_20px_40px_-10px_rgba(0,0,0,0.1)] flex flex-col overflow-hidden max-h-[96vh]"
+        @click.stop
       >
-        <div class="min-w-0">
-          <div class="flex items-center gap-2 mb-1">
-            <FileText class="w-4 h-4 text-accent" />
-            <span class="section-label">Liquidation Review</span>
-          </div>
-        </div>
+        <!-- Close Button -->
         <button
-          class="inline-flex items-center justify-center w-10 h-10 transition-colors rounded-full text-slate-500 hover:bg-slate-100 hover:text-danger"
-          type="button"
-          title="Close review"
           @click="$emit('close')"
+          class="absolute top-2 right-2 text-slate-400 hover:bg-slate-100 transition-colors p-1.5 rounded-full flex items-center justify-center z-10"
         >
-          <X class="h-5 w-5 stroke-[1.75]" />
+          <X class="w-4 h-4" />
         </button>
-      </header>
 
-      <LiquidationReviewDetails
-        :reviewing-case="reviewingCase"
-        :review-status="reviewStatus"
-        :review-outstanding-balance="reviewOutstandingBalance"
-        :review-receipts="reviewReceipts"
-        :get-file-url="getFileUrl"
-        :format-date-only="formatDateOnly"
-        :status-badge-class="statusBadgeClass"
-        @view-receipt="$emit('view-receipt', $event)"
-      />
-
-      <footer class="relative px-6 py-4 bg-white border-t border-slate-200">
-        <div
-          v-if="
-            reviewingCase.status !== 'Liquidated' &&
-            reviewingCase.status !== 'Rejected'
-          "
-          class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
-        >
-          <div class="text-sm font-semibold text-slate-500">
-            Accepted receipts total:
-            <span class="font-bold text-primary">{{
-              formatPeso(acceptedReviewTotal)
-            }}</span>
-          </div>
-          <p
-            v-if="isReviewingOwnLiquidation"
-            class="text-sm font-semibold text-danger"
-          >
-            You cannot process your own liquidation settlement.
-          </p>
-          <div class="flex gap-2">
-            <button
-              class="inline-flex items-center justify-center gap-2 px-5 text-sm font-bold text-red-700 transition-colors border border-red-200 rounded-lg min-h-11 bg-red-50 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
-              type="button"
-              :disabled="isReviewingOwnLiquidation"
-              @click="$emit('reject')"
-            >
-              <XCircle class="w-4 h-4" />
-              Reject Settlement
-            </button>
-            <button
-              class="btn btn-cta min-h-[42px] disabled:cursor-not-allowed disabled:opacity-60"
-              type="button"
-              :disabled="isReviewingOwnLiquidation"
-              @click="$emit('approve')"
-            >
-              <ShieldCheck class="w-4 h-4" />
-              Accept as Liquidation
-            </button>
+        <!-- Header -->
+        <div class="px-6 pt-8 pb-4 border-b border-slate-100 shrink-0">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-1">
+                Liquidation {{ reviewingCase.id }}
+              </p>
+              <h2 class="text-2xl font-bold text-slate-800">
+                {{ formatPeso(reviewingCase.cashAdvanceAmount) }}
+              </h2>
+            </div>
+            <StatusBadge :status="reviewStatus" />
           </div>
         </div>
-        <div
-          v-else
-          class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
-        >
-          <div class="text-sm font-semibold text-slate-500">
-            Liquidation status:
-            <span
-              :class="[
-                'inline-flex rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide',
-                statusBadgeClass(reviewingCase.status),
-              ]"
-            >
-              {{ reviewingCase.status }}
-            </span>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+          <div v-if="String(reviewStatus).toLowerCase() === 'revise'" class="p-3 rounded-lg border border-orange-200 bg-orange-50">
+            <p class="text-[11px] text-orange-600 uppercase tracking-wide font-bold">Needs Revision — Attempt {{ reviewingCase.revision_count || 1 }}/3</p>
+            <p class="text-sm text-orange-800 mt-1">{{ reviewingCase.adminNote || 'Please revise per admin feedback.' }}</p>
           </div>
+          <!-- UNIFIED 8-step Roadmap -->
+          <UnifiedRoadmapStepper
+            :cash-advance="roadmapCashAdvance"
+            :liquidation="roadmapLiquidation"
+            :status-history="roadmapHistory"
+            :penalties="roadmapPenalties"
+            :overpayment-amount="roadmapOverpayment"
+            :aging="roadmapAging"
+            @navigate="handleRoadmapNavigate"
+          />
+
+          <!-- Details Grid -->
+          <section class="grid grid-cols-2 gap-x-6 gap-y-3 pt-4 border-t border-slate-100">
+            <div>
+              <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-0.5">Employee Name</p>
+              <p class="text-sm text-slate-700">{{ reviewingCase.requestorName || "--" }}</p>
+            </div>
+            <div>
+              <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-0.5">Due Date</p>
+              <p class="text-sm text-slate-700">{{ formatDateOnly(reviewingCase.dueDate) }}</p>
+            </div>
+            <div>
+              <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-0.5">Outstanding Balance</p>
+              <p class="text-sm font-semibold text-primary">{{ formatPeso(reviewOutstandingBalance) }}</p>
+            </div>
+            <div>
+              <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-0.5">Advance Date</p>
+              <p class="text-sm text-slate-700">{{ formatDateOnly(reviewingCase.dateOfAdvances) }}</p>
+            </div>
+          </section>
+
+          <!-- Receipts -->
+          <div>
+            <h3 class="text-sm font-medium text-slate-700 mb-3">
+              Receipts ({{ reviewReceipts.length }})
+            </h3>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <article
+                v-for="receipt in reviewReceipts"
+                :key="receipt.id"
+                class="rounded-xl overflow-hidden border border-slate-200"
+              >
+                <!-- Receipt Image -->
+                <BaseReceiptImage
+                  :src="receipt.filePath ? getFileUrl(receipt.filePath) : null"
+                  :alt="receipt.merchantName || 'Receipt'"
+                  :file-type="receipt.fileType"
+                  img-class="h-full w-full object-cover object-top"
+                  container-class="bg-slate-50 aspect-[4/3] flex items-center justify-center border-b border-slate-100 overflow-hidden"
+                />
+
+                <!-- Receipt Info -->
+                <div class="p-3 space-y-2.5">
+                  <div class="flex justify-between items-start gap-2">
+                    <div class="min-w-0">
+                      <p class="text-sm font-medium text-slate-800 truncate">
+                        {{ receipt.merchantName || "Receipt" }}
+                      </p>
+                      <p class="text-xs text-slate-400 mt-0.5">
+                        {{ receipt.location || "--" }}
+                      </p>
+                    </div>
+                    <StatusBadge :status="receipt.decision === 'accepted' ? 'approved' : receipt.decision" />
+                  </div>
+
+                  <div class="flex justify-between items-center">
+                    <span class="text-[10px] font-medium uppercase tracking-wide text-primary bg-primary/5 px-2 py-0.5 rounded">
+                      {{ receipt.category || "General" }}
+                    </span>
+                    <span class="text-sm font-semibold text-slate-800">
+                      {{ formatPeso(receipt.amount || 0) }}
+                    </span>
+                  </div>
+
+                  <button
+                    class="w-full py-2 bg-slate-50 text-slate-600 text-xs font-medium rounded-lg hover:bg-slate-100 transition-colors flex items-center justify-center gap-1.5"
+                    type="button"
+                    @click="$emit('view-receipt', receipt)"
+                  >
+                    <Eye class="w-3.5 h-3.5" />
+                    Details
+                  </button>
+                </div>
+              </article>
+            </div>
+          </div>
+
+          <!-- Admin Notes -->
           <div
             v-if="reviewingCase.adminNote"
-            class="max-w-md text-xs italic text-slate-500"
+            class="pt-2 border-t border-slate-100"
           >
-            Note: "{{ reviewingCase.adminNote }}"
+            <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-1">Admin Notes</p>
+            <p class="text-sm text-slate-700">{{ reviewingCase.adminNote }}</p>
+          </div>
+
+          <!-- Report Attachment -->
+          <div v-if="reviewingCase.reportFilePath" class="pt-2">
+            <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-1">Report Attachment</p>
+            <a
+              :href="getFileUrl(reviewingCase.reportFilePath)"
+              target="_blank"
+              class="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+            >
+              <FileText class="w-3.5 h-3.5" />
+              <span>View / Download Report</span>
+              <Download class="w-3 h-3" />
+            </a>
           </div>
         </div>
-      </footer>
+
+        <!-- Footer -->
+        <footer class="px-6 py-4 border-t border-slate-100 shrink-0">
+          <div
+            v-if="reviewingCase.status !== 'Liquidated' && reviewingCase.status !== 'Rejected'"
+            class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div class="text-sm font-semibold text-slate-500">
+              Accepted receipts total:
+              <span class="font-bold text-primary">{{ formatPeso(acceptedReviewTotal) }}</span>
+            </div>
+            <p
+              v-if="isReviewingOwnLiquidation"
+              class="text-sm font-semibold text-danger"
+            >
+              You cannot process your own liquidation settlement.
+            </p>
+            <div class="flex gap-2">
+              <select
+                @change="$emit('reject', $event.target.value); $event.target.value=''"
+                class="flex-1 sm:flex-none py-2.5 px-4 border border-slate-200 text-slate-700 text-sm font-medium rounded-lg bg-white hover:bg-slate-50 transition-colors text-center"
+                :disabled="isReviewingOwnLiquidation"
+                value=""
+              >
+                <option value="" disabled selected>Actions ▾</option>
+                <option value="revise">Request Revision</option>
+                <option value="reject">Reject</option>
+              </select>
+              <button
+                class="flex-1 sm:flex-none py-2.5 px-5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                type="button"
+                :disabled="isReviewingOwnLiquidation"
+                @click="$emit('approve')"
+              >
+                <ShieldCheck class="w-4 h-4 inline-block mr-1" />
+                Approve
+              </button>
+            </div>
+          </div>
+          <div
+            v-else
+            class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div class="text-sm font-semibold text-slate-500">
+              Liquidation status:
+              <StatusBadge :status="reviewingCase.status" />
+            </div>
+          </div>
+        </footer>
+      </div>
     </div>
-  </div>
+  </Transition>
 </template>

@@ -5,11 +5,12 @@ import { useReimbursementStore } from "@/stores/reimbursement";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "@/composables/useToast";
 import BaseButton from "@/components/base/BaseButton.vue";
+import BaseToggleSwitch from "@/components/base/BaseToggleSwitch.vue";
 import BaseKpiGrid from "@/components/base/BaseKpiGrid.vue";
 import BaseUtilityToolbar from "@/components/base/BaseUtilityToolbar.vue";
 import ReimbursementDetailsModal from "@/components/reimbursements/ReimbursementDetailsModal.vue";
 import ReceiptDetailsModal from "@/components/reimbursements/ReceiptDetailsModal.vue";
-import DecisionConfirmationModal from "@/components/reimbursements/DecisionConfirmationModal.vue";
+import DecisionConfirmationModal from "@/components/base/DecisionConfirmationModal.vue";
 import DeleteConfirmModal from "@/components/base/DeleteConfirmModal.vue";
 import ReimbursementsTable from "@/components/reimbursements/ReimbursementsTable.vue";
 import { formatPeso } from "@/utils/formatters";
@@ -19,9 +20,9 @@ import {
 } from "@/composables/reimbursements/useReimbursementFilters";
 import { useReimbursementDetails } from "@/composables/reimbursements/useReimbursementDetails";
 import { useReimbursementDecisions } from "@/composables/reimbursements/useReimbursementDecisions";
+import { useOcrMode } from "@/composables/useOcrMode";
 import {
   Plus,
-  Activity,
   ShieldCheck,
   XCircle,
   Clock,
@@ -33,11 +34,12 @@ const store = useReimbursementStore();
 const auth = useAuthStore();
 const router = useRouter();
 const { addToast } = useToast();
+const { isMockOcr, setMockMode } = useOcrMode();
 
 const statusFilters = computed(() =>
   auth.isAdmin
-    ? ["All", "Pending", "Approved", "Rejected", "Granted"]
-    : ["All", "Pending", "Approved", "Rejected", "Granted"],
+    ? ["All", "Pending", "Revise", "Approved", "Rejected", "Granted"]
+    : ["All", "Pending", "Revise", "Approved", "Rejected", "Granted"],
 );
 
 const employeeReimbursementColumns = [
@@ -149,6 +151,8 @@ const {
 const {
   approvingId,
   rejectingId,
+  grantingId,
+  revisionAction,
   rejectionComment,
   confirmPassword,
   isReviewSubmitting,
@@ -158,10 +162,28 @@ const {
   openRejectModal,
   cancelReject,
   confirmReject,
+  openGrantModal,
+  cancelGrant,
+  confirmGrant,
 } = useReimbursementDecisions(store, addToast, viewingRecord);
 
 const isDeleteModalOpen = ref(false);
 const deletingRequestId = ref(null);
+const newRequestFileInput = ref(null);
+
+function handleNewRequest() {
+  newRequestFileInput.value?.click();
+}
+
+function handleNewRequestFiles(e) {
+  const files = e.target.files;
+  if (files && files.length > 0) {
+    // Store File objects in a module-level holder accessible by the form view
+    window.__serms_pending_files = Array.from(files);
+    router.push('/reimbursements/new');
+  }
+  if (e.target) e.target.value = "";
+}
 
 function handleEdit(row) {
   router.push({ name: "ReimbursementEdit", params: { id: row.id } });
@@ -195,15 +217,21 @@ onMounted(() => store.fetchAll());
 
 <template>
   <div class="flex flex-col gap-6 font-sans animate-fade-up">
+    <!-- Hidden file input for New Request -->
+    <input
+      ref="newRequestFileInput"
+      type="file"
+      class="hidden"
+      accept=".jpg,.jpeg,.png,.pdf"
+      multiple
+      @change="handleNewRequestFiles"
+    />
+
     <!-- ── Page Header ── -->
     <div
       class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"
     >
       <div class="min-w-0">
-        <div class="flex items-center gap-2 mb-2">
-          <Activity class="w-3.5 h-3.5 text-accent" />
-          <span class="section-label">Claim Records</span>
-        </div>
         <h1
           class="text-2xl font-bold leading-tight font-heading text-slate-800"
         >
@@ -212,6 +240,18 @@ onMounted(() => store.fetchAll());
         <p class="mt-1 text-sm text-slate-400">
           Manage and track all submitted expense claims.
         </p>
+      </div>
+      <div
+        v-if="!auth.isAdmin"
+        class="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2.5"
+      >
+        <BaseToggleSwitch
+          :model-value="isMockOcr"
+          @update:model-value="setMockMode"
+          on-label="Mock OCR"
+          off-label="Real OCR"
+          hint="Mock uploads file, fills instantly, skips OCR wait"
+        />
       </div>
     </div>
 
@@ -234,7 +274,7 @@ onMounted(() => store.fetchAll());
           id="new-reimbursement-btn"
           variant="cta"
           class="min-h-[42px] w-full sm:w-fit"
-          @click="router.push('/reimbursements/new')"
+          @click="handleNewRequest"
         >
           <Plus class="w-4 h-4" /> New Request
         </BaseButton>
@@ -265,8 +305,10 @@ onMounted(() => store.fetchAll());
       :modal-loading="modalLoading"
       @close="closeDetails"
       @view-receipt-details="viewReceiptDetails"
-      @reject="openRejectModal"
+      @reject="(id, action) => openRejectModal(id, action || 'revise')"
       @approve="openApproveModal"
+      @grant="openGrantModal"
+      @edit="handleEdit"
     />
 
     <!-- ── Single Receipt Details Modal ── -->
@@ -289,15 +331,15 @@ onMounted(() => store.fetchAll());
       @confirm-decision="confirmReceiptDecision"
     />
 
-    <!-- Approve and Reject Confirmation Modal -->
+    <!-- Approve / Revise / Reject / Grant Confirmation Modal -->
     <DecisionConfirmationModal
-      :is-open="!!approvingId || !!rejectingId"
-      :mode="approvingId ? 'approve' : 'reject'"
+      :is-open="!!approvingId || !!rejectingId || !!grantingId"
+      :mode="grantingId ? 'grant' : approvingId ? 'approve' : (revisionAction || 'revise')"
       :is-submitting="isReviewSubmitting"
       v-model:password="confirmPassword"
       v-model:comment="rejectionComment"
-      @close="approvingId ? cancelApprove() : cancelReject()"
-      @confirm="approvingId ? confirmApprove() : confirmReject()"
+      @close="grantingId ? cancelGrant() : approvingId ? cancelApprove() : cancelReject()"
+      @confirm="grantingId ? confirmGrant() : approvingId ? confirmApprove() : confirmReject()"
     />
 
     <!-- Delete Confirmation Modal -->

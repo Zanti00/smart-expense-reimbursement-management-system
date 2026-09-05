@@ -5,13 +5,11 @@ import { useCashAdvanceStore } from "@/stores/cashAdvance";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "@/composables/useToast";
 import { useCashAdvanceList } from "@/composables/useCashAdvanceList";
-import ToastNotification from "@/components/ToastNotification.vue";
 import DeleteConfirmModal from "@/components/base/DeleteConfirmModal.vue";
 
 import BaseKpiGrid from "@/components/base/BaseKpiGrid.vue";
 import BaseUtilityToolbar from "@/components/base/BaseUtilityToolbar.vue";
 import CashAdvanceTable from "@/components/cash-advances/CashAdvanceTable.vue";
-import RejectionModal from "@/components/cash-advances/RejectionModal.vue";
 import CashAdvanceDetailsModal from "@/components/cash-advances/CashAdvanceDetailsModal.vue";
 import { Plus, Wallet, Activity, ShieldCheck, X } from "lucide-vue-next";
 import { formatPeso } from "@/utils/formatters";
@@ -42,8 +40,9 @@ onMounted(() => store.fetchAll());
 
 function openDetails(row) {
   viewingRecord.value = {
+    ...row,
     id: row.id,
-    purpose: row.purpose.replace(/\s\.\.\.$|\.\.\.$/, ""),
+    purpose: (row.purpose || "").replace(/\s\.\.\.$|\.\.\.$/, ""),
     amount: row.amount,
     balance:
       row.outstanding ??
@@ -67,48 +66,19 @@ function openDetails(row) {
     documentUrl: row.documentUrl,
     documentFileName:
       row.documentFileName || `Cash_Advance_Request_${row.id}.pdf`,
+    status_history: row.status_history || row.statusHistory || [],
+    statusHistory: row.statusHistory || row.status_history || [],
+    approval_actions: row.approval_actions || row.approvalActions || [],
+    approvalActions: row.approvalActions || row.approval_actions || [],
+    disbursement: row.disbursement || null,
+    penalties: row.penalties || [],
   };
 }
-
-const rejectingId = ref(null);
-const rejectionType = ref("");
 
 const viewingRecord = ref(null);
 
 function closeDetails() {
   viewingRecord.value = null;
-}
-
-async function quickApproveAdvance(id) {
-  await store.approveRequest(id);
-}
-async function quickApproveSettlement(id) {
-  await store.approveSettlement(id);
-}
-
-function openRejectModal(id, type) {
-  rejectingId.value = id;
-  rejectionType.value = type;
-}
-
-function cancelReject() {
-  rejectingId.value = null;
-  rejectionType.value = "";
-}
-
-async function confirmReject(reason) {
-  if (!rejectingId.value) return;
-  try {
-    if (rejectionType.value === "advance") {
-      await store.rejectRequest(rejectingId.value, reason);
-    } else if (rejectionType.value === "settlement") {
-      await store.rejectSettlement(rejectingId.value, reason);
-    }
-    addToast({ message: "Request rejected successfully", type: "success" });
-    cancelReject();
-  } catch (error) {
-    addToast({ message: error.message || "Failed to reject", type: "error" });
-  }
 }
 
 const kpis = computed(() => {
@@ -205,16 +175,11 @@ async function confirmDelete(password) {
 
 <template>
   <div class="flex flex-col w-full gap-6 mx-auto font-sans max-w-7xl">
-    <ToastNotification />
     <!-- Page Header -->
     <section
       class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"
     >
       <div class="min-w-0">
-        <div class="flex items-center gap-2 mb-2">
-          <Wallet class="h-3.5 w-3.5 text-accent" />
-          <span class="section-label">Advance Requests</span>
-        </div>
         <h1
           class="text-2xl font-bold leading-tight font-heading text-slate-800"
         >
@@ -268,23 +233,11 @@ async function confirmDelete(password) {
       @delete="handleDelete"
     />
 
-    <!-- Rejection Modal -->
-    <RejectionModal
-      :isOpen="!!rejectingId"
-      :id="rejectingId || ''"
-      :type="rejectionType"
-      @close="cancelReject"
-      @confirm="confirmReject"
-    />
-
     <!-- Cash Advance Details Modal -->
     <CashAdvanceDetailsModal
       :isOpen="!!viewingRecord"
       :record="viewingRecord"
       @close="closeDetails"
-      @reject="openRejectModal"
-      @approve-advance="quickApproveAdvance"
-      @approve-settlement="quickApproveSettlement"
     />
 
     <!-- Delete Confirmation Modal -->

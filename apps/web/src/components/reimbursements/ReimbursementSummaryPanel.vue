@@ -1,5 +1,5 @@
 <script setup>
-import { formatAmount } from "@/utils/formatters";
+import { formatAmount, formatCutoffPeriod } from "@/utils/formatters";
 
 const props = defineProps({
   receiptCount: {
@@ -61,7 +61,7 @@ const props = defineProps({
               : 'text-danger font-bold'
           "
         >
-          {{ cutoffPeriod || "Not selected" }}
+          {{ (cutoffPeriod && formatCutoffPeriod(cutoffPeriod) !== '—') ? formatCutoffPeriod(cutoffPeriod) : (cutoffPeriod || "Not selected") }}
         </span>
       </div>
       <div class="flex justify-between items-center pt-2">
@@ -70,7 +70,7 @@ const props = defineProps({
           style="font-family: 'Poppins', sans-serif"
           >Total Amount</span
         >
-        <span class="text-2xl font-black text-accent font-mono">{{
+        <span class="text-2xl font-bold text-accent">{{
           formatAmount(totalAmount, currency || "PHP")
         }}</span>
       </div>

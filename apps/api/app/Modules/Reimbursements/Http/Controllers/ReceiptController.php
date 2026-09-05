@@ -31,6 +31,8 @@ class ReceiptController extends Controller
             'search' => $request->query('search'),
             'status' => $request->query('status'),
             'category' => $request->query('category'),
+            'scope' => $request->query('scope'),
+            'sort' => $request->query('sort'),
             'per_page' => $request->query('per_page', 10),
         ]);
 
@@ -164,7 +166,7 @@ class ReceiptController extends Controller
     }
 
     /**
-     * Edit a processed receipt while keeping it processed.
+     * Edit a receipt (unless forbidden status) and set it back to processed.
      */
     public function resubmit(ResubmitReceiptRequest $request, $id)
     {
@@ -186,6 +188,26 @@ class ReceiptController extends Controller
             return response()->json([
                 'message' => $e->validator->errors()->first('status') ?: $e->getMessage(),
             ], 422);
+        }
+    }
+
+    /**
+     * Re-run the OCR pipeline for a receipt.
+     */
+    public function retryOcr(Request $request, $id)
+    {
+        try {
+            $receipt = $this->service->retryOcrReceipt(
+                $request->user(),
+                (int) $id
+            );
+
+            return response()->json([
+                'message' => 'OCR reprocessing started.',
+                'data' => $receipt,
+            ]);
+        } catch (AuthorizationException $e) {
+            return response()->json(['message' => $e->getMessage()], 403);
         }
     }
 }

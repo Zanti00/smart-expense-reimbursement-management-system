@@ -23,7 +23,9 @@ class ResubmitReceiptRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'file' => 'nullable|file|mimes:jpeg,jpg,png,pdf|max:10240',
+            // Receipt image re-upload is disabled — the resubmit endpoint only
+            // accepts metadata edits. Any `file` present is rejected at the boundary.
+            'file' => 'prohibited',
             'expense_category_id' => 'nullable|exists:expense_categories,id',
             'vendor_name' => 'nullable|string|max:255',
             'transaction_date' => 'nullable|date',

@@ -1,4 +1,5 @@
 import { ref, computed, watch } from "vue";
+import { formatCutoffPeriod } from "@/utils/formatters";
 
 export function normalizeStatus(status) {
   const normalized = String(status || "").toLowerCase();
@@ -25,14 +26,18 @@ export function statusLabel(status) {
   return labels[normalizeStatus(status)] || "Pending";
 }
 
-function getCutoffPeriod(date) {
-  const submittedDate = new Date(date);
-  if (Number.isNaN(submittedDate.getTime())) return date || "--";
-
-  return submittedDate.toLocaleDateString("en-US", {
-    month: "short",
-    year: "numeric",
-  });
+function getCutoffPeriod(itemOrDate) {
+  if (!itemOrDate) return "--";
+  const val =
+    typeof itemOrDate === "object"
+      ? itemOrDate.cutoff_period ||
+        itemOrDate.cutoffPeriod ||
+        itemOrDate.date ||
+        itemOrDate.created_at ||
+        itemOrDate.submitted_at
+      : itemOrDate;
+  const res = formatCutoffPeriod(val);
+  return res === "—" ? "--" : res;
 }
 
 function getSortValue(row, key) {
@@ -41,10 +46,14 @@ function getSortValue(row, key) {
     return Number(value || 0);
   }
   if (["dateSubmitted"].includes(key)) {
-    const timestamp = new Date(value).getTime();
+    const raw = row.created_at || row.submitted_at || row.date || value;
+    const timestamp = new Date(raw).getTime();
     return Number.isNaN(timestamp)
       ? String(value || "").toLowerCase()
       : timestamp;
+  }
+  if (["id"].includes(key)) {
+    return Number(row.id || 0);
   }
   return String(value || "").toLowerCase();
 }
@@ -53,8 +62,8 @@ export function useReimbursementFilters(store) {
   const searchQuery = ref("");
   const activeStatus = ref("All");
   const activeCategory = ref("All");
-  const sortKey = ref("");
-  const sortDirection = ref("asc");
+  const sortKey = ref("dateSubmitted");
+  const sortDirection = ref("desc");
   const pageSize = 10;
   const currentPage = ref(1);
 
@@ -71,12 +80,12 @@ export function useReimbursementFilters(store) {
         null,
       originalStatus: item.status,
       reportDescription: item.description,
-      cutoffPeriod: getCutoffPeriod(item.date),
+      cutoffPeriod: getCutoffPeriod(item),
       receiptQuantity: Array.isArray(item.receipts)
         ? item.receipts.length
         : Number(item.receipts) || 0,
       quantityReport: 1,
-      dateSubmitted: item.date,
+      dateSubmitted: item.date || item.submitted_at || item.created_at,
       submittedBy: item.user?.name || item.submitted_by_name || "Employee",
       displayStatus: normalizeStatus(item.status),
       displayStatusLabel: statusLabel(item.status),
@@ -123,12 +132,24 @@ export function useReimbursementFilters(store) {
 
   const sortedTableRows = computed(() => {
     const rows = [...filteredTableRows.value];
-    if (!sortKey.value) return rows;
+    if (!sortKey.value) {
+      return rows.sort((a, b) => {
+        const aTime = new Date(a.created_at || a.submitted_at || a.dateSubmitted || a.date || 0).getTime();
+        const bTime = new Date(b.created_at || b.submitted_at || b.dateSubmitted || b.date || 0).getTime();
+        if (aTime !== bTime) return bTime - aTime;
+        return (Number(b.id) || 0) - (Number(a.id) || 0);
+      });
+    }
 
     return rows.sort((a, b) => {
       const aValue = getSortValue(a, sortKey.value);
       const bValue = getSortValue(b, sortKey.value);
-      if (aValue === bValue) return 0;
+      if (aValue === bValue) {
+        const aTime = new Date(a.created_at || a.submitted_at || a.dateSubmitted || a.date || 0).getTime();
+        const bTime = new Date(b.created_at || b.submitted_at || b.dateSubmitted || b.date || 0).getTime();
+        if (aTime !== bTime) return bTime - aTime;
+        return (Number(b.id) || 0) - (Number(a.id) || 0);
+      }
       const result = aValue > bValue ? 1 : -1;
       return sortDirection.value === "asc" ? result : -result;
     });
@@ -159,7 +180,7 @@ export function useReimbursementFilters(store) {
       return;
     }
     sortKey.value = key;
-    sortDirection.value = "asc";
+    sortDirection.value = ["dateSubmitted", "id"].includes(key) ? "desc" : "asc";
     currentPage.value = 1;
   }
 

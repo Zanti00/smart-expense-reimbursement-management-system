@@ -3,9 +3,6 @@ node_modules/
 vendor/
 .pnpm-store/
 
-docs/
-.agents/
-
 # Build outputs
 dist/
 dist-ssr/
@@ -16,6 +13,8 @@ out/
 public/build/
 public/hot/
 public/storage/
+
+.agents/
 
 # Logs
 npm-debug.log*
@@ -35,8 +34,6 @@ storage/logs/
 *.env
 !.env.example
 auth.json
-
-docs/
 
 # IDE / Editor
 .vscode/

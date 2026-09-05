@@ -113,13 +113,17 @@ export const useLiquidationStore = defineStore('liquidation', () => {
 
       const formattedReceipts = payload.receipts.map(r => ({
         id: r.ocrData?.id || r.id, // backend DB ID
-        vendor_name: r.ocrData?.vendor || r.merchantName,
-        transaction_date: r.ocrData?.date || r.transactionDate,
-        total_amount: r.ocrData?.amount || r.amount,
-        vat_amount: r.ocrData?.vat || r.vat,
-        tin: r.ocrData?.tin || r.tinNumber,
-        invoice_number: r.ocrData?.invoiceNumber || r.invoiceNumber,
-        expense_category_id: r.categoryId ?? null,
+        vendor_name: r.merchantName || r.ocrData?.vendor,
+        transaction_date: r.date || r.ocrData?.date || r.transactionDate,
+        total_amount: r.amount || r.ocrData?.amount,
+        vat_amount: r.tax || r.ocrData?.vat || r.vat,
+        tin: r.tin || r.ocrData?.tin || r.tinNumber,
+        invoice_number: r.invoiceNumber || r.ocrData?.invoiceNumber,
+        expense_category_id: r.categoryId ?? r.ocrData?.expense_category_id ?? null,
+        location: r.location || r.ocrData?.location || null,
+        currency: r.currency || 'PHP',
+        vat_classification: r.vatClassification || 'vat',
+        items: Array.isArray(r.items) ? r.items : [],
       }));
       formData.append('receipts', JSON.stringify(formattedReceipts));
 
@@ -186,13 +190,17 @@ export const useLiquidationStore = defineStore('liquidation', () => {
 
       const formattedReceipts = payload.receipts.map(r => ({
         id: r.ocrData?.id || r.id, // backend DB ID
-        vendor_name: r.ocrData?.vendor || r.merchantName,
-        transaction_date: r.ocrData?.date || r.transactionDate,
-        total_amount: r.ocrData?.amount || r.amount,
-        vat_amount: r.ocrData?.vat || r.vat,
-        tin: r.ocrData?.tin || r.tinNumber,
-        invoice_number: r.ocrData?.invoiceNumber || r.invoiceNumber,
-        expense_category_id: r.categoryId ?? null,
+        vendor_name: r.merchantName || r.ocrData?.vendor,
+        transaction_date: r.date || r.ocrData?.date || r.transactionDate,
+        total_amount: r.amount || r.ocrData?.amount,
+        vat_amount: r.tax || r.ocrData?.vat || r.vat,
+        tin: r.tin || r.ocrData?.tin || r.tinNumber,
+        invoice_number: r.invoiceNumber || r.ocrData?.invoiceNumber,
+        expense_category_id: r.categoryId ?? r.ocrData?.expense_category_id ?? null,
+        location: r.location || r.ocrData?.location || null,
+        currency: r.currency || 'PHP',
+        vat_classification: r.vatClassification || 'vat',
+        items: Array.isArray(r.items) ? r.items : [],
       }));
       formData.append('receipts', JSON.stringify(formattedReceipts));
 

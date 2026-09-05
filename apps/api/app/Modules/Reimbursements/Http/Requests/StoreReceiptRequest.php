@@ -44,10 +44,13 @@ class StoreReceiptRequest extends FormRequest
             'invoice_number' => 'nullable|string|max:255',
             'location' => 'nullable|string|max:255',
             'vat_classification' => 'nullable|in:vat,non-vat',
+            'currency' => 'nullable|string|max:10',
             'items' => 'nullable|array',
             'items.*.name' => 'required_with:items|string|max:255',
             'items.*.quantity' => 'required_with:items|integer|min:1',
             'items.*.price' => 'required_with:items|numeric|gt:0',
+            'is_mock' => 'nullable|boolean',
+            'mock' => 'nullable|boolean',
         ];
     }
 }

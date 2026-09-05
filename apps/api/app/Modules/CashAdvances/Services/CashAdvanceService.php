@@ -11,6 +11,7 @@ use App\Modules\Users\Models\User;
 use App\Modules\Shared\Services\PasswordVerificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
@@ -50,9 +51,15 @@ class CashAdvanceService
         });
     }
 
-    public function approveAdvance(CashAdvance $advance, User $user, ?string $comment = null)
+    public function approveAdvance(CashAdvance $advance, User $user, ?string $comment, string $password, Request $requestContext)
     {
-        return DB::transaction(function () use ($advance, $user, $comment) {
+        return DB::transaction(function () use ($advance, $user, $comment, $password, $requestContext) {
+            if (!PasswordVerificationService::verify($requestContext, $password)) {
+                throw ValidationException::withMessages([
+                    'password' => ['Invalid password. Please try again.'],
+                ]);
+            }
+
             $advance->update(['status' => 'approved']);
 
             CashAdvanceApprovalAction::create([
@@ -73,22 +80,79 @@ class CashAdvanceService
         });
     }
 
-    public function rejectAdvance(CashAdvance $advance, User $user, string $comment)
+    public function rejectAdvance(CashAdvance $advance, User $user, string $comment, string $action = 'revise', string $password = '', Request $requestContext = null)
     {
-        return DB::transaction(function () use ($advance, $user, $comment) {
-            $advance->update(['status' => 'rejected']);
+        return DB::transaction(function () use ($advance, $user, $comment, $action, $password, $requestContext) {
+            if ($requestContext === null || $password === '' || !PasswordVerificationService::verify($requestContext, $password)) {
+                throw ValidationException::withMessages([
+                    'password' => ['Invalid password. Please try again.'],
+                ]);
+            }
 
-            CashAdvanceApprovalAction::create([
-                'cash_advance_id' => $advance->id,
-                'approver_id' => $user->id,
-                'action' => 'rejected',
-                'comment' => $comment,
+            if (!in_array($advance->status, ['pending', 'revise'])) {
+                throw new \Illuminate\Auth\Access\AuthorizationException('Only pending or revise cash advances can be revised/rejected.');
+            }
+
+            $currentCount = (int) ($advance->revision_count ?? 0);
+            $newCount = $currentCount + 1;
+            // 2 revises allowed (<=2 revise, >=3 rejected) — 1st/2nd = revise, 3rd = terminal rejected, 3 total
+            $newStatus = $newCount <= 2 ? 'revise' : 'rejected';
+            $fromStatus = $advance->status;
+
+            $advance->update([
+                'status' => $newStatus,
+                'revision_count' => $newCount,
             ]);
+
+            // Map request action (present tense: revise/reject) to stored action (past tense: revised/rejected).
+            // Terminal 3rd strike (newCount >=3 / <=2 allowed) — 2 strikes revise, 3rd rejected, 3 total — always forces 'rejected' regardless of $action input —
+            // system outcome overrides admin intent to enforce hard revocation cap (2 revises allowed: 1st-2nd revise, 3rd rejected, 3 total).
+            $actionValue = $newStatus === 'rejected' ? 'rejected' : ($action === 'revise' ? 'revised' : 'rejected');
+
+            // Defensive guard: fail fast with 422 instead of 500 if DB enum is out-of-sync.
+            // Allowed values must match cash_advance_approval_actions.action enum: approved/rejected/revised.
+            $allowedActions = ['approved', 'rejected', 'revised'];
+            if (!in_array($actionValue, $allowedActions, true)) {
+                throw ValidationException::withMessages([
+                    'action' => ["Invalid approval action '{$actionValue}'. Allowed: " . implode(', ', $allowedActions) . ". Database enum may be out-of-sync — contact administrator."],
+                ]);
+            }
+
+            try {
+                CashAdvanceApprovalAction::create([
+                    'cash_advance_id' => $advance->id,
+                    'approver_id' => $user->id,
+                    'action' => $actionValue,
+                    'comment' => $comment,
+                ]);
+            } catch (\Throwable $e) {
+                // System boundary (DB insert): log actionable context and rethrow to guarantee
+                // DB::transaction rollback per AGENTS.md — never swallow inside transaction.
+                Log::error('CashAdvanceService::rejectAdvance failed to persist approval action.', [
+                    'cash_advance_id' => $advance->id,
+                    'approver_id' => $user->id,
+                    'action_param' => $action,
+                    'action_value' => $actionValue,
+                    'new_status' => $newStatus,
+                    'revision_count' => $newCount,
+                    'error' => $e->getMessage(),
+                ]);
+
+                // If DB enum still lacks 'revised', surface as 422 for operability (not raw 500).
+                $msg = strtolower($e->getMessage());
+                if (str_contains($msg, 'revised') || str_contains($msg, 'enum') || str_contains($msg, 'truncated') || str_contains($msg, 'data truncated')) {
+                    throw ValidationException::withMessages([
+                        'action' => ["Approval action '{$actionValue}' violates database constraint. Ensure migration adding 'revised' to enum has run. Original: " . $e->getMessage()],
+                    ]);
+                }
+
+                throw $e;
+            }
 
             CashAdvanceStatusHistory::create([
                 'cash_advance_id' => $advance->id,
-                'from_status' => 'pending',
-                'to_status' => 'rejected',
+                'from_status' => $fromStatus,
+                'to_status' => $newStatus,
                 'changed_by' => $user->id,
             ]);
 
@@ -96,9 +160,20 @@ class CashAdvanceService
         });
     }
 
-    public function disburseAdvance(CashAdvance $advance, User $user, array $data)
+    public function reviseAdvance(CashAdvance $advance, User $user, string $comment, string $password, Request $requestContext)
     {
-        return DB::transaction(function () use ($advance, $user, $data) {
+        return $this->rejectAdvance($advance, $user, $comment, 'revise', $password, $requestContext);
+    }
+
+    public function disburseAdvance(CashAdvance $advance, User $user, array $data, string $password, Request $requestContext)
+    {
+        return DB::transaction(function () use ($advance, $user, $data, $password, $requestContext) {
+            if (!PasswordVerificationService::verify($requestContext, $password)) {
+                throw ValidationException::withMessages([
+                    'password' => ['Invalid password. Please try again.'],
+                ]);
+            }
+
             $advance->update([
                 'status'              => 'disbursed',
                 'outstanding_balance' => $advance->amount, // Debt begins at full amount
@@ -146,9 +221,9 @@ class CashAdvanceService
     }
 
     /**
-     * Update a pending or rejected cash advance (employee self-edit).
+     * Update a pending or revise cash advance (employee self-edit).
      *
-     * Resets rejected → pending with status history entry.
+     * Resets revise → pending with status history entry. Terminal rejected (>=3 strikes / >2) cannot be edited — 2 revises allowed (<=2 revise, >=3 rejected), 3rd = terminal rejected, 3 total.
      */
     public function updateAdvance(CashAdvance $advance, User $user, array $data, array $files = [])
     {
@@ -162,8 +237,12 @@ class CashAdvanceService
                 'expected_liquidation_date' => $data['expected_liquidation_date'] ?? null,
             ], fn($v) => $v !== null);
 
-            // Reset rejected → pending on re-submission
             if ($advance->status === 'rejected') {
+                throw new \Illuminate\Auth\Access\AuthorizationException('Rejected cash advances (exceeded revision limit) cannot be edited.');
+            }
+
+            // Reset revise → pending on re-submission
+            if ($advance->status === 'revise') {
                 $updatePayload['status'] = 'pending';
             }
 

@@ -2,9 +2,10 @@ import { ref, watch, onMounted, onBeforeUnmount } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "@/composables/useToast";
 import { buildPrefilledReceiptDraft } from "@/utils/receiptUtils";
+import { useOcrMode } from "@/composables/useOcrMode";
 
-export function useReceiptUploads() {
-  const DRAFT_KEY = "serms_draft_receipts";
+export function useReceiptUploads(options = {}) {
+  const DRAFT_KEY = options.draftKey || "serms_draft_receipts";
   const initialDrafts = sessionStorage.getItem(DRAFT_KEY);
   const localReceipts = ref(initialDrafts ? JSON.parse(initialDrafts) : []);
 
@@ -81,11 +82,37 @@ export function useReceiptUploads() {
             (r) => String(r.id) === String(receiptId),
           );
 
-          if (data.status === "rejected" || data.status === "failed") {
-            const rejectedItem = index !== -1 ? localReceipts.value[index] : null;
-            const fileObj = rejectedItem?.sourceFile || rejectedItem?.file || null;
-            
-            if (checkIsDuplicateResponse(data)) {
+           if (data.status === "rejected" || data.status === "failed") {
+             const rejectedItem = index !== -1 ? localReceipts.value[index] : null;
+             const fileObj = rejectedItem?.sourceFile || rejectedItem?.file || null;
+
+             // A `failed` receipt means the OCR pipeline errored (AI service
+             // unreachable / dispatch failed), NOT a quality rejection. Surface a
+             // clear error and leave Retry OCR available instead of opening the
+             // quality-rejection modal.
+             if (data.status === "failed") {
+               if (index !== -1) {
+                 localReceipts.value[index] = {
+                   ...localReceipts.value[index],
+                   isUploading: false,
+                   isProcessing: false,
+                   isRejected: true,
+                   rejectionCode: data.rejection_code || "ocr_failed",
+                   rejectionReason:
+                     data.rejection_reason ||
+                     "OCR processing failed. You can retry OCR.",
+                 };
+               }
+               addToast({
+                 message:
+                   data.rejection_reason ||
+                   "OCR processing failed. You can retry OCR.",
+                 type: "error",
+               });
+               return;
+             }
+
+             if (checkIsDuplicateResponse(data)) {
                 if (index !== -1) {
                   localReceipts.value[index].isUploading = false;
                   localReceipts.value[index].isProcessing = false;
@@ -185,6 +212,14 @@ export function useReceiptUploads() {
   async function addReceiptFiles(fileList, forceProcess = false) {
     const allowedMimeTypes = ["image/jpeg", "image/png", "application/pdf"];
     const files = Array.from(fileList || []);
+
+    let isMockMode = false;
+    try {
+      isMockMode = Boolean(useOcrMode()?.isMockOcr?.value);
+    } catch {
+      isMockMode = false;
+    }
+
     const accepted = files.filter((file) =>
       allowedMimeTypes.includes(file.type),
     );
@@ -221,10 +256,15 @@ export function useReceiptUploads() {
         if (forceProcess) {
           formData.append("force_process", "1");
         }
+        // Fast mock path — real file upload, instant mock data, skip OCR wait.
+        if (isMockMode) {
+          formData.append("is_mock", "1");
+        }
 
         const headers = { Accept: "application/json" };
         if (authStore.token)
           headers["Authorization"] = `Bearer ${authStore.token}`;
+        if (isMockMode) headers["X-Mock-OCR"] = "1";
 
         const res = await fetch("/api/serms/reimbursements/receipts", {
           method: "POST",
@@ -362,6 +402,13 @@ export function useReceiptUploads() {
   async function submitSegments(files) {
     if (!files || files.length < 2) return;
 
+    let isMockMode = false;
+    try {
+      isMockMode = Boolean(useOcrMode()?.isMockOcr?.value);
+    } catch {
+      isMockMode = false;
+    }
+
     const tempId = `temp-seg-${Date.now()}`;
     const firstFile = files[0];
     const receiptObj = buildPrefilledReceiptDraft({
@@ -377,10 +424,12 @@ export function useReceiptUploads() {
       files.forEach((file) => {
         formData.append("files[]", file);
       });
+      if (isMockMode) formData.append("is_mock", "1");
 
       const headers = { Accept: "application/json" };
       if (authStore.token)
         headers["Authorization"] = `Bearer ${authStore.token}`;
+      if (isMockMode) headers["X-Mock-OCR"] = "1";
 
       const res = await fetch("/api/serms/reimbursements/receipts/segmented", {
         method: "POST",
@@ -520,6 +569,7 @@ export function useReceiptUploads() {
     receiptInput,
     handleReceiptDrop,
     handleReceiptSelect,
+    addReceiptFiles,
     removeReceipt,
     clearDraftReceipts,
     qualityRejection,

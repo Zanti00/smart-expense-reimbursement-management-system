@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
+import { encryptPayload } from "../utils/crypto";
 
 const AUTH_MODULE_URL =
   import.meta.env.VITE_AUTH_MODULE_URL || "http://localhost:3001";
@@ -133,6 +134,10 @@ export const useAuthStore = defineStore("auth", () => {
    */
   async function verifyPassword(password) {
     try {
+      // Encrypt the password client-side (AES-256-GCM + RSA-OAEP wrapper) before
+      // transmission, per SDD §5 / AGENTS.md payload-privacy requirement.
+      const envelope = await encryptPayload(password);
+
       const headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
@@ -145,9 +150,10 @@ export const useAuthStore = defineStore("auth", () => {
         method: "POST",
         headers,
         credentials: "include",
-        body: JSON.stringify({ password }),
+        body: JSON.stringify(envelope),
       });
 
+      // 422 (invalid) or any non-2xx → "Invalid password." toast (handled by caller).
       if (!response.ok) {
         return false;
       }

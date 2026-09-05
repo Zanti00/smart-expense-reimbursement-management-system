@@ -23,6 +23,8 @@ class RejectCashAdvanceRequest extends FormRequest
     {
         return [
             'comment' => 'required|string|min:5',
+            'action' => 'sometimes|string|in:revise,reject',
+            'password' => 'required|string',
         ];
     }
 }

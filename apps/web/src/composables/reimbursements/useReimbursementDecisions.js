@@ -5,6 +5,7 @@ export function useReimbursementDecisions(store, addToast, viewingRecord) {
   const auth = useAuthStore();
   const approvingId = ref(null);
   const rejectingId = ref(null);
+  const grantingId = ref(null);
   const rejectionComment = ref("");
   const confirmPassword = ref("");
   const isReviewSubmitting = ref(false);
@@ -46,6 +47,13 @@ export function useReimbursementDecisions(store, addToast, viewingRecord) {
 
   async function confirmApprove() {
     if (!approvingId.value) return;
+    if (!confirmPassword.value?.trim()) {
+      addToast({
+        message: "Password is required to approve this request.",
+        type: "error",
+      });
+      return;
+    }
 
     isReviewSubmitting.value = true;
     try {
@@ -68,7 +76,9 @@ export function useReimbursementDecisions(store, addToast, viewingRecord) {
     }
   }
 
-  function openRejectModal(id) {
+  const revisionAction = ref("revise"); // 'revise' | 'reject'
+
+  function openRejectModal(id, action = "revise") {
     if (isOwnSubmission()) {
       addToast({
         message: "You cannot process your own request.",
@@ -77,21 +87,42 @@ export function useReimbursementDecisions(store, addToast, viewingRecord) {
       return;
     }
 
+    revisionAction.value = action;
     rejectingId.value = id;
     rejectionComment.value = "";
     confirmPassword.value = "";
+  }
+
+  function openReviseModal(id) {
+    return openRejectModal(id, "revise");
   }
 
   function cancelReject() {
     rejectingId.value = null;
     rejectionComment.value = "";
     confirmPassword.value = "";
+    revisionAction.value = "revise";
   }
 
   async function confirmReject() {
+    if (!confirmPassword.value?.trim()) {
+      addToast({
+        message: `Password is required to ${revisionAction.value} this request.`,
+        type: "error",
+      });
+      return;
+    }
     if (rejectionComment.value.length < 10) {
       addToast({
-        message: "Rejection comment must be at least 10 characters.",
+        message: `${revisionAction.value === "revise" ? "Revision" : "Rejection"} comment must be at least 10 characters.`,
+        type: "error",
+      });
+      return;
+    }
+
+    if (rejectionComment.value.length > 255) {
+      addToast({
+        message: `${revisionAction.value === "revise" ? "Revision" : "Rejection"} comment cannot exceed 255 characters.`,
         type: "error",
       });
       return;
@@ -103,15 +134,63 @@ export function useReimbursementDecisions(store, addToast, viewingRecord) {
         rejectingId.value,
         rejectionComment.value,
         confirmPassword.value,
+        revisionAction.value,
       );
       if (viewingRecord.value?.id === rejectingId.value) {
         viewingRecord.value = updated;
       }
-      addToast({ message: "Reimbursement rejected.", type: "success" });
+      const isRejected = updated?.status === "rejected";
+      addToast({
+        message: isRejected
+          ? "Reimbursement rejected (exceeded revision limit)."
+          : revisionAction.value === "revise"
+            ? "Reimbursement returned for revision."
+            : "Reimbursement rejected.",
+        type: "success",
+      });
       cancelReject();
     } catch (e) {
       addToast({
-        message: e.message || "Error rejecting reimbursement",
+        message: e.message || "Error processing reimbursement",
+        type: "error",
+      });
+    } finally {
+      isReviewSubmitting.value = false;
+    }
+  }
+
+  function openGrantModal(id) {
+    if (isOwnSubmission()) {
+      addToast({
+        message: "You cannot process your own request.",
+        type: "error",
+      });
+      return;
+    }
+
+    grantingId.value = id;
+    confirmPassword.value = "";
+  }
+
+  function cancelGrant() {
+    grantingId.value = null;
+    confirmPassword.value = "";
+  }
+
+  async function confirmGrant() {
+    if (!grantingId.value) return;
+
+    isReviewSubmitting.value = true;
+    try {
+      const updated = await store.grant(grantingId.value, confirmPassword.value);
+      if (viewingRecord.value?.id === grantingId.value) {
+        viewingRecord.value = updated;
+      }
+      addToast({ message: "Reimbursement granted!", type: "success" });
+      cancelGrant();
+    } catch (e) {
+      addToast({
+        message: e.message || "Error granting reimbursement",
         type: "error",
       });
     } finally {
@@ -122,6 +201,8 @@ export function useReimbursementDecisions(store, addToast, viewingRecord) {
   return {
     approvingId,
     rejectingId,
+    grantingId,
+    revisionAction,
     rejectionComment,
     confirmPassword,
     isReviewSubmitting,
@@ -129,7 +210,11 @@ export function useReimbursementDecisions(store, addToast, viewingRecord) {
     cancelApprove,
     confirmApprove,
     openRejectModal,
+    openReviseModal,
     cancelReject,
     confirmReject,
+    openGrantModal,
+    cancelGrant,
+    confirmGrant,
   };
 }

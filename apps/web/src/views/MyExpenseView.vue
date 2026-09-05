@@ -6,6 +6,7 @@ import { useReceiptStore } from "@/stores/receipts";
 import { useToast } from "@/composables/useToast";
 import { formatPeso } from "@/utils/formatters";
 import { EXPENSE_CATEGORIES } from "@/utils/constants";
+import { canEditReceipt, canDeleteReceipt } from "@/utils/receiptUtils";
 import {
   getForwardingBlockReason,
   mapReceiptToReimbursement,
@@ -81,8 +82,20 @@ const CATEGORIES = computed(() => {
 
   return ["All", ...source.map((c) => c.name)];
 });
+const SORT_OPTIONS = [
+  { value: "newest", label: "Newest First" },
+  { value: "oldest", label: "Oldest First" },
+  { value: "name-asc", label: "Name: A to Z" },
+  { value: "name-desc", label: "Name: Z to A" },
+  { value: "price-desc", label: "Price: High to Low" },
+  { value: "price-asc", label: "Price: Low to High" },
+  { value: "category-asc", label: "Category: A to Z" },
+  { value: "status-asc", label: "Status: A to Z" },
+];
+
 const activeCategory = ref("All");
 const activeStatus = ref("All");
+const activeSort = ref("newest");
 const searchQuery = ref("");
 const currentPage = ref(1);
 const pageSize = 10;
@@ -105,6 +118,8 @@ async function fetchReceipts(page = currentPage.value) {
     search: searchQuery.value.trim(),
     status: normalizeFilterLabel(activeStatus.value),
     category: activeCategory.value,
+    sort: activeSort.value,
+    scope: "mine",
   });
 }
 
@@ -127,14 +142,9 @@ async function confirmDelete(password) {
     (item) => item.id === selectedReceiptId.value,
   );
 
-  if (
-    receipt &&
-    !["processed", "rejected"].includes(
-      String(receipt.status || "").toLowerCase(),
-    )
-  ) {
+  if (receipt && !canDeleteReceipt(receipt)) {
     addToast({
-      message: "Only processed or rejected receipts can be deleted.",
+      message: "This receipt's current status does not allow deletion.",
       type: "error",
     });
     deleteModalOpen.value = false;
@@ -160,6 +170,73 @@ async function confirmDelete(password) {
   }
 }
 
+// ── OCR completion toasts ─────────────────────────────────────────
+// Poll any receipt currently in `processing` and surface a toast when the
+// external AI OCR callback flips it to a terminal status. Covers both the
+// Retry OCR flow and first-time uploads, even if the modal was closed.
+const ocrWatchedIds = ref(new Set());
+let ocrPollTimer = null;
+
+function toastOcrCompletion(receipt) {
+  if (!receipt) return;
+  const status = String(receipt.status || receipt.complianceStatus || "").toLowerCase();
+  const label = receipt.id || "receipt";
+  switch (status) {
+    case "processed":
+      addToast({ message: `OCR completed for ${label}.`, type: "success" });
+      break;
+    case "flagged":
+      addToast({
+        message: `OCR finished with low confidence — ${label} was flagged.`,
+        type: "warning",
+      });
+      break;
+    case "rejected":
+      addToast({ message: `OCR rejected ${label}.`, type: "error" });
+      break;
+    case "failed":
+      addToast({ message: `OCR failed for ${label}.`, type: "error" });
+      break;
+    default:
+      addToast({ message: `OCR finished for ${label} (${status}).`, type: "info" });
+  }
+}
+
+async function tickOcrWatch() {
+  for (const id of [...ocrWatchedIds.value]) {
+    try {
+      const updated = await receiptsStore.refreshReceipt(id);
+      const status = String(updated?.status || "").toLowerCase();
+      if (status && status !== "processing") {
+        toastOcrCompletion(updated);
+        ocrWatchedIds.value.delete(id);
+      }
+    } catch {
+      // keep watching; will retry on the next tick
+    }
+  }
+  if (ocrWatchedIds.value.size === 0 && ocrPollTimer) {
+    clearInterval(ocrPollTimer);
+    ocrPollTimer = null;
+  }
+}
+
+function ensureOcrWatch() {
+  for (const r of receiptsStore.visibleReceipts) {
+    if (String(r.status || "").toLowerCase() === "processing") {
+      ocrWatchedIds.value.add(r.dbId);
+    }
+  }
+  if (ocrWatchedIds.value.size > 0 && !ocrPollTimer) {
+    ocrPollTimer = setInterval(tickOcrWatch, 2500);
+  }
+}
+
+watch(
+  () => receiptsStore.visibleReceipts.map((r) => `${r.dbId}:${r.status}`).join("|"),
+  () => ensureOcrWatch(),
+);
+
 // ── View Modal ────────────────────────────────────────────────────
 const viewModalOpen = ref(false);
 const viewedReceipt = ref(null);
@@ -181,15 +258,15 @@ const automaticRejectedReceipts = computed(() =>
 );
 
 const pendingReReviewReceipts = computed(() =>
-  receiptsStore.visibleReceipts.filter(
+  receiptsStore.reReviewReceipts.filter(
     (r) => r.status === "pending-admin-re-review",
   ),
 );
 
 function openEditReceipt(receipt) {
-  if (String(receipt?.status || "").toLowerCase() !== "processed") {
+  if (!canEditReceipt(receipt)) {
     addToast({
-      message: "Only receipts with processed status can be edited.",
+      message: "This receipt's current status does not allow editing.",
       type: "error",
     });
     return;
@@ -202,6 +279,11 @@ function openEditReceipt(receipt) {
 function closeUploadModal(value) {
   uploadModalOpen.value = value;
   if (!value) receiptBeingEdited.value = null;
+}
+
+// Refresh the card grid after a new OCR'd receipt is saved.
+function onExpenseSaved() {
+  fetchReceipts(currentPage.value);
 }
 
 async function finalizeReceiptReview(receipt, decision) {
@@ -228,18 +310,19 @@ async function finalizeReceiptReview(receipt, decision) {
 const handleOpenReceiptUpload = () => { uploadModalOpen.value = true; };
 
 onMounted(async () => {
-  await Promise.all([
-    fetchReceipts(1),
-    receiptsStore.fetchCategories(),
-  ]);
+  const tasks = [fetchReceipts(1), receiptsStore.fetchCategories()];
+  if (auth.isAdmin) tasks.push(receiptsStore.fetchReReviewReceipts());
+  await Promise.all(tasks);
+  ensureOcrWatch();
   window.addEventListener('open-receipt-upload', handleOpenReceiptUpload);
 });
 
 onUnmounted(() => {
+  if (ocrPollTimer) clearInterval(ocrPollTimer);
   window.removeEventListener('open-receipt-upload', handleOpenReceiptUpload);
 });
 
-watch([activeCategory, activeStatus], () => {
+watch([activeCategory, activeStatus, activeSort], () => {
   fetchReceipts(1);
 });
 
@@ -288,17 +371,12 @@ const kpis = computed(() => [
       >
         <div>
           <h1
-            class="text-2xl font-bold leading-tight text-slate-800"
-            style="
-              font-family: &quot;Poppins&quot;, sans-serif;
-              letter-spacing: -0.02em;
-            "
+            class="text-2xl font-bold leading-tight text-slate-800 font-heading tracking-tight"
           >
             My Expense
           </h1>
           <p
-            class="mt-1 text-sm text-slate-400"
-            style="font-family: &quot;Open Sans&quot;, sans-serif"
+            class="mt-1 text-sm text-slate-400 font-sans"
           >
             Organize and manage your receipts
           </p>
@@ -386,11 +464,7 @@ const kpis = computed(() => [
             <div class="space-y-2">
               <div class="flex flex-wrap items-center gap-2">
                 <StatusBadge status="pending-admin-re-review" />
-                <span
-                  class="rounded-full border border-danger/20 bg-danger/5 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-danger"
-                >
-                  Previously System Rejected
-                </span>
+                <StatusBadge status="automatic-rejected" />
               </div>
               <h3 class="text-sm font-bold font-heading text-slate-900">
                 {{ receipt.vendorName || "Unknown Vendor" }}
@@ -442,8 +516,10 @@ const kpis = computed(() => [
         v-model:search="searchQuery"
         v-model:status-value="activeStatus"
         v-model:category-value="activeCategory"
+        v-model:sort-value="activeSort"
         :statuses="STATUS_FILTERS"
         :categories="CATEGORIES"
+        :sort-options="SORT_OPTIONS"
       />
 
       <!-- ── Receipt Card Grid ── -->
@@ -497,8 +573,7 @@ const kpis = computed(() => [
         </div>
         <div>
           <p
-            class="text-sm font-semibold text-slate-600"
-            style="font-family: &quot;Poppins&quot;, sans-serif"
+            class="text-sm font-semibold text-slate-600 font-heading"
           >
             No receipts found
           </p>
@@ -518,6 +593,7 @@ const kpis = computed(() => [
       :categories="receiptsStore.categories"
       :receipt-to-edit="receiptBeingEdited"
       @update:model-value="closeUploadModal"
+      @saved="onExpenseSaved"
     />
 
     <!-- ── Delete Confirmation Modal ── -->

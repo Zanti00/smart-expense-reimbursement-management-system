@@ -1,5 +1,5 @@
 import { ref, computed } from "vue";
-import { getInitials } from "@/utils/formatters";
+import { getInitials, formatDate } from "@/utils/formatters";
 
 export function useCashAdvanceList(store, auth) {
   const activeStatus = ref("All");
@@ -8,6 +8,7 @@ export function useCashAdvanceList(store, auth) {
     const baseTabs = [
       "All",
       "Pending",
+      "Revise",
       "Approved",
       "Disbursed",
       "Signed",
@@ -26,10 +27,12 @@ export function useCashAdvanceList(store, auth) {
       ...item,
       fileDescription: item.document?.file_name || item.documentFileName || "Document Attached",
       documentUrl: item.documentUrl,
-      requested: item.date ? new Date(item.date).toLocaleDateString() : "--",
+      requested: item.date
+        ? formatDate(item.date)
+        : "—",
       dueDate: item.dueDate
-        ? new Date(item.dueDate).toLocaleDateString()
-        : "--",
+        ? formatDate(item.dueDate)
+        : "—",
       user: item.requestedBy || "Unknown User",
       initials: getInitials(item.requestedBy || "Unknown User"),
       outstanding: item.balance || 0,

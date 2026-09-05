@@ -1,6 +1,8 @@
 <script setup>
-import { Eye, FileText, Download } from "lucide-vue-next";
-import { formatPeso } from "@/utils/formatters";
+import { Eye, Download } from "lucide-vue-next";
+import { formatPeso, formatDate } from "@/utils/formatters";
+import StatusBadge from "@/components/base/StatusBadge.vue";
+import BaseReceiptImage from "@/components/base/BaseReceiptImage.vue";
 
 defineProps({
   reviewingCase: {
@@ -25,11 +27,7 @@ defineProps({
   },
   formatDateOnly: {
     type: Function,
-    required: true,
-  },
-  statusBadgeClass: {
-    type: Function,
-    required: true,
+    default: formatDate,
   },
 });
 
@@ -44,19 +42,19 @@ defineEmits(["view-receipt"]);
       class="grid grid-cols-1 gap-4 p-4 bg-white border rounded-lg border-slate-200 md:grid-cols-4"
     >
       <div>
-        <p class="mb-1 section-label">Date</p>
+        <p class="text-xs font-medium text-slate-500 mb-1">Date</p>
         <p class="text-sm font-bold text-slate-800">
           {{ formatDateOnly(reviewingCase.dateOfAdvances) }}
         </p>
       </div>
       <div>
-        <p class="mb-1 section-label">Name of Employee</p>
+        <p class="text-xs font-medium text-slate-500 mb-1">Name of Employee</p>
         <p class="text-sm font-bold text-slate-800">
           {{ reviewingCase.requestorName }}
         </p>
       </div>
       <div>
-        <p class="mb-1 section-label">Settlement Due Date</p>
+        <p class="text-xs font-medium text-slate-500 mb-1">Settlement Due Date</p>
         <p class="text-sm font-bold text-slate-800">
           {{ formatDateOnly(reviewingCase.dueDate) }}
         </p>
@@ -65,22 +63,15 @@ defineEmits(["view-receipt"]);
 
     <section class="grid grid-cols-1 gap-4 md:grid-cols-2">
       <div class="p-5 bg-white border rounded-lg border-accent/20">
-        <p class="mb-2 section-label">Original Cash Advance Amount</p>
+        <p class="text-xs font-medium text-slate-500 mb-2">Original Cash Advance Amount</p>
         <p class="text-3xl font-bold font-heading text-primary">
           {{ formatPeso(reviewingCase.cashAdvanceAmount) }}
         </p>
       </div>
       <div class="p-5 bg-white border rounded-lg border-slate-200">
         <div class="flex items-center justify-between gap-3">
-          <p class="section-label">Ending Balance</p>
-          <span
-            :class="[
-              'rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-wide',
-              statusBadgeClass(reviewStatus),
-            ]"
-          >
-            {{ reviewStatus }}
-          </span>
+          <p class="text-xs font-medium text-slate-500">Ending Balance</p>
+          <StatusBadge :status="reviewStatus" />
         </div>
         <p class="mt-2 text-3xl font-bold font-heading text-primary">
           {{ formatPeso(reviewOutstandingBalance) }}
@@ -91,13 +82,7 @@ defineEmits(["view-receipt"]);
     <section class="space-y-4">
       <div class="flex items-center justify-between gap-3">
         <div>
-          <h3 class="text-base font-bold font-heading text-slate-800">
-            Submitted Receipt Audit
-          </h3>
-          <p class="text-xs text-slate-400">
-            Accept or reject each receipt before finalizing the liquidation
-            balance.
-          </p>
+          <h3 class="text-sm font-semibold text-slate-700">Receipts</h3>
         </div>
         <span class="kpi-label text-slate-400"
           >{{ reviewReceipts.length }} receipts</span
@@ -110,13 +95,13 @@ defineEmits(["view-receipt"]);
           :key="receipt.id"
           class="overflow-hidden transition-shadow bg-white border rounded-xl border-slate-200 hover:shadow-md"
         >
-          <div class="aspect-[4/5] overflow-hidden bg-slate-100">
-            <img
-              :src="getFileUrl(receipt.filePath)"
-              alt="Scanned receipt"
-              class="object-cover object-top w-full h-full transition-transform duration-500 hover:scale-105"
-            />
-          </div>
+          <BaseReceiptImage
+            :src="receipt.filePath ? getFileUrl(receipt.filePath) : null"
+            :alt="receipt.merchantName || 'Scanned receipt'"
+            :file-type="receipt.fileType"
+            img-class="object-cover object-top w-full h-full transition-transform duration-500 hover:scale-105"
+            container-class="aspect-[4/5] overflow-hidden bg-slate-100"
+          />
           <div class="flex flex-col gap-3 p-5">
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
@@ -129,18 +114,7 @@ defineEmits(["view-receipt"]);
                   {{ receipt.location }}
                 </p>
               </div>
-              <span
-                :class="[
-                  'shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide',
-                  receipt.decision === 'accepted'
-                    ? 'border-accent/20 bg-accent-50 text-accent'
-                    : receipt.decision === 'rejected'
-                      ? 'border-red-200 bg-red-50 text-red-700'
-                      : 'border-slate-200 bg-slate-50 text-slate-500',
-                ]"
-              >
-                {{ receipt.decision }}
-              </span>
+              <StatusBadge :status="receipt.decision === 'accepted' ? 'approved' : receipt.decision" />
             </div>
             <div class="flex items-center justify-between gap-3">
               <span
@@ -164,35 +138,13 @@ defineEmits(["view-receipt"]);
       </div>
     </section>
 
-    <section
-      v-if="reviewingCase.adminNote"
-      class="p-5 space-y-2 bg-white border rounded-xl border-slate-200"
-    >
-      <p class="section-label">Admin Notes</p>
-      <p class="text-sm leading-relaxed text-slate-700">
-        {{ reviewingCase.adminNote }}
-      </p>
-    </section>
+
 
     <section
       v-if="reviewingCase.reportFilePath"
       class="p-5 space-y-4 bg-white border rounded-xl border-slate-200"
     >
-      <div class="flex items-center gap-3">
-        <span
-          class="inline-flex items-center justify-center w-10 h-10 rounded-lg shrink-0 bg-accent/10 text-accent"
-        >
-          <FileText class="w-5 h-5" />
-        </span>
-        <div>
-          <h3 class="text-base font-bold font-heading text-slate-800">
-            Report Letter Attachment
-          </h3>
-          <p class="text-xs text-slate-400">
-            Supporting documentation for this liquidation.
-          </p>
-        </div>
-      </div>
+      <p class="text-[11px] text-slate-400 mb-2">Report Attachment</p>
       <a
         :href="getFileUrl(reviewingCase.reportFilePath)"
         target="_blank"

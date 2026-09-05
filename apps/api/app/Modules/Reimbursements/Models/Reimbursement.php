@@ -15,6 +15,7 @@ class Reimbursement extends Model
         'amount',
         'date',
         'status',
+        'revision_count',
         'rejection_comment',
         'cutoff_period',
         'report_file_path',

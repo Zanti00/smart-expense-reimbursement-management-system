@@ -20,8 +20,9 @@ class RejectReimbursementRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'comment' => 'required|string|min:5',
-            'password' => 'required|string',
+            'comment' => 'required|string|min:5|max:255',
+            'password' => 'nullable|string',
+            'action' => 'sometimes|string|in:revise,reject',
         ];
     }
 }

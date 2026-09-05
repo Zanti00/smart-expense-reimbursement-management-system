@@ -33,7 +33,7 @@ defineEmits(['sort']);
 
 <template>
   <div class="overflow-x-auto">
-    <table class="w-full min-w-[980px] border-collapse text-left">
+    <table class="w-full min-w-[880px] border-collapse text-left">
       <thead>
         <tr class="border-b border-slate-200 bg-slate-50">
           <th
@@ -62,11 +62,11 @@ defineEmits(['sort']);
             >
               <span>{{ column.label }}</span>
               <ChevronUp
-                v-if="sortKey === column.key && sortDirection === 'asc'"
+                v-if="sortKey === (column.sortKey || column.key) && sortDirection === 'asc'"
                 class="h-3.5 w-3.5 text-accent"
               />
               <ChevronDown
-                v-else-if="sortKey === column.key"
+                v-else-if="sortKey === (column.sortKey || column.key)"
                 class="h-3.5 w-3.5 text-accent"
               />
               <ChevronsUpDown v-else class="h-3.5 w-3.5 text-slate-300" />
@@ -100,9 +100,10 @@ defineEmits(['sort']);
                 class="h-3.5 max-w-full animate-pulse rounded bg-slate-200"
                 :class="[
                   col === 5 ? 'mx-auto h-5 w-20 rounded-full sm:w-24' : '',
-                  col === 1 ? 'w-24 sm:w-32' : '',
+                  col === 1 ? 'w-28 sm:w-36' : '',
                   col === 2 ? 'w-24 sm:w-32' : '',
-                  [3, 4].includes(col) ? 'ml-auto w-20 sm:w-24' : '',
+                  col === 3 ? 'w-20 sm:w-24' : '',
+                  col === 4 ? 'ml-auto w-20 sm:w-24' : '',
                   ![1, 2, 3, 4, 5, 6].includes(col) ? 'w-20 sm:w-28' : '',
                 ]"
               ></div>

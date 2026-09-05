@@ -1,5 +1,5 @@
 <script setup>
-import { FileText } from 'lucide-vue-next'
+import BaseReceiptImage from './BaseReceiptImage.vue'
 
 defineProps({
   receipt: {
@@ -33,8 +33,12 @@ defineEmits(['remove'])
       </div>
 
       <div class="relative flex-1 bg-white border border-slate-200 flex items-center justify-center overflow-hidden">
-        <img v-if="receipt.preview" :src="receipt.preview" class="w-full h-full object-contain" />
-        <FileText v-else class="w-8 h-8 text-slate-300" />
+        <BaseReceiptImage
+          :src="receipt.preview"
+          :alt="receipt.fileName || 'Receipt Viewfinder'"
+          :file-type="receipt.fileType"
+          img-class="w-full h-full object-contain"
+        />
         
         <!-- Scanning Overlay Line -->
         <div v-if="receipt.ocrStatus === 'processing'" class="absolute inset-x-0 w-full z-10 pointer-events-none animate-scan-slow">

@@ -50,7 +50,7 @@ Missing data must trigger clarification requests instead of assumptions.
 ### Response Standards
 
 - Currency: `PHP 1,250.00`
-- Date: `YYYY-MM-DD`
+- Date: Medium Date format (e.g. `Sept 1, 2026` / `MMM D, YYYY` for all human-facing presentation, UI components, notifications, and AI responses; standard ISO `YYYY-MM-DD` for internal DB storage)
 - Timestamp: ISO 8601 with timezone
 - Use system enum values only.
 
@@ -323,6 +323,13 @@ Antigravity must:
 ## DRY & Maintainability
 
 Validation, notification, and audit logic must be centralized and reusable.
+
+## Error Handling & Exception Management
+
+- **Boundary Try-Catching:** Explicit `try-catch` blocks must be used at all system execution & integration boundaries (Supabase object storage, Tesseract OCR queue tasks, external HTTP API calls, filesystem I/O, background jobs).
+- **Zero Error Swallowing:** Catch blocks must never be left empty or silently swallow exceptions. Caught errors must log actionable context and rethrow, map to structured domain exceptions, or return formatted HTTP 4xx/5xx responses.
+- **Transaction Integrity:** Never catch and swallow exceptions inside `DB::transaction()` blocks without rethrowing to guarantee atomic database rollbacks.
+- **Centralized Exception Delegation:** Uncaught internal runtime exceptions must bubble up to Laravel's centralized Exception Handler (`bootstrap/app.php`) or Vue's global error handler.
 
 ## Performance
 

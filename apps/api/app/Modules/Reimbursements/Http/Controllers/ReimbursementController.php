@@ -8,6 +8,7 @@ use App\Modules\Reimbursements\Services\ReimbursementService;
 use App\Modules\Reimbursements\Http\Requests\StoreReimbursementRequest;
 use App\Modules\Reimbursements\Http\Requests\ApproveReimbursementRequest;
 use App\Modules\Reimbursements\Http\Requests\RejectReimbursementRequest;
+use App\Modules\Reimbursements\Http\Requests\GrantReimbursementRequest;
 use App\Modules\Reimbursements\Http\Requests\UpdateReimbursementRequest;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -93,22 +94,53 @@ class ReimbursementController extends Controller
     }
 
     /**
-     * Reject claim.
+     * Reject / Revise claim — dropdown action.
      */
     public function reject(RejectReimbursementRequest $request, $id)
     {
         try {
+            $action = $request->validated('action', 'revise');
             $reimbursement = $this->service->rejectReimbursement(
                 $request->user(),
                 (int)$id,
                 $request->validated('comment'),
                 $request->validated('password'),
                 $request->ip(),
+                $request,
+                $action
+            );
+
+            $isRejected = $reimbursement->status === 'rejected';
+            return response()->json([
+                'message' => $isRejected ? 'Reimbursement request rejected (exceeded revision limit).' : 'Reimbursement returned for revision.',
+                'data' => $reimbursement,
+            ]);
+        } catch (AuthorizationException $e) {
+            return response()->json(['message' => $e->getMessage()], 403);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => 'The given data was invalid.',
+                'errors' => $e->errors(),
+            ], 422);
+        }
+    }
+
+    /**
+     * Grant (disburse) a previously approved claim.
+     */
+    public function grant(GrantReimbursementRequest $request, $id)
+    {
+        try {
+            $reimbursement = $this->service->grantReimbursement(
+                $request->user(),
+                (int)$id,
+                $request->validated('password'),
+                $request->ip(),
                 $request
             );
 
             return response()->json([
-                'message' => 'Reimbursement request rejected.',
+                'message' => 'Reimbursement granted.',
                 'data' => $reimbursement,
             ]);
         } catch (AuthorizationException $e) {

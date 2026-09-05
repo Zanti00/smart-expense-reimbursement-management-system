@@ -4,23 +4,13 @@ import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useNotificationStore } from "@/stores/notification";
 import { useToast } from "@/composables/useToast";
+import { buildNavLinks } from "@/composables/useNavLinks";
 import NotificationPanel from "@/components/base/NotificationPanel.vue";
 import ToastNotification from "@/components/ToastNotification.vue";
 import DuplicateReceiptModal from "@/components/expenses/DuplicateReceiptModal.vue";
 import sbsiLogo from "@/assets/sbsi_logo.png";
 import sbsiLogoShort from "@/assets/sbsi_logo_short.png";
-import {
-  LayoutDashboard,
-  Receipt,
-  Wallet,
-  FilePieChart,
-  Bell,
-  LogOut,
-  Menu,
-  ChevronRight,
-  FileCheck,
-  Search,
-} from "lucide-vue-next";
+import { Bell, LogOut, Menu, ChevronRight, Search } from "lucide-vue-next";
 
 const auth = useAuthStore();
 const notif = useNotificationStore();
@@ -47,17 +37,7 @@ const sidebarOpen = ref(true);
 const notifOpen = ref(false);
 const mobileOpen = ref(false);
 
-const navLinks = computed(() => {
-  const base = [
-    { header: "OPERATOR" },
-    { name: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
-    { name: "Reimbursements", to: "/reimbursements", icon: Receipt },
-    { name: "Cash Advances", to: "/cash-advances", icon: Wallet },
-    { name: "Liquidations", to: "/liquidations", icon: FilePieChart },
-  ];
-  const employee = [{ name: "My Expense", to: "/my-expense", icon: FileCheck }];
-  return auth.isAdmin ? base : [...base, ...employee];
-});
+const navLinks = buildNavLinks();
 
 const unreadCount = computed(() => notif.alerts.filter((a) => !a.read).length);
 
@@ -251,9 +231,9 @@ async function logout() {
         class="flex-1 p-6 overflow-y-auto scrollbar-thin animate-fade-in bg-clinical"
       >
         <RouterView v-slot="{ Component, route: viewRoute }">
-          <Transition name="page" mode="out-in">
-            <component :is="Component" :key="viewRoute.path" />
-          </Transition>
+          <div :key="viewRoute.path" class="animate-fade-in">
+            <component :is="Component" />
+          </div>
         </RouterView>
       </main>
     </div>
@@ -276,15 +256,6 @@ async function logout() {
 }
 .fade-enter-from,
 .fade-leave-to {
-  opacity: 0;
-}
-
-.page-enter-active,
-.page-leave-active {
-  transition: opacity 0.15s linear;
-}
-.page-enter-from,
-.page-leave-to {
   opacity: 0;
 }
 

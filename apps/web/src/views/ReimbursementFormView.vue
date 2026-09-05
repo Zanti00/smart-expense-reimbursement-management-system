@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onBeforeUnmount, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, nextTick, onBeforeUnmount, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { usePolicyStore } from "@/stores/policy";
 import { useReceiptStore } from "@/stores/receipts";
@@ -9,17 +9,18 @@ import { Save, Send } from "lucide-vue-next";
 
 // Components
 import ReceiptsManagementHeader from "@/components/reimbursements/ReceiptsManagementHeader.vue";
+import BaseToggleSwitch from "@/components/base/BaseToggleSwitch.vue";
 import ScannedReceiptsList from "@/components/reimbursements/ScannedReceiptsList.vue";
 import MetaAndAttachments from "@/components/reimbursements/MetaAndAttachments.vue";
 import ReimbursementSummaryPanel from "@/components/reimbursements/ReimbursementSummaryPanel.vue";
 import ReimbursementFormHeader from "@/components/reimbursements/ReimbursementFormHeader.vue";
-import ReimbursementFormEmptyState from "@/components/reimbursements/ReimbursementFormEmptyState.vue";
 import ReceiptQualityRejectionModal from "@/components/reimbursements/ReceiptQualityRejectionModal.vue";
 import SegmentedReceiptUpload from "@/components/reimbursements/SegmentedReceiptUpload.vue";
 import ConfirmModal from "@/components/base/ConfirmModal.vue";
 
 // Composables
 import { useReceiptUploads } from "@/composables/reimbursements/useReceiptUploads";
+import { useOcrMode } from "@/composables/useOcrMode";
 import { useReimbursementSubmit } from "@/composables/reimbursements/useReimbursementSubmit";
 import { useUnsavedChanges } from "@/composables/useUnsavedChanges";
 
@@ -61,6 +62,9 @@ const FORWARDED_RECEIPTS_KEY = "serms_forwarded_reimbursement_receipts";
 const LEGACY_LIQUIDATION_RECEIPTS_KEY = "serms_forwarded_liquidation_receipts";
 const summaryCurrency = ref("PHP");
 
+// OCR mode toggle — Real pipeline (default OFF) vs offline Mock OCR (ON).
+const { isMockOcr, setMockMode } = useOcrMode();
+
 // Form uploads and file management
 const {
   localReceipts,
@@ -68,6 +72,7 @@ const {
   receiptInput,
   handleReceiptDrop,
   handleReceiptSelect,
+  addReceiptFiles,
   removeReceipt,
   clearDraftReceipts,
   qualityRejection,
@@ -207,6 +212,15 @@ onMounted(async () => {
   receiptsStore.fetchCategories();
   
   window.addEventListener('open-receipt-upload', handleOpenReceiptUpload);
+
+  // Pick up files passed from the Reimbursements page via global
+  if (!props.id && !props.forwardedReceipts.length && window.__serms_pending_files) {
+    const pendingFiles = window.__serms_pending_files;
+    delete window.__serms_pending_files;
+    nextTick(() => {
+      addReceiptFiles(pendingFiles);
+    });
+  }
 
   if (isEditMode.value) {
     fetching.value = true;
@@ -375,17 +389,24 @@ function dismiss() {
         </p>
       </div>
 
-      <!--  Empty State (standalone + no upload yet)  -->
-      <ReimbursementFormEmptyState
-        v-if="receipts.length === 0 && !isEditMode && !showSegmentedUpload"
-        :receiptDrag="receiptDrag"
-        @dragover="receiptDrag = true"
-        @dragleave="receiptDrag = false"
-        @drop="handleReceiptDrop"
-        @upload="triggerUpload"
-      />
+      <!-- OCR mode toggle: Real pipeline vs fast mock (real file, instant data, skip OCR wait) -->
+      <div
+        v-if="!isForwardedMode && !isEditMode"
+        class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3"
+      >
+        <BaseToggleSwitch
+          :model-value="isMockOcr"
+          @update:model-value="setMockMode"
+          on-label="Mock OCR"
+          off-label="Real OCR"
+          hint="Mock uploads file, fills instantly, skips OCR wait"
+        />
+        <p class="text-[11px] text-slate-400">
+          {{ isMockOcr ? "Fast — real file upload, instant mock data." : "Online — uses ocr-pipeline with polling." }}
+        </p>
+      </div>
 
-      <template v-else>
+      <template v-if="receipts.length > 0 || isEditMode">
         <!--  CARD 1: Upload Receipt Management  -->
         <ReceiptsManagementHeader
           v-if="!isForwardedMode"

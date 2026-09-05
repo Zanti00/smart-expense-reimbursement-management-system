@@ -3,7 +3,6 @@ import { ref, reactive, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useCashAdvanceStore } from "@/stores/cashAdvance";
 import { useToast } from "@/composables/useToast";
-import ToastNotification from "@/components/ToastNotification.vue";
 import ConfirmModal from "@/components/base/ConfirmModal.vue";
 import { useUnsavedChanges } from "@/composables/useUnsavedChanges";
 import {
@@ -112,8 +111,10 @@ onMounted(async () => {
         }
         const doc = data.document;
         if (doc) {
+          const rawDocPath = Array.isArray(doc.file_path) ? doc.file_path[0] : doc.file_path;
+          const docPathStr = typeof rawDocPath === "string" ? rawDocPath : rawDocPath ? String(rawDocPath) : "";
           form.documents.push({
-            name: doc.file_name || doc.file_path.split("/").pop(),
+            name: doc.file_name || (docPathStr ? docPathStr.split("/").pop() : "document.pdf"),
             isExisting: true,
             file_path: doc.file_path,
           });
@@ -282,7 +283,6 @@ function goBack() {
 
 <template>
   <div class="flex min-h-full flex-col bg-clinical">
-    <ToastNotification />
     <main class="flex-1 overflow-y-auto">
       <div class="mx-auto flex w-full max-w-5xl flex-col gap-8 p-6">
         <header
@@ -298,10 +298,7 @@ function goBack() {
               <ArrowLeft class="h-4 w-4" />
             </button>
             <div class="min-w-0">
-              <div class="mb-2 flex items-center gap-2">
-                <FileText class="h-3.5 w-3.5 text-accent" />
-                <span class="section-label">Advance Request</span>
-              </div>
+
               <h1
                 class="font-heading text-2xl font-bold leading-tight text-slate-800"
               >

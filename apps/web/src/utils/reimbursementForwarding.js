@@ -10,6 +10,20 @@ export function canForwardToReimbursement(receipt) {
   return normalizeReceiptStatus(receipt?.status) === "processed" && !receipt?.isReimbursed;
 }
 
+/**
+ * Return a precise, human-readable reason a set of receipts cannot be
+ * forwarded to reimbursement, or an empty string when they can be forwarded.
+ *
+ * The two distinct failure modes are reported with DISTINCT messages so the UI
+ * never conflates "not yet processed" with "already attached to a
+ * reimbursement":
+ *   - genuinely attached (isReimbursed === true) -> "...already attached..."
+ *   - merely unprocessed (status !== "processed") -> "...must be processed..."
+ *
+ * This matters because a freshly uploaded, un-attached receipt is in `pending`
+ * (or `processing`) state and must be reported as "needs processing", NOT as
+ * "already attached".
+ */
 export function getForwardingBlockReason(receipts) {
   const list = Array.isArray(receipts) ? receipts : [receipts];
 
@@ -17,8 +31,22 @@ export function getForwardingBlockReason(receipts) {
     return "Select at least one receipt to forward.";
   }
 
-  if (list.some((receipt) => !canForwardToReimbursement(receipt))) {
-    return "Only processed receipts that are not already attached to a reimbursement can be forwarded.";
+  // Failure mode 1: genuinely attached to a reimbursement request.
+  const attached = list.filter((receipt) => receipt?.isReimbursed);
+  if (attached.length) {
+    return list.length > 1
+      ? "One or more selected receipts are already attached to a reimbursement request."
+      : "This receipt is already attached to a reimbursement request.";
+  }
+
+  // Failure mode 2: not yet processed (status !== "processed"). This is the
+  // common case for a freshly uploaded receipt and must NOT be reported as
+  // "already attached".
+  const unprocessed = list.filter(
+    (receipt) => normalizeReceiptStatus(receipt?.status) !== "processed",
+  );
+  if (unprocessed.length) {
+    return "Receipts must be processed before they can be forwarded to reimbursement.";
   }
 
   if (list.some((receipt) => !receipt?.dbId)) {

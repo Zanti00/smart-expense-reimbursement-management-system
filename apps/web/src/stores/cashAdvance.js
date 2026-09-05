@@ -10,8 +10,15 @@ export const useCashAdvanceStore = defineStore("cashAdvance", () => {
     () => items.value.filter((i) => i.status === "pending").length,
   );
   const totalOutstanding = computed(() =>
-    items.value.reduce((s, i) => s + (i.amount || 0), 0),
-  ); // simplistic for now
+    items.value.reduce((s, i) => {
+      if (["rejected", "liquidated", "settled"].includes(i.status)) return s;
+      const bal =
+        i.outstanding_balance !== null && i.outstanding_balance !== undefined
+          ? Number(i.outstanding_balance)
+          : Number(i.balance ?? i.amount ?? 0);
+      return s + (isNaN(bal) ? 0 : Math.max(0, bal));
+    }, 0),
+  );
 
   function normalizeAdvance(item = {}) {
     const document = item.document || null;
@@ -93,19 +100,23 @@ export const useCashAdvanceStore = defineStore("cashAdvance", () => {
     }
   }
 
-  async function approveRequest(id, comment) {
+  async function approveRequest(id, comment, password) {
     try {
       const response = await apiFetch(`/api/serms/cash-advances/${id}/approve`, {
         method: "POST",
         credentials: "include",
-        body: JSON.stringify({ comment }),
+        body: JSON.stringify({ comment, password }),
       });
       if (response.ok) {
         const result = await response.json();
         return upsertAdvance(result.data);
       } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to approve cash advance");
+        const errorData = await response.json().catch(() => ({}));
+        const errMsg =
+          errorData.errors?.password?.[0] ||
+          errorData.message ||
+          "Failed to approve cash advance";
+        throw new Error(errMsg);
       }
     } catch (err) {
       console.error("Failed to approve cash advance", err);
@@ -113,19 +124,42 @@ export const useCashAdvanceStore = defineStore("cashAdvance", () => {
     }
   }
 
-  async function rejectRequest(id, comment) {
+  async function rejectRequest(id, comment, action = "revise", password) {
+    // Backwards-compatible overload handling:
+    // - New preferred: rejectRequest(id, comment, action, password)
+    // - Legacy 3-arg where 3rd was password (reimbursement style): if action is not 'revise'/'reject' treat as password
+    let effectiveAction = action;
+    let effectivePassword = password;
+    if (
+      effectivePassword === undefined &&
+      typeof effectiveAction === "string" &&
+      effectiveAction !== "revise" &&
+      effectiveAction !== "reject"
+    ) {
+      // Caller used (id, comment, password) or (id, comment, password, action) swapped — normalize
+      effectivePassword = effectiveAction;
+      effectiveAction = "revise";
+    }
     try {
       const response = await apiFetch(`/api/serms/cash-advances/${id}/reject`, {
         method: "POST",
         credentials: "include",
-        body: JSON.stringify({ comment }),
+        body: JSON.stringify({
+          comment,
+          action: effectiveAction,
+          password: effectivePassword,
+        }),
       });
       if (response.ok) {
         const result = await response.json();
         return upsertAdvance(result.data);
       } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to reject cash advance");
+        const errorData = await response.json().catch(() => ({}));
+        const errMsg =
+          errorData.errors?.password?.[0] ||
+          errorData.message ||
+          "Failed to reject cash advance";
+        throw new Error(errMsg);
       }
     } catch (err) {
       console.error("Failed to reject cash advance", err);
@@ -133,19 +167,40 @@ export const useCashAdvanceStore = defineStore("cashAdvance", () => {
     }
   }
 
-  async function disburseRequest(id, payload) {
+  async function reviseRequest(id, comment, password) {
+    return rejectRequest(id, comment, "revise", password);
+  }
+
+  async function disburseRequest(id, payload, password) {
+    // Support both signatures:
+    // - disburseRequest(id, { channel, reference }, password)
+    // - disburseRequest(id, { channel, reference, password })
+    let channel;
+    let reference;
+    let effectivePassword = password;
+    if (payload && typeof payload === "object") {
+      channel = payload.channel;
+      reference = payload.reference;
+      if (effectivePassword === undefined && typeof payload.password !== "undefined") {
+        effectivePassword = payload.password;
+      }
+    }
     try {
       const response = await apiFetch(`/api/serms/cash-advances/${id}/disburse`, {
         method: "POST",
         credentials: "include",
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ channel, reference, password: effectivePassword }),
       });
       if (response.ok) {
         const result = await response.json();
         return upsertAdvance(result.data);
       } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to disburse cash advance");
+        const errorData = await response.json().catch(() => ({}));
+        const errMsg =
+          errorData.errors?.password?.[0] ||
+          errorData.message ||
+          "Failed to disburse cash advance";
+        throw new Error(errMsg);
       }
     } catch (err) {
       console.error("Failed to disburse cash advance", err);
@@ -277,6 +332,7 @@ export const useCashAdvanceStore = defineStore("cashAdvance", () => {
     fetchDocument,
     approveRequest,
     rejectRequest,
+    reviseRequest,
     disburseRequest,
     acknowledgeRequest,
     approveSettlement,

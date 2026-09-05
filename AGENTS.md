@@ -5,45 +5,89 @@
 SERMS is a high-precision, Modular Monolith financial compliance application built in Laravel 13 and Vue 3, utilizing automated OCR queues, BIR-compliant VAT logic, and strict append-only audit tracking.
 
 ## Read Order (Every Session)
-1. `docs/index.md` → 2. `docs/PRD.md` → 3. `docs/SAD.md` → 4. `docs/SDD.md` → 5. `docs/DSD.md` → 6. `docs/Build.md` → 7. `AGENTS.md`
 
-## Subagents & Roles
-
-The system uses 4 specialized subagent profiles located in `.agents/subagents/`:
-- **SAD-A1: `laravel-endpoint-builder`** — Scaffolds Laravel 13 modules, migrations, controllers, request validation, and async jobs in `app/Modules`.
-- **SAD-A2: `vue-component-scaffolder`** — Builds Vite/Vue 3 Composition API UI components, layout views, and Pinia stores in `apps/web`.
-- **SAD-A3: `serms-compliance-auditor`** — Audits backend code to guarantee that every mutation is written to `audit_logs`, VAT logic conforms to BIR rules, and duplicate detection is active.
-- **SAD-A4: `reusability-auditor`** — Audits the whole diff for compliance with the `A-09` axiom ("Reuse before you write").
+1. `docs/SERMS.md` (Canonical Master Source of Truth) → 2. `docs/CHANGELOG.md` (for historical context) → 3. `docs/PRD.md` → 4. `docs/SAD.md` → 5. `docs/SDD.md` → 6. `docs/DSD.md` → 7. `docs/OPS.md` → 8. `docs/QAD.md` → 9. `docs/Build.md` → 10. `AGENTS.md`
 
 ## Pinned Stack
 
-| Layer | Technology | Version | Location / Reference |
-|---|---|---|---|
-| Backend Runtime | PHP | `^8.3` | `apps/api/composer.json` |
-| Backend Framework | Laravel | `^13.7` | Monolith App Core |
-| Frontend Runtime | Node / Vue 3 | `^3.4.0` | `apps/web/package.json` |
-| Styling | Tailwind CSS | `^3.4.3` | `apps/web/tailwind.config.js` |
-| Icons | Lucide Vue Next | `^0.373.0` | Sourced dynamically in layouts |
+| Layer             | Technology      | Version    | Location / Reference           |
+| ----------------- | --------------- | ---------- | ------------------------------ |
+| Backend Runtime   | PHP             | `^8.3`     | `apps/api/composer.json`       |
+| Backend Framework | Laravel         | `^13.7`    | Monolith App Core              |
+| Frontend Runtime  | Node / Vue 3    | `^3.4.0`   | `apps/web/package.json`        |
+| Styling           | Tailwind CSS    | `^3.4.3`   | `apps/web/tailwind.config.js`  |
+| Icons             | Lucide Vue Next | `^0.373.0` | Sourced dynamically in layouts |
 
 ## Deprecations Register — Stale Forms NOT to Use
 
-| Deprecated Form | Correct Form | Reason |
-|---|---|---|
-| In-memory collection filtering/math for analytics | SQL aggregate queries (`SUM`, `COUNT`, `GROUP BY`) | Performance optimization; avoids loading huge tables into memory |
-| Plaintext sensitive input submission | Client-side pre-encryption (AES-256-GCM + RSA wrapper) | Prevent shoulder theft / network snooping of credentials and PII |
-| Inline raw HTML button elements | `BaseButton.vue` components or `.btn` utility class | UI/UX consistency, hover transitions, and hold-to-confirm support |
-| Raw custom status indicator markup | `StatusBadge.vue` badge helper component | Standard status color map and label compliance |
+| Deprecated Form                                   | Correct Form                                           | Reason                                                            |
+| ------------------------------------------------- | ------------------------------------------------------ | ----------------------------------------------------------------- |
+| In-memory collection filtering/math for analytics | SQL aggregate queries (`SUM`, `COUNT`, `GROUP BY`)     | Performance optimization; avoids loading huge tables into memory  |
+| Plaintext sensitive input submission              | Client-side pre-encryption (AES-256-GCM + RSA wrapper) | Prevent shoulder theft / network snooping of credentials and PII  |
+| Inline raw HTML button elements                   | `BaseButton.vue` components or `.btn` utility class    | UI/UX consistency, hover transitions, and hold-to-confirm support |
+| Raw custom status indicator markup                | `StatusBadge.vue` badge helper component               | Standard status color map and label compliance                    |
 
 ## Conventions
+
+- **Canonical Source of Truth (AI & Developer Rule):** [`docs/SERMS.md`](docs/SERMS.md) is the primary, authoritative single source of truth for all requirements, architecture, design, and governance. All developers and AI agents must cross-reference `docs/SERMS.md` first before modifying code or downstream documentation. If requirements change, `docs/SERMS.md` must be updated first before any downstream document or code file.
 - **Module Structure:** Every backend component must live in `app/Modules/{ModuleName}`. Cross-module imports are prohibited except via the `Shared` module or models.
 - **Immutability:** Never run updates or deletes on the `audit_logs` or `penalties` tables.
 - **Errors:** All authorization violations must return `403 Forbidden`, authentication failures must return `401 Unauthorized`, and duplicate conflicts must return `409 Conflict`.
-- **Hold-to-Confirm:** Destructive actions (e.g. archiving receipts, deleting advances) must utilize the 2000ms hold-to-confirm interactive pattern.
+- **Historical Context (AI Subagent Rule):** AI subagents and developers must check [`docs/CHANGELOG.md`](docs/CHANGELOG.md) whenever historical context, past design decisions, or background on previous modifications is needed before making changes.
+- **Git Operations (AI Rule):** AI agents are encouraged to check and inspect Git (e.g., `git log`, `git diff`, `git status`) in read-only mode to gather context and information about the latest changes. However, AI agents must never write, commit, alter Git history, or push to Git without explicit user permission. Always ask the user before performing any mutating Git actions.
+- **Context Gathering (AI Rule):** If you think a user's prompt or task lacks sufficient context, details, or information, AI agents and developers must ask questions or interview the user via the `/grill-me` skill interface about the given task/prompt to deepen understanding and avoid hallucinations before proceeding.
+- **Reusability & Anti-Duplication Rule — Frontend (AI & Developer Rule):** Developers and subagents must thoroughly scan the codebase for pre-existing reusable components (in `src/components/base/`), composables (in `src/composables/`), utility helpers, and functions before creating new ones. If no existing reusable component or utility exists for a recurring UI/logic pattern, create a clean, reusable abstraction first rather than writing duplicated or inline one-off implementations.
+- **Reusability & Anti-Duplication Rule — Backend (AI & Developer Rule):** Before implementing new API routes or controllers, check if an existing endpoint, module controller action, service method, or repository query already fulfills or can be extended to fulfill the requirement. Reuse existing endpoints and services rather than creating duplicate routes, controllers, or redundant database queries.
+- **Role-Based Debugging Credentials (AI Subagents & Developers):** When debugging or testing user roles, permissions, approval workflows, and multi-tenant views, subagents and developers must use the official seeded test credentials documented in the _Seeded Test Accounts & Debugging Credentials_ section below.
+- **Medium Date Formatting Standard (AI & Subagent Rule):** Whenever creating, displaying, or formatting human-readable dates across UI components, templates, notifications, documentation, or subagent conversational responses, AI subagents and developers must always use the **Medium Date Format** (e.g., `Sept 1, 2026`, `Oct 14, 2026`, `Jan 15, 2026`) instead of numerical or raw ISO formats (such as `2026-09-01` or `09/01/2026`). Internal storage/database layers may continue to persist standard ISO `YYYY-MM-DD`, but all human-facing presentation layers must strictly use the medium date format.
+- **Cross-Project Access Rule for Sister Repositories (AI & Subagent Rule):** AI agents and subagents are permitted to access, inspect, and search sister repositories (`capstone-auth-module`, `capstone-azure-infra`, `ocr-pipeline`, `CMS`, `PRS`, `TS`) whenever they need additional architecture, schema, route contracts, or infrastructure context. However, agents are **strictly restricted to READ and SEARCH operations only** (e.g. `view_file`, `grep_search`, `list_dir`). AI agents must **NEVER modify, write to, delete, or commit/push changes to any other project** unless explicitly instructed and permitted by the user.
+- **Browser Testing & Interactive Debugging (GEMINI & AI Agents Rule):** Use browser testing (`browser_subagent`, DevTools, interactive browser actions, DOM/console log inspection, network payload checking, and screenshot verification) **judiciously and only when strictly applicable** (e.g., complex multi-step interactive workflows, visual regression, or DOM/CSS layout verification that cannot be validated via faster Vitest/PHPUnit tests). Do NOT run heavy browser subagents for simple UI tweaks, static logic, or non-visual tasks where faster local verification suffices, avoiding unnecessary testing delays and token consumption.
+- **Proactive Skill & Workflow Ingestion (AI & Subagent Rule):** AI agents and subagents must actively check and leverage applicable skills from `.agents/skills/` (and built-in skills) before executing specialized tasks. When authoring features or bug fixes, utilize `test-driven-development`; for investigating errors or unexpected behavior, invoke `systematic-debugging`; for exploring requirements or creative design, use `brainstorming`; for multi-step implementation tasks, follow `writing-plans` and `executing-plans`; and before claiming completion, always invoke `verification-before-completion`. Agents must read the relevant `SKILL.md` before proceeding.
+- **Documentation Change Log (AI Rule):** Always add an entry to the Changelog in [`docs/CHANGELOG.md`](docs/CHANGELOG.md) whenever changes, additions, or updates are made to any documentation guide or specification in either `docs/` or `documentations/`.
+
+## Seeded Test Accounts & Debugging Credentials
+
+When debugging authentication, role-based access control (RBAC), approval thresholds, disbursements, and submission flows, use these pre-seeded test accounts:
+
+| Role / Persona                 | Email                          | Password          | Department / Grade             | Purpose & Scopes                                                                       |
+| ------------------------------ | ------------------------------ | ----------------- | ------------------------------ | -------------------------------------------------------------------------------------- |
+| **Employee (Standard)**        | `employee@example.com`         | `password`        | Operations / L2                | Regular expense upload, reimbursement requests, cash advances, liquidation submissions |
+| **Accounting / Finance**       | `sum@sbsi.com`                 | `@.Akirasendoh07` | Accounting / Finance           | Primary accounting verification, disbursements, settlement validation                  |
+| **IT Administrator**           | `admin@example.com`            | `password`        | IT / L5                        | System administration, user management, audit log inspection, global settings          |
+| **Approver / Finance Manager** | `approver@example.com`         | `password`        | Finance / L4                   | Cash advance approvals, threshold sign-offs, reimbursement approvals                   |
+| **Finance Administrator**      | `finance-admin@example.com`    | `password`        | Finance / Admin                | Financial compliance, expense category oversight, audit reporting                      |
+| **Finance Officer**            | `finance@example.com`          | `password`        | Finance / Employee             | Financial operations, receipt verification, payment matching                           |
+| **Operations Manager**         | `manager@example.com`          | `password`        | Operations / Manager           | Departmental expense approval, operational budget sign-off                             |
+| **Sales Representative**       | `sales@example.com`            | `password`        | Operations / Sales             | Field sales reimbursements, client entertainment claims, travel advances               |
+| **Accounting Staff (SBSI)**    | `employee.accounting@sbsi.com` | `password`        | Accounting / Accountant        | Client-specific accounting reviews, BIR VAT compliance                                 |
+| **Finance Manager (SBSI)**     | `manager.finance@sbsi.com`     | `password`        | Finance / Manager              | High-tier approval thresholds, budget disbursements                                    |
+| **Operations Manager (SBSI)**  | `manager.operations@sbsi.com`  | `password`        | Operations / Manager           | Field operations oversight, regional cash advance sign-offs                            |
+| **Sales Supervisor (SBSI)**    | `supervisor.sales@sbsi.com`    | `password`        | Sales & Marketing / Supervisor | First-line expense validations, team travel approvals                                  |
+| **Super Admin (SBSI)**         | `superadmin@sbsi.com`          | `password`        | Executive / Super Admin        | Full ecosystem administrative privileges across integrated systems                     |
+| **IT Support Engineer (SBSI)** | `employee.it@sbsi.com`         | `password`        | IT / Employee                  | IT support tickets, technical access verification                                      |
 
 ## Definition of Done
+
 - [ ] Code conforms to `A-09` reusability constraints (no duplicate components or utility helpers).
 - [ ] Every database mutation has a corresponding `AuditLogService::log()` call in the same database transaction.
+- [ ] System boundary operations feature explicit `try-catch` blocks with logging/rethrowing and zero silent error swallowing.
 - [ ] Sensitive inputs are encrypted on the client side and verified/decrypted server-side.
 - [ ] Export actions for reports are written to the audit logs with filters used.
 - [ ] Pre-aggregated database aggregation is used for dashboard visual components.
+- [ ] Applicable skills from `.agents/skills/` (e.g., `test-driven-development`, `systematic-debugging`, `writing-plans`, `verification-before-completion`) were engaged where relevant.
+- [ ] Documentation changes in `docs/` or `documentations/` are recorded in the Changelog in `docs/DOC_CHANGELOG.md`.
 - [ ] All unit and integration tests (PHPUnit / Vitest) run without failure.
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+When the user types `/graphify`, use the installed graphify skill or instructions before doing anything else.
+
+Rules:
+
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- Dirty graphify-out/ files are expected after hooks or incremental updates; dirty graph files are not a reason to skip graphify. Only skip graphify if the task is about stale or incorrect graph output, or the user explicitly says not to use it.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
