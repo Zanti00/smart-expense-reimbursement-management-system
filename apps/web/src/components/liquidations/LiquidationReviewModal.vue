@@ -4,6 +4,7 @@ import { X, XCircle, ShieldCheck, Eye, FileText, Download } from "lucide-vue-nex
 import { formatPeso, formatDate } from "@/utils/formatters";
 import StatusBadge from "@/components/base/StatusBadge.vue";
 import BaseReceiptImage from "@/components/base/BaseReceiptImage.vue";
+import ReceiptImagePreview from "@/components/base/ReceiptImagePreview.vue";
 import UnifiedRoadmapStepper from "@/components/base/UnifiedRoadmapStepper.vue";
 import { useLiquidationStore } from "@/stores/liquidation";
 
@@ -199,26 +200,30 @@ function handleRoadmapNavigate(payload) {
               Receipts ({{ reviewReceipts.length }})
             </h3>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <article
-                v-for="receipt in reviewReceipts"
+                v-for="(receipt, idx) in reviewReceipts"
                 :key="receipt.id"
-                class="rounded-xl overflow-hidden border border-slate-200"
+                class="rounded-xl border border-slate-200 bg-white p-4 flex flex-col justify-between gap-3 shadow-sm hover:shadow-md transition-shadow"
               >
-                <!-- Receipt Image -->
-                <BaseReceiptImage
-                  :src="receipt.filePath ? getFileUrl(receipt.filePath) : null"
-                  :alt="receipt.merchantName || 'Receipt'"
+                <!-- Reusable Receipt Image Preview (with zoom & clean title) -->
+                <ReceiptImagePreview
+                  :index="idx + 1"
+                  :file-name="receipt.fileName || receipt.name || receipt.merchantName || `receipt_${receipt.id}`"
+                  :src="receipt.filePath ? getFileUrl(receipt.filePath) : (receipt.thumbnail || receipt.preview || receipt.file_url)"
                   :file-type="receipt.fileType"
-                  img-class="h-full w-full object-cover object-top"
-                  container-class="bg-slate-50 aspect-[4/3] flex items-center justify-center border-b border-slate-100 overflow-hidden"
+                  :alt="receipt.merchantName || 'Receipt'"
+                  :enable-zoom="true"
+                  :show-badge="true"
+                  :show-delete-button="false"
+                  :receipt="receipt"
                 />
 
-                <!-- Receipt Info -->
-                <div class="p-3 space-y-2.5">
+                <!-- Receipt Info & Details Action -->
+                <div class="space-y-2.5 pt-2 border-t border-slate-100">
                   <div class="flex justify-between items-start gap-2">
                     <div class="min-w-0">
-                      <p class="text-sm font-medium text-slate-800 truncate">
+                      <p class="text-sm font-semibold text-slate-800 truncate">
                         {{ receipt.merchantName || "Receipt" }}
                       </p>
                       <p class="text-xs text-slate-400 mt-0.5">

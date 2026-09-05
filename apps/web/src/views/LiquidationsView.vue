@@ -791,7 +791,40 @@ function employeeSortValue(advance, key) {
   return employeeAdvanceStatus(advance);
 }
 
+const selectedAdvanceAcknowledged = computed(() => {
+  const adv = selectedAdvance.value;
+  if (!adv) return false;
+  if (adv.acknowledgedAt || adv.acknowledged_at) return true;
+  if (adv.signature || adv.signatureImage) return true;
+  return String(adv.status || "").toLowerCase().trim() === "signed";
+});
+
+const selectedAdvanceIsPhase2 = computed(() => {
+  if (existingLiquidation.value) return true;
+  const status = String(selectedAdvance.value?.status || "")
+    .toLowerCase()
+    .trim()
+    .replace(/[\s/_-]+/g, "-");
+  return ["signed", "under-review", "pending-under-review", "incomplete", "overdue", "liquidated", "settled"].includes(status);
+});
+
+const selectedAdvanceCanLiquidate = computed(() => {
+  if (!selectedAdvance.value) return false;
+  // Revise stays editable — already in Phase 2
+  if (String(existingLiquidation.value?.status || "").toLowerCase() === "revise") return true;
+  return selectedAdvanceAcknowledged.value || selectedAdvanceIsPhase2.value;
+});
+
 async function submitLiquidation() {
+  // Preview-only until acknowledged / Phase 2 — block submit with feedback
+  if (!selectedAdvanceCanLiquidate.value) {
+    addToast({
+      title: "Acknowledgement Required",
+      message: "Please acknowledge the cash advance (sign) before submitting a liquidation. Preview only until Phase 2.",
+      type: "danger",
+    });
+    return;
+  }
   const success = await performSubmitLiquidation({
     receipts: receipts.value,
     selectedAdvance: selectedAdvance.value,
@@ -1448,6 +1481,7 @@ function finalizeLiquidation() {
           :liquidation-outstanding-balance="liquidationOutstandingBalance"
           :overpayment-amount="overpaymentAmount"
           :submitting="submitting"
+          :disabled="!selectedAdvanceCanLiquidate"
           :has-incomplete-receipt-fields="hasIncompleteReceiptFields"
           @reload-console="
             selectedAdvance = null;

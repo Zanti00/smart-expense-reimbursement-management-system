@@ -22,6 +22,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 > **Note for AI Subagents & Developers:** Always consult this file when you need chronological historical context, previous architectural pivots, or design rationale before modifying codebase features or documentation guides.
 
+## [1.5.5] - 2026-09-06
+
+### Added
+- **Constructive Pushback & Logical Rigor Rule (Anti-Sycophancy):**
+  - Added explicit AI and subagent governance across [`AGENTS.md`](../AGENTS.md), [`docs/Build.md`](Build.md), [`docs/SERMS.md`](SERMS.md), and [`.agents/rules/smart-expense-reimbursement-management-system.md`](../.agents/rules/smart-expense-reimbursement-management-system.md) mandating constructive pushback against flawed, suboptimal, or non-compliant user inputs.
+  - Required that all critiques, pushbacks, and technical recommendations be strictly backed by sound logical basis, architectural principles, and verifiable evidence rather than arbitrary or performative dissent.
+
+---
+
+## [1.5.4] - 2026-09-05
+
+### Added
+- **Reusable Receipt Image Preview Component (`ReceiptImagePreview.vue`):**
+  - Extracted the standardized receipt image preview card into `src/components/base/ReceiptImagePreview.vue`, encapsulating the 1-based index badge, cleaned filename, vertical `aspect-[3/4]` frame with `BaseReceiptImage` (`object-contain`), processing/uploading spinners, and action slot/delete trigger (conforming to Axiom A-09).
+  - Integrated interactive hover preview and click-to-preview lightbox backed by `ImagePreviewModal.vue` with zoom, pan, rotate, and reset controls.
+
+### Changed
+- **Liquidation Request View & Review Surfaces:**
+  - Upgraded [`LiquidationReviewModal.vue`](apps/web/src/components/liquidations/LiquidationReviewModal.vue) receipts section to render the standardized `ReceiptImagePreview` card layout with full-screen zoom inspection support.
+  - Enhanced [`BaseReceiptDetailModal.vue`](apps/web/src/components/base/BaseReceiptDetailModal.vue) with clickable zoom trigger and integrated `ImagePreviewModal` so receipt detail inspections across liquidations and expenses support full-resolution lightbox viewing.
+  - Refactored [`ScannedReceiptsList.vue`](apps/web/src/components/reimbursements/ScannedReceiptsList.vue) to reuse `ReceiptImagePreview.vue`, eliminating redundant inline preview markup.
+
+---
+
 ## [1.5.3] - 2026-09-05
 
 ### Fixed
