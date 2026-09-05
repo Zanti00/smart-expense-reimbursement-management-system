@@ -1,0 +1,27 @@
+# Production static build for SERMS web — serves the built Vue bundle via nginx.
+# Built with base '/serms/' (see vite.config.js). On Azure the auth-proxy strips
+# the /serms prefix, so this nginx serves the SPA at the root with SPA fallback.
+#
+# Build args (set at deploy time):
+#   VITE_AUTH_MODULE_URL  = the auth-proxy base URL (e.g. https://auth-proxy...azurecontainerapps.io)
+#                           REQUIRED — otherwise login redirects to localhost:3001.
+FROM node:20-alpine AS build
+
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm ci || npm install
+
+COPY . .
+
+ARG VITE_AUTH_MODULE_URL
+ARG VITE_API_BASE_URL=""
+ENV VITE_AUTH_MODULE_URL=$VITE_AUTH_MODULE_URL \
+    VITE_API_BASE_URL=$VITE_API_BASE_URL
+
+RUN npm run build
+
+FROM nginx:1.27-alpine
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/dist /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
