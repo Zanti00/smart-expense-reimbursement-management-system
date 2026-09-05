@@ -5,6 +5,7 @@ import { useReimbursementStore } from "@/stores/reimbursement";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "@/composables/useToast";
 import BaseButton from "@/components/base/BaseButton.vue";
+import BaseToggleSwitch from "@/components/base/BaseToggleSwitch.vue";
 import BaseKpiGrid from "@/components/base/BaseKpiGrid.vue";
 import BaseUtilityToolbar from "@/components/base/BaseUtilityToolbar.vue";
 import ReimbursementDetailsModal from "@/components/reimbursements/ReimbursementDetailsModal.vue";
@@ -19,6 +20,7 @@ import {
 } from "@/composables/reimbursements/useReimbursementFilters";
 import { useReimbursementDetails } from "@/composables/reimbursements/useReimbursementDetails";
 import { useReimbursementDecisions } from "@/composables/reimbursements/useReimbursementDecisions";
+import { useOcrMode } from "@/composables/useOcrMode";
 import {
   Plus,
   ShieldCheck,
@@ -32,6 +34,7 @@ const store = useReimbursementStore();
 const auth = useAuthStore();
 const router = useRouter();
 const { addToast } = useToast();
+const { isMockOcr, setMockMode } = useOcrMode();
 
 const statusFilters = computed(() =>
   auth.isAdmin
@@ -237,6 +240,18 @@ onMounted(() => store.fetchAll());
         <p class="mt-1 text-sm text-slate-400">
           Manage and track all submitted expense claims.
         </p>
+      </div>
+      <div
+        v-if="!auth.isAdmin"
+        class="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2.5"
+      >
+        <BaseToggleSwitch
+          :model-value="isMockOcr"
+          @update:model-value="setMockMode"
+          on-label="Mock OCR"
+          off-label="Real OCR"
+          hint="Mock uploads file, fills instantly, skips OCR wait"
+        />
       </div>
     </div>
 

@@ -8,6 +8,7 @@ use App\Modules\Liquidations\Models\Liquidation;
 use App\Modules\CashAdvances\Models\CashAdvance;
 use App\Modules\Reimbursements\Models\Receipt;
 use App\Modules\Ai\Contracts\AsyncOcrEngineInterface;
+use App\Modules\Ai\Services\MockOcrService;
 use App\Modules\Shared\Services\PasswordVerificationService;
 use App\Modules\AuditLogs\Services\AuditLogService;
 use App\Modules\Reimbursements\Jobs\DispatchReceiptToAiService;
@@ -232,6 +233,9 @@ class LiquidationController extends Controller
             throw $e;
         }
 
+        $isMock = MockOcrService::isMockRequest();
+        $mock = $isMock ? MockOcrService::generate($files[0]?->getClientOriginalName() ?? 'receipt.jpg') : [];
+
         try {
             $receipt = Receipt::create([
                 'uploaded_by' => $request->user()->id,
@@ -239,9 +243,22 @@ class LiquidationController extends Controller
                 'file_hash' => $fileHashes,
                 'file_type' => $fileTypes,
                 'file_size_bytes' => $fileSizes,
+                'vendor_name' => $mock['vendor_name'] ?? null,
+                'transaction_date' => $mock['transaction_date'] ?? null,
+                'total_amount' => $mock['total_amount'] ?? null,
+                'vat_amount' => $mock['vat_amount'] ?? null,
+                'tin' => $mock['tin'] ?? null,
+                'invoice_number' => $mock['invoice_number'] ?? null,
+                'vat_classification' => $mock['vat_classification'] ?? ($isMock ? 'vat' : null),
+                'currency' => $mock['currency'] ?? ($isMock ? 'PHP' : null),
+                'location' => $mock['location'] ?? null,
+                'ocr_confidence_score' => $mock['ocr_confidence_score'] ?? null,
                 'ocr_flagged' => false,
-                'status' => 'processing',
+                'status' => $isMock ? 'processed' : 'processing',
             ]);
+            if ($isMock && !empty($mock['items'])) {
+                $receipt->items()->createMany($mock['items']);
+            }
         } catch (\Throwable $e) {
             Log::error('LiquidationController@scan: failed to create receipt row', [
                 'error' => $e->getMessage(),
@@ -254,7 +271,9 @@ class LiquidationController extends Controller
         }
 
         // Dispatch async OCR (sync connection runs inline if no worker, matching ReceiptService)
+        // Mock mode skips the pipeline entirely — receipt is already processed.
         $connection = config('services.ai_service.ocr_queue_connection', 'sync');
+        if (!$isMock) {
         try {
             $job = (new DispatchReceiptToAiService($receipt))->onConnection($connection);
             Bus::dispatch($job);
@@ -278,6 +297,7 @@ class LiquidationController extends Controller
             // Don't swallow — let caller see the failure via the row's failed status
             // but still return 201 so the frontend can poll/retry.
         }
+        }
 
         // Audit log — every DB mutation requires it
         try {
@@ -295,10 +315,10 @@ class LiquidationController extends Controller
             Log::warning('LiquidationController@scan: audit log failed', ['receipt_id' => $receipt->id, 'error' => $e->getMessage()]);
         }
 
-        $fresh = $receipt->fresh();
+        $fresh = $receipt->fresh()->load('items');
 
         return response()->json([
-            'message' => 'Receipt uploaded for OCR processing.',
+            'message' => $isMock ? 'Receipt uploaded with mock OCR data.' : 'Receipt uploaded for OCR processing.',
             'data' => [
                 'id' => $fresh->id,
                 'status' => $fresh->status,
@@ -308,6 +328,15 @@ class LiquidationController extends Controller
                 'vat_amount' => $fresh->vat_amount,
                 'tin' => $fresh->tin,
                 'invoice_number' => $fresh->invoice_number,
+                'location' => $fresh->location,
+                'currency' => $fresh->currency,
+                'vat_classification' => $fresh->vat_classification,
+                'items' => $fresh->items->map(fn ($item) => [
+                    'name' => $item->name,
+                    'quantity' => $item->qty,
+                    'qty' => $item->qty,
+                    'price' => $item->price,
+                ])->values()->all(),
                 'ocr_confidence_score' => $fresh->ocr_confidence_score,
                 'ocr_flagged' => (bool) $fresh->ocr_flagged,
                 'rejection_code' => $fresh->rejection_code,

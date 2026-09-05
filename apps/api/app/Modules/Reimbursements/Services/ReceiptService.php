@@ -5,6 +5,7 @@ namespace App\Modules\Reimbursements\Services;
 use App\Modules\Users\Models\User;
 use App\Modules\Reimbursements\Models\Receipt;
 use App\Modules\AuditLogs\Services\AuditLogService;
+use App\Modules\Ai\Services\MockOcrService;
 use App\Modules\Reimbursements\Jobs\DispatchReceiptToAiService;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
@@ -114,6 +115,9 @@ class ReceiptService
 
             $this->validateDuplicateReceipt($storedFile['file_hash']);
 
+            $isMock = MockOcrService::isMockRequest($validated);
+            $mock = $isMock ? MockOcrService::generate($files[0]?->getClientOriginalName() ?? 'receipt.jpg') : [];
+
             $receipt = Receipt::create([
                 'uploaded_by'          => $user->id,
                 'file_path'            => $storedFile['file_path'],
@@ -121,22 +125,42 @@ class ReceiptService
                 'file_type'            => $storedFile['file_type'],
                 'file_size_bytes'      => $storedFile['file_size_bytes'],
                 'expense_category_id'  => $validated['expense_category_id'] ?? null,
-                'vendor_name'          => $validated['vendor_name'] ?? null,
-                'transaction_date'     => $validated['transaction_date'] ?? null,
-                'total_amount'         => $validated['total_amount'] ?? null,
-                'vat_amount'           => $validated['vat_amount'] ?? null,
-                'tin'                  => $validated['tin'] ?? null,
-                'invoice_number'       => $validated['invoice_number'] ?? null,
-                'vat_classification'   => $validated['vat_classification'] ?? null,
-                'currency'             => $validated['currency'] ?? null,
-                'location'             => $validated['location'] ?? null,
+                'vendor_name'          => $validated['vendor_name'] ?? $mock['vendor_name'] ?? null,
+                'transaction_date'     => $validated['transaction_date'] ?? $mock['transaction_date'] ?? null,
+                'total_amount'         => $validated['total_amount'] ?? $mock['total_amount'] ?? null,
+                'vat_amount'           => $validated['vat_amount'] ?? $mock['vat_amount'] ?? null,
+                'tin'                  => $validated['tin'] ?? $mock['tin'] ?? null,
+                'invoice_number'       => $validated['invoice_number'] ?? $mock['invoice_number'] ?? null,
+                'vat_classification'   => $validated['vat_classification'] ?? $mock['vat_classification'] ?? null,
+                'currency'             => $validated['currency'] ?? $mock['currency'] ?? ($isMock ? 'PHP' : null),
+                'location'             => $validated['location'] ?? $mock['location'] ?? null,
+                'ocr_confidence_score' => $mock['ocr_confidence_score'] ?? null,
                 'ocr_flagged'          => false,
                 'is_archived'          => false,
-                'status'               => 'processing',
+                'status'               => $isMock ? 'processed' : 'processing',
             ]);
 
             if (!empty($validated['items'])) {
                 $receipt->items()->createMany($validated['items']);
+            } elseif ($isMock && !empty($mock['items'])) {
+                $receipt->items()->createMany($mock['items']);
+            }
+
+            if ($isMock) {
+                $receipt->load('category', 'items', 'uploader');
+
+                AuditLogService::log(
+                    actorId: $user->id,
+                    actorRole: $user->role,
+                    actionType: 'RECEIPT_CREATED',
+                    entityType: 'receipt',
+                    entityId: $receipt->id,
+                    beforeState: null,
+                    afterState: $receipt->toArray(),
+                    ipAddress: request()->ip(),
+                );
+
+                return $receipt;
             }
 
             // Dispatch to the external AI OCR + categorization service (callback-based;

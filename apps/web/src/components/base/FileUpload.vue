@@ -21,6 +21,7 @@ const props = defineProps({
   maxSizeMb: { type: Number, default: 2 },
   emptyActionLabel: { type: String, default: 'Select Files' },
   addActionLabel: { type: String, default: 'Add More Receipts' },
+  mockMode: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['update:modelValue', 'ocr-result', 'upload-error'])
@@ -201,6 +202,13 @@ function hydrateEntry(entry, ocrData) {
   entry.amount = Number(entry.ocrData.amount) || 0
   entry.tax = entry.ocrData.vat ? String(entry.ocrData.vat) : '0.00'
   entry.subtotal = (Math.max(Number(entry.amount || 0) - Number(entry.tax || 0), 0)).toFixed(2)
+  if (Array.isArray(ocrData.items) && ocrData.items.length > 0) {
+    entry.items = ocrData.items.map((item) => ({
+      name: item.name || '',
+      qty: Number(item.qty ?? item.quantity ?? 1) || 1,
+      price: Number(item.price) || 0,
+    }))
+  }
   entry.thumbnail = entry.previews?.[0] || null
   emit('ocr-result', entry.ocrData)
   emit('update:modelValue', files.value)
@@ -299,10 +307,15 @@ async function simulateOCR(entry) {
     entry.pages.forEach(file => {
       formData.append('files[]', file)
     })
+    // Fast mock path — real file upload, instant mock data, skip OCR wait + polling.
+    if (props.mockMode) {
+      formData.append('is_mock', '1')
+    }
 
     const response = await apiFetch('/api/serms/liquidations/scan', {
       method: 'POST',
       body: formData,
+      headers: props.mockMode ? { 'X-Mock-OCR': '1' } : {},
     })
 
     if (!response.ok) {

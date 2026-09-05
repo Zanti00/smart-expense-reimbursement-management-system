@@ -9,6 +9,7 @@ import { useToast } from "@/composables/useToast";
 import StatusBadge from "@/components/base/StatusBadge.vue";
 import FileUpload from "@/components/base/FileUpload.vue";
 import BaseButton from "@/components/base/BaseButton.vue";
+import BaseToggleSwitch from "@/components/base/BaseToggleSwitch.vue";
 import BaseKpiGrid from "@/components/base/BaseKpiGrid.vue";
 import BasePagination from "@/components/base/BasePagination.vue";
 import BaseUtilityToolbar from "@/components/base/BaseUtilityToolbar.vue";
@@ -25,6 +26,7 @@ import LiquidationAdvancesList from "@/components/liquidations/LiquidationAdvanc
 import { useLiquidationDecisions } from "@/composables/liquidations/useLiquidationDecisions";
 import { useLiquidationForwarding } from "@/composables/liquidations/useLiquidationForwarding";
 import { useLiquidationSubmit } from "@/composables/liquidations/useLiquidationSubmit";
+import { useOcrMode } from "@/composables/useOcrMode";
 import { useUnsavedChanges } from "@/composables/useUnsavedChanges";
 import { formatPeso, formatDate } from "@/utils/formatters";
 import { numberOrZero } from "@/utils/numbers";
@@ -49,6 +51,7 @@ const receiptStore = useReceiptStore();
 const auth = useAuthStore();
 const router = useRouter();
 const { addToast } = useToast();
+const { isMockOcr, setMockMode } = useOcrMode();
 
 /** Refresh both stores in parallel — balance is now authoritative in the DB */
 async function refreshAll() {
@@ -1387,6 +1390,22 @@ function finalizeLiquidation() {
       :statuses="employeeStatusFilters"
       searchPlaceholder="Search purpose, status, or amount..."
     />
+
+    <div
+      v-if="!auth.isAdmin || showAdminRequestForm"
+      class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3"
+    >
+      <BaseToggleSwitch
+        :model-value="isMockOcr"
+        @update:model-value="setMockMode"
+        on-label="Mock OCR"
+        off-label="Real OCR"
+        hint="Mock uploads file, fills instantly, skips OCR wait"
+      />
+      <p class="text-[11px] text-slate-400">
+        {{ isMockOcr ? "Fast — real file upload, instant mock data." : "Online — uses ocr-pipeline with polling." }}
+      </p>
+    </div>
 
     <div
       v-if="!auth.isAdmin || showAdminRequestForm"

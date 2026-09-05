@@ -11,10 +11,12 @@ import {
   ArrowRight,
 } from "lucide-vue-next";
 import BaseButton from "@/components/base/BaseButton.vue";
+import BaseToggleSwitch from "@/components/base/BaseToggleSwitch.vue";
 import FileUpload from "@/components/base/FileUpload.vue";
 import ScannedReceiptsList from "@/components/reimbursements/ScannedReceiptsList.vue";
 import UnifiedRoadmapStepper from "@/components/base/UnifiedRoadmapStepper.vue";
 import { useLiquidationStore } from "@/stores/liquidation";
+import { useOcrMode } from "@/composables/useOcrMode";
 import { formatPeso } from "@/utils/formatters";
 
 const props = defineProps({
@@ -97,6 +99,8 @@ const emit = defineEmits([
 ]);
 
 const reportAttachmentInput = ref(null);
+
+const { isMockOcr, setMockMode } = useOcrMode();
 
 const isFormDisabled = computed(() => {
   if (props.disabled) return true;
@@ -311,11 +315,22 @@ function attachmentFileSize(file) {
         class="flex flex-col gap-2 mb-3 sm:flex-row sm:items-center sm:justify-between"
       >
         <label class="input-label !mb-0">Receipt Attachments</label>
+        <BaseToggleSwitch
+          :model-value="isMockOcr"
+          @update:model-value="setMockMode"
+          on-label="Mock OCR"
+          off-label="Real OCR"
+          hint="Mock uploads file, fills instantly, skips OCR wait"
+        />
       </div>
+      <p class="mb-3 text-[11px] text-slate-400">
+        {{ isMockOcr ? "Fast — real file upload, instant mock data." : "Online — uses ocr-pipeline with polling." }}
+      </p>
       <FileUpload
         :model-value="receipts"
         @update:model-value="$emit('update:receipts', $event)"
         :max-size-mb="2"
+        :mock-mode="isMockOcr"
         empty-action-label="Upload Receipt"
         add-action-label="Upload Receipt"
         @upload-error="$emit('upload-error', $event)"

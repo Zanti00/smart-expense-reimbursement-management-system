@@ -2,6 +2,7 @@ import { ref, watch, onMounted, onBeforeUnmount } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "@/composables/useToast";
 import { buildPrefilledReceiptDraft } from "@/utils/receiptUtils";
+import { useOcrMode } from "@/composables/useOcrMode";
 
 export function useReceiptUploads(options = {}) {
   const DRAFT_KEY = options.draftKey || "serms_draft_receipts";
@@ -211,6 +212,14 @@ export function useReceiptUploads(options = {}) {
   async function addReceiptFiles(fileList, forceProcess = false) {
     const allowedMimeTypes = ["image/jpeg", "image/png", "application/pdf"];
     const files = Array.from(fileList || []);
+
+    let isMockMode = false;
+    try {
+      isMockMode = Boolean(useOcrMode()?.isMockOcr?.value);
+    } catch {
+      isMockMode = false;
+    }
+
     const accepted = files.filter((file) =>
       allowedMimeTypes.includes(file.type),
     );
@@ -247,10 +256,15 @@ export function useReceiptUploads(options = {}) {
         if (forceProcess) {
           formData.append("force_process", "1");
         }
+        // Fast mock path — real file upload, instant mock data, skip OCR wait.
+        if (isMockMode) {
+          formData.append("is_mock", "1");
+        }
 
         const headers = { Accept: "application/json" };
         if (authStore.token)
           headers["Authorization"] = `Bearer ${authStore.token}`;
+        if (isMockMode) headers["X-Mock-OCR"] = "1";
 
         const res = await fetch("/api/serms/reimbursements/receipts", {
           method: "POST",
@@ -388,6 +402,13 @@ export function useReceiptUploads(options = {}) {
   async function submitSegments(files) {
     if (!files || files.length < 2) return;
 
+    let isMockMode = false;
+    try {
+      isMockMode = Boolean(useOcrMode()?.isMockOcr?.value);
+    } catch {
+      isMockMode = false;
+    }
+
     const tempId = `temp-seg-${Date.now()}`;
     const firstFile = files[0];
     const receiptObj = buildPrefilledReceiptDraft({
@@ -403,10 +424,12 @@ export function useReceiptUploads(options = {}) {
       files.forEach((file) => {
         formData.append("files[]", file);
       });
+      if (isMockMode) formData.append("is_mock", "1");
 
       const headers = { Accept: "application/json" };
       if (authStore.token)
         headers["Authorization"] = `Bearer ${authStore.token}`;
+      if (isMockMode) headers["X-Mock-OCR"] = "1";
 
       const res = await fetch("/api/serms/reimbursements/receipts/segmented", {
         method: "POST",
