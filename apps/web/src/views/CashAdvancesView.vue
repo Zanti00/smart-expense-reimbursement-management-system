@@ -40,6 +40,7 @@ onMounted(() => store.fetchAll());
 
 function openDetails(row) {
   viewingRecord.value = {
+    ...row,
     id: row.id,
     purpose: (row.purpose || "").replace(/\s\.\.\.$|\.\.\.$/, ""),
     amount: row.amount,
@@ -65,6 +66,12 @@ function openDetails(row) {
     documentUrl: row.documentUrl,
     documentFileName:
       row.documentFileName || `Cash_Advance_Request_${row.id}.pdf`,
+    status_history: row.status_history || row.statusHistory || [],
+    statusHistory: row.statusHistory || row.status_history || [],
+    approval_actions: row.approval_actions || row.approvalActions || [],
+    approvalActions: row.approvalActions || row.approval_actions || [],
+    disbursement: row.disbursement || null,
+    penalties: row.penalties || [],
   };
 }
 

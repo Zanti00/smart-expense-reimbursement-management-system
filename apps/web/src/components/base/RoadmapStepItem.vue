@@ -153,13 +153,13 @@ function handleClick() {
       </p>
 
       <!-- Meta Date + Actor -->
-      <template v-if="historyEntry?.date || historyEntry?.actor">
+      <template v-if="state !== 'future' && (historyEntry?.date || historyEntry?.actor)">
         <p class="mt-0.5 text-[10px] leading-tight text-slate-400 truncate">
           <span v-if="formatDateOnly(historyEntry?.date)">
             {{ formatDateOnly(historyEntry?.date) }}
           </span>
           <span v-if="historyEntry?.actor" class="hidden sm:inline">
-            • {{ historyEntry?.actor }}
+            <template v-if="formatDateOnly(historyEntry?.date)"> • </template>{{ historyEntry?.actor }}
           </span>
         </p>
         <p
@@ -178,9 +178,9 @@ function handleClick() {
         {{ revisionCount }}/3
       </span>
 
-      <!-- Penalty Badge on Overdue Steps 4-8 -->
+      <!-- Penalty Badge on Overdue Steps 4-6 -->
       <span
-        v-if="isOverdue && step.idx >= 3 && step.idx <= 7 && totalPenalty > 0 && (state === 'current' || state === 'completed')"
+        v-if="isOverdue && step.idx >= 3 && step.idx <= 5 && totalPenalty > 0 && (state === 'current' || state === 'completed')"
         class="mt-1 inline-flex items-center gap-1 rounded-full bg-red-50 px-1.5 py-0.5 text-[9px] font-bold leading-none text-red-700 ring-1 ring-red-200"
       >
         <AlertTriangle class="h-2.5 w-2.5 shrink-0" />

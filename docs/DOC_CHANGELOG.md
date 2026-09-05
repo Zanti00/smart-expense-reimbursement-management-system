@@ -22,6 +22,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 > **Note for AI Subagents & Developers:** Always consult this file when you need chronological historical context, previous architectural pivots, or design rationale before modifying codebase features or documentation guides.
 
+## [1.5.3] - 2026-09-05
+
+### Fixed
+- **Unified Roadmap Stepper & Flow Map Streamlining:**
+  - Removed intermediate "Under Review" and "Decision" steps, streamlining the lifecycle into 6 canonical steps (`Request` → `Approval` → `Disbursed` → `Acknowledged` → `Liquidation` → `Settled`).
+  - Fixed terminal settlement logic in `stepState()` where `isTerminalSuccess` was unreachable, resolving the bug where approved settlements remained stuck in "Pending".
+  - Prevented Approver/Disburser admin actors from leaking into Step 5 (Liquidation) prior to employee submission by introducing strict future guards and isolating liquidation submitter/auditor history.
+  - Fixed missing step metadata (approver, disburser, dates) in the Cash Advance View Modal by preserving relational history in `CashAdvancesView.vue`, enriching `roadmapCashAdvance` and `roadmapHistory` in `CashAdvanceDetailsModal.vue`, and adding robust fallbacks for approvals, disbursements, and acknowledgments in `UnifiedRoadmapStepper.vue`.
+
 ---
 
 ## [1.5.2] - 2026-09-03

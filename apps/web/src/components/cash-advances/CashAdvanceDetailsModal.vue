@@ -48,24 +48,96 @@ const linkedLiquidation = computed(() => {
   return props.record.liquidation || props.record.settlement || null;
 });
 
+const roadmapCashAdvance = computed(() => {
+  if (!props.record) return null;
+  const fromStore = store.items.find(
+    (i) => String(i.id) === String(props.record.id),
+  );
+  return {
+    ...(fromStore || {}),
+    ...(props.record || {}),
+    disbursement: props.record.disbursement || fromStore?.disbursement || null,
+    approval_actions:
+      props.record.approval_actions ||
+      props.record.approvalActions ||
+      fromStore?.approval_actions ||
+      fromStore?.approvalActions ||
+      [],
+    approvalActions:
+      props.record.approvalActions ||
+      props.record.approval_actions ||
+      fromStore?.approvalActions ||
+      fromStore?.approval_actions ||
+      [],
+    status_history:
+      props.record.status_history ||
+      props.record.statusHistory ||
+      fromStore?.status_history ||
+      fromStore?.statusHistory ||
+      [],
+    statusHistory:
+      props.record.statusHistory ||
+      props.record.status_history ||
+      fromStore?.statusHistory ||
+      fromStore?.status_history ||
+      [],
+  };
+});
+
 const roadmapHistory = computed(() => {
-  const raw =
-    props.record?.status_history ||
-    props.record?.statusHistory ||
-    props.record?.approval_actions ||
-    props.record?.audit_logs ||
-    props.record?.history ||
-    [];
-  if (Array.isArray(raw)) return raw;
-  if (raw && typeof raw === "object") return [raw];
-  return [];
+  if (!props.record) return [];
+  const fromStore = store.items.find(
+    (i) => String(i.id) === String(props.record.id),
+  );
+  const target = props.record;
+
+  const entries = [];
+  const append = (list) => {
+    if (Array.isArray(list)) {
+      entries.push(...list);
+    } else if (list && typeof list === "object") {
+      entries.push(list);
+    }
+  };
+
+  append(target.status_history);
+  append(target.statusHistory);
+  append(target.approval_actions);
+  append(target.approvalActions);
+  append(target.history);
+  append(target.audit_logs);
+
+  if (fromStore) {
+    append(fromStore.status_history);
+    append(fromStore.statusHistory);
+    append(fromStore.approval_actions);
+    append(fromStore.approvalActions);
+  }
+
+  const seen = new Set();
+  const deduped = [];
+  for (const h of entries) {
+    if (!h) continue;
+    const key = `${h.id || ""}-${h.status || h.action || h.to_status || ""}-${h.changed_at || h.actioned_at || h.created_at || ""}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      deduped.push(h);
+    }
+  }
+  return deduped;
 });
 
 const roadmapPenalties = computed(() => {
-  if (props.record?.penalties && Array.isArray(props.record.penalties))
-    return props.record.penalties;
-  if (Array.isArray(props.record?.penalty_logs)) return props.record.penalty_logs;
-  return [];
+  if (!props.record) return [];
+  const fromStore = store.items.find(
+    (i) => String(i.id) === String(props.record.id),
+  );
+  const p =
+    props.record.penalties ||
+    props.record.penalty_logs ||
+    fromStore?.penalties ||
+    [];
+  return Array.isArray(p) ? p : [];
 });
 
 const roadmapAging = computed(() => {
@@ -447,7 +519,7 @@ async function confirmAcknowledge() {
           </div>
           <!-- UNIFIED 8-step Roadmap -->
           <UnifiedRoadmapStepper
-            :cash-advance="record"
+            :cash-advance="roadmapCashAdvance"
             :liquidation="linkedLiquidation"
             :status-history="roadmapHistory"
             :penalties="roadmapPenalties"
@@ -653,7 +725,7 @@ async function confirmAcknowledge() {
           </div>
           <!-- UNIFIED 8-step Roadmap -->
           <UnifiedRoadmapStepper
-            :cash-advance="record"
+            :cash-advance="roadmapCashAdvance"
             :liquidation="linkedLiquidation"
             :status-history="roadmapHistory"
             :penalties="roadmapPenalties"

@@ -155,13 +155,14 @@ const liqStore = useLiquidationStore();
 const roadmapCashAdvance = computed(() => props.selectedAdvance || null);
 const roadmapLiquidation = computed(() => {
   if (props.existingLiquidation) return props.existingLiquidation;
-  // fabricate pending liquidation shape from form state
-  if (!props.selectedAdvance) return null;
-  return {
-    status: props.liquidationStatus === "Overpayment" ? "approved" : props.liquidationStatus === "Liquidated" ? "liquidated" : props.liquidationStatus === "Incomplete" ? "pending" : "pending",
-    total_expense_amount: props.totalExpenseAmount,
-    revision_count: 0,
-  };
+  if (props.submitted) {
+    return {
+      status: "pending",
+      total_expense_amount: props.totalExpenseAmount,
+      revision_count: 0,
+    };
+  }
+  return null;
 });
 const roadmapHistory = computed(() => {
   const sa = props.selectedAdvance;

@@ -95,7 +95,7 @@ function formatActorName(actor) {
   return String(actor);
 }
 
-function resolveHistoryDate(statusKeys) {
+function resolveHistoryEntry(statusKeys) {
   if (!props.statusHistory || props.statusHistory.length === 0) return null;
   const keys = statusKeys.map(normalize);
   // search in reverse to find latest matching entry
@@ -111,7 +111,6 @@ function resolveHistoryDate(statusKeys) {
         h.action ||
         "",
     );
-    // also check h.from_status vs to_status? we match target status
     if (keys.includes(s)) {
       const rawActor =
         h.actor_name ||
@@ -127,6 +126,8 @@ function resolveHistoryDate(statusKeys) {
         h.user ||
         h.performed_by ||
         h.approver ||
+        h.disbursed_by ||
+        h.disbursedBy ||
         null;
 
       return {
@@ -134,6 +135,11 @@ function resolveHistoryDate(statusKeys) {
         date:
           h.changed_at ||
           h.changedAt ||
+          h.actioned_at ||
+          h.actionedAt ||
+          h.disbursed_at ||
+          h.disbursedAt ||
+          h.disbursement_date ||
           h.created_at ||
           h.createdAt ||
           h.date ||
@@ -153,6 +159,306 @@ function resolveHistoryDate(statusKeys) {
   return null;
 }
 
+function resolveStepHistory(step, state) {
+  // If the step is in the future, it has not occurred yet — never show history or actor
+  if (state === "future") return null;
+
+  // Step 5: Liquidation step
+  if (step.key === "liq-submitted" || step.key === "liquidation") {
+    const isSubmitted =
+      Boolean(props.liquidation) ||
+      ["under-review", "under_review", "liquidated", "settled", "incomplete"].includes(caStatus.value);
+
+    // If liquidation has not yet been submitted by employee
+    if (!isSubmitted) {
+      return null;
+    }
+
+    // If liquidation object is provided
+    if (props.liquidation) {
+      const liq = props.liquidation;
+      if (state === "revise" || state === "rejected") {
+        const auditor = formatActorName(
+          liq.audited_by || liq.auditedBy || liq.auditor || liq.admin || null,
+        );
+        return {
+          date: liq.updated_at || liq.updatedAt || liq.created_at || null,
+          actor: auditor,
+          comment: liq.admin_note || liq.adminNote || null,
+        };
+      }
+
+      if (state === "completed") {
+        const auditor = formatActorName(
+          liq.audited_by || liq.auditedBy || liq.auditor || liq.admin || null,
+        );
+        return {
+          date: liq.updated_at || liq.updatedAt || liq.created_at || null,
+          actor:
+            auditor ||
+            formatActorName(
+              props.cashAdvance?.requestedBy ||
+                props.cashAdvance?.requester ||
+                null,
+            ),
+          comment: liq.admin_note || liq.adminNote || null,
+        };
+      }
+
+      // State is "current" (submitted, under review)
+      const submitter =
+        formatActorName(
+          liq.user || liq.submitted_by || liq.submittedBy || null,
+        ) ||
+        formatActorName(
+          props.cashAdvance?.requestedBy ||
+            props.cashAdvance?.requester ||
+            null,
+        );
+      return {
+        date: liq.created_at || liq.createdAt || null,
+        actor: submitter,
+        comment: null,
+      };
+    }
+
+    return resolveHistoryEntry([
+      "under-review",
+      "under_review",
+      "liquidation_submitted",
+      "liquidation-submitted",
+    ]);
+  }
+
+  // Step 6: Settled step
+  if (step.key === "settled") {
+    if (state !== "completed") return null;
+    return resolveHistoryEntry(["liquidated", "settled"]);
+  }
+
+  // Step 1: Request
+  if (step.key === "request") {
+    const entry = resolveHistoryEntry(["pending", "submitted"]);
+    if (entry) return entry;
+    if (
+      props.cashAdvance?.date ||
+      props.cashAdvance?.created_at ||
+      props.cashAdvance?.requestedBy
+    ) {
+      return {
+        date: props.cashAdvance?.date || props.cashAdvance?.created_at || null,
+        actor: formatActorName(
+          props.cashAdvance?.requestedBy ||
+            props.cashAdvance?.requester ||
+            null,
+        ),
+        comment: null,
+      };
+    }
+    return null;
+  }
+
+  // Step 2: Approval
+  if (step.key === "approval") {
+    const entry = resolveHistoryEntry(["approved", "revise", "rejected"]);
+    const approvals =
+      props.cashAdvance?.approval_actions ||
+      props.cashAdvance?.approvalActions ||
+      [];
+    const latestApproval =
+      Array.isArray(approvals) && approvals.length > 0
+        ? [...approvals].reverse().find((a) =>
+            [
+              "approved",
+              "revise",
+              "rejected",
+              "approved_by_manager",
+              "approved_by_finance",
+            ].includes(normalize(a.action || a.status || "")),
+          ) || approvals[approvals.length - 1]
+        : null;
+
+    if (entry && (entry.date || entry.actor)) {
+      if (!entry.actor) {
+        entry.actor = formatActorName(
+          latestApproval?.approver ||
+            latestApproval?.actor ||
+            latestApproval?.user ||
+            props.cashAdvance?.approver ||
+            props.cashAdvance?.approved_by ||
+            props.cashAdvance?.approvedBy ||
+            null,
+        );
+      }
+      if (!entry.date) {
+        entry.date =
+          latestApproval?.actioned_at ||
+          latestApproval?.actionedAt ||
+          latestApproval?.created_at ||
+          props.cashAdvance?.approved_at ||
+          props.cashAdvance?.approvedAt ||
+          null;
+      }
+      return entry;
+    }
+
+    if (latestApproval) {
+      return {
+        raw: latestApproval,
+        date:
+          latestApproval.actioned_at ||
+          latestApproval.actionedAt ||
+          latestApproval.created_at ||
+          latestApproval.createdAt ||
+          latestApproval.updated_at ||
+          null,
+        actor: formatActorName(
+          latestApproval.approver ||
+            latestApproval.actor ||
+            latestApproval.user ||
+            props.cashAdvance?.approver ||
+            props.cashAdvance?.approved_by ||
+            props.cashAdvance?.approvedBy ||
+            null,
+        ),
+        comment: latestApproval.comment || null,
+      };
+    }
+
+    if (
+      props.cashAdvance?.approver ||
+      props.cashAdvance?.approved_by ||
+      props.cashAdvance?.approvedBy ||
+      props.cashAdvance?.approved_at ||
+      props.cashAdvance?.approvedAt
+    ) {
+      return {
+        date:
+          props.cashAdvance.approved_at ||
+          props.cashAdvance.approvedAt ||
+          props.cashAdvance.updated_at ||
+          props.cashAdvance.updatedAt ||
+          null,
+        actor: formatActorName(
+          props.cashAdvance.approver ||
+            props.cashAdvance.approved_by ||
+            props.cashAdvance.approvedBy ||
+            null,
+        ),
+        comment: props.cashAdvance.adminNotes || null,
+      };
+    }
+
+    return null;
+  }
+
+  // Step 3: Disbursed
+  if (step.key === "disbursed") {
+    const entry = resolveHistoryEntry(["disbursed"]);
+    const d = props.cashAdvance?.disbursement || null;
+
+    if (entry && (entry.date || entry.actor)) {
+      if (!entry.actor && d) {
+        entry.actor = formatActorName(
+          d.disbursed_by || d.disbursedBy || d.user || d.actor || null,
+        );
+      }
+      if (!entry.date && d) {
+        entry.date =
+          d.disbursed_at ||
+          d.disbursedAt ||
+          d.disbursement_date ||
+          d.created_at ||
+          null;
+      }
+      return entry;
+    }
+
+    if (d) {
+      return {
+        date:
+          d.disbursed_at ||
+          d.disbursedAt ||
+          d.disbursement_date ||
+          d.disbursementDate ||
+          d.created_at ||
+          d.createdAt ||
+          null,
+        actor: formatActorName(
+          d.disbursed_by || d.disbursedBy || d.user || d.actor || null,
+        ),
+        comment: d.reference_number || d.reference || null,
+      };
+    }
+
+    if (
+      props.cashAdvance?.disbursed_at ||
+      props.cashAdvance?.disbursedAt ||
+      props.cashAdvance?.disbursed_by ||
+      props.cashAdvance?.disbursedBy
+    ) {
+      return {
+        date:
+          props.cashAdvance.disbursed_at ||
+          props.cashAdvance.disbursedAt ||
+          null,
+        actor: formatActorName(
+          props.cashAdvance.disbursed_by ||
+            props.cashAdvance.disbursedBy ||
+            null,
+        ),
+        comment:
+          props.cashAdvance.disbursement_reference ||
+          props.cashAdvance.reference_number ||
+          null,
+      };
+    }
+
+    // When processing (state === 'current'), show expected disbursement date if available
+    if (
+      state === "current" &&
+      (props.cashAdvance?.expected_disbursement_date ||
+        props.cashAdvance?.expectedDisbursementDate)
+    ) {
+      return {
+        date:
+          props.cashAdvance.expected_disbursement_date ||
+          props.cashAdvance.expectedDisbursementDate,
+        actor: null,
+        comment: null,
+      };
+    }
+
+    return null;
+  }
+
+  // Step 4: Acknowledged
+  if (step.key === "acknowledged") {
+    const entry = resolveHistoryEntry(["signed", "acknowledged"]);
+    if (entry) return entry;
+    if (
+      props.cashAdvance?.acknowledgedAt ||
+      props.cashAdvance?.acknowledged_at
+    ) {
+      return {
+        date:
+          props.cashAdvance.acknowledgedAt ||
+          props.cashAdvance.acknowledged_at ||
+          null,
+        actor: formatActorName(
+          props.cashAdvance.requestedBy ||
+            props.cashAdvance.requester ||
+            null,
+        ),
+        comment: null,
+      };
+    }
+    return null;
+  }
+
+  return resolveHistoryEntry(step.statusKeys);
+}
+
 function revisionCountForStep(stepKey) {
   if (["request", "approval"].includes(stepKey)) {
     return Number(
@@ -161,7 +467,7 @@ function revisionCountForStep(stepKey) {
         0,
     );
   }
-  if (["liq-submitted", "under-review", "decision"].includes(stepKey)) {
+  if (["liq-submitted", "liquidation"].includes(stepKey)) {
     return Number(
       props.liquidation?.revision_count ??
         props.liquidation?.revisionCount ??
@@ -242,7 +548,7 @@ const overdueDays = computed(() => {
 });
 
 /**
- * 8-step unified definition (1-8 + optional 9)
+ * 6-step unified definition (1-6 + optional 7)
  */
 const allSteps = computed(() => {
   const steps = [
@@ -301,38 +607,29 @@ const allSteps = computed(() => {
       label: "Liquidation",
       subDefault: "Submitted",
       icon: FileText,
-      caKeys: [],
-      liqKeys: ["pending"],
-      statusKeys: ["pending", "submitted"],
+      caKeys: ["under-review", "under_review"],
+      liqKeys: [
+        "pending",
+        "submitted",
+        "under-review",
+        "under_review",
+        "pending-under-review",
+        "approved",
+        "liquidated",
+        "rejected",
+        "revise",
+      ],
+      statusKeys: [
+        "under-review",
+        "under_review",
+        "liquidation_submitted",
+        "liquidation-submitted",
+      ],
       domain: "liquidation",
     },
     {
       idx: 5,
       id: 6,
-      key: "under-review",
-      label: "Under Review",
-      subDefault: "In Progress",
-      icon: Clock,
-      caKeys: ["under-review", "under_review"],
-      liqKeys: ["under-review", "under_review", "pending-under-review"],
-      statusKeys: ["under-review", "under_review"],
-      domain: "liquidation",
-    },
-    {
-      idx: 6,
-      id: 7,
-      key: "decision",
-      label: "Decision",
-      subDefault: "Approved",
-      icon: CircleDot,
-      caKeys: [],
-      liqKeys: ["approved", "liquidated", "rejected", "revise"],
-      statusKeys: ["approved", "liquidated", "rejected", "revise"],
-      domain: "liquidation",
-    },
-    {
-      idx: 7,
-      id: 8,
       key: "settled",
       label: "Settled",
       subDefault: "Complete",
@@ -346,8 +643,8 @@ const allSteps = computed(() => {
 
   if (Number(props.overpaymentAmount) > 0 && props.layout === "horizontal") {
     steps.push({
-      idx: 8,
-      id: 9,
+      idx: 6,
+      id: 7,
       key: "overpayment",
       label: "Overpayment",
       subDefault: "Forwarded",
@@ -363,49 +660,57 @@ const allSteps = computed(() => {
 });
 
 const row1Steps = computed(() => allSteps.value.slice(0, 4));
-const row2StepsDisplay = computed(() => {
-  // Steps 5-8 displayed visually as Step 8 (Settled), Step 7 (Decision), Step 6 (Under Review), Step 5 (Liquidation)
-  const steps5to8 = allSteps.value.slice(4, 8);
-  return [...steps5to8].reverse();
-});
+const row2Steps = computed(() => allSteps.value.slice(4));
 
 const currentIndex = computed(() => {
   const ca = caStatus.value;
   const liq = liqStatus.value;
 
+  // Phase 1 rejections / revisions
   if (ca === "rejected") return 1;
-  if (liq === "rejected" || liq === "reject") return 6;
-  if (liq === "revise") return 6;
   if (ca === "revise") return 1;
+
+  // Phase 2 rejections / revisions on Liquidation step
+  if (liq === "rejected" || liq === "reject") return 4;
+  if (liq === "revise") return 4;
+
+  // Phase 1 steps
   if (ca === "pending") return 0;
   if (ca === "approved") return 2;
   if (ca === "disbursed") return 3;
-  if (ca === "signed" && !props.liquidation) return 4;
 
-  if (props.liquidation) {
-    if (liq === "pending") return 4;
-    if (
-      liq === "under-review" ||
-      liq === "under_review" ||
-      liq === "pending-under-review"
-    )
-      return 5;
-    if (liq === "approved" || liq === "liquidated") return 7;
-  }
-
+  // Phase 2 terminal success (admin approved liquidation or terminal settled)
   if (
     ["liquidated", "settled"].includes(ca) ||
-    ["settled", "liquidated"].includes(liq)
-  )
-    return 7;
-  if (ca === "incomplete") return 7;
-  if (ca === "overdue" || isOverdue.value) {
-    if (!props.liquidation) return 4;
-    if (liq === "under-review" || liq === "pending") return 5;
-    return 7;
+    ["settled", "liquidated", "approved"].includes(liq)
+  ) {
+    return 5;
+  }
+  if (ca === "incomplete") return 5;
+
+  // Phase 2 - Liquidation submitted and under audit
+  if (props.liquidation) {
+    if (
+      [
+        "pending",
+        "submitted",
+        "under-review",
+        "under_review",
+        "pending-under-review",
+      ].includes(liq)
+    ) {
+      return 4;
+    }
   }
 
-  if (ca === "under-review" || ca === "under_review") return 5;
+  if (ca === "under-review" || ca === "under_review") return 4;
+
+  // Overdue before settlement
+  if (ca === "overdue" || isOverdue.value) {
+    return 4;
+  }
+
+  // Phase 2 - Cash advance signed, ready for liquidation submission
   if (ca === "signed") return 4;
 
   return 0;
@@ -420,13 +725,20 @@ const isRejectedFlow = computed(
 
 const rejectedAtIndex = computed(() => {
   if (caStatus.value === "rejected") return 1;
-  if (liqStatus.value === "rejected" || liqStatus.value === "reject") return 6;
+  if (liqStatus.value === "rejected" || liqStatus.value === "reject") return 4;
   return -1;
 });
 
 const isReviseFlow = computed(
   () => caStatus.value === "revise" || liqStatus.value === "revise",
 );
+
+const isTerminalSuccess = computed(() => {
+  return (
+    ["liquidated", "settled"].includes(caStatus.value) ||
+    ["liquidated", "settled", "approved"].includes(liqStatus.value)
+  );
+});
 
 function stepState(stepIdx) {
   const cur = currentIndex.value;
@@ -445,12 +757,11 @@ function stepState(stepIdx) {
   }
 
   if (stepIdx < cur) return "completed";
-  if (stepIdx === cur) return "current";
 
-  const isTerminalSuccess =
-    ["liquidated", "settled"].includes(caStatus.value) ||
-    ["liquidated", "settled", "approved"].includes(liqStatus.value);
-  if (isTerminalSuccess && stepIdx === cur) return "completed";
+  if (stepIdx === cur) {
+    if (isTerminalSuccess.value) return "completed";
+    return "current";
+  }
 
   return "future";
 }
@@ -460,11 +771,16 @@ function stepSublabel(step, state) {
   if (state === "revise") return "Needs Revision";
   if (state === "completed") {
     if (
-      step.key === "decision" &&
+      (step.key === "liq-submitted" || step.key === "liquidation") &&
       ["approved", "liquidated"].includes(liqStatus.value)
-    )
+    ) {
       return "Approved";
-    if (step.key === "settled" && isOverdue.value) return "Overdue";
+    }
+    if (step.key === "settled") {
+      if (isOverdue.value) return "Overdue";
+      if (caStatus.value === "incomplete") return "Incomplete";
+      return step.subDefault;
+    }
     return step.subDefault;
   }
   if (state === "current") {
@@ -472,11 +788,18 @@ function stepSublabel(step, state) {
     if (step.key === "approval") return "In Review";
     if (step.key === "disbursed") return "Processing";
     if (step.key === "acknowledged") return "Awaiting";
-    if (step.key === "liq-submitted") return "In Review";
-    if (step.key === "under-review") return "In Progress";
-    if (step.key === "decision") return "Awaiting";
+    if (step.key === "liq-submitted" || step.key === "liquidation") {
+      if (
+        props.liquidation ||
+        ["under-review", "under_review"].includes(caStatus.value)
+      ) {
+        return "Under Review";
+      }
+      return "Pending";
+    }
     if (step.key === "settled") {
       if (isOverdue.value) return "Overdue";
+      if (caStatus.value === "incomplete") return "Incomplete";
       return "Pending";
     }
     if (step.key === "overpayment") return formatPeso(props.overpaymentAmount);
@@ -508,17 +831,17 @@ const isTurnConnected = computed(() => {
 });
 
 const row2ProgressPercent = computed(() => {
+  const count = row2Steps.value.length;
+  if (count <= 1) return 0;
+
   if (isRejectedFlow.value && rejectedAtIndex.value !== -1) {
-    if (rejectedAtIndex.value < 5) return 0;
-    if (rejectedAtIndex.value === 5) return 33.33;
-    if (rejectedAtIndex.value === 6) return 66.66;
-    return 100;
+    if (rejectedAtIndex.value <= 4) return 0;
+    return ((rejectedAtIndex.value - 4) / (count - 1)) * 100;
   }
+
   const cur = currentIndex.value;
   if (cur <= 4) return 0;
-  if (cur === 5) return 33.33;
-  if (cur === 6) return 66.66;
-  return 100;
+  return (Math.min(cur - 4, count - 1) / (count - 1)) * 100;
 });
 
 function handleStepClick(step, state) {
@@ -577,7 +900,7 @@ function handleStepClick(step, state) {
               :step="step"
               :state="stepState(step.idx)"
               :sublabel="stepSublabel(step, stepState(step.idx))"
-              :history-entry="resolveHistoryDate(step.statusKeys)"
+              :history-entry="resolveStepHistory(step, stepState(step.idx))"
               :revision-count="revisionCountForStep(step.key)"
               :is-overdue="isOverdue"
               :total-penalty="totalPenalty"
@@ -624,7 +947,7 @@ function handleStepClick(step, state) {
           </span>
         </div>
 
-        <div class="relative flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start">
+        <div class="relative flex flex-col gap-3 sm:flex-row-reverse sm:justify-between sm:items-start">
           <!-- Row 2 Desktop connector line (Right to Left) -->
           <div
             class="pointer-events-none absolute top-4 -translate-y-1/2 hidden h-0.5 bg-slate-100 sm:block"
@@ -637,9 +960,9 @@ function handleStepClick(step, state) {
             ></div>
           </div>
 
-          <!-- Steps 8 down to 5 (displayed visually left-to-right as 8, 7, 6, 5) -->
+          <!-- Phase 2 Steps (rendered sequentially on mobile; flex-row-reverse places Step 5 on right under Step 4, Step 6 on left) -->
           <div
-            v-for="step in row2StepsDisplay"
+            v-for="step in row2Steps"
             :key="step.key"
             class="relative sm:w-1/4"
           >
@@ -647,7 +970,7 @@ function handleStepClick(step, state) {
               :step="step"
               :state="stepState(step.idx)"
               :sublabel="stepSublabel(step, stepState(step.idx))"
-              :history-entry="resolveHistoryDate(step.statusKeys)"
+              :history-entry="resolveStepHistory(step, stepState(step.idx))"
               :revision-count="revisionCountForStep(step.key)"
               :is-overdue="isOverdue"
               :total-penalty="totalPenalty"
@@ -698,7 +1021,7 @@ function handleStepClick(step, state) {
           :step="step"
           :state="stepState(step.idx)"
           :sublabel="stepSublabel(step, stepState(step.idx))"
-          :history-entry="resolveHistoryDate(step.statusKeys)"
+          :history-entry="resolveStepHistory(step, stepState(step.idx))"
           :revision-count="revisionCountForStep(step.key)"
           :is-overdue="isOverdue"
           :total-penalty="totalPenalty"
