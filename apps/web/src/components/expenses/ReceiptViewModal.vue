@@ -3,7 +3,6 @@ import { computed, ref } from "vue";
 import { formatAmount, formatDate } from "@/utils/formatters";
 import { canEditReceipt, canDeleteReceipt } from "@/utils/receiptUtils";
 import BaseReceiptDetailModal from "@/components/base/BaseReceiptDetailModal.vue";
-import ImagePreviewModal from "@/components/base/ImagePreviewModal.vue";
 import { Pencil, Trash2 } from "lucide-vue-next";
 
 const props = defineProps({
@@ -15,7 +14,6 @@ const emit = defineEmits(["update:modelValue", "delete", "edit"]);
 
 const canEdit = computed(() => canEditReceipt(props.receipt));
 const canDelete = computed(() => canDeleteReceipt(props.receipt));
-const isImagePreviewOpen = ref(false);
 
 function close() {
   emit("update:modelValue", false);
@@ -71,13 +69,4 @@ const normalizedReceipt = computed(() => {
       </div>
     </template>
   </BaseReceiptDetailModal>
-
-  <ImagePreviewModal
-    v-if="receipt?.thumbnail"
-    :model-value="isImagePreviewOpen"
-    @update:model-value="isImagePreviewOpen = $event"
-    :src="receipt.thumbnail"
-    :alt="receipt?.vendorName || 'Receipt'"
-    :title="receipt?.invoiceNumber || receipt?.fileName || 'Receipt Image'"
-  />
 </template>

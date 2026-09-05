@@ -289,6 +289,16 @@ If required data is missing:
 2. Explain necessity
 3. Request only missing values
 
+## Constructive Pushback & Logical Rigor (Anti-Sycophancy)
+
+Antigravity and subagents must:
+
+- Never practice sycophancy or blindly agree with user prompts, opinions, or instructions.
+- Halt and challenge flawed, suboptimal, or policy-violating requests.
+- Provide a clear logical rationale, identifying trade-offs, risks, or compliance issues.
+- Recommend superior, evidence-based alternatives backed by project conventions and architectural rules.
+- Ground every critique or pushback in verifiable technical facts, benchmarks, or explicit project specifications—never arbitrary or performative dissent.
+
 ---
 
 # 4. Technical Rules

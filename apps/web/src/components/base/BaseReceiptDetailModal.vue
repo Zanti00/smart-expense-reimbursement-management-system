@@ -3,7 +3,8 @@ import { computed, ref } from "vue";
 import { formatAmount } from "@/utils/formatters";
 import StatusBadge from "@/components/base/StatusBadge.vue";
 import BaseReceiptImage from "@/components/base/BaseReceiptImage.vue";
-import { X } from "lucide-vue-next";
+import ImagePreviewModal from "@/components/base/ImagePreviewModal.vue";
+import { X, ZoomIn } from "lucide-vue-next";
 
 const props = defineProps({
   isOpen: {
@@ -18,6 +19,25 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["close"]);
+
+const isImagePreviewOpen = ref(false);
+
+const isPdf = computed(() => {
+  const type = String(props.receipt?.fileType || "").toLowerCase();
+  if (type === "application/pdf" || type === "pdf") return true;
+  const source = String(props.receipt?.imageUrl || "").toLowerCase();
+  return source.endsWith(".pdf") || source.includes(".pdf?");
+});
+
+const canPreview = computed(() => {
+  return Boolean(props.receipt?.imageUrl) && !isPdf.value;
+});
+
+function handleImageClick() {
+  if (canPreview.value) {
+    isImagePreviewOpen.value = true;
+  }
+}
 
 const hasItems = computed(() => props.receipt?.items?.length > 0);
 
@@ -52,15 +72,35 @@ const subtotal = computed(() => {
         </button>
 
         <!-- Left Column: Image -->
-        <div class="w-full md:w-5/12 bg-gradient-to-b from-slate-100 to-slate-50 rounded-2xl flex items-center justify-center p-4 shrink-0 relative overflow-hidden min-h-[360px]">
+        <div
+          :class="[
+            'w-full md:w-5/12 bg-gradient-to-b from-slate-100 to-slate-50 rounded-2xl flex items-center justify-center p-4 shrink-0 relative overflow-hidden min-h-[360px]',
+            canPreview ? 'cursor-pointer group' : '',
+          ]"
+          :title="canPreview ? 'Click to zoom and preview receipt' : ''"
+          @click="handleImageClick"
+        >
           <BaseReceiptImage
             :src="receipt.imageUrl"
             :alt="receipt.vendor || 'Receipt'"
             :file-type="receipt.fileType"
-            img-class="w-full h-full object-contain rounded-md"
+            img-class="w-full h-full object-contain rounded-md transition-transform duration-200 group-hover:scale-[1.02]"
             icon-size-class="w-10 h-10"
             badge-size-class="w-16 h-16 rounded-2xl"
           />
+
+          <!-- Hover Preview Overlay Badge -->
+          <div
+            v-if="canPreview"
+            class="absolute inset-0 bg-slate-950/0 group-hover:bg-slate-950/15 transition-all duration-200 rounded-2xl flex items-center justify-center pointer-events-none"
+          >
+            <span
+              class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-slate-900/80 backdrop-blur-sm text-white text-[11px] font-medium px-3 py-1.5 rounded-full shadow-md flex items-center gap-1.5"
+            >
+              <ZoomIn class="w-3.5 h-3.5" />
+              Click to preview
+            </span>
+          </div>
         </div>
 
         <!-- Right Column: Content -->
@@ -152,4 +192,14 @@ const subtotal = computed(() => {
       </div>
     </div>
   </Transition>
+
+  <!-- Reusable Fullscreen Image Preview Lightbox -->
+  <ImagePreviewModal
+    v-if="canPreview"
+    v-model="isImagePreviewOpen"
+    :src="receipt?.imageUrl || ''"
+    :alt="receipt?.vendor || 'Receipt'"
+    :title="receipt?.invoiceNumber ? `Invoice #${receipt.invoiceNumber}` : (receipt?.vendor || 'Receipt Image')"
+    z-index-class="z-[110]"
+  />
 </template>

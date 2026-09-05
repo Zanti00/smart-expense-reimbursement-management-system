@@ -45,7 +45,9 @@ class LiquidationLogicTest extends TestCase
             'user_id' => $this->employee->id,
             'purpose' => 'Business travel to Cebu',
             'amount' => 5000.00,
-            'status' => 'disbursed',
+            'outstanding_balance' => 5000.00,
+            'status' => 'signed',
+            'acknowledged_at' => Carbon::now()->subDay(),
             'expected_disbursement_date' => Carbon::now()->addDays(2),
             'expected_liquidation_date' => Carbon::now()->addDays(7),
         ]);

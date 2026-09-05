@@ -3,6 +3,7 @@ import { useAuthStore } from "@/stores/auth";
 import { useToast } from "@/composables/useToast";
 import { buildPrefilledReceiptDraft } from "@/utils/receiptUtils";
 import { useOcrMode } from "@/composables/useOcrMode";
+import { isOcrOfflineFailure } from "@/utils/ocrErrors";
 
 export function useReceiptUploads(options = {}) {
   const DRAFT_KEY = options.draftKey || "serms_draft_receipts";
@@ -11,6 +12,21 @@ export function useReceiptUploads(options = {}) {
 
   const qualityRejection = ref(null);
   const showSegmentedUpload = ref(false);
+
+  // Safety net: never let an OCR-offline failure open the quality modal,
+  // even if a future code path assigns it directly. Toast is enough and the
+  // user stays on the reimbursement page with Retry OCR available.
+  watch(qualityRejection, (val) => {
+    if (
+      val &&
+      isOcrOfflineFailure({
+        rejectionCode: val.rejectionCode,
+        rejectionReason: val.rejectionReason,
+      })
+    ) {
+      qualityRejection.value = null;
+    }
+  });
 
   watch(
     localReceipts,
@@ -127,6 +143,39 @@ export function useReceiptUploads(options = {}) {
                   } 
                 }));
                 return;
+            }
+
+            // Defensive: a `rejected` payload carrying an OCR-infra code/reason
+            // (e.g. `ocr_failed` / "OCR could not be started") is an offline
+            // failure, NOT a quality rejection — toast only, no modal.
+            if (
+              isOcrOfflineFailure({
+                status: data.status,
+                rejectionCode: data.rejection_code,
+                rejectionReason: data.rejection_reason || data.error,
+              })
+            ) {
+              if (index !== -1) {
+                localReceipts.value[index] = {
+                  ...localReceipts.value[index],
+                  isUploading: false,
+                  isProcessing: false,
+                  isRejected: true,
+                  rejectionCode: data.rejection_code || "ocr_failed",
+                  rejectionReason:
+                    data.rejection_reason ||
+                    data.error ||
+                    "OCR processing failed. You can retry OCR.",
+                };
+              }
+              addToast({
+                message:
+                  data.rejection_reason ||
+                  data.error ||
+                  "OCR processing failed. You can retry OCR.",
+                type: "error",
+              });
+              return;
             }
 
             if (index !== -1) {
@@ -286,14 +335,40 @@ export function useReceiptUploads(options = {}) {
                localReceipts.value[index].rejectionCode = "duplicate";
              }
              const msg = errorData.rejection_reason || errorData.message || (errorData.errors?.file_hash ? errorData.errors.file_hash[0] : null) || "Duplicate receipt detected.";
-             window.dispatchEvent(new CustomEvent('receipt-duplicate-detected', { 
-               detail: { 
+             window.dispatchEvent(new CustomEvent('receipt-duplicate-detected', {
+               detail: {
                  similarityScore: errorData.duplicate_similarity || 1.0,
                  receiptId: tempId,
                  message: msg
-               } 
+               }
              }));
              return;
+          }
+          // OCR offline / could-not-start must NOT open the quality modal.
+          // Toast is enough (caller stays on the reimbursement page).
+          if (
+            isOcrOfflineFailure({
+              rejectionCode: errorData.rejection_code,
+              rejectionReason:
+                errorData.rejection_reason || errorData.message || errorData.error,
+            })
+          ) {
+            if (index !== -1) {
+              localReceipts.value[index].rejectionCode =
+                errorData.rejection_code || "ocr_failed";
+              localReceipts.value[index].rejectionReason =
+                errorData.rejection_reason ||
+                errorData.message ||
+                "OCR processing failed. You can retry OCR.";
+            }
+            addToast({
+              message:
+                errorData.rejection_reason ||
+                errorData.message ||
+                "OCR processing failed. You can retry OCR.",
+              type: "error",
+            });
+            return;
           }
           qualityRejection.value = {
             receiptId: tempId,
@@ -323,14 +398,52 @@ export function useReceiptUploads(options = {}) {
                localReceipts.value[index].isRejected = true;
                localReceipts.value[index].rejectionCode = "duplicate";
              }
-             window.dispatchEvent(new CustomEvent('receipt-duplicate-detected', { 
-               detail: { 
+             window.dispatchEvent(new CustomEvent('receipt-duplicate-detected', {
+               detail: {
                  similarityScore: data.data.duplicate_similarity || 1.0,
                  receiptId: data.data.id || tempId,
                  message: data.data.rejection_reason || data.data.error || "Duplicate receipt detected."
-               } 
+               }
              }));
              return;
+          }
+          // OCR offline / could-not-start must NOT open the quality modal.
+          // Toast is enough — user stays on the reimbursement page with
+          // Retry OCR available on the receipt row.
+          if (
+            isOcrOfflineFailure({
+              status: data.data?.status,
+              rejectionCode: data.data?.rejection_code,
+              rejectionReason:
+                data.data?.rejection_reason || data.data?.error,
+            })
+          ) {
+            if (index !== -1) {
+              localReceipts.value[index] = {
+                ...buildPrefilledReceiptDraft({
+                  id: data.data.id,
+                  file,
+                  receiptData: data.data,
+                  thumbnail: localReceipts.value[index].thumbnail,
+                }),
+                isUploading: false,
+                isProcessing: false,
+                isRejected: true,
+                rejectionCode: data.data.rejection_code || "ocr_failed",
+                rejectionReason:
+                  data.data.rejection_reason ||
+                  data.data.error ||
+                  "OCR processing failed. You can retry OCR.",
+              };
+            }
+            addToast({
+              message:
+                data.data.rejection_reason ||
+                data.data.error ||
+                "OCR processing failed. You can retry OCR.",
+              type: "error",
+            });
+            return;
           }
           if (index !== -1) {
             localReceipts.value[index] = {
@@ -451,14 +564,39 @@ export function useReceiptUploads(options = {}) {
              localReceipts.value[index].rejectionCode = "duplicate";
            }
            const msg = errorData.rejection_reason || errorData.message || (errorData.errors?.file_hash ? errorData.errors.file_hash[0] : null) || "Duplicate receipt detected.";
-           window.dispatchEvent(new CustomEvent('receipt-duplicate-detected', { 
-             detail: { 
+           window.dispatchEvent(new CustomEvent('receipt-duplicate-detected', {
+             detail: {
                similarityScore: errorData.duplicate_similarity || 1.0,
                receiptId: tempId,
                message: msg
-             } 
+             }
            }));
            return;
+        }
+        // OCR offline / could-not-start must NOT open the quality modal.
+        if (
+          isOcrOfflineFailure({
+            rejectionCode: errorData.rejection_code,
+            rejectionReason:
+              errorData.rejection_reason || errorData.message || errorData.error,
+          })
+        ) {
+          if (index !== -1) {
+            localReceipts.value[index].rejectionCode =
+              errorData.rejection_code || "ocr_failed";
+            localReceipts.value[index].rejectionReason =
+              errorData.rejection_reason ||
+              errorData.message ||
+              "OCR processing failed. You can retry OCR.";
+          }
+          addToast({
+            message:
+              errorData.rejection_reason ||
+              errorData.message ||
+              "OCR processing failed. You can retry OCR.",
+            type: "error",
+          });
+          return;
         }
         qualityRejection.value = {
           receiptId: tempId,
@@ -488,14 +626,50 @@ export function useReceiptUploads(options = {}) {
              localReceipts.value[index].isRejected = true;
              localReceipts.value[index].rejectionCode = "duplicate";
            }
-           window.dispatchEvent(new CustomEvent('receipt-duplicate-detected', { 
-             detail: { 
+           window.dispatchEvent(new CustomEvent('receipt-duplicate-detected', {
+             detail: {
                similarityScore: data.data.duplicate_similarity || 1.0,
                receiptId: data.data.id || tempId,
                message: data.data.rejection_reason || data.data.error || "Duplicate receipt detected."
-             } 
+             }
            }));
            return;
+        }
+        // OCR offline / could-not-start must NOT open the quality modal.
+        if (
+          isOcrOfflineFailure({
+            status: data.data?.status,
+            rejectionCode: data.data?.rejection_code,
+            rejectionReason:
+              data.data?.rejection_reason || data.data?.error,
+          })
+        ) {
+          if (index !== -1) {
+            localReceipts.value[index] = {
+              ...buildPrefilledReceiptDraft({
+                id: data.data.id,
+                file: firstFile,
+                receiptData: data.data,
+                thumbnail: localReceipts.value[index].thumbnail,
+              }),
+              isUploading: false,
+              isProcessing: false,
+              isRejected: true,
+              rejectionCode: data.data.rejection_code || "ocr_failed",
+              rejectionReason:
+                data.data.rejection_reason ||
+                data.data.error ||
+                "OCR processing failed. You can retry OCR.",
+            };
+          }
+          addToast({
+            message:
+              data.data.rejection_reason ||
+              data.data.error ||
+              "OCR processing failed. You can retry OCR.",
+            type: "error",
+          });
+          return;
         }
         if (index !== -1) {
           localReceipts.value[index] = {
