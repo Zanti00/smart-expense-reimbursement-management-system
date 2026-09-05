@@ -29,6 +29,7 @@ import { useReceiptUploads } from "@/composables/reimbursements/useReceiptUpload
 import ScannedReceiptsList from "@/components/reimbursements/ScannedReceiptsList.vue";
 import SegmentedReceiptUpload from "@/components/reimbursements/SegmentedReceiptUpload.vue";
 import ReceiptQualityRejectionModal from "@/components/reimbursements/ReceiptQualityRejectionModal.vue";
+import { isOcrOfflineFailure } from "@/utils/ocrErrors";
 
 const props = defineProps({
   modelValue: {
@@ -132,6 +133,16 @@ function handleRetake() {
   clearQualityRejection();
   setTimeout(() => receiptInput.value?.click(), 100);
 }
+
+// Never open the quality modal for OCR-offline failures. Toast is enough.
+const showQualityModal = computed(
+  () =>
+    !!qualityRejection.value &&
+    !isOcrOfflineFailure({
+      rejectionCode: qualityRejection.value?.rejectionCode,
+      rejectionReason: qualityRejection.value?.rejectionReason,
+    }),
+);
 
 const allOcrComplete = computed(
   () =>
@@ -1088,7 +1099,7 @@ function formatCurrency(amount) {
   <!-- Quality rejection handling (NEW upload mode only) -->
   <ReceiptQualityRejectionModal
     v-if="!isEditMode"
-    :is-open="!!qualityRejection"
+    :is-open="showQualityModal"
     :rejected-file="qualityRejection?.file ?? null"
     :rejection-code="qualityRejection?.rejectionCode ?? ''"
     :rejection-reason="qualityRejection?.rejectionReason ?? ''"

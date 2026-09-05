@@ -451,7 +451,13 @@ class LiquidationController extends Controller
                 return response()->json(['message' => 'Forbidden. You do not own this cash advance.'], 403);
             }
 
-            if (!in_array($advance->status, ['disbursed', 'signed', 'overdue', 'incomplete'])) {
+            // Defense-in-depth: liquidation requires Phase 2 (acknowledged/signed).
+            // Disbursed-but-not-acknowledged advances are Phase 1 preview-only.
+            if ($advance->acknowledged_at === null) {
+                return response()->json(['message' => 'Conflict. Cash advance must be acknowledged before liquidation.'], 409);
+            }
+
+            if (!in_array($advance->status, ['signed', 'overdue', 'incomplete'])) {
                 return response()->json(['message' => 'Conflict. Cash advance is not in a reconcilable state.'], 409);
             }
 

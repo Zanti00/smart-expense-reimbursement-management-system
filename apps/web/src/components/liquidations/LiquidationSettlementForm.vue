@@ -102,14 +102,53 @@ const reportAttachmentInput = ref(null);
 
 const { isMockOcr, setMockMode } = useOcrMode();
 
+const normalizeStatus = (val) =>
+  String(val || "")
+    .toLowerCase()
+    .trim()
+    .replace(/[\s/_-]+/g, "-");
+
+// Phase 2 gate: liquidation is editable only after acknowledgement (signed)
+// or when the workflow has already entered Phase 2. Until then preview-only.
+const hasAcknowledged = computed(() => {
+  const adv = props.selectedAdvance;
+  if (!adv) return false;
+  if (adv.acknowledgedAt || adv.acknowledged_at) return true;
+  if (adv.signature || adv.signatureImage) return true;
+  return normalizeStatus(adv.status) === "signed";
+});
+
+const isPhase2 = computed(() => {
+  const advanceStatus = normalizeStatus(props.selectedAdvance?.status);
+  const phase2Statuses = [
+    "signed",
+    "under-review",
+    "pending-under-review",
+    "incomplete",
+    "overdue",
+    "liquidated",
+    "settled",
+  ];
+  if (advanceStatus && phase2Statuses.includes(advanceStatus)) return true;
+  // Any existing liquidation means we already entered Phase 2
+  if (props.existingLiquidation) return true;
+  return false;
+});
+
+const requiresAcknowledgement = computed(() => {
+  // Revise requests are already in Phase 2 — keep them editable
+  const existingStatus = normalizeStatus(props.existingLiquidation?.status);
+  if (existingStatus === "revise") return false;
+  if (!props.selectedAdvance) return false;
+  return !hasAcknowledged.value && !isPhase2.value;
+});
+
 const isFormDisabled = computed(() => {
   if (props.disabled) return true;
+  // Preview-only until acknowledged / Phase 2
+  if (requiresAcknowledgement.value) return true;
 
-  const normalize = (val) =>
-    String(val || "")
-      .toLowerCase()
-      .trim()
-      .replace(/[\s/_-]+/g, "-");
+  const normalize = normalizeStatus;
 
   const existingStatus = normalize(props.existingLiquidation?.status);
   // revise is explicitly editable — not disabled
@@ -298,6 +337,17 @@ function attachmentFileSize(file) {
         {{ existingLiquidation?.admin_note || existingLiquidation?.adminNote || 'Please revise per admin feedback and resubmit.' }}
       </p>
       <p class="text-xs text-orange-700/70">Edit the receipts below and click Update — it will return to Pending.</p>
+    </div>
+
+    <!-- Awaiting Acknowledgement — Preview Only (Phase 1) -->
+    <div
+      v-else-if="requiresAcknowledgement"
+      class="flex items-center gap-2.5 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-medium text-amber-800"
+    >
+      <AlertCircle class="h-4 w-4 shrink-0 text-amber-600" />
+      <span>
+        This cash advance must be <strong class="text-amber-900">acknowledged (signed)</strong> before liquidation. You are in <strong>Phase 1</strong> — preview only until acknowledgement is complete.
+      </span>
     </div>
 
     <!-- Status Banner for Disabled / Read-Only View -->

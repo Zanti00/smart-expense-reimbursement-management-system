@@ -23,6 +23,7 @@ import { useReceiptUploads } from "@/composables/reimbursements/useReceiptUpload
 import { useOcrMode } from "@/composables/useOcrMode";
 import { useReimbursementSubmit } from "@/composables/reimbursements/useReimbursementSubmit";
 import { useUnsavedChanges } from "@/composables/useUnsavedChanges";
+import { isOcrOfflineFailure } from "@/utils/ocrErrors";
 
 import {
   tinFor,
@@ -85,19 +86,44 @@ const {
 
 const uploadMode = ref('single');
 
+// Never open the quality modal for OCR-offline failures (e.g. OCR could not
+// be started). Toast is enough — user stays on the reimbursement page.
+const showQualityModal = computed(
+  () =>
+    !!qualityRejection.value &&
+    !isOcrOfflineFailure({
+      rejectionCode: qualityRejection.value?.rejectionCode,
+      rejectionReason: qualityRejection.value?.rejectionReason,
+    }),
+);
+
 function handleRetake() {
   if (qualityRejection.value?.receiptId) {
     removeReceipt({ id: qualityRejection.value.receiptId });
   }
   clearQualityRejection();
   setTimeout(() => {
+    if (receiptInput.value) receiptInput.value.value = "";
     receiptInput.value?.click();
   }, 100);
 }
 
 function triggerUpload(mode = 'single') {
   uploadMode.value = mode;
+  if (receiptInput.value) receiptInput.value.value = "";
   receiptInput.value?.click();
+}
+
+function onReceiptInputCancel() {
+  // User dismissed the native file chooser without picking a file (e.g. after
+  // DuplicateReceiptModal "Upload New One"). Reset so the same file can be
+  // re-picked next time. When no receipts remain in create mode, return to the
+  // Reimbursements list instead of stranding the user on an empty
+  // /reimbursements/new page.
+  if (receiptInput.value) receiptInput.value.value = "";
+  if (!isEditMode.value && receipts.value.length === 0) {
+    router.push("/reimbursements");
+  }
 }
 
 function onReceiptSelect(e) {
@@ -205,7 +231,10 @@ async function handleSubmit() {
 }
 
 // Lifecycle
-const handleOpenReceiptUpload = () => { receiptInput.value?.click(); };
+const handleOpenReceiptUpload = () => {
+  if (receiptInput.value) receiptInput.value.value = "";
+  receiptInput.value?.click();
+};
 
 onMounted(async () => {
   policyStore.fetchAll();
@@ -354,6 +383,7 @@ function dismiss() {
       accept=".jpg,.jpeg,.png,.pdf"
       multiple
       @change="onReceiptSelect"
+      @cancel="onReceiptInputCancel"
     />
 
     <!--  Page Header (standalone route mode only)  -->
@@ -480,7 +510,7 @@ function dismiss() {
     />
 
     <ReceiptQualityRejectionModal
-      :is-open="!!qualityRejection"
+      :is-open="showQualityModal"
       :rejected-file="qualityRejection?.file ?? null"
       :rejection-code="qualityRejection?.rejectionCode ?? ''"
       :rejection-reason="qualityRejection?.rejectionReason ?? ''"

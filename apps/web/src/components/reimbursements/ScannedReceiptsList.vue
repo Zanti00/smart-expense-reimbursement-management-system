@@ -15,6 +15,7 @@ import {
 } from "@/utils/receiptUtils";
 import CurrencySelect from "@/components/base/CurrencySelect.vue";
 import BaseReceiptImage from "@/components/base/BaseReceiptImage.vue";
+import ReceiptImagePreview from "@/components/base/ReceiptImagePreview.vue";
 
 const props = defineProps({
   receipts: {
@@ -191,41 +192,19 @@ function removeReceiptItem(receipt, index) {
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <!-- Left: Image Preview -->
-          <div class="lg:col-span-4 flex flex-col gap-4">
-            <div
-              class="relative aspect-[3/4] rounded-xl overflow-hidden border border-slate-200 bg-white shadow-sm flex items-center justify-center"
-            >
-              <BaseReceiptImage
-                :src="receipt.thumbnail || receipt.preview || receipt.filePath || receipt.file_url"
-                :alt="receipt.fileName || receipt.name || 'Receipt Image'"
-                :file-type="receipt.fileType"
-                img-class="w-full h-full object-contain"
-                icon-size-class="w-12 h-12 opacity-40"
-              />
-              <div
-                v-if="receipt.isUploading || receipt.isProcessing"
-                class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white/80 text-accent backdrop-blur-[1px]"
-              >
-                <span
-                  class="h-8 w-8 rounded-full border-2 border-current border-t-transparent animate-spin"
-                  aria-hidden="true"
-                />
-                <span class="text-[10px] font-bold uppercase tracking-widest text-center">
-                  {{ receipt.isProcessing ? 'Extracting OCR Data...' : 'Uploading...' }}
-                </span>
-              </div>
-            </div>
-            <div>
-              <button
-                v-if="allowRemove && !disabled"
-                class="inline-flex h-9 w-fit items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3.5 text-xs font-bold text-danger transition-colors hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                type="button"
-                :disabled="receipt.isUploading || receipt.isProcessing || disabled"
-                @click="$emit('remove-receipt', receipt)"
-              >
-                <Trash2 class="w-3.5 h-3.5" /> Delete Receipt
-              </button>
-            </div>
+          <div class="lg:col-span-4">
+            <ReceiptImagePreview
+              :src="receipt.thumbnail || receipt.preview || receipt.filePath || receipt.file_url"
+              :file-name="receipt.fileName || receipt.name"
+              :file-type="receipt.fileType"
+              :is-uploading="receipt.isUploading"
+              :is-processing="receipt.isProcessing"
+              :allow-remove="allowRemove"
+              :disabled="disabled"
+              :show-badge="false"
+              :receipt="receipt"
+              @remove="$emit('remove-receipt', $event)"
+            />
           </div>
 
           <!-- Right: Extracted Fields -->
