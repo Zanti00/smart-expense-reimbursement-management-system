@@ -22,6 +22,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 > **Note for AI Subagents & Developers:** Always consult this file when you need chronological historical context, previous architectural pivots, or design rationale before modifying codebase features or documentation guides.
 
+## [1.5.6] - 2026-09-06
+
+### Added
+- **One-Shot Agent Setup Guides (`docs/agent-setup/SETUP-0{1,2,3}-*.md`):**
+  - Added three standalone subagent-executable setup guides covering zero-state hosts (no Git/Docker/Node/PHP/Python preinstalled): `SETUP-01-capstone-auth-module.md` (Laravel 13 + Vue 3.5 + MySQL 8.0 + Redis + Nginx gateway, host ports 5173/8000/33066, 32-char `INTERNAL_ENCRYPTION_KEY` gate), `SETUP-02-ocr-pipeline.md` (Python 3.12 + FastAPI + Celery + Mongo 7 + pgvector + Ollama `qwen2.5:1.5b`, host ports 8010/6380/27017/5433/11434, `alembic upgrade head` gate), and `SETUP-03-serms.md` (Laravel 13 Modular Monolith + Vue 3.4 + MySQL + Supabase + auth/OCR integrations, host ports 8000/5002/3306/8080, Supabase/Auth/AI key gates).
+  - Each guide enforces ordered phases (host triage → zero-state installer via `winget` + official fallbacks → clone → `shared-capstone-network` → `USER-INPUT-GATE` secret collection → `compose up --build` → migrations/seeds → verification matrix → troubleshooting → Definition of Done), documents the `8000` host-port collision between auth-module and SERMS, and requires evidence-based completion reporting.
+
+### Changed
+- **Setup guides relocated into their home repos (single-source rule):**
+  - `SETUP-01-capstone-auth-module.md` now lives at `docs/agent-setup/` in `capstone-auth-module` (v1.1.0 in-repo edition, registered in that repo's `docs/README.md` hub); `SETUP-02-ocr-pipeline.md` now lives at `docs/agent-setup/` in `ocr-pipeline` (v1.1.0 in-repo edition, registered in that repo's `docs/index.md` suite table + change log).
+  - All three guides now assume the repo is already cloned (locate-and-verify Phase 2 with clone-as-fallback-only) since the guide ships with the clone.
+  - SERMS `docs/agent-setup/` keeps only its own `SETUP-03-serms.md` (v1.1.0) plus a pointer `README.md` cross-linking all three canonical homes — no duplicate copies across repos.
+- **Subagent guardrails tightened in all three setup guides:**
+  - Each guide's directive now forbids creating/adding new files or changing the codebase unless necessary to finish setup (anything beyond `.env` copies, network/containers/volumes, migrations/seeds/keys, and ordered cache clears requires STOP + user approval).
+  - Each guide now requires consulting the repo's other docs (`AGENTS.md`, `docs/` hub/suite, canonical read order) as references whenever a step is ambiguous or fails, citing the resolving doc and stopping on conflicts instead of guessing.
+
+---
+
 ## [1.5.5] - 2026-09-06
 
 ### Added
