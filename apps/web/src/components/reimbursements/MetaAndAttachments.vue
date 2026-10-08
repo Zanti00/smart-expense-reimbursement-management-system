@@ -1,8 +1,8 @@
 <script setup>
-import { ref, computed } from "vue";
-import { ChevronDown, FileText, UploadCloud, X } from "lucide-vue-next";
+import { ref } from "vue";
+import { FileText, UploadCloud, X } from "lucide-vue-next";
 import { useToast } from "@/composables/useToast";
-import { formatCutoffPeriod } from "@/utils/formatters";
+import CutoffPeriodDatePicker from "./CutoffPeriodDatePicker.vue";
 
 const props = defineProps({
   cutoffPeriod: {
@@ -16,31 +16,6 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["update:cutoffPeriod", "update:reportFile"]);
-
-const DEFAULT_CUTOFF_OPTIONS = [
-  "Jun 01 - Jun 15, 2026",
-  "Jun 16 - Jun 30, 2026",
-  "Jul 01 - Jul 15, 2026",
-  "Jul 16 - Jul 31, 2026",
-  "Aug 01 - Aug 15, 2026",
-  "Aug 16 - Aug 31, 2026",
-  "Sep 01 - Sep 15, 2026",
-  "Sep 16 - Sep 30, 2026",
-  "Oct 01 - Oct 15, 2026",
-  "Oct 16 - Oct 31, 2026",
-  "Nov 01 - Nov 15, 2026",
-  "Nov 16 - Nov 30, 2026",
-  "Dec 01 - Dec 15, 2026",
-  "Dec 16 - Dec 31, 2026",
-];
-
-const cutoffOptions = computed(() => {
-  const options = [...DEFAULT_CUTOFF_OPTIONS];
-  if (props.cutoffPeriod && !options.includes(props.cutoffPeriod)) {
-    options.unshift(props.cutoffPeriod);
-  }
-  return options;
-});
 
 const reportDrag = ref(false);
 const reportInput = ref(null);
@@ -104,24 +79,12 @@ function removeReportFile() {
         >
           Cutoff Period <span class="text-danger">*</span>
         </h3>
-        <div class="relative">
-          <select
-            :value="cutoffPeriod"
-            @change="$emit('update:cutoffPeriod', $event.target.value)"
-            class="input appearance-none cursor-pointer bg-white pr-10"
-            :class="cutoffPeriod ? 'text-slate-700' : 'text-slate-400'"
-          >
-            <option value="" disabled>Select cutoff period</option>
-            <option v-for="opt in cutoffOptions" :key="opt" :value="opt">
-              {{ formatCutoffPeriod(opt) !== "—" ? formatCutoffPeriod(opt) : opt }}
-            </option>
-          </select>
-          <ChevronDown
-            class="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-          />
-        </div>
+        <CutoffPeriodDatePicker
+          :model-value="cutoffPeriod"
+          @update:model-value="$emit('update:cutoffPeriod', $event)"
+        />
         <p class="text-[11px] text-slate-400 mt-2">
-          You can submit one reimbursement per cutoff period.
+          You can submit one reimbursement per cutoff period. Select the 1st (1st–15th) or 16th (16th–end) of current or future months.
         </p>
       </div>
     </section>
