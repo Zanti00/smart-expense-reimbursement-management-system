@@ -2,8 +2,37 @@ import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { encryptPayload } from "../utils/crypto";
 
-const AUTH_MODULE_URL =
-  import.meta.env.VITE_AUTH_MODULE_URL || "http://localhost:3001";
+/**
+ * Resolve an endpoint or path against the configured Auth Module URL.
+ * Normalizes leading/trailing slashes and handles relative bases cleanly
+ * to avoid protocol-relative URLs (e.g. "//logout" -> "http://logout/").
+ *
+ * @param {string} path - Target path on the auth module (e.g. "/login", "/logout")
+ * @returns {string} Fully resolved URL or absolute path
+ */
+export function resolveAuthModuleUrl(path = "") {
+  const rawBase = (import.meta.env.VITE_AUTH_MODULE_URL || "").trim();
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+
+  // If empty or set to root path "/", resolve against current window origin
+  if (!rawBase || rawBase === "/") {
+    return typeof window !== "undefined" && window.location?.origin
+      ? `${window.location.origin}${cleanPath}`
+      : cleanPath;
+  }
+
+  // If base starts with http:// or https://
+  if (rawBase.startsWith("http://") || rawBase.startsWith("https://")) {
+    const cleanBase = rawBase.replace(/\/+$/, "");
+    return `${cleanBase}${cleanPath}`;
+  }
+
+  // Relative path base without scheme (e.g. "/auth")
+  const cleanBase = rawBase.replace(/^\/+|\/+$/g, "");
+  return typeof window !== "undefined" && window.location?.origin
+    ? `${window.location.origin}/${cleanBase}${cleanPath}`
+    : `/${cleanBase}${cleanPath}`;
+}
 
 export const useAuthStore = defineStore("auth", () => {
   const user = ref(null);
@@ -43,7 +72,8 @@ export const useAuthStore = defineStore("auth", () => {
     const baseUrl = import.meta.env.BASE_URL || "/";
     const callbackPath = `${baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl}/auth/callback`;
     const callbackUrl = `${window.location.origin}${callbackPath}`;
-    let loginUrl = `${AUTH_MODULE_URL}/login?redirect_uri=${encodeURIComponent(callbackUrl)}&state=${encodeURIComponent(redirectPath)}`;
+    const baseLoginUrl = resolveAuthModuleUrl("/login");
+    let loginUrl = `${baseLoginUrl}?redirect_uri=${encodeURIComponent(callbackUrl)}&state=${encodeURIComponent(redirectPath)}`;
 
     if (errorMessage) {
       loginUrl += `&error=${encodeURIComponent(errorMessage)}`;
@@ -112,7 +142,7 @@ export const useAuthStore = defineStore("auth", () => {
 
     // Redirect to auth module to clear server-side session.
     // We intentionally omit redirect_uri so it stays on the login screen and displays a success toast.
-    const logoutUrl = `${AUTH_MODULE_URL}/logout`;
+    const logoutUrl = resolveAuthModuleUrl("/logout");
     window.location.href = logoutUrl;
   }
 
