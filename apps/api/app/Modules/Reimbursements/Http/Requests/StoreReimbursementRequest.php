@@ -21,6 +21,7 @@ class StoreReimbursementRequest extends FormRequest
     {
         return [
             'description' => 'required|string|max:255',
+            'user_comment' => 'nullable|string|max:1000',
             'expense_category_id' => 'required|integer|exists:expense_categories,id',
             'amount' => 'required|numeric|min:0.01',
             'date' => 'required|date',

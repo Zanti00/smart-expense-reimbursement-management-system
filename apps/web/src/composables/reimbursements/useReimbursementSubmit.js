@@ -9,7 +9,7 @@ export function useReimbursementSubmit(emit, router) {
   
   const submitting = ref(false);
 
-  async function submitReimbursement({ receipts, cutoffPeriod, reportFile, totalAmount }) {
+  async function submitReimbursement({ receipts, cutoffPeriod, reportFile, totalAmount, userComment }) {
     if (!receipts.length || !cutoffPeriod || !reportFile || receipts.some(r => r.isUploading)) {
       return false;
     }
@@ -66,6 +66,9 @@ export function useReimbursementSubmit(emit, router) {
           .map((r) => r.merchantName || cleanName(r.fileName))
           .join(", "),
       );
+      if (userComment) {
+        formData.append("user_comment", userComment);
+      }
       formData.append("expense_category_id", receipts[0].categoryId);
       formData.append("amount", totalAmount);
       formData.append(
@@ -136,7 +139,7 @@ export function useReimbursementSubmit(emit, router) {
     }
   }
 
-  async function updateReimbursement(id, { receipts, cutoffPeriod, reportFile, totalAmount }) {
+  async function updateReimbursement(id, { receipts, cutoffPeriod, reportFile, totalAmount, userComment }) {
     if (!receipts.length || !cutoffPeriod || receipts.some(r => r.isUploading)) {
       return false;
     }
@@ -186,6 +189,9 @@ export function useReimbursementSubmit(emit, router) {
           .map((r) => r.merchantName || cleanName(r.fileName))
           .join(", "),
       );
+      if (userComment !== undefined) {
+        formData.append("user_comment", userComment || "");
+      }
       if (receipts[0].categoryId) {
         formData.append("expense_category_id", receipts[0].categoryId);
       }
