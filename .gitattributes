@@ -21,4 +21,3 @@ CHANGELOG.md export-ignore
 .gitattributes export-ignore
 .styleci.yml export-ignore
 phpunit.xml export-ignore
-graphify-out/graph.json merge=graphify

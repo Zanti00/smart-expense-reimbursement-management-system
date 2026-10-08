@@ -3,11 +3,11 @@
 **Project:** Smart Expense & Reimbursement Management System (SERMS)  
 **Client / Partner:** Science Biotech Specialties Inc. (SBSI) — [https://sbsi.com.ph/about-us/](https://sbsi.com.ph/about-us/)  
 **Academic Context:** 3rd & 4th Year Capstone Project (Capstone 1: Ended July 2026 · Capstone 2: September–December 2026)  
-**Date:** 2026-09-01  
-**Version:** 1.5.1  
+**Date:** 2026-10-08  
+**Version:** 1.5.7  
 **Owner:** SERMS Engineering Team  
 **Status:** Active  
-**Last reconciled:** 2026-09-01 (Documentation suite refactor & standardization of 'What this is' sections across all docs)  
+**Last reconciled:** 2026-10-08 (Removal of Graphify knowledge graph subsystem)  
 **Canonical Spec:** [SERMS.md](SERMS.md) · **Related Docs:** [index.md](index.md) · [PRD.md](PRD.md) · [SAD.md](SAD.md) · [SDD.md](SDD.md) · [DSD.md](DSD.md) · [Build.md](Build.md) · [OPS.md](OPS.md) · [QAD.md](QAD.md) · [AGENTS.md](../AGENTS.md)
 
 ---
@@ -21,6 +21,18 @@ All notable changes, architectural decisions, and documentation updates for the 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 > **Note for AI Subagents & Developers:** Always consult this file when you need chronological historical context, previous architectural pivots, or design rationale before modifying codebase features or documentation guides.
+
+## [1.5.7] - 2026-10-08
+
+### Removed
+- **Graphify Knowledge Graph Integration:**
+  - Removed project-level knowledge graph artifacts (`graphify-out/` directory containing AST cache, graphs, and reports).
+  - De-registered Git hooks (`.git/hooks/post-commit`, `.git/hooks/post-checkout`) and custom Git merge driver (`merge.graphify`).
+  - Removed Graphify merge attribute from `.gitattributes`.
+  - Removed OpenCode tool-execution hook plugin and configuration (`.opencode/`).
+  - Removed Graphify agent rules and prompt instructions from `AGENTS.md`.
+
+---
 
 ## [1.5.6] - 2026-09-06
 
