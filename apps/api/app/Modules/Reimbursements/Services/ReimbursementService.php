@@ -103,6 +103,7 @@ class ReimbursementService
             $reimbursement = Reimbursement::create([
                 'user_id' => $user->id,
                 'description' => $validated['description'],
+                'user_comment' => $validated['user_comment'] ?? null,
                 'expense_category_id' => $expenseCategoryId,
                 'amount' => $validated['amount'],
                 'date' => $validated['date'],
@@ -397,6 +398,10 @@ class ReimbursementService
                 'cutoff_period' => $data['cutoff_period'] ?? null,
                 'report_file_path' => $reportPath,
             ], fn($v) => $v !== null);
+
+            if (array_key_exists('user_comment', $data)) {
+                $updatePayload['user_comment'] = $data['user_comment'];
+            }
 
             // Reset revise → pending on re-submission (rejected terminal cannot be reset)
             if ($reimbursement->status === 'revise') {

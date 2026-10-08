@@ -246,6 +246,18 @@ function categoryName(record) {
                   <Download class="w-3 h-3" />
                 </a>
               </div>
+              <div class="col-span-2">
+                <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-1">User Comment</p>
+                <div
+                  v-if="viewingRecord.user_comment"
+                  class="rounded-lg bg-slate-50 border border-slate-200 p-3 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed"
+                >
+                  {{ viewingRecord.user_comment }}
+                </div>
+                <p v-else class="text-xs text-slate-400 italic">
+                  No comment provided
+                </p>
+              </div>
             </section>
 
             <!-- Needs Revision Banner (employee) -->

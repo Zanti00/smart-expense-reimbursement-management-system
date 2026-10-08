@@ -106,7 +106,7 @@ describe("ReimbursementFormView — Submit Confirmation Modal", () => {
           ScannedReceiptsList: true,
           MetaAndAttachments: {
             template: "<div class='meta-stub'></div>",
-            props: ["cutoffPeriod", "reportFile"],
+            props: ["cutoffPeriod", "reportFile", "userComment"],
           },
           ReimbursementSummaryPanel: true,
           SegmentedReceiptUpload: true,

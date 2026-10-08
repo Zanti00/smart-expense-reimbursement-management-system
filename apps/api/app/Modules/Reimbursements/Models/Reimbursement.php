@@ -11,6 +11,7 @@ class Reimbursement extends Model
         'user_id',
         'receipt_id',
         'description',
+        'user_comment',
         'expense_category_id',
         'amount',
         'date',

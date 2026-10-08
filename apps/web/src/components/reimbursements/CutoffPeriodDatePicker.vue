@@ -232,7 +232,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="containerRef" class="relative w-full">
+  <div ref="containerRef" class="relative w-full" :class="{ 'z-40': isOpen }">
     <!-- Trigger input -->
     <button
       type="button"

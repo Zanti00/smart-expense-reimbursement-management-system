@@ -426,4 +426,146 @@ class ReimbursementLogicTest extends TestCase
         $this->assertEquals('Automatically rejected because a linked receipt was rejected.', $reimbursement->admin_notes);
         $this->assertEquals('Automatically rejected because a linked receipt was rejected.', $reimbursement->rejection_comment);
     }
+
+    public function test_reimbursement_stores_optional_user_comment(): void
+    {
+        $category = \App\Modules\Reimbursements\Models\ExpenseCategory::firstOrCreate(['name' => 'Meals']);
+
+        $receipt = Receipt::create([
+            'uploaded_by' => $this->employee->id,
+            'file_path' => 'receipts/rcpt_comment_test.png',
+            'file_hash' => str_repeat('d', 64),
+            'file_type' => 'png',
+            'file_size_bytes' => 1024,
+            'vendor_name' => 'Cafe Test',
+            'total_amount' => 150.00,
+        ]);
+
+        $token = $this->generateMockToken([
+            'email' => $this->employee->email,
+            'role' => $this->employee->role,
+            'first_name' => 'John',
+            'last_name' => 'Doe',
+        ]);
+
+        $customComment = 'Project kickoff lunch with external client partners.';
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'Accept' => 'application/json',
+        ])->post('/api/reimbursements', [
+            'description' => 'Client Lunch',
+            'user_comment' => $customComment,
+            'expense_category_id' => $category->id,
+            'amount' => 150.00,
+            'date' => '2026-06-15',
+            'cutoff_period' => '2026-06-16',
+            'receipt_ids' => [$receipt->id],
+            'report_file' => UploadedFile::fake()->create('report.pdf', 100, 'application/pdf')
+        ]);
+
+        $response->assertStatus(201);
+        $this->assertEquals($customComment, $response->json('data.user_comment'));
+
+        $this->assertDatabaseHas('reimbursements', [
+            'id' => $response->json('data.id'),
+            'user_comment' => $customComment,
+        ]);
+    }
+
+    public function test_reimbursement_can_be_submitted_without_user_comment(): void
+    {
+        $category = \App\Modules\Reimbursements\Models\ExpenseCategory::firstOrCreate(['name' => 'Transport']);
+
+        $receipt = Receipt::create([
+            'uploaded_by' => $this->employee->id,
+            'file_path' => 'receipts/rcpt_no_comment.png',
+            'file_hash' => str_repeat('e', 64),
+            'file_type' => 'png',
+            'file_size_bytes' => 1024,
+            'vendor_name' => 'Taxi Service',
+            'total_amount' => 80.00,
+        ]);
+
+        $token = $this->generateMockToken([
+            'email' => $this->employee->email,
+            'role' => $this->employee->role,
+            'first_name' => 'John',
+            'last_name' => 'Doe',
+        ]);
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'Accept' => 'application/json',
+        ])->post('/api/reimbursements', [
+            'description' => 'Taxi Ride',
+            'expense_category_id' => $category->id,
+            'amount' => 80.00,
+            'date' => '2026-06-16',
+            'cutoff_period' => '2026-06-16',
+            'receipt_ids' => [$receipt->id],
+            'report_file' => UploadedFile::fake()->create('report.pdf', 100, 'application/pdf')
+        ]);
+
+        $response->assertStatus(201);
+        $this->assertNull($response->json('data.user_comment'));
+
+        $this->assertDatabaseHas('reimbursements', [
+            'id' => $response->json('data.id'),
+            'user_comment' => null,
+        ]);
+    }
+
+    public function test_employee_can_update_user_comment(): void
+    {
+        $category = \App\Modules\Reimbursements\Models\ExpenseCategory::firstOrCreate(['name' => 'Supplies']);
+
+        $receipt = Receipt::create([
+            'uploaded_by' => $this->employee->id,
+            'file_path' => 'receipts/rcpt_update_comment.png',
+            'file_hash' => str_repeat('f', 64),
+            'file_type' => 'png',
+            'file_size_bytes' => 1024,
+            'vendor_name' => 'Stationery Shop',
+            'total_amount' => 50.00,
+        ]);
+
+        $reimbursement = Reimbursement::create([
+            'user_id' => $this->employee->id,
+            'description' => 'Pens and Notebooks',
+            'user_comment' => 'Initial comment',
+            'expense_category_id' => $category->id,
+            'amount' => 50.00,
+            'date' => '2026-06-17',
+            'cutoff_period' => '2026-06-16',
+            'status' => 'pending',
+            'submitted_by_name' => $this->employee->name,
+        ]);
+        $reimbursement->receipts()->attach($receipt->id);
+
+        $token = $this->generateMockToken([
+            'email' => $this->employee->email,
+            'role' => $this->employee->role,
+            'first_name' => 'John',
+            'last_name' => 'Doe',
+        ]);
+
+        $updatedComment = 'Updated notes with additional rationale.';
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'Accept' => 'application/json',
+        ])->patch('/api/reimbursements/' . $reimbursement->id, [
+            'user_comment' => $updatedComment,
+            'description' => 'Pens and Notebooks Updated',
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertEquals($updatedComment, $response->json('data.user_comment'));
+        $this->assertDatabaseHas('reimbursements', [
+            'id' => $reimbursement->id,
+            'user_comment' => $updatedComment,
+        ]);
+    }
 }
+

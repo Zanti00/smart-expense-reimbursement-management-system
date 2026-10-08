@@ -36,4 +36,47 @@ describe("MetaAndAttachments", () => {
     expect(wrapper.emitted("update:cutoffPeriod")).toBeTruthy();
     expect(wrapper.emitted("update:cutoffPeriod")[0]).toEqual(["Nov 16 - Nov 30, 2026"]);
   });
+
+  it("renders optional comments textarea and relays update:userComment on input", async () => {
+    const wrapper = mount(MetaAndAttachments, {
+      props: {
+        cutoffPeriod: "Oct 01 - Oct 15, 2026",
+        reportFile: null,
+        userComment: "Initial note",
+      },
+    });
+
+    const textarea = wrapper.find("textarea#reimbursement-user-comment");
+    expect(textarea.exists()).toBe(true);
+    expect(textarea.element.value).toBe("Initial note");
+    expect(wrapper.text()).toContain("Comments / Notes (Optional)");
+    expect(wrapper.text()).toContain("12 / 1000");
+
+    await textarea.setValue("Updated comment for admin");
+    expect(wrapper.emitted("update:userComment")).toBeTruthy();
+    expect(wrapper.emitted("update:userComment")[0]).toEqual(["Updated comment for admin"]);
+  });
+
+  it("assigns higher stacking context z-index to Cutoff Period card than Comments card", () => {
+    const wrapper = mount(MetaAndAttachments, {
+      props: {
+        cutoffPeriod: "Oct 01 - Oct 15, 2026",
+        reportFile: null,
+      },
+    });
+
+    const cards = wrapper.findAll("section.card");
+    expect(cards.length).toBe(3);
+
+    // Cutoff Period section (first card) must have z-30
+    expect(cards[0].classes()).toContain("z-30");
+
+    // Report section (second card) must have z-20
+    expect(cards[1].classes()).toContain("z-20");
+
+    // Comments section (third card) must have z-10
+    expect(cards[2].classes()).toContain("z-10");
+  });
 });
+
+

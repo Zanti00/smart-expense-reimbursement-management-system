@@ -208,7 +208,14 @@ const tableMinWidth = computed(() => "min-w-full");
               class="transition-colors duration-200 ease-out group whitespace-nowrap"
             >
               <td class="max-w-[240px] px-5 py-5 text-sm text-slate-600">
-                <span class="block truncate">{{ row.reportDescription }}</span>
+                <span class="block truncate font-medium text-slate-800">{{ row.reportDescription }}</span>
+                <span
+                  v-if="row.user_comment"
+                  class="block truncate text-xs text-slate-400 mt-0.5"
+                  :title="row.user_comment"
+                >
+                  {{ row.user_comment }}
+                </span>
               </td>
 
               <td class="px-5 py-5">

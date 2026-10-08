@@ -30,6 +30,7 @@ class UpdateReimbursementRequest extends FormRequest
 
             // Employee self-edit fields
             'description' => 'sometimes|string|max:500',
+            'user_comment' => 'nullable|string|max:1000',
             'expense_category_id' => 'nullable|integer|exists:expense_categories,id',
             'amount' => 'sometimes|numeric|min:0.01',
             'date' => 'sometimes|date',
