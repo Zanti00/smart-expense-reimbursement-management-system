@@ -12,6 +12,7 @@ import {
 import {
   itemsGrossAmount,
   receiptFinancials,
+  isReceiptFieldMissing,
 } from "@/utils/receiptUtils";
 import CurrencySelect from "@/components/base/CurrencySelect.vue";
 import BaseReceiptImage from "@/components/base/BaseReceiptImage.vue";
@@ -215,25 +216,37 @@ function removeReceiptItem(receipt, index) {
                 <label class="input-label">Invoice Number <span class="text-danger">*</span></label>
                 <input
                   class="input disabled:opacity-50 disabled:cursor-not-allowed"
-                  :class="{ 'cursor-not-allowed bg-slate-100 text-slate-500': disabled }"
+                  :class="{
+                    'cursor-not-allowed bg-slate-100 text-slate-500': disabled,
+                    'input-error !border-danger focus:!border-danger': isReceiptFieldMissing(receipt, 'invoiceNumber'),
+                  }"
                   type="text"
                   v-model="receipt.invoiceNumber"
                   :disabled="disabled || receipt.isUploading || receipt.isProcessing"
                   @input="syncOcrData(receipt)"
                 />
+                <span v-if="isReceiptFieldMissing(receipt, 'invoiceNumber')" class="text-[10px] text-danger font-medium mt-0.5">
+                  Invoice number is required
+                </span>
               </div>
               <div class="input-wrapper">
                 <label class="input-label">Date <span class="text-danger">*</span></label>
                 <div class="relative">
                   <input
                     class="input disabled:opacity-50 disabled:cursor-not-allowed"
-                    :class="{ 'cursor-not-allowed bg-slate-100 text-slate-500': disabled }"
+                    :class="{
+                      'cursor-not-allowed bg-slate-100 text-slate-500': disabled,
+                      'input-error !border-danger focus:!border-danger': isReceiptFieldMissing(receipt, 'date'),
+                    }"
                     type="date"
                     v-model="receipt.date"
                     :disabled="disabled || receipt.isUploading || receipt.isProcessing"
                     @input="syncOcrData(receipt)"
                   />
                 </div>
+                <span v-if="isReceiptFieldMissing(receipt, 'date')" class="text-[10px] text-danger font-medium mt-0.5">
+                  Date is required
+                </span>
               </div>
             </div>
 
@@ -244,7 +257,10 @@ function removeReceiptItem(receipt, index) {
               </div>
               <input
                 class="input disabled:opacity-50 disabled:cursor-not-allowed"
-                :class="{ 'cursor-not-allowed bg-slate-100 text-slate-500': disabled }"
+                :class="{
+                  'cursor-not-allowed bg-slate-100 text-slate-500': disabled,
+                  'input-error !border-danger focus:!border-danger': isReceiptFieldMissing(receipt, 'tin'),
+                }"
                 type="text"
                 v-model="receipt.tin"
                 inputmode="numeric"
@@ -254,18 +270,27 @@ function removeReceiptItem(receipt, index) {
                 @input="handleTinInput(receipt)"
                 @blur="handleTinBlur(receipt)"
               />
+              <span v-if="isReceiptFieldMissing(receipt, 'tin')" class="text-[10px] text-danger font-medium mt-0.5">
+                TIN number is required
+              </span>
             </div>
 
             <div class="input-wrapper">
               <label class="input-label">Merchant Name <span class="text-danger">*</span></label>
               <input
                 class="input disabled:opacity-50 disabled:cursor-not-allowed"
-                :class="{ 'cursor-not-allowed bg-slate-100 text-slate-500': disabled }"
+                :class="{
+                  'cursor-not-allowed bg-slate-100 text-slate-500': disabled,
+                  'input-error !border-danger focus:!border-danger': isReceiptFieldMissing(receipt, 'merchantName'),
+                }"
                 type="text"
                 v-model="receipt.merchantName"
                 :disabled="disabled || receipt.isUploading || receipt.isProcessing"
                 @input="syncOcrData(receipt)"
               />
+              <span v-if="isReceiptFieldMissing(receipt, 'merchantName')" class="text-[10px] text-danger font-medium mt-0.5">
+                Merchant name is required
+              </span>
             </div>
 
             <!-- Location -->
@@ -274,7 +299,10 @@ function removeReceiptItem(receipt, index) {
               <div class="relative">
                 <input
                   class="input pr-10 disabled:opacity-50 disabled:cursor-not-allowed"
-                  :class="{ 'cursor-not-allowed bg-slate-100 text-slate-500': disabled }"
+                  :class="{
+                    'cursor-not-allowed bg-slate-100 text-slate-500': disabled,
+                    'input-error !border-danger focus:!border-danger': isReceiptFieldMissing(receipt, 'location'),
+                  }"
                   type="text"
                   v-model="receipt.location"
                   placeholder="Enter location..."
@@ -285,6 +313,9 @@ function removeReceiptItem(receipt, index) {
                   class="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
                 />
               </div>
+              <span v-if="isReceiptFieldMissing(receipt, 'location')" class="text-[10px] text-danger font-medium mt-0.5">
+                Location is required
+              </span>
             </div>
 
             <!-- Category with AI badge -->
@@ -296,7 +327,10 @@ function removeReceiptItem(receipt, index) {
                 <div class="relative flex-1">
                   <select
                     class="input appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                    :class="{ 'cursor-not-allowed bg-slate-100 text-slate-500': disabled }"
+                    :class="{
+                      'cursor-not-allowed bg-slate-100 text-slate-500': disabled,
+                      'input-error !border-danger focus:!border-danger': isReceiptFieldMissing(receipt, 'categoryId'),
+                    }"
                     v-model="receipt.categoryId"
                     :disabled="disabled || receipt.isUploading || receipt.isProcessing"
                     @change="syncCategoryName(receipt)"
@@ -315,6 +349,9 @@ function removeReceiptItem(receipt, index) {
                   />
                 </div>
               </div>
+              <span v-if="isReceiptFieldMissing(receipt, 'categoryId')" class="text-[10px] text-danger font-medium mt-0.5">
+                Category is required
+              </span>
             </div>
 
             <!-- Order Items -->
@@ -436,12 +473,18 @@ function removeReceiptItem(receipt, index) {
                   <label class="input-label">Subtotal <span class="text-danger">*</span></label>
                   <input
                     class="input !bg-white disabled:opacity-50 disabled:cursor-not-allowed"
-                    :class="{ 'cursor-not-allowed bg-slate-100 text-slate-500': disabled }"
+                    :class="{
+                      'cursor-not-allowed bg-slate-100 text-slate-500': disabled,
+                      'input-error !border-danger focus:!border-danger': isReceiptFieldMissing(receipt, 'subtotal'),
+                    }"
                     type="number"
                     v-model="receipt.subtotal"
                     :disabled="disabled || receipt.isUploading || receipt.isProcessing"
                     @input="recalculateFromSubtotal(receipt)"
                   />
+                  <span v-if="isReceiptFieldMissing(receipt, 'subtotal')" class="text-[10px] text-danger font-medium mt-0.5">
+                    Subtotal is required
+                  </span>
                 </div>
                 <div class="input-wrapper">
                   <label class="input-label">Tax (VAT 12%) <span class="text-danger">*</span></label>
@@ -459,11 +502,17 @@ function removeReceiptItem(receipt, index) {
                   <input
                     type="number"
                     class="input !bg-white text-lg font-bold text-accent text-right disabled:opacity-50 disabled:cursor-not-allowed"
-                    :class="{ 'cursor-not-allowed !bg-slate-100 !text-slate-500': disabled }"
+                    :class="{
+                      'cursor-not-allowed !bg-slate-100 !text-slate-500': disabled,
+                      'input-error !border-danger focus:!border-danger': isReceiptFieldMissing(receipt, 'amount'),
+                    }"
                     v-model="receipt.amount"
                     :disabled="disabled || receipt.isUploading || receipt.isProcessing"
                     @input="recalculateFinancials(receipt)"
                   />
+                  <span v-if="isReceiptFieldMissing(receipt, 'amount')" class="text-[10px] text-danger font-medium mt-0.5">
+                    Total amount is required
+                  </span>
                 </div>
               </div>
             </div>

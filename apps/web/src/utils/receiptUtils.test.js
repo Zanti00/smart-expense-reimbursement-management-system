@@ -136,3 +136,58 @@ describe("canDeleteReceipt (delete gating, allows final-rejected)", () => {
     ]);
   });
 });
+
+describe("getMissingReceiptFields and isReceiptFieldMissing", () => {
+  const completeReceipt = {
+    invoiceNumber: "INV-101",
+    date: "2026-10-01",
+    tin: "123-456-789-000",
+    merchantName: "Acme Corp",
+    location: "BGC Taguig",
+    categoryId: 2,
+    amount: 500,
+    subtotal: 446.43,
+  };
+
+  it("returns no missing fields when receipt is fully populated", async () => {
+    const { getMissingReceiptFields } = await import("./receiptUtils");
+    expect(getMissingReceiptFields(completeReceipt)).toEqual([]);
+  });
+
+  it("identifies missing required fields", async () => {
+    const { getMissingReceiptFields } = await import("./receiptUtils");
+    const partialReceipt = {
+      ...completeReceipt,
+      invoiceNumber: "",
+      location: "   ",
+      categoryId: null,
+      amount: 0,
+    };
+    const missing = getMissingReceiptFields(partialReceipt);
+    const missingKeys = missing.map((m) => m.key);
+    expect(missingKeys).toContain("invoiceNumber");
+    expect(missingKeys).toContain("location");
+    expect(missingKeys).toContain("categoryId");
+    expect(missingKeys).toContain("amount");
+    expect(missingKeys).not.toContain("merchantName");
+    expect(missingKeys).not.toContain("date");
+  });
+
+  it("does not report field missing if hasOcrReturned is false", async () => {
+    const { isReceiptFieldMissing } = await import("./receiptUtils");
+    const receipt = {
+      invoiceNumber: "",
+      hasOcrReturned: false,
+    };
+    expect(isReceiptFieldMissing(receipt, "invoiceNumber")).toBe(false);
+  });
+
+  it("reports field missing if hasOcrReturned is true and value is empty", async () => {
+    const { isReceiptFieldMissing } = await import("./receiptUtils");
+    const receipt = {
+      invoiceNumber: "",
+      hasOcrReturned: true,
+    };
+    expect(isReceiptFieldMissing(receipt, "invoiceNumber")).toBe(true);
+  });
+});
