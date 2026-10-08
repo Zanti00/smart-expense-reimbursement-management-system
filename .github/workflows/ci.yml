@@ -1,0 +1,77 @@
+name: ci-serms
+
+# Continuous Integration workflow for SERMS
+# Runs automated frontend (Vitest) and backend (PHPUnit) test suites on pull requests and pushes to staging and main.
+
+on:
+  push:
+    branches: [ staging, main ]
+  pull_request:
+    branches: [ staging, main ]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-serms-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-web:
+    name: Frontend Tests (Vitest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Vitest test suite
+        run: npm run test
+
+  test-api:
+    name: Backend Tests (PHPUnit)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, bcmath, openssl
+          coverage: none
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: apps/api/vendor
+          key: composer-${{ runner.os }}-${{ hashFiles('apps/api/composer.lock') }}
+          restore-keys: |
+            composer-${{ runner.os }}-
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Run PHPUnit test suite
+        run: php artisan test

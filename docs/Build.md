@@ -301,6 +301,7 @@ onMounted(() => {
 - **Medium Date Formatting Standard (AI & Subagent Rule):** Whenever creating, displaying, or formatting human-readable dates across UI components, templates, notifications, documentation, or subagent conversational responses, AI subagents and developers must always use the **Medium Date Format** (e.g., `Sept 1, 2026`, `Oct 14, 2026`, `Jan 15, 2026`) instead of numerical or raw ISO formats (such as `2026-09-01` or `09/01/2026`). Internal storage/database layers may continue to persist standard ISO `YYYY-MM-DD`, but all human-facing presentation layers must strictly use the medium date format.
 - **Always maintain the Documentation Change Log (AI & Developer Rule):** Always append a change log entry in [`docs/CHANGELOG.md`](CHANGELOG.md) whenever creating, modifying, or updating documentation guides or specifications in either `docs/` or `documentations/`.
 - **Constructive Pushback & Logical Rigor (AI & Subagent Rule):** AI agents and subagents must never practice sycophancy or blindly agree with user prompts, opinions, or instructions. If a user request, proposed design, architectural direction, or implementation approach is flawed, suboptimal, violates project axioms (e.g., A-09 reusability, BIR compliance, audit immutability), or introduces technical debt, the agent MUST actively push back, articulate the exact logical reasoning and architectural risks, and propose an evidence-backed alternative. Every pushback, critique, or technical recommendation must have a clear, verifiable logical basis and cite relevant code, system constraints, or industry standards—never baseless disagreement or performative objection.
+- **Automated Testing & Integration Test Mandate (AI & Developer Rule):** Whenever introducing a new feature, module action, API endpoint, or modifying existing functionality, developers and AI agents must author corresponding automated tests (such as integration/feature tests in `tests/Feature` for backend logic and component/store integration tests in Vitest for frontend logic) to verify its operational status and correctness. No feature or function is considered complete or ready for PR merge without automated test coverage demonstrating that it works as specified.
 
 ---
 
@@ -336,7 +337,8 @@ When debugging authentication, role-based access control (RBAC), approval thresh
 - [ ] Export actions for reports are written to the audit logs with filters used.
 - [ ] Pre-aggregated database aggregation is used for dashboard visual components.
 - [ ] Applicable skills from `.agents/skills/` (e.g., `test-driven-development`, `systematic-debugging`, `writing-plans`, `verification-before-completion`) were engaged where relevant.
-- [ ] Documentation changes in `docs/` or `documentations/` are recorded in the Changelog in `docs/CHANGELOG.md`.
+- [ ] Documentation changes in `docs/` or `documentations/` are recorded in the Changelog in `docs/DOC_CHANGELOG.md`.
+- [ ] Automated integration/unit tests (PHPUnit / Vitest) are created or updated for all newly introduced or modified features and functions to verify operational status.
 - [ ] All unit and integration tests (PHPUnit / Vitest) run without failure.
 
 ---

@@ -4,10 +4,10 @@
 **Client / Partner:** Science Biotech Specialties Inc. (SBSI) — [https://sbsi.com.ph/about-us/](https://sbsi.com.ph/about-us/)  
 **Academic Context:** 3rd & 4th Year Capstone Project (Capstone 1: Ended July 2026 · Capstone 2: September–December 2026)  
 **Date:** 2026-10-08  
-**Version:** 1.5.7  
+**Version:** 1.5.8  
 **Owner:** SERMS Engineering Team  
 **Status:** Active  
-**Last reconciled:** 2026-10-08 (Removal of Graphify knowledge graph subsystem)  
+**Last reconciled:** 2026-10-08 (Added GitHub Actions CI workflow and automated integration testing mandate)  
 **Canonical Spec:** [SERMS.md](SERMS.md) · **Related Docs:** [index.md](index.md) · [PRD.md](PRD.md) · [SAD.md](SAD.md) · [SDD.md](SDD.md) · [DSD.md](DSD.md) · [Build.md](Build.md) · [OPS.md](OPS.md) · [QAD.md](QAD.md) · [AGENTS.md](../AGENTS.md)
 
 ---
@@ -21,6 +21,17 @@ All notable changes, architectural decisions, and documentation updates for the 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 > **Note for AI Subagents & Developers:** Always consult this file when you need chronological historical context, previous architectural pivots, or design rationale before modifying codebase features or documentation guides.
+
+## [1.5.8] - 2026-10-08
+
+### Added
+- **Automated CI Workflow (`.github/workflows/ci.yml`):**
+  - Continuous integration pipeline running Vitest test suite (`apps/web`) and PHPUnit test suite (`apps/api`) on pull requests and pushes to `staging` and `main`.
+  - Configured dependency caching for npm and composer to optimize CI execution times.
+- **Automated Testing & Integration Test Mandate:**
+  - Added strict convention and Definition of Done mandate in `AGENTS.md` and `docs/Build.md` requiring developers and AI agents to author automated tests (such as integration/feature tests in `tests/Feature` and Vitest component/store tests) whenever introducing or modifying features and functions.
+
+---
 
 ## [1.5.7] - 2026-10-08
 
