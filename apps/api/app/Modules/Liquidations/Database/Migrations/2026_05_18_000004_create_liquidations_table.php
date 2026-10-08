@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('cash_advance_id')->constrained('cash_advances')->cascadeOnDelete();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-            $table->enum('status', ['pending', 'approved', 'rejected', 'liquidated'])->default('pending');
+            $table->enum('status', ['pending', 'revise', 'approved', 'rejected', 'liquidated'])->default('pending');
             $table->json('reimbursement_ids'); // List of associated expense/reimbursement claim IDs
             $table->decimal('total_expense_amount', 15, 2);
             $table->decimal('variance_amount', 15, 2); // Cash Advance Amount - Total Expense Amount

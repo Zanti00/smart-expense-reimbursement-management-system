@@ -435,11 +435,15 @@ class CashAdvancePasswordVerificationTest extends TestCase
     {
         $token = $this->approverToken();
 
-        // First: successful revise with correct password (count => 1)
+        // Mock external password verifier: valid only if password === 'password'
         Http::fake([
-            "*/api/verify-password" => Http::response(["valid" => true], 200),
+            "*/api/verify-password" => function ($request) {
+                $body = $request->data();
+                return Http::response(["valid" => ($body["password"] ?? "") === "password"], 200);
+            },
         ]);
 
+        // First: successful revise with correct password (count => 1)
         $this->withHeaders(["Authorization" => "Bearer " . $token])
             ->postJson("/api/cash-advances/{$this->cashAdvance->id}/reject", [
                 "comment" => "First correct revise.",
@@ -453,10 +457,6 @@ class CashAdvancePasswordVerificationTest extends TestCase
         $this->assertDatabaseCount("cash_advance_approval_actions", 1);
 
         // Second: wrong password while still in revise (should be 422, count stays 1)
-        Http::fake([
-            "*/api/verify-password" => Http::response(["valid" => false], 200),
-        ]);
-
         $response = $this->withHeaders(["Authorization" => "Bearer " . $token])
             ->postJson("/api/cash-advances/{$this->cashAdvance->id}/reject", [
                 "comment" => "Wrong password after one successful revise.",
@@ -470,7 +470,7 @@ class CashAdvancePasswordVerificationTest extends TestCase
         $this->cashAdvance->refresh();
         $this->assertEquals("revise", $this->cashAdvance->status);
         $this->assertEquals(1, (int) $this->cashAdvance->revision_count);
-        $this->assertDatabaseCount("cash_advance_approval_actions", 1, "No new approval_action on wrong password");
+        $this->assertDatabaseCount("cash_advance_approval_actions", 1);
 
         // Third: another wrong attempt still 1
         $response = $this->withHeaders(["Authorization" => "Bearer " . $token])
@@ -490,7 +490,12 @@ class CashAdvancePasswordVerificationTest extends TestCase
         $token = $this->approverToken();
 
         // Seed 2 successful revises (pending->revise->pending->revise)
-        Http::fake(["*/api/verify-password" => Http::response(["valid" => true], 200)]);
+        Http::fake([
+            "*/api/verify-password" => function ($request) {
+                $body = $request->data();
+                return Http::response(["valid" => ($body["password"] ?? "") === "password"], 200);
+            },
+        ]);
 
         $this->withHeaders(["Authorization" => "Bearer " . $token])
             ->postJson("/api/cash-advances/{$this->cashAdvance->id}/reject", [
@@ -513,7 +518,6 @@ class CashAdvancePasswordVerificationTest extends TestCase
         $this->assertEquals(2, (int) $this->cashAdvance->revision_count);
 
         // Now wrong password must not push to 3
-        Http::fake(["*/api/verify-password" => Http::response(["valid" => false], 200)]);
 
         $response = $this->withHeaders(["Authorization" => "Bearer " . $token])
             ->postJson("/api/cash-advances/{$this->cashAdvance->id}/reject", [

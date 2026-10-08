@@ -38,7 +38,7 @@ class LiquidationLogicTest extends TestCase
             'email' => 'jane.admin@example.com',
             'role' => 'admin',
             'grade' => 'L5',
-            'department' => 'HR',
+            'department' => 'accounting',
         ]);
 
         $this->cashAdvance = CashAdvance::create([
@@ -172,6 +172,7 @@ class LiquidationLogicTest extends TestCase
             'role' => $this->admin->role,
             'first_name' => 'Jane',
             'last_name' => 'Admin',
+            'department' => 'accounting',
         ]);
 
         $response = $this->withHeaders([
@@ -212,6 +213,7 @@ class LiquidationLogicTest extends TestCase
             'role' => $this->admin->role,
             'first_name' => 'Jane',
             'last_name' => 'Admin',
+            'department' => 'accounting',
         ]);
 
         $response = $this->withHeaders([
@@ -258,6 +260,7 @@ class LiquidationLogicTest extends TestCase
             'role' => $this->admin->role,
             'first_name' => 'Jane',
             'last_name' => 'Admin',
+            'department' => 'accounting',
         ]);
 
         $response = $this->withHeaders([
@@ -350,6 +353,7 @@ class LiquidationLogicTest extends TestCase
             'role' => $this->admin->role,
             'first_name' => 'Jane',
             'last_name' => 'Admin',
+            'department' => 'accounting',
         ]);
 
         $response = $this->withHeaders([

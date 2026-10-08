@@ -95,8 +95,8 @@ class CashAdvanceService
 
             $currentCount = (int) ($advance->revision_count ?? 0);
             $newCount = $currentCount + 1;
-            // 2 revises allowed (<=2 revise, >=3 rejected) — 1st/2nd = revise, 3rd = terminal rejected, 3 total
-            $newStatus = $newCount <= 2 ? 'revise' : 'rejected';
+            // 3 revises allowed: 1st-3rd = revise, 4th (>3) = terminal rejected
+            $newStatus = $newCount > 3 ? 'rejected' : 'revise';
             $fromStatus = $advance->status;
 
             $advance->update([

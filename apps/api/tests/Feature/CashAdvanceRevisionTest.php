@@ -20,6 +20,10 @@ class CashAdvanceRevisionTest extends TestCase
     {
         parent::setUp();
 
+        \Illuminate\Support\Facades\Http::fake([
+            "*/api/verify-password" => \Illuminate\Support\Facades\Http::response(["valid" => true], 200),
+        ]);
+
         $this->employee = User::create([
             "name" => "John Employee",
             "email" => "john.employee@example.com",
@@ -45,6 +49,16 @@ class CashAdvanceRevisionTest extends TestCase
             "expected_disbursement_date" => Carbon::now()->addDays(2)->toDateString(),
             "expected_liquidation_date" => Carbon::now()->addDays(7)->toDateString(),
         ]);
+    }
+
+    public function postJson($uri, array $data = [], array $headers = [], $options = 0)
+    {
+        if (str_contains($uri, '/approve') || str_contains($uri, '/reject')) {
+            if (!isset($data['password'])) {
+                $data['password'] = 'password';
+            }
+        }
+        return parent::postJson($uri, $data, $headers, $options);
     }
 
     private function approverToken(array $overrides = []): string

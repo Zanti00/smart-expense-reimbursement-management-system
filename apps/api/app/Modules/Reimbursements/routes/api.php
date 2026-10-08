@@ -5,9 +5,11 @@ use App\Modules\Reimbursements\Http\Controllers\ReimbursementController;
 use App\Modules\Reimbursements\Http\Controllers\ReceiptController;
 use App\Modules\Reimbursements\Http\Controllers\ExpenseCategoryController;
 use App\Modules\Reimbursements\Http\Controllers\PrsReimbursementRequestController;
+use App\Modules\Reimbursements\Http\Controllers\PrsWebhookController;
 use App\Modules\Reimbursements\Http\Controllers\OcrCallbackController;
 
 Route::post('/prs-requests', PrsReimbursementRequestController::class)->middleware('auth.prs-reimbursement-api');
+Route::post('/webhooks/prs', PrsWebhookController::class);
 
 // AI OCR service callback — authenticated by the AI service API key (bearer token).
 // This route is outside auth.external because the caller is the AI service, not a user.

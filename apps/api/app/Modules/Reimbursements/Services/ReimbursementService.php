@@ -202,9 +202,9 @@ class ReimbursementService
                 throw new \Illuminate\Auth\Access\AuthorizationException('Conflict. Self-rejection/approval is prohibited.');
             }
 
-            // Only pending or revise can be returned; approved/granted/rejected are terminal for this action
-            if (!in_array($reimbursement->status, ['pending', 'revise'])) {
-                throw new \Illuminate\Auth\Access\AuthorizationException('Only pending or revise reimbursements can be revised/rejected.');
+            // Only pending, revise, or submitted can be returned; approved/granted/rejected are terminal for this action
+            if (!in_array($reimbursement->status, ['pending', 'revise', 'submitted'])) {
+                throw new \Illuminate\Auth\Access\AuthorizationException('Only pending, revise, or submitted reimbursements can be revised/rejected.');
             }
 
             $beforeState = $reimbursement->toArray();
@@ -212,7 +212,8 @@ class ReimbursementService
             $currentCount = (int) ($reimbursement->revision_count ?? 0);
             $newCount = $currentCount + 1;
             // 2 revises allowed (<=2 revise, >=3 rejected) — 1st/2nd = revise, 3rd = terminal rejected, 3 total
-            $newStatus = $newCount <= 2 ? 'revise' : 'rejected';
+            // If action is explicit 'reject', it transitions immediately to 'rejected'.
+            $newStatus = ($action === 'reject' || $newCount > 2) ? 'rejected' : 'revise';
             $isTerminal = $newStatus === 'rejected';
 
             $reimbursement->update([

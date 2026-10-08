@@ -39,7 +39,7 @@ class ReimbursementLogicTest extends TestCase
             'email' => 'admin@example.com',
             'role' => 'admin',
             'grade' => 'L5',
-            'department' => 'HR',
+            'department' => 'accounting',
         ]);
 
         Storage::fake('supabase');
@@ -47,6 +47,8 @@ class ReimbursementLogicTest extends TestCase
 
     public function test_default_status_is_pending(): void
     {
+        $category = \App\Modules\Reimbursements\Models\ExpenseCategory::firstOrCreate(['name' => 'Meals']);
+
         $receipt = Receipt::create([
             'uploaded_by' => $this->employee->id,
             'file_path' => 'receipts/rcpt_test.png',
@@ -66,14 +68,16 @@ class ReimbursementLogicTest extends TestCase
 
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $token,
+            'Accept' => 'application/json',
         ])->post('/api/reimbursements', [
             'description' => 'Business Lunch',
+            'expense_category_id' => $category->id,
             'category' => 'Meals',
             'amount' => 100.00,
             'date' => '2026-06-10',
             'cutoff_period' => '2026-06',
             'receipt_ids' => [$receipt->id],
-            'report_file' => UploadedFile::fake()->image('report.jpg')
+            'report_file' => UploadedFile::fake()->create('report.pdf', 100, 'application/pdf')
         ]);
 
         $response->assertStatus(201);
@@ -92,6 +96,7 @@ class ReimbursementLogicTest extends TestCase
             ->actingAs($this->employee)
             ->post('/api/reimbursements/receipts', [
                 'file' => UploadedFile::fake()->create('receipt.pdf', 100, 'application/pdf'),
+                'is_mock' => '1',
             ]);
 
         $response->assertStatus(201);
@@ -216,12 +221,15 @@ class ReimbursementLogicTest extends TestCase
 
         $reimbursement->receipts()->attach($receipt->id);
 
+        $category = \App\Modules\Reimbursements\Models\ExpenseCategory::firstOrCreate(['name' => 'Meals']);
+
         $response = $this
             ->withoutMiddleware(\App\Modules\Shared\Http\Middleware\AuthenticateWithExternalService::class)
             ->actingAs($this->employee)
             ->withHeaders(['Accept' => 'application/json'])
             ->post('/api/reimbursements', [
                 'description' => 'Duplicate Claim',
+                'expense_category_id' => $category->id,
                 'category' => 'Meals',
                 'amount' => 100.00,
                 'date' => '2026-06-10',
@@ -255,6 +263,7 @@ class ReimbursementLogicTest extends TestCase
         $token = $this->generateMockToken([
             'email' => $this->admin->email,
             'role' => $this->admin->role,
+            'department' => 'accounting',
             'first_name' => 'Admin',
             'last_name' => 'User',
         ]);
@@ -286,6 +295,7 @@ class ReimbursementLogicTest extends TestCase
         $token = $this->generateMockToken([
             'email' => $this->admin->email,
             'role' => $this->admin->role,
+            'department' => 'accounting',
             'first_name' => 'Admin',
             'last_name' => 'User',
         ]);

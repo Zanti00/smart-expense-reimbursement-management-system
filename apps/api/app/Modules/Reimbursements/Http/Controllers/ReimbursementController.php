@@ -99,7 +99,7 @@ class ReimbursementController extends Controller
     public function reject(RejectReimbursementRequest $request, $id)
     {
         try {
-            $action = $request->validated('action', 'revise');
+            $action = $request->validated('action', 'reject');
             $reimbursement = $this->service->rejectReimbursement(
                 $request->user(),
                 (int)$id,
@@ -112,7 +112,7 @@ class ReimbursementController extends Controller
 
             $isRejected = $reimbursement->status === 'rejected';
             return response()->json([
-                'message' => $isRejected ? 'Reimbursement request rejected (exceeded revision limit).' : 'Reimbursement returned for revision.',
+                'message' => $isRejected ? ($action === 'reject' ? 'Reimbursement request rejected.' : 'Reimbursement request rejected (exceeded revision limit).') : 'Reimbursement returned for revision.',
                 'data' => $reimbursement,
             ]);
         } catch (AuthorizationException $e) {

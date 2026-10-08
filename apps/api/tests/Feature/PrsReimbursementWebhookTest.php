@@ -28,7 +28,7 @@ class PrsReimbursementWebhookTest extends TestCase
         ]);
         $this->assertDatabaseHas('receipts', [
             'invoice_number' => 'INV-2026-00001',
-            'file_path' => 'https://prs.local/receipts/inv-00001.jpg',
+            'file_path' => json_encode('https://prs.local/receipts/inv-00001.jpg'),
         ]);
     }
 

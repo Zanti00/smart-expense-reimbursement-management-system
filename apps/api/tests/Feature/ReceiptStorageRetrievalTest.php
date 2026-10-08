@@ -36,7 +36,7 @@ class ReceiptStorageRetrievalTest extends TestCase
             'name' => 'Alex Reyes',
             'role' => 'admin',
             'grade' => 'EXEC',
-            'department' => 'FINANCE',
+            'department' => 'accounting',
             'avatar' => 'AR',
         ]);
 
@@ -107,7 +107,7 @@ class ReceiptStorageRetrievalTest extends TestCase
         // Assert database values
         $this->assertDatabaseHas('receipts', [
             'uploaded_by' => $this->employee->id,
-            'file_path' => 'receipts/restaurant_dinner.jpg',
+            'file_path' => json_encode('receipts/restaurant_dinner.jpg'),
             'vendor_name' => 'Ramen Nagi',
             'total_amount' => '1250.00',
             'ocr_flagged' => false, // Confidence score 92.50 is >= 80, so ocr_flagged must be false
@@ -215,7 +215,7 @@ class ReceiptStorageRetrievalTest extends TestCase
         // --- Admin Index Call ---
         // Should see all receipts
         $responseAdmin = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->generateMockToken(['email' => 'admin@serms.com', 'role' => 'admin']) // maps to admin
+            'Authorization' => 'Bearer ' . $this->generateMockToken(['email' => 'admin@serms.com', 'role' => 'admin', 'department' => 'accounting']) // maps to admin
         ])->getJson('/api/expenses');
 
         $responseAdmin->assertStatus(200);

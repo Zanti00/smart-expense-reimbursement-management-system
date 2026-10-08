@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('cash_advance_id')->constrained('cash_advances')->cascadeOnDelete();
             $table->foreignId('approver_id')->constrained('users')->cascadeOnDelete();
-            $table->enum('action', ['approved', 'rejected']);
+            $table->enum('action', ['approved', 'rejected', 'revised']);
             $table->text('comment')->nullable();
             $table->timestamp('actioned_at')->useCurrent();
             $table->timestamps();
