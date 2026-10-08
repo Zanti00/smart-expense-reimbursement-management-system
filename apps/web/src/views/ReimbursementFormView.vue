@@ -200,6 +200,21 @@ const { submitting, submitReimbursement, updateReimbursement } = useReimbursemen
   router,
 );
 
+const showSubmitConfirmModal = ref(false);
+
+function promptSubmit() {
+  showSubmitConfirmModal.value = true;
+}
+
+function handleConfirmSubmit() {
+  showSubmitConfirmModal.value = false;
+  handleSubmit();
+}
+
+function handleCancelSubmit() {
+  showSubmitConfirmModal.value = false;
+}
+
 async function handleSubmit() {
   isSubmitted.value = true;
   try {
@@ -484,7 +499,7 @@ function dismiss() {
           <button
             class="btn btn-cta min-h-[42px] w-full sm:w-fit disabled:cursor-not-allowed disabled:opacity-60"
             :disabled="!canProceed || submitting"
-            @click="handleSubmit"
+            @click="promptSubmit"
           >
             <span
               v-if="submitting"
@@ -497,6 +512,17 @@ function dismiss() {
         </div>
       </template>
     </template>
+
+    <ConfirmModal
+      :is-open="showSubmitConfirmModal"
+      title="Submit Request"
+      message="Are you sure do you want to submit this request?"
+      confirm-text="Done"
+      cancel-text="Cancel"
+      :danger="false"
+      @confirm="handleConfirmSubmit"
+      @close="handleCancelSubmit"
+    />
 
     <ConfirmModal
       :is-open="showConfirmModal"
