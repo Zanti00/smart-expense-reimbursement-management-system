@@ -815,6 +815,30 @@ const selectedAdvanceCanLiquidate = computed(() => {
   return selectedAdvanceAcknowledged.value || selectedAdvanceIsPhase2.value;
 });
 
+const showSubmitConfirmModal = ref(false);
+
+function promptSubmitLiquidation() {
+  // Preview-only until acknowledged / Phase 2 — block submit with feedback
+  if (!selectedAdvanceCanLiquidate.value) {
+    addToast({
+      title: "Acknowledgement Required",
+      message: "Please acknowledge the cash advance (sign) before submitting a liquidation. Preview only until Phase 2.",
+      type: "danger",
+    });
+    return;
+  }
+  showSubmitConfirmModal.value = true;
+}
+
+function handleConfirmSubmit() {
+  showSubmitConfirmModal.value = false;
+  submitLiquidation();
+}
+
+function handleCancelSubmit() {
+  showSubmitConfirmModal.value = false;
+}
+
 async function submitLiquidation() {
   // Preview-only until acknowledged / Phase 2 — block submit with feedback
   if (!selectedAdvanceCanLiquidate.value) {
@@ -825,6 +849,7 @@ async function submitLiquidation() {
     });
     return;
   }
+  const isEditing = !!existingLiquidation.value;
   const success = await performSubmitLiquidation({
     receipts: receipts.value,
     selectedAdvance: selectedAdvance.value,
@@ -837,8 +862,15 @@ async function submitLiquidation() {
 
   if (success) {
     submitted.value = true;
+    addToast({
+      message: isEditing
+        ? "Liquidation settlement updated successfully!"
+        : "Liquidation settlement submitted successfully!",
+      type: "success",
+    });
   }
 }
+
 
 
 
@@ -1490,10 +1522,21 @@ function finalizeLiquidation() {
           @upload-error="handleReceiptUploadError"
           @forward-overpayment="forwardOverpaymentToReimbursement"
           @delete-liquidation="handleDeleteLiquidation"
-          @submit-liquidation="submitLiquidation"
+          @submit-liquidation="promptSubmitLiquidation"
         />
       </div>
     </div>
+
+    <ConfirmModal
+      :is-open="showSubmitConfirmModal"
+      title="Submit Request"
+      message="Are you sure do you want to submit this request?"
+      confirm-text="Done"
+      cancel-text="Cancel"
+      :danger="false"
+      @confirm="handleConfirmSubmit"
+      @close="handleCancelSubmit"
+    />
 
     <ConfirmModal
       :is-open="showConfirmModal"
