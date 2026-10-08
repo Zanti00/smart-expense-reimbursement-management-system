@@ -1,7 +1,10 @@
 import { ref, watch, onMounted, onBeforeUnmount } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "@/composables/useToast";
-import { buildPrefilledReceiptDraft } from "@/utils/receiptUtils";
+import {
+  buildPrefilledReceiptDraft,
+  getMissingReceiptFields,
+} from "@/utils/receiptUtils";
 import { useOcrMode } from "@/composables/useOcrMode";
 import { isOcrOfflineFailure } from "@/utils/ocrErrors";
 
@@ -47,6 +50,20 @@ export function useReceiptUploads(options = {}) {
 
   const receiptDrag = ref(false);
   const receiptInput = ref(null);
+  const { addToast } = useToast();
+
+  function checkAndNotifyMissingFields(receipt) {
+    if (!receipt) return;
+    receipt.hasOcrReturned = true;
+    const missing = getMissingReceiptFields(receipt);
+    if (missing.length > 0) {
+      const fieldNames = missing.map((f) => f.label).join(", ");
+      addToast({
+        message: `Missing required field(s): ${fieldNames}`,
+        type: "warning",
+      });
+    }
+  }
 
   const pollTimers = {};
 
@@ -217,6 +234,7 @@ export function useReceiptUploads(options = {}) {
             updatedReceipt.isUploading = false;
             updatedReceipt.isProcessing = false;
             localReceipts.value[index] = updatedReceipt;
+            checkAndNotifyMissingFields(localReceipts.value[index]);
           }
         }
       } catch (e) {
@@ -246,16 +264,16 @@ export function useReceiptUploads(options = {}) {
   }
 
   const authStore = useAuthStore();
-  const { addToast } = useToast();
 
   function handleReceiptDrop(e) {
     receiptDrag.value = false;
-    addReceiptFiles(e.dataTransfer.files);
+    return addReceiptFiles(e.dataTransfer.files);
   }
 
   function handleReceiptSelect(e) {
-    addReceiptFiles(e.target.files);
+    const res = addReceiptFiles(e.target.files);
     if (e.target) e.target.value = "";
+    return res;
   }
 
   async function addReceiptFiles(fileList, forceProcess = false) {
@@ -490,6 +508,8 @@ export function useReceiptUploads(options = {}) {
           };
           if (data.data.status === "processing") {
             startPolling(data.data.id);
+          } else {
+            checkAndNotifyMissingFields(localReceipts.value[index]);
           }
         }
       } catch (e) {
@@ -716,6 +736,8 @@ export function useReceiptUploads(options = {}) {
         };
         if (data.data.status === "processing") {
           startPolling(data.data.id);
+        } else {
+          checkAndNotifyMissingFields(localReceipts.value[index]);
         }
       }
     } catch (e) {

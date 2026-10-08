@@ -252,3 +252,90 @@ export function canDeleteReceipt(receipt) {
   if (!status) return false;
   return !DELETE_FORBIDDEN_STATUSES.includes(status);
 }
+
+export const REQUIRED_RECEIPT_FIELDS = [
+  { key: "invoiceNumber", label: "Invoice Number" },
+  { key: "date", label: "Date" },
+  { key: "tin", label: "TIN Number" },
+  { key: "merchantName", label: "Merchant Name" },
+  { key: "location", label: "Location" },
+  { key: "categoryId", label: "Category" },
+  { key: "amount", label: "Total Amount" },
+  { key: "subtotal", label: "Subtotal" },
+];
+
+export function isReceiptFieldMissing(receipt, fieldKey) {
+  if (!receipt || (!receipt.hasOcrReturned && !receipt.validated)) return false;
+  switch (fieldKey) {
+    case "invoiceNumber":
+      return !receipt.invoiceNumber || !String(receipt.invoiceNumber).trim();
+    case "date":
+      return !receipt.date || !String(receipt.date).trim();
+    case "tin":
+      return !receipt.tin || !String(receipt.tin).trim();
+    case "merchantName":
+      return !receipt.merchantName || !String(receipt.merchantName).trim();
+    case "location":
+      return !receipt.location || !String(receipt.location).trim();
+    case "categoryId":
+      return !receipt.categoryId;
+    case "amount":
+      return (
+        receipt.amount === "" ||
+        receipt.amount === null ||
+        receipt.amount === undefined ||
+        Number(receipt.amount) <= 0
+      );
+    case "subtotal":
+      return (
+        receipt.subtotal === "" ||
+        receipt.subtotal === null ||
+        receipt.subtotal === undefined ||
+        Number(receipt.subtotal) <= 0
+      );
+    default:
+      return false;
+  }
+}
+
+export function getMissingReceiptFields(receipt) {
+  if (!receipt) return [];
+  const missing = [];
+
+  if (!receipt.invoiceNumber || !String(receipt.invoiceNumber).trim()) {
+    missing.push({ key: "invoiceNumber", label: "Invoice Number" });
+  }
+  if (!receipt.date || !String(receipt.date).trim()) {
+    missing.push({ key: "date", label: "Date" });
+  }
+  if (!receipt.tin || !String(receipt.tin).trim()) {
+    missing.push({ key: "tin", label: "TIN Number" });
+  }
+  if (!receipt.merchantName || !String(receipt.merchantName).trim()) {
+    missing.push({ key: "merchantName", label: "Merchant Name" });
+  }
+  if (!receipt.location || !String(receipt.location).trim()) {
+    missing.push({ key: "location", label: "Location" });
+  }
+  if (!receipt.categoryId) {
+    missing.push({ key: "categoryId", label: "Category" });
+  }
+  if (
+    receipt.amount === "" ||
+    receipt.amount === null ||
+    receipt.amount === undefined ||
+    Number(receipt.amount) <= 0
+  ) {
+    missing.push({ key: "amount", label: "Total Amount" });
+  }
+  if (
+    receipt.subtotal === "" ||
+    receipt.subtotal === null ||
+    receipt.subtotal === undefined ||
+    Number(receipt.subtotal) <= 0
+  ) {
+    missing.push({ key: "subtotal", label: "Subtotal" });
+  }
+
+  return missing;
+}
