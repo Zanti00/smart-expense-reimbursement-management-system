@@ -49,7 +49,7 @@ const isDropdownOpen = ref(false);
           <div>
             <button
               @click="isDropdownOpen = !isDropdownOpen"
-              class="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-accent px-3.5 text-xs font-bold text-white transition-colors hover:bg-accent-600 focus:outline-none"
+              class="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-primary px-3.5 text-xs font-bold text-white transition-colors hover:bg-primary/90 focus:outline-none"
             >
               <PlusCircle class="h-3.5 w-3.5" />
               Add More Receipts

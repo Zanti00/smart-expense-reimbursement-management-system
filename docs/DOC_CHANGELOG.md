@@ -3,11 +3,11 @@
 **Project:** Smart Expense & Reimbursement Management System (SERMS)  
 **Client / Partner:** Science Biotech Specialties Inc. (SBSI) — [https://sbsi.com.ph/about-us/](https://sbsi.com.ph/about-us/)  
 **Academic Context:** 3rd & 4th Year Capstone Project (Capstone 1: Ended July 2026 · Capstone 2: September–December 2026)  
-**Date:** 2026-10-08  
-**Version:** 1.5.8  
+**Date:** 2026-10-16  
+**Version:** 1.6.0  
 **Owner:** SERMS Engineering Team  
 **Status:** Active  
-**Last reconciled:** 2026-10-08 (Added GitHub Actions CI workflow and automated integration testing mandate)  
+**Last reconciled:** 2026-10-16 (Refactored component design system to shadcn-vue and Radix Vue primitives)  
 **Canonical Spec:** [SERMS.md](SERMS.md) · **Related Docs:** [index.md](index.md) · [PRD.md](PRD.md) · [SAD.md](SAD.md) · [SDD.md](SDD.md) · [DSD.md](DSD.md) · [Build.md](Build.md) · [OPS.md](OPS.md) · [QAD.md](QAD.md) · [AGENTS.md](../AGENTS.md)
 
 ---
@@ -21,6 +21,36 @@ All notable changes, architectural decisions, and documentation updates for the 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 > **Note for AI Subagents & Developers:** Always consult this file when you need chronological historical context, previous architectural pivots, or design rationale before modifying codebase features or documentation guides.
+
+## [1.6.0] - 2026-10-16
+
+### Added
+- **Headless UI Primitives (`@/components/ui/`):**
+  - Integrated `radix-vue` headless primitives, `class-variance-authority`, `tailwind-merge`, and `clsx` via `cn()` utility (`apps/web/src/utils/cn.js`).
+  - Implemented Tier 1 primitives: Button (`ui/button`), Badge (`ui/badge`), Card (`ui/card`), Dialog (`ui/dialog`), DropdownMenu (`ui/dropdown-menu`), and Skeleton (`ui/skeleton`).
+  - Added `components.json` for shadcn-vue schema interoperability.
+  - Added unit test suite `apps/web/src/components/ui/ui-primitives.test.js` validating all headless primitives.
+  - Added `apps/web/src/layouts/AppLayout.test.js` validating navigation chrome rendering and theme adherence.
+
+### Changed
+- **ONE UI Token & Variable Infrastructure:**
+  - Modernized `apps/web/src/assets/index.css` with semantic `:root` CSS variables matching ONE UI canonical tokens (`--primary` `#252578`, `--secondary` `#2E85D8`, `--brand-deep` `#3A3A85`, `--brand-deep-border` `#4E4E91`, `--card` `#FFFFFF`, `--background` `#F8F9FA`, `--destructive` `#EF4444`).
+  - Configured `apps/web/tailwind.config.js` with `tailwindcss-animate`, 4 elevation shadow levels (`shadow-xs`, `shadow-sm`, `shadow-lg`, `shadow-2xl`), and CSS variable bindings while preserving Tailwind CSS 3.4.
+- **Layered Adapter Pattern Refactoring (`@/components/base/`):**
+  - Refactored `BaseButton.vue` to wrap `ui/button` while preserving hold-to-confirm (`requireHold`), danger button mapping, and bifurcated `Loader2` action spinner.
+  - Refactored `StatusBadge.vue` to wrap `ui/badge`, enforcing Title Case formatting and 3 visual status tiers (`Approved`, `Pending`, `Rejected`, etc.).
+  - Refactored `BaseInput.vue` with 8px vertical rhythm, uppercase tracking eyebrow labels, and `#2E85D8` focus rings.
+  - Refactored `BaseModal.vue` and `ConfirmModal.vue` to wrap `ui/dialog` with `VisuallyHidden` accessible dialog titles and backdrops.
+  - Refactored `ToastNotification.vue` with top-right viewport positioning (`top: 24px; right: 24px; z-index: 1200;`), Level 3 shadow, 4px left strip, and pause-on-hover timers.
+- **Navigation & Layout Chrome Modernization:**
+  - Refactored `AppLayout.vue` with ONE UI sidebar navigation (Brand Primary `#252578`, Brand Deep active link `#3A3A85` with `#4E4E91` container border, 260px expanded / 70px collapsed widths, uppercase category eyebrows).
+  - Modernized top header with Lucide `PanelLeft` sidebar toggle, user initials avatar (`#A7A7C8`), and Radix `DropdownMenu` profile popover.
+- **Complex Table & Modal Widgets Modernization:**
+  - Refactored `BaseTable.vue` to Section VI.10 specifications (56px row height, uppercase Poppins headers, BaseButton pagination).
+  - Refactored `ActionDropdownMenu.vue` to wrap Radix DropdownMenu primitives, removing ad-hoc coordinate calculations.
+  - Modernized raw buttons in `DecisionConfirmationModal.vue`, `ReceiptUploadModal.vue`, `CashAdvanceDetailsModal.vue`, and `LiquidationSettlementForm.vue` to `<BaseButton>`.
+
+---
 
 ## [1.5.8] - 2026-10-08
 

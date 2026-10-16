@@ -3,6 +3,7 @@ import { ref, computed, watch, onBeforeUnmount } from "vue";
 import { useReceiptStore } from "@/stores/receipts";
 import { useToast } from "@/composables/useToast";
 import ConfirmModal from "@/components/base/ConfirmModal.vue";
+import BaseButton from "@/components/base/BaseButton.vue";
 import CurrencySelect from "@/components/base/CurrencySelect.vue";
 import BaseReceiptImage from "@/components/base/BaseReceiptImage.vue";
 import { useUnsavedChanges } from "@/composables/useUnsavedChanges";
@@ -647,7 +648,7 @@ function formatCurrency(amount) {
               />
               <button
                 type="button"
-                class="btn btn-cta min-h-[42px]"
+                class="btn btn-primary min-h-[42px]"
                 :disabled="receiptsStore.isSaving"
                 @click="receiptInput?.click()"
               >
@@ -1025,53 +1026,48 @@ function formatCurrency(amount) {
         <div
           class="px-6 py-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3 sticky bottom-0"
         >
-          <button
+          <BaseButton
             v-if="isEditMode"
-            @click="handleRetryOcr"
-            class="btn btn-secondary min-h-[42px] mr-auto"
+            variant="secondary"
+            class="min-h-[42px] mr-auto"
+            :loading="isRetryingOcr"
             :disabled="isRetryingOcr || receiptsStore.isSaving || props.receiptToEdit?.status === 'processing'"
+            @click="handleRetryOcr"
           >
             <RefreshCw v-if="!isRetryingOcr" class="w-4 h-4" />
-            <span
-              v-else
-              class="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin"
-              aria-hidden="true"
-            />
             {{ isRetryingOcr ? "Retrying..." : "Retry OCR" }}
-          </button>
-          <button
-            @click="close"
-            class="btn btn-secondary !px-8"
+          </BaseButton>
+
+          <BaseButton
+            variant="secondary"
+            class="!px-8"
             :disabled="receiptsStore.isSaving"
+            @click="close"
           >
             Discard All
-          </button>
-          <button
+          </BaseButton>
+
+          <BaseButton
             v-if="!isEditMode"
-            @click="saveNewReceipt"
-            class="btn btn-cta min-h-[42px] w-full sm:w-fit"
+            variant="primary"
+            class="min-h-[42px] w-full sm:w-fit"
+            :loading="receiptsStore.isSaving"
             :disabled="receiptsStore.isSaving || !canSaveNew"
+            @click="saveNewReceipt"
           >
-            <span
-              v-if="receiptsStore.isSaving"
-              class="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin"
-              aria-hidden="true"
-            />
-            <Save v-else class="w-4 h-4" />
+            <Save v-if="!receiptsStore.isSaving" class="w-4 h-4" />
             {{ receiptsStore.isSaving ? "Saving..." : "Save Receipt" }}
-          </button>
-          <button
+          </BaseButton>
+
+          <BaseButton
             v-else
-            @click="saveReceipt"
-            class="btn btn-cta min-h-[42px] w-full sm:w-fit"
+            variant="primary"
+            class="min-h-[42px] w-full sm:w-fit"
+            :loading="receiptsStore.isSaving"
             :disabled="receiptsStore.isSaving || !isFormValid || isOcrProcessing"
+            @click="saveReceipt"
           >
-            <span
-              v-if="receiptsStore.isSaving"
-              class="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin"
-              aria-hidden="true"
-            />
-            <Save v-else class="w-4 h-4" />
+            <Save v-if="!receiptsStore.isSaving" class="w-4 h-4" />
             {{
               receiptsStore.isSaving
                 ? receiptToEdit
@@ -1079,7 +1075,7 @@ function formatCurrency(amount) {
                   : "Uploading..."
                 : "Save Receipt"
             }}
-          </button>
+          </BaseButton>
         </div>
       </div>
     </div>

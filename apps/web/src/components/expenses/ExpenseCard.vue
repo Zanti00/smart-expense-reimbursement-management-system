@@ -119,7 +119,7 @@ const canDelete = computed(() => canDeleteReceipt(props.expense));
       <!-- Action Buttons -->
       <div class="flex gap-2">
         <button
-          class="btn btn-cta flex-1"
+          class="btn btn-primary flex-1"
           @click.stop="$emit('view', expense)"
         >
           <Eye class="w-3.5 h-3.5" /> View

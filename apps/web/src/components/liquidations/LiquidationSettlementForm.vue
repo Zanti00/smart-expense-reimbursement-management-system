@@ -272,7 +272,7 @@ function attachmentFileSize(file) {
 
   <div
     v-else-if="submitted"
-    class="flex flex-col items-center gap-6 p-8 text-center border-t-2 card border-t-emerald-600 sm:p-12"
+    class="flex flex-col items-center gap-6 p-8 text-center card sm:p-12"
   >
     <CheckCircle class="w-12 h-12 text-emerald-600" />
     <h3 class="text-lg font-semibold text-primary">
@@ -288,7 +288,7 @@ function attachmentFileSize(file) {
 
   <div
     v-else
-    class="flex flex-col gap-6 p-4 border-t-2 shadow-sm card border-t-primary sm:p-6"
+    class="flex flex-col gap-6 p-4 shadow-sm card sm:p-6"
   >
     <div
       class="flex flex-col gap-3 pb-4 border-b border-slate-100 sm:flex-row sm:items-start sm:justify-between"
@@ -409,14 +409,15 @@ function attachmentFileSize(file) {
 
       <div class="flex items-center justify-between">
         <label class="input-label !mb-0">Report Letter</label>
-        <button
+        <BaseButton
           v-if="!reportAttachment && !isFormDisabled"
-          class="btn btn-cta min-h-[36px] text-xs px-4"
+          variant="primary"
+          size="sm"
           type="button"
           @click="reportAttachmentInput?.click()"
         >
           Browse
-        </button>
+        </BaseButton>
       </div>
 
       <div v-if="reportAttachment" class="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-3">
@@ -550,16 +551,16 @@ function attachmentFileSize(file) {
           </p>
           <p class="mt-1 text-[11px] text-slate-400">Shows as optional step 9 in the roadmap above. Click below to create a reimbursement linked to this advance.</p>
         </div>
-        <button
-          class="btn btn-cta min-h-[42px] w-full shrink-0 sm:w-fit"
+        <BaseButton
+          variant="primary"
+          class="min-h-[42px] w-full shrink-0 sm:w-fit"
           type="button"
           :disabled="isFormDisabled"
-          :class="{ 'opacity-50 cursor-not-allowed': isFormDisabled }"
           @click="!isFormDisabled && $emit('forward-overpayment')"
         >
           <Upload class="w-4 h-4" />
           File Reimbursement
-        </button>
+        </BaseButton>
       </div>
     </section>
 
@@ -577,7 +578,7 @@ function attachmentFileSize(file) {
 
       <BaseButton
         id="submit-liquidation-btn"
-        variant="cta"
+        variant="primary"
         class="min-h-[42px] w-full sm:w-fit"
         :disabled="
           isFormDisabled ||

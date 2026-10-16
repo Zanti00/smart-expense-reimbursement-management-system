@@ -1,9 +1,11 @@
 <script setup>
-import { ref, watch, onUnmounted } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
+import { Button } from '@/components/ui/button'
+import { Loader2 } from 'lucide-vue-next'
 
 const props = defineProps({
-  variant: { type: String, default: 'primary' }, // primary | secondary | ghost | danger
-  size: { type: String, default: 'md' },          // sm | md | icon
+  variant: { type: String, default: 'primary' }, // primary | secondary | ghost | danger | destructive | outline | cta | icon
+  size: { type: String, default: 'md' },          // sm | md | lg | icon
   loading: { type: Boolean, default: false },
   disabled: { type: Boolean, default: false },
   type: { type: String, default: 'button' },
@@ -13,20 +15,18 @@ const props = defineProps({
 
 const emit = defineEmits(['click'])
 
-const variantClass = {
-  primary: 'btn-primary',
-  secondary: 'btn-secondary',
-  ghost: 'btn-ghost',
-  danger: 'btn-danger',
-  icon: 'btn-icon',
-  cta: 'btn-cta'
-}
+// Map legacy variant names to shadcn Button variants
+const mappedVariant = computed(() => {
+  if (props.variant === 'danger') return 'destructive'
+  if (props.variant === 'cta') return 'primary'
+  return props.variant
+})
 
-const sizeClass = {
-  sm: 'btn-sm',
-  md: '',
-  icon: 'p-1.5'
-}
+// Map legacy sizes to shadcn Button sizes
+const mappedSize = computed(() => {
+  if (props.size === 'md') return 'default'
+  return props.size
+})
 
 const isHolding = ref(false)
 const progress = ref(0)
@@ -77,10 +77,12 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <button
+  <Button
     :type="type"
+    :variant="mappedVariant"
+    :size="mappedSize"
     :disabled="disabled || loading"
-    :class="[variantClass[variant], sizeClass[size], 'btn relative overflow-hidden transition-all duration-150']"
+    class="relative overflow-hidden"
     @mousedown="startHold"
     @mouseup="cancelHold"
     @mouseleave="cancelHold"
@@ -93,15 +95,13 @@ onUnmounted(() => {
       v-if="requireHold && isHolding" 
       class="absolute inset-0 bg-black/20 origin-left"
       :style="{ width: `${progress}%`, transition: 'none' }"
-    ></div>
+    />
     
     <div class="relative z-10 flex items-center justify-center gap-2">
-      <svg v-if="loading" class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
-      </svg>
+      <!-- Guardrail #6: Bifurcated Loading Spinner using Lucide Loader2 -->
+      <Loader2 v-if="loading" class="animate-spin h-4 w-4" />
       <slot />
       <span v-if="requireHold && !isHolding && !loading" class="text-[9px] opacity-70 ml-1">(HOLD)</span>
     </div>
-  </button>
+  </Button>
 </template>

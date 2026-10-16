@@ -81,12 +81,12 @@ async function deleteLimit(id) {
         </p>
       </div>
       <div v-if="activeTab === 'limits'">
-        <BaseButton id="add-policy-btn" variant="cta" @click="showAddLimit = true">
+        <BaseButton id="add-policy-btn" variant="primary" @click="showAddLimit = true">
           <Plus class="w-5 h-5 mr-1" /> NEW LIMIT RULE
         </BaseButton>
       </div>
       <div v-else-if="activeTab === 'penalties'">
-        <BaseButton id="add-penalty-btn" variant="cta" @click="showAddPenalty = true">
+        <BaseButton id="add-penalty-btn" variant="primary" @click="showAddPenalty = true">
           <Plus class="w-5 h-5 mr-1" /> NEW PENALTY RULE
         </BaseButton>
       </div>
@@ -125,7 +125,7 @@ async function deleteLimit(id) {
       <div v-if="activeTab === 'limits'" class="space-y-6">
         <!-- New Limit Form -->
         <Transition name="slide">
-          <div v-if="showAddLimit" class="card p-6 border-t-2 border-t-primary shadow-md">
+          <div v-if="showAddLimit" class="card p-6 shadow-md">
             <div class="flex items-center justify-between mb-6 border-b border-slate-50 pb-4">
               <h3 class="text-[11px] font-bold uppercase tracking-widest text-primary flex items-center gap-2">
                 <span class="w-1.5 h-1.5 bg-primary" /> New Compliance Limit
@@ -166,7 +166,7 @@ async function deleteLimit(id) {
               </div>
             </div>
             <div class="flex justify-end mt-4">
-              <BaseButton variant="cta" class="min-h-[42px] w-full sm:w-fit" :disabled="!newPolicy.limit || !newPolicy.effectiveDate" @click="submitLimit">
+              <BaseButton variant="primary" class="min-h-[42px] w-full sm:w-fit" :disabled="!newPolicy.limit || !newPolicy.effectiveDate" @click="submitLimit">
                 <Save class="w-3.5 h-3.5 mr-2" /> DEPLOY LIMIT RULE
               </BaseButton>
             </div>
@@ -229,7 +229,7 @@ async function deleteLimit(id) {
       <!-- TAB 2: PENALTIES -->
       <div v-if="activeTab === 'penalties'" class="space-y-6">
         <Transition name="slide">
-          <div v-if="showAddPenalty" class="card p-6 border-t-2 border-t-danger shadow-md">
+          <div v-if="showAddPenalty" class="card p-6 shadow-md">
             <div class="flex items-center justify-between mb-6 border-b border-slate-50 pb-4">
               <h3 class="text-[11px] font-bold uppercase tracking-widest text-danger flex items-center gap-2">
                 <span class="w-1.5 h-1.5 bg-danger" /> New Penalty Config

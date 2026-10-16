@@ -34,14 +34,6 @@ defineProps({
     </template>
     <template v-else>
       <div v-for="kpi in kpis" :key="kpi.label" class="kpi-card group">
-        <!-- Colored accent top strip -->
-        <div
-          :class="[
-            'absolute top-0 left-0 right-0 h-0.5 rounded-t-xl',
-            kpi.accent,
-          ]"
-        ></div>
-
         <div class="flex items-center justify-between mb-4">
           <span class="text-xs text-slate-400">
             {{ kpi.sub }}

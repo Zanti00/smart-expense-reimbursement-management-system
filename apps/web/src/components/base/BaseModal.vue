@@ -1,5 +1,7 @@
 <script setup>
-import { onMounted, onUnmounted } from "vue";
+import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { DialogTitle, DialogDescription, VisuallyHidden } from 'radix-vue'
+import { cn } from '@/utils/cn'
 
 const props = defineProps({
   isOpen: {
@@ -17,52 +19,41 @@ const props = defineProps({
   contentClass: {
     type: String,
     default: "",
+  },
+  title: {
+    type: String,
+    default: "Modal Window",
+  },
+  description: {
+    type: String,
+    default: "Modal Window Content",
   }
-});
+})
 
-const emit = defineEmits(["close"]);
+const emit = defineEmits(["close"])
 
-function handleKeydown(e) {
-  if (e.key === "Escape" && props.isOpen) {
-    emit("close");
+function onOpenChange(open) {
+  if (!open) {
+    emit("close")
   }
 }
-
-onMounted(() => {
-  document.addEventListener("keydown", handleKeydown);
-});
-
-onUnmounted(() => {
-  document.removeEventListener("keydown", handleKeydown);
-});
 </script>
 
 <template>
-  <Transition name="modal">
-    <div
-      v-if="isOpen"
-      :class="['fixed inset-0 flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-[1px] transition-opacity', zIndexClass]"
-      @click.self="$emit('close')"
+  <Dialog :open="isOpen" @update:open="onOpenChange">
+    <DialogContent
+      :show-close="false"
+      :class="cn('p-0 overflow-hidden rounded-2xl border-none shadow-2xl bg-white', maxWidthClass, contentClass)"
     >
-      <div
-        :class="['w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl transform transition-all', maxWidthClass, contentClass]"
-      >
-        <slot></slot>
-      </div>
-    </div>
-  </Transition>
+      <!-- VisuallyHidden fallback for Radix Dialog Accessibility -->
+      <VisuallyHidden as-child>
+        <DialogTitle>{{ title }}</DialogTitle>
+      </VisuallyHidden>
+      <VisuallyHidden as-child>
+        <DialogDescription>{{ description }}</DialogDescription>
+      </VisuallyHidden>
+
+      <slot />
+    </DialogContent>
+  </Dialog>
 </template>
-
-<style scoped>
-.modal-enter-active { transition: opacity 0.2s ease-out; }
-.modal-leave-active { transition: opacity 0.15s ease-in; }
-.modal-enter-from, .modal-leave-to { opacity: 0; }
-
-.modal-enter-active > div {
-  animation: modal-pop 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-}
-@keyframes modal-pop {
-  from { transform: scale(0.95) translateY(8px); opacity: 0; }
-  to   { transform: scale(1) translateY(0); opacity: 1; }
-}
-</style>

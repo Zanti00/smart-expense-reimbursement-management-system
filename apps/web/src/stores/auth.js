@@ -21,6 +21,18 @@ export function resolveAuthModuleUrl(path = "") {
       : cleanPath;
   }
 
+  // If accessed from a remote hostname (such as Cloudflare Tunnel or port-forwarded domain)
+  // but rawBase is configured with localhost/127.0.0.1, dynamically adapt to current origin
+  if (
+    typeof window !== "undefined" &&
+    window.location?.hostname &&
+    window.location.hostname !== "localhost" &&
+    window.location.hostname !== "127.0.0.1" &&
+    (rawBase.includes("localhost") || rawBase.includes("127.0.0.1"))
+  ) {
+    return `${window.location.origin}${cleanPath}`;
+  }
+
   // If base starts with http:// or https://
   if (rawBase.startsWith("http://") || rawBase.startsWith("https://")) {
     const cleanBase = rawBase.replace(/\/+$/, "");

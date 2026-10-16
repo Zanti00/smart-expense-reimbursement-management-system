@@ -10,16 +10,6 @@ defineProps({
 
 <template>
   <div class="kpi-card group relative">
-    <!-- Colored accent top strip -->
-    <div
-      v-if="kpi.accent"
-      :class="[
-        'absolute top-0 left-0 right-0 h-0.5 rounded-t-xl',
-        kpi.accent,
-      ]"
-    ></div>
-    <div v-else class="absolute top-0 left-0 right-0 h-0.5 rounded-t-xl bg-slate-200 animate-pulse"></div>
-
     <div class="flex items-center justify-between mb-4">
       <span
         v-if="kpi.sub"

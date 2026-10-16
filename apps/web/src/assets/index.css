@@ -13,6 +13,46 @@
 :root {
   --font-primary: "Poppins", "Montserrat", "Open Sans", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* ONE UI Canonical Semantic Color Tokens */
+  --background: #F8F9FA;
+  --foreground: #1E293B;
+
+  --card: #FFFFFF;
+  --card-foreground: #1E293B;
+
+  --popover: #FFFFFF;
+  --popover-foreground: #1E293B;
+
+  --primary: #252578;
+  --primary-foreground: #FFFFFF;
+
+  --secondary: #2E85D8;
+  --secondary-foreground: #FFFFFF;
+
+  --brand-deep: #3A3A85;
+  --brand-deep-border: #4E4E91;
+
+  --muted: #F1F5F9;
+  --muted-foreground: #8D8B8F;
+
+  --accent: #EFF6FF;
+  --accent-foreground: #252578;
+
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+
+  --success: #10B981;
+  --success-foreground: #FFFFFF;
+
+  --warning: #F59E0B;
+  --warning-foreground: #FFFFFF;
+
+  --border: #CBD5E1;
+  --input: #E2E8F0;
+  --ring: #2E85D8;
+
+  --radius: 0.5rem;
 }
 
 @layer base {
@@ -139,16 +179,20 @@
       0 0 0 4px rgba(46, 133, 216, 0.3);
   }
   .btn-primary {
-    @apply text-white shadow-sm hover:shadow-xl hover:scale-[1.01] active:scale-[0.99];
+    @apply text-white shadow-sm hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] px-5 py-2.5 text-sm font-bold;
     background-color: #252578;
   }
   .btn-primary:hover {
     background-color: #2f2f7e;
   }
   .btn-cta {
-    @apply bg-accent text-white border border-white/10 shadow-md px-5 py-2.5 text-sm font-bold
-           hover:bg-accent-600 hover:shadow-xl hover:scale-[1.01]
-           active:scale-[0.99] active:bg-accent-700 transition-all duration-200 ease-out;
+    @apply text-white border border-white/10 shadow-md px-5 py-2.5 text-sm font-bold
+           hover:shadow-xl hover:scale-[1.01]
+           active:scale-[0.99] transition-all duration-200 ease-out;
+    background-color: #252578;
+  }
+  .btn-cta:hover {
+    background-color: #2f2f7e;
   }
   .btn-secondary {
     @apply bg-white/90 text-primary border border-black/5 shadow-sm px-4 py-2 hover:bg-accent-50 hover:text-accent-700 hover:border-accent/20 hover:scale-[1.01] active:scale-[0.99];
@@ -213,7 +257,7 @@
     font-family: var(--font-primary);
     @apply flex items-center gap-3 mx-2 px-3 py-3 text-sm font-medium
            text-white/70 border border-transparent rounded-md
-           hover:bg-white/10 hover:text-white hover:border-white/10 hover:scale-[1.01] transition-all duration-200 ease-out;
+           hover:bg-white/10 hover:text-white hover:border-white/10;
   }
   .sidebar-link.active {
     @apply bg-white/10 text-white border-white/10 shadow-sm;

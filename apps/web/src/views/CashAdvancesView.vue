@@ -9,6 +9,7 @@ import DeleteConfirmModal from "@/components/base/DeleteConfirmModal.vue";
 
 import BaseKpiGrid from "@/components/base/BaseKpiGrid.vue";
 import BaseUtilityToolbar from "@/components/base/BaseUtilityToolbar.vue";
+import BaseButton from "@/components/base/BaseButton.vue";
 import CashAdvanceTable from "@/components/cash-advances/CashAdvanceTable.vue";
 import CashAdvanceDetailsModal from "@/components/cash-advances/CashAdvanceDetailsModal.vue";
 import { Plus, Wallet, Activity, ShieldCheck, X } from "lucide-vue-next";
@@ -212,14 +213,15 @@ async function confirmDelete(password) {
       :statuses="statusTabs"
     >
       <template #actions>
-        <button
+        <BaseButton
           id="request-advance-btn"
-          class="btn btn-cta min-h-[42px] w-full sm:w-fit"
+          variant="primary"
+          class="min-h-[42px] px-5 w-full sm:w-fit font-bold whitespace-nowrap"
           @click="$router.push('/cash-advances/new')"
         >
           <Plus class="w-4 h-4" />
           New Request
-        </button>
+        </BaseButton>
       </template>
     </BaseUtilityToolbar>
 
