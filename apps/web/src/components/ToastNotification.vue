@@ -6,8 +6,8 @@
         :key="toast.id"
         class="toast-item pointer-events-auto flex items-start gap-3 p-4 rounded-xl bg-white border border-slate-200/80 shadow-lg text-sm min-w-[300px] max-w-md transform transition-all duration-200 ease-out border-l-4 font-sans"
         :class="getBorderClass(toast.type)"
-        @mouseenter="pauseTimer(toast.id)"
-        @mouseleave="resumeTimer(toast.id)"
+        @mouseenter="pauseToast(toast.id)"
+        @mouseleave="resumeToast(toast.id)"
       >
         <!-- Circular status icon badge per Section VI.8 -->
         <div 
@@ -45,15 +45,7 @@
 import { AlertCircle, AlertTriangle, CheckCircle, Info, X } from 'lucide-vue-next'
 import { useToast } from '@/composables/useToast'
 
-const { toasts, removeToast } = useToast()
-
-function pauseTimer(id) {
-  // Optional hover pause hook
-}
-
-function resumeTimer(id) {
-  // Optional hover resume hook
-}
+const { toasts, removeToast, pauseToast, resumeToast } = useToast()
 
 function getBorderClass(type) {
   switch (type) {
@@ -115,6 +107,6 @@ function getIcon(type) {
 }
 .toast-leave-to {
   opacity: 0;
-  transform: scale(0.95);
+  transform: translateX(30px) scale(0.95);
 }
 </style>

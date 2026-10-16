@@ -2,6 +2,8 @@
 import { ref, watch } from 'vue';
 import { Trash2, Eye, EyeOff } from 'lucide-vue-next';
 import { useAuthStore } from "@/stores/auth";
+import BaseModal from "./BaseModal.vue";
+import BaseButton from "./BaseButton.vue";
 
 const props = defineProps({
   modelValue: {
@@ -43,75 +45,80 @@ function close() {
 </script>
 
 <template>
-  <Transition name="modal">
-    <div
-      v-if="modelValue"
-      class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-[1px] flex items-center justify-center p-4"
-    >
-      <div class="card w-full max-w-sm shadow-2xl overflow-hidden">
+  <BaseModal :is-open="modelValue" @close="close" max-width-class="max-w-sm">
+    <div class="p-6">
+      <!-- Centered Header per Section VI.5 -->
+      <div class="flex flex-col items-center text-center gap-4">
         <div
-          class="px-6 py-4 flex items-center gap-3 border-b border-red-100 bg-red-50"
+          class="w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0 bg-red-50 text-red-600 border border-red-200"
         >
-          <div class="w-9 h-9 rounded-xl bg-red-100 flex items-center justify-center">
-            <Trash2 class="w-4 h-4 text-danger" />
-          </div>
-          <div>
-            <h3 class="text-sm font-semibold text-slate-800">
-              {{ title }}
-            </h3>
-            <p class="text-xs text-slate-400 mt-0.5">
-              {{ message }}
-            </p>
-          </div>
+          <Trash2 class="w-7 h-7" />
         </div>
-        <div class="p-6 flex flex-col gap-4">
-          <p class="text-sm text-slate-600">
-            Please enter your password to confirm this action.
+        <div>
+          <h3 class="font-sans text-xl font-bold text-slate-800">
+            {{ title }}
+          </h3>
+          <p class="font-sans text-sm text-slate-500 mt-2 leading-relaxed">
+            {{ message }}
           </p>
-          <input
-            type="text"
-            :value="auth.user?.email"
-            autocomplete="username"
-            tabindex="-1"
-            aria-hidden="true"
-            class="sr-only"
-          />
-          <div class="input-wrapper">
-            <label class="input-label">Password</label>
-            <div class="relative">
-              <input
-                :type="showPassword ? 'text' : 'password'"
-                class="input w-full pr-10"
-                v-model="password"
-                placeholder="Enter your password"
-                autocomplete="current-password"
-                @keyup.enter="handleConfirm"
-              />
-              <button
-                type="button"
-                @click="showPassword = !showPassword"
-                class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                tabindex="-1"
-              >
-                <Eye v-if="!showPassword" class="w-4 h-4" />
-                <EyeOff v-else class="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-          <div class="flex gap-2.5">
-            <button class="btn btn-secondary flex-1 min-h-10 px-4" @click="close">
-              Cancel
-            </button>
+        </div>
+      </div>
+
+      <!-- High-Security Action: Password Confirmation (Section VI.5) -->
+      <div class="mt-6">
+        <p class="text-sm text-slate-600 mb-4 text-center">
+          Please enter your password to confirm this action.
+        </p>
+        <input
+          type="text"
+          :value="auth.user?.email"
+          autocomplete="username"
+          tabindex="-1"
+          aria-hidden="true"
+          class="sr-only"
+        />
+        <div class="input-wrapper">
+          <label class="input-label">Password</label>
+          <div class="relative">
+            <input
+              :type="showPassword ? 'text' : 'password'"
+              class="input w-full pr-10"
+              v-model="password"
+              placeholder="Enter your password"
+              autocomplete="current-password"
+              @keyup.enter="handleConfirm"
+            />
             <button
-              class="btn btn-danger flex-1 min-h-10 px-4"
-              :disabled="password.length === 0"
-              @click="handleConfirm"
+              type="button"
+              @click="showPassword = !showPassword"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+              tabindex="-1"
             >
-              Confirm Delete
+              <Eye v-if="!showPassword" class="w-4 h-4" />
+              <EyeOff v-else class="w-4 h-4" />
             </button>
           </div>
         </div>
       </div>
+
+      <!-- Centered Action Footer per Section VI.5 -->
+      <div class="flex gap-3 mt-6">
+        <BaseButton
+          variant="secondary"
+          class="flex-1 min-h-10"
+          @click="close"
+        >
+          Cancel
+        </BaseButton>
+        <BaseButton
+          variant="destructive"
+          class="flex-1 min-h-10"
+          :disabled="password.length === 0"
+          @click="handleConfirm"
+        >
+          Confirm Delete
+        </BaseButton>
+      </div>
     </div>
-  </Transition>
+  </BaseModal>
 </template>

@@ -33,6 +33,12 @@
   --brand-deep: #3A3A85;
   --brand-deep-border: #4E4E91;
 
+  --primary-hover: #2F2F8E;
+  --primary-pressed: #1E1E66;
+
+  --avatar: #A7A7C8;
+  --eyebrow: #8086A3;
+
   --muted: #F1F5F9;
   --muted-foreground: #8D8B8F;
 
@@ -47,6 +53,8 @@
 
   --warning: #F59E0B;
   --warning-foreground: #FFFFFF;
+  --warning-banner: #FFFDF0;
+  --warning-icon: #D97706;
 
   --border: #CBD5E1;
   --input: #E2E8F0;
@@ -98,7 +106,7 @@
   /* Page title — large heading */
   .text-page-title {
     font-family: var(--font-primary);
-    @apply text-2xl font-bold leading-tight text-slate-800;
+    @apply text-2xl font-bold leading-tight text-slate-700;
   }
 
   /* Section heading — card/panel titles */
@@ -156,7 +164,7 @@
   }
   .input {
     font-family: var(--font-primary);
-    @apply w-full border border-black/10 rounded-md px-3.5 py-2.5 text-sm outline-none bg-white/90 shadow-sm;
+    @apply w-full border border-slate-200 rounded-md px-3.5 py-2.5 text-sm outline-none bg-white shadow-sm;
     @apply placeholder:text-slate-300 focus:bg-white;
   }
   .input:focus {
@@ -179,29 +187,45 @@
       0 0 0 4px rgba(46, 133, 216, 0.3);
   }
   .btn-primary {
-    @apply text-white shadow-sm hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] px-5 py-2.5 text-sm font-bold;
+    @apply text-white shadow-sm hover:shadow-xl hover:scale-[1.01] active:scale-[0.98] px-5 py-2.5 text-sm font-bold;
     background-color: #252578;
   }
   .btn-primary:hover {
-    background-color: #2f2f7e;
+    background-color: #2F2F8E;
+  }
+  .btn-primary:active {
+    background-color: #1E1E66;
   }
   .btn-cta {
     @apply text-white border border-white/10 shadow-md px-5 py-2.5 text-sm font-bold
            hover:shadow-xl hover:scale-[1.01]
-           active:scale-[0.99] transition-all duration-200 ease-out;
+           active:scale-[0.98] transition-all duration-200 ease-out;
     background-color: #252578;
   }
   .btn-cta:hover {
-    background-color: #2f2f7e;
+    background-color: #2F2F8E;
+  }
+  .btn-cta:active {
+    background-color: #1E1E66;
   }
   .btn-secondary {
-    @apply bg-white/90 text-primary border border-black/5 shadow-sm px-4 py-2 hover:bg-accent-50 hover:text-accent-700 hover:border-accent/20 hover:scale-[1.01] active:scale-[0.99];
+    @apply bg-white text-slate-700 border shadow-sm px-4 py-2
+           hover:bg-slate-50 hover:border-slate-300
+           active:bg-slate-100 active:scale-[0.98]
+           transition-all duration-200 ease-out;
   }
   .btn-ghost {
     @apply text-slate-500 hover:bg-primary/5 hover:text-primary;
   }
   .btn-danger {
-    @apply bg-danger text-white shadow-sm hover:bg-red-700 hover:scale-[1.01] active:scale-[0.99];
+    @apply text-white shadow-sm hover:scale-[1.01] active:scale-[0.98] px-5 py-2.5 text-sm font-bold;
+    background-color: #EF4444;
+  }
+  .btn-danger:hover {
+    background-color: #DC2626;
+  }
+  .btn-danger:active {
+    background-color: #B91C1C;
   }
   .btn-sm {
     @apply px-2.5 py-1.5 text-[10px];
@@ -214,7 +238,7 @@
   .badge {
     font-family: var(--font-primary);
     letter-spacing: 0.02em;
-    @apply inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-semibold uppercase bg-slate-50 border border-black/5 text-slate-700 rounded-md;
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-semibold bg-slate-50 border border-black/5 text-slate-700 rounded-md;
   }
 
   /* ---- Table ---- */
@@ -240,11 +264,14 @@
 
   /* ---- KPI Module ---- */
   .kpi-card {
-    @apply card p-5 flex flex-col gap-0.5 relative overflow-hidden transition-all duration-200 ease-out;
+    @apply bg-white border-0 rounded-card shadow-sm p-5 flex flex-col gap-0.5 relative overflow-hidden transition-all duration-200 ease-out;
+  }
+  .kpi-card:hover {
+    @apply shadow-md -translate-y-1;
   }
   .kpi-value {
     font-family: var(--font-primary);
-    @apply text-2xl font-bold text-primary;
+    @apply text-2xl font-bold text-slate-700;
   }
   .kpi-label {
     font-family: var(--font-primary);
@@ -260,7 +287,7 @@
            hover:bg-white/10 hover:text-white hover:border-white/10;
   }
   .sidebar-link.active {
-    @apply bg-white/10 text-white border-white/10 shadow-sm;
+    @apply bg-brand-deep text-white border-brand-deep-border shadow-sm font-bold;
   }
 
   .section-label {

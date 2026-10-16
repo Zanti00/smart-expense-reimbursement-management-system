@@ -8,13 +8,13 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: 'bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 active:scale-[0.98]',
-        secondary: 'bg-white text-slate-800 border border-slate-200 shadow-sm hover:bg-slate-100 active:scale-[0.98]',
-        destructive: 'bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90 active:scale-[0.98]',
-        outline: 'border border-slate-300 bg-white text-slate-800 hover:bg-slate-50 active:scale-[0.98]',
+        primary: 'bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover active:bg-primary-pressed active:scale-[0.98]',
+        secondary: 'bg-white text-slate-800 border shadow-sm hover:bg-slate-50 hover:border-slate-300 active:scale-[0.98]',
+        destructive: 'bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive-hover active:bg-destructive-pressed active:scale-[0.98]',
+        outline: 'border bg-white text-slate-800 hover:bg-slate-50 hover:border-slate-300 active:scale-[0.98]',
         ghost: 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
         link: 'text-secondary underline-offset-4 hover:underline',
-        cta: 'bg-primary text-primary-foreground shadow-md hover:bg-primary/90 active:scale-[0.98]',
+        cta: 'bg-primary text-primary-foreground shadow-md hover:bg-primary-hover active:bg-primary-pressed active:scale-[0.98]',
       },
       size: {
         default: 'h-9 px-4 py-2',

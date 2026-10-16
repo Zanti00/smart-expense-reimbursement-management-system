@@ -105,12 +105,15 @@ async function logout() {
             sidebarOpen ? 'h-9 w-auto max-w-[140px]' : 'h-8 w-8',
           ]"
         />
-        <div v-if="sidebarOpen" class="flex flex-col">
+        <div v-if="sidebarOpen" class="flex flex-col leading-tight">
           <span class="font-sans font-bold text-xs text-white uppercase tracking-wider">
             SMART EXPENSE
           </span>
-          <span class="font-sans font-normal text-[9px] text-white/70 uppercase leading-tight tracking-normal">
-            REIMBURSEMENT MANAGEMENT SYSTEM
+          <span class="font-sans font-bold text-xs text-white uppercase tracking-wider">
+            REIMBURSEMENT
+          </span>
+          <span class="font-sans font-normal text-[9px] text-white/70 uppercase tracking-normal mt-0.5">
+            MANAGEMENT SYSTEM
           </span>
         </div>
       </div>
@@ -133,10 +136,10 @@ async function logout() {
             v-else
             :to="link.to"
             :class="[
-              'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-sans transition-none outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 border-0',
+              'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-sans transition-none outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 border border-transparent',
               isActive(link.to)
-                ? 'bg-brand-deep text-white font-semibold shadow-sm'
-                : 'text-white/70 hover:bg-white/10 hover:text-white',
+                ? 'bg-brand-deep text-white font-semibold shadow-sm border-brand-deep-border'
+                : 'text-white/60 hover:bg-white/10 hover:text-white',
               !sidebarOpen ? 'justify-center px-0' : '',
             ]"
             :title="!sidebarOpen ? link.name : undefined"
@@ -146,7 +149,7 @@ async function logout() {
               :is="link.icon"
               :class="[
                 'w-4 h-4 flex-shrink-0',
-                isActive(link.to) ? 'text-white' : 'text-slate-300',
+                isActive(link.to) ? 'text-white' : 'text-white/60',
               ]"
             />
             <span
@@ -199,7 +202,7 @@ async function logout() {
 
           <div class="h-6 w-px bg-slate-200 hidden sm:block" />
 
-          <h1 class="font-sans font-bold text-lg text-slate-800 tracking-tight">
+          <h1 class="font-sans font-bold text-lg text-slate-700 tracking-tight">
             {{ pageTitle }}
           </h1>
         </div>
@@ -231,12 +234,12 @@ async function logout() {
                 class="flex items-center gap-2.5 p-1.5 pr-2.5 rounded-xl cursor-pointer hover:bg-slate-100/80 transition-colors"
               >
                 <div
-                  class="w-8 h-8 rounded-full bg-[#A7A7C8] flex items-center justify-center text-white text-xs font-bold font-sans shadow-sm"
+                  class="w-8 h-8 rounded-full bg-avatar flex items-center justify-center text-white text-xs font-bold font-sans shadow-sm"
                 >
                   {{ userInitials }}
                 </div>
                 <div class="hidden md:flex flex-col text-left">
-                  <span class="text-xs font-semibold font-sans text-slate-800 leading-tight">
+                  <span class="text-xs font-semibold font-sans text-slate-700 leading-tight">
                     {{ auth.user?.name || "User Profile" }}
                   </span>
                   <span class="text-[10px] font-normal font-sans text-slate-500 leading-tight">
@@ -248,7 +251,7 @@ async function logout() {
 
             <DropdownMenuContent align="end" class="w-52">
               <div class="px-3 py-2 border-b border-slate-100">
-                <p class="text-xs font-bold text-slate-800 truncate font-sans">
+                <p class="text-xs font-bold text-slate-700 truncate font-sans">
                   {{ auth.user?.name }}
                 </p>
                 <p class="text-[11px] text-slate-500 truncate font-sans">

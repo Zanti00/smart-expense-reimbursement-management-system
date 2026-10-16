@@ -9,7 +9,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        border: '#E2E8F0',
+        border: '#CBD5E1',
         input: '#E2E8F0',
         ring: '#2E85D8',
         background: '#F8F9FA',
@@ -17,6 +17,8 @@ export default {
         primary: {
           DEFAULT: '#252578',
           foreground: '#FFFFFF',
+          hover: '#2F2F8E',
+          pressed: '#1E1E66',
           50: '#F4F5FF',
           100: '#E6E8FF',
           200: '#C8CCFF',
@@ -49,6 +51,8 @@ export default {
         destructive: {
           DEFAULT: '#EF4444',
           foreground: '#FFFFFF',
+          hover: '#DC2626',
+          pressed: '#B91C1C',
         },
         success: {
           DEFAULT: '#10B981',
@@ -57,6 +61,8 @@ export default {
         warning: {
           DEFAULT: '#F59E0B',
           foreground: '#FFFFFF',
+          banner: '#FFFDF0',
+          icon: '#D97706',
         },
         muted: {
           DEFAULT: '#F1F5F9',
@@ -96,6 +102,8 @@ export default {
           900: '#020617',
         },
         danger: '#EF4444',
+        avatar: '#A7A7C8',
+        eyebrow: '#8086A3',
       },
       borderRadius: {
         lg: 'var(--radius)',

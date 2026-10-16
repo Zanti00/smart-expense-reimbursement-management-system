@@ -3,8 +3,8 @@
 **Project:** Smart Expense & Reimbursement Management System (SERMS)  
 **Client / Partner:** Science Biotech Specialties Inc. (SBSI) — [https://sbsi.com.ph/about-us/](https://sbsi.com.ph/about-us/)  
 **Academic Context:** 3rd & 4th Year Capstone Project (Capstone 1: Ended July 2026 · Capstone 2: September–December 2026)  
-**Date:** 2026-10-16  
-**Version:** 1.6.0  
+**Date:** 2026-10-17  
+**Version:** 1.7.0  
 **Owner:** SERMS Engineering Team  
 **Status:** Active  
 **Last reconciled:** 2026-10-16 (Refactored component design system to shadcn-vue and Radix Vue primitives)  
@@ -21,6 +21,23 @@ All notable changes, architectural decisions, and documentation updates for the 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 > **Note for AI Subagents & Developers:** Always consult this file when you need chronological historical context, previous architectural pivots, or design rationale before modifying codebase features or documentation guides.
+
+## [1.7.0] - 2026-10-17
+
+### Added
+- **ONE UI Design System Specification:** Placed `documentations/DESIGN.md` — the canonical ONE UI Design System & Frontend Guardrails specification covering logo/brand marks, typography (Poppins/Montserrat), canonical colour palette, 8px spacing grid, elevation/shadow levels, component standards (sidebar, header, metric cards, modals, forms, selects, toasts, banners, tables, badges), interaction state matrix, and loading state bifurcation.
+- **Specialized Contextual Color Tokens:** Added `primary.hover` (`#2F2F8E`), `primary.pressed` (`#1E1E66`), `destructive.hover` (`#DC2626`), `destructive.pressed` (`#B91C1C`), `warning.banner` (`#FFFDF0`), `warning.icon` (`#D97706`), `avatar` (`#A7A7C8`), and `eyebrow` (`#8086A3`) to `tailwind.config.js` and `index.css` `:root` variables per Section III of DESIGN.md.
+
+### Changed
+- **Toast Hover-Pause (Section VI.8):** Implemented pause-on-hover timer logic in `useToast.js` — timer pauses when cursor enters toast, resumes on leave. Changed default auto-dismiss duration from 5000ms to 4000ms per spec. Added slide-out-right leave animation to `ToastNotification.vue`.
+- **Button Interaction States (Section VII):** Updated `Button.vue` (shadcn) — primary uses `hover:bg-primary-hover` / `active:bg-primary-pressed`, destructive uses `hover:bg-destructive-hover` / `active:bg-destructive-pressed`, secondary/outline use default border (`#CBD5E1`) with `hover:border-slate-300` (`#94A3B8`). Updated `.btn-primary`, `.btn-cta`, `.btn-danger`, `.btn-secondary` CSS utility classes with exact spec hover/pressed colours and `scale(0.98)`.
+- **DeleteConfirmModal (Section VI.5):** Refactored to centered header pattern with circular status icon badge on top, BaseButton components replacing raw `<button>` elements, and shadcn Dialog wrapper.
+- **BaseWarningBanner (Section VI.9):** Warning type now uses `bg-warning-banner` (`#FFFDF0`), `border-amber-300` (`#FCD34D`), and `text-warning-icon` (`#D97706`) per persistent banner spec.
+- **KPI Metric Cards (Section VI.4):** Made borderless with pure white surface (`bg-white`), added `shadow-md` + `-translate-y-1` hover lift. Metric numbers changed to Dark Slate (`#1E293B`), category labels to eyebrow colour (`#8086A3`).
+- **AppLayout (Section VI.1–VI.2):** Avatar uses `bg-avatar` token. Active nav links use `border-brand-deep-border`. Default nav text/icons changed to `text-white/60` per `rgba(255,255,255,0.6)`. Page title and user display name use `text-slate-700` (`#1E293B`).
+- **Badge Class (Section VI.11):** Removed `uppercase` from `.badge` CSS class — spec mandates Title Case badge labels.
+- **Input Field (Section VI.6):** Default border changed from `border-black/10` to `border-slate-200` (`#E2E8F0`), background from `bg-white/90` to pure `bg-white` per Section III surface spec.
+- **Tailwind Border Token:** Fixed `border` colour from `#E2E8F0` to `#CBD5E1` to match CSS `--border` variable and spec Section III.
 
 ## [1.6.0] - 2026-10-16
 
