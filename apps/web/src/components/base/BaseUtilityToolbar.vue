@@ -160,7 +160,7 @@ onBeforeUnmount(() => document.removeEventListener("click", onDocumentClick));
               v-for="category in categories"
               :key="`category-${category}`"
               class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs font-semibold transition-colors"
-              :class="categoryValue === category ? 'bg-accent text-white' : 'text-slate-600 hover:bg-accent-50 hover:text-accent'"
+              :class="categoryValue === category ? 'bg-primary text-white' : 'text-slate-600 hover:bg-accent-50 hover:text-accent'"
               type="button"
               @click="chooseCategory(category)"
             >

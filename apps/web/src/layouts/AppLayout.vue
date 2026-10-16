@@ -8,9 +8,16 @@ import { buildNavLinks } from "@/composables/useNavLinks";
 import NotificationPanel from "@/components/base/NotificationPanel.vue";
 import ToastNotification from "@/components/ToastNotification.vue";
 import DuplicateReceiptModal from "@/components/expenses/DuplicateReceiptModal.vue";
-import sbsiLogo from "@/assets/sbsi_logo.png";
+const sbsiLogo = `${import.meta.env.BASE_URL}sbsi-logo.webp`;
 import sbsiLogoShort from "@/assets/sbsi_logo_short.png";
-import { Bell, LogOut, Menu, ChevronRight, Search } from "lucide-vue-next";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { Bell, LogOut, PanelLeft, User } from "lucide-vue-next";
 
 const auth = useAuthStore();
 const notif = useNotificationStore();
@@ -23,10 +30,9 @@ onMounted(() => {
     addToast({
       message: route.query.message,
       type: "success",
-      duration: 5000,
+      duration: 4000,
     });
 
-    // Clean up URL so it doesn't persist on refresh
     const query = { ...route.query };
     delete query.message;
     router.replace({ query });
@@ -43,22 +49,29 @@ const unreadCount = computed(() => notif.alerts.filter((a) => !a.read).length);
 
 const pageTitle = computed(() => route.meta?.title || "SERMS");
 
+const userInitials = computed(() => {
+  if (!auth.user?.name) return "US";
+  return auth.user.name
+    .split(" ")
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+});
+
 function isActive(path) {
   return route.path === path || route.path.startsWith(path + "/");
 }
 
 async function logout() {
   auth.logout();
-  // auth.logout() redirects to the capstone-auth-module's logout endpoint
-  // via window.location.href — no router.push needed
 }
 </script>
 
 <template>
   <div
-    class="flex h-screen overflow-hidden font-sans select-none bg-clinical text-slate-700"
+    class="flex h-screen overflow-hidden font-sans select-none bg-clinical text-slate-800"
   >
-    <!-- ======================== SIDEBAR ======================== -->
     <!-- Mobile overlay -->
     <Transition name="fade">
       <div
@@ -68,20 +81,20 @@ async function logout() {
       />
     </Transition>
 
-    <!-- ======================== SIDEBAR ======================== -->
+    <!-- ======================== SIDEBAR (Section VI.1) ======================== -->
     <aside
       :class="[
-        'flex flex-col z-30 transition-all duration-300 ease-out flex-shrink-0',
-        'fixed lg:relative inset-y-0 left-0 bg-primary',
-        sidebarOpen ? 'w-[240px]' : 'w-16',
+        'flex flex-col z-30 transition-[width,transform] duration-300 ease-out flex-shrink-0',
+        'fixed lg:relative inset-y-0 left-0 bg-primary select-none',
+        sidebarOpen ? 'w-[260px]' : 'w-[70px]',
         mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
       ]"
     >
-      <!-- Branding Module -->
+      <!-- Branding & Subsystem Lockup -->
       <div
         :class="[
           'flex items-center px-4 py-4 border-b border-white/10 min-h-[70px]',
-          sidebarOpen ? 'justify-start' : 'justify-center',
+          sidebarOpen ? 'justify-start gap-3' : 'justify-center',
         ]"
       >
         <img
@@ -89,22 +102,29 @@ async function logout() {
           alt="SBSI"
           :class="[
             'object-contain transition-all duration-300 ease-out',
-            sidebarOpen ? 'h-10 w-auto max-w-[190px]' : 'h-8 w-8',
+            sidebarOpen ? 'h-9 w-auto max-w-[140px]' : 'h-8 w-8',
           ]"
         />
+        <div v-if="sidebarOpen" class="flex flex-col">
+          <span class="font-sans font-bold text-xs text-white uppercase tracking-wider">
+            SMART EXPENSE
+          </span>
+          <span class="font-sans font-normal text-[9px] text-white/70 uppercase leading-tight tracking-normal">
+            REIMBURSEMENT MANAGEMENT SYSTEM
+          </span>
+        </div>
       </div>
 
-      <!-- Navigation -->
-      <nav class="flex-1 px-0 py-4 overflow-y-auto scrollbar-thin space-y-0.5">
+      <!-- Navigation Links -->
+      <nav class="flex-1 px-3 py-4 overflow-y-auto scrollbar-thin space-y-1">
         <template v-for="(link, i) in navLinks" :key="i">
-          <div v-if="link.divider" class="mx-4 my-4 border-t border-white/10" />
-          <div v-else-if="link.header" class="px-4 pt-3 pb-1">
+          <div v-if="link.divider" class="mx-2 my-3 border-t border-white/10" />
+          <div v-else-if="link.header" class="px-3 pt-3 pb-1">
             <Transition name="fade">
               <span
                 v-if="sidebarOpen"
-                class="text-[10px] font-heading font-bold uppercase text-white/45 flex items-center gap-2"
+                class="text-[10px] font-sans font-bold uppercase tracking-wider text-white/60 flex items-center gap-2"
               >
-                <div class="w-1.5 h-1.5 rounded-full bg-accent opacity-70" />
                 {{ link.header }}
               </span>
             </Transition>
@@ -112,7 +132,13 @@ async function logout() {
           <RouterLink
             v-else
             :to="link.to"
-            :class="['sidebar-link', isActive(link.to) ? 'active' : '']"
+            :class="[
+              'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-sans transition-none outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 border-0',
+              isActive(link.to)
+                ? 'bg-brand-deep text-white font-semibold shadow-sm'
+                : 'text-white/70 hover:bg-white/10 hover:text-white',
+              !sidebarOpen ? 'justify-center px-0' : '',
+            ]"
             :title="!sidebarOpen ? link.name : undefined"
             @click="mobileOpen = false"
           >
@@ -120,116 +146,137 @@ async function logout() {
               :is="link.icon"
               :class="[
                 'w-4 h-4 flex-shrink-0',
-                isActive(link.to) ? 'text-white' : 'text-slate-400',
+                isActive(link.to) ? 'text-white' : 'text-slate-300',
               ]"
             />
-            <Transition name="fade-text">
-              <span
-                v-if="sidebarOpen"
-                class="flex-1 text-sm font-semibold truncate"
-              >
-                {{ link.name }}
-              </span>
-            </Transition>
-            <Transition name="fade">
-              <ChevronRight
-                v-if="sidebarOpen && isActive(link.to)"
-                class="w-3 h-3 ml-auto text-white/60"
-              />
-            </Transition>
+            <span
+              v-if="sidebarOpen"
+              class="flex-1 truncate"
+            >
+              {{ link.name }}
+            </span>
           </RouterLink>
         </template>
       </nav>
 
-      <!-- Operator Status -->
-      <div class="p-4 border-t border-white/10 bg-black/10">
-        <div class="flex items-center gap-3">
-          <!-- <div
-            class="w-8 h-8 rounded-md border border-white/10 bg-white/10 flex items-center justify-center flex-shrink-0 text-white text-[10px] font-bold font-mono shadow-sm"
-          >
-            {{ auth.user?.avatar }}
-          </div> -->
-          <Transition name="fade">
-            <div v-if="sidebarOpen" class="flex-1 min-w-0">
-              <p class="text-xs font-bold text-white truncate font-heading">
-                {{ auth.user?.name }}
-              </p>
-              <div class="flex items-center gap-1.5 mt-0.5">
-                <div class="w-1.5 h-1.5 bg-success rounded-full" />
-                <p
-                  class="text-white/60 text-[10px] font-heading font-bold uppercase"
-                >
-                  {{ auth.user?.role }}
-                </p>
-              </div>
-            </div>
-          </Transition>
-          <button
+      <!-- Pinned Sidebar Footer: Logout Action -->
+      <div class="p-3 border-t border-white/10">
+        <button
+          type="button"
+          :class="[
+            'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-white hover:bg-white/10 transition-colors duration-150',
+            sidebarOpen ? 'justify-start' : 'justify-center px-0',
+          ]"
+          :title="!sidebarOpen ? 'Logout' : undefined"
+          @click="logout"
+        >
+          <LogOut class="w-4 h-4 text-white flex-shrink-0" />
+          <span
             v-if="sidebarOpen"
-            class="text-white/35 hover:text-white p-1.5 rounded-md hover:bg-white/10 flex-shrink-0 transition-all duration-200 ease-out"
-            title="Logout"
-            @click="logout"
+            class="text-sm font-sans font-bold text-white tracking-wide truncate"
           >
-            <LogOut class="w-3.5 h-3.5" />
-          </button>
-        </div>
+            Logout
+          </span>
+        </button>
       </div>
     </aside>
 
     <!-- ======================== MAIN AREA ======================== -->
     <div class="flex flex-col flex-1 min-w-0 overflow-hidden">
-      <!-- Console Header -->
+      <!-- Top Header Component (Section VI.2) -->
       <header
-        class="flex items-center gap-4 px-4 lg:px-6 py-3 bg-white/85 border-b border-black/5 shadow-sm backdrop-blur-md z-10 min-h-[70px]"
+        class="flex items-center justify-between px-4 lg:px-6 py-3 bg-white/90 border-b border-slate-100 shadow-sm backdrop-blur-md z-10 min-h-[70px]"
       >
-        <!-- Mobile Trigger -->
-        <button class="lg:hidden btn-icon" @click="mobileOpen = !mobileOpen">
-          <Menu class="w-5 h-5" />
-        </button>
-
-        <!-- Collapse toggle -->
-        <button
-          class="hidden lg:flex btn-icon !p-2"
-          :title="sidebarOpen ? 'Collapse' : 'Expand'"
-          @click="sidebarOpen = !sidebarOpen"
-        >
-          <Menu class="w-4 h-4" />
-        </button>
-
-        <div class="flex-1" />
-
-        <!-- Search -->
-        <!-- <div
-          class="items-center hidden w-56 gap-2 px-3 py-2 transition-all duration-200 border rounded-md shadow-sm md:flex bg-white/80 border-black/5 hover:border-accent/30 focus-within:border-accent/50 focus-within:bg-white"
-        >
-          <Search class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-          <input
-            placeholder="Search…"
-            class="flex-1 min-w-0 text-sm bg-transparent outline-none text-slate-600 placeholder-slate-400"
-            style="transition: none"
-          />
-        </div> -->
-
-        <!-- System Alerts -->
-        <!-- <button
-          id="notif-bell"
-          class="btn btn-secondary !p-2 relative"
-          @click="notifOpen = !notifOpen"
-        >
-          <Bell class="w-4 h-4" />
-          <span
-            v-if="unreadCount > 0"
-            class="absolute -top-0.5 -right-0.5 w-4 h-4 bg-danger text-white text-[9px] font-bold flex items-center justify-center rounded-full border-2 border-white shadow-sm"
+        <!-- Left Section: Sidebar Toggle & Page Title -->
+        <div class="flex items-center gap-4">
+          <button
+            class="p-2 text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition-colors"
+            title="Toggle Sidebar"
+            @click="sidebarOpen = !sidebarOpen; mobileOpen = !mobileOpen"
           >
-            {{ unreadCount }}
-          </span>
-        </button> -->
+            <PanelLeft class="w-5 h-5" />
+          </button>
+
+          <div class="h-6 w-px bg-slate-200 hidden sm:block" />
+
+          <h1 class="font-sans font-bold text-lg text-slate-800 tracking-tight">
+            {{ pageTitle }}
+          </h1>
+        </div>
+
+        <!-- Right Section: Utilities & User Dropdown -->
+        <div class="flex items-center gap-3">
+          <!-- Notification Bell -->
+          <button
+            id="notif-bell"
+            class="relative p-2 text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition-colors"
+            title="Notifications"
+            @click="notifOpen = !notifOpen"
+          >
+            <Bell class="w-5 h-5" />
+            <span
+              v-if="unreadCount > 0"
+              class="absolute top-1.5 right-1.5 w-4 h-4 bg-secondary text-white text-[9px] font-bold flex items-center justify-center rounded-full border-2 border-white shadow-sm"
+            >
+              {{ unreadCount }}
+            </span>
+          </button>
+
+          <div class="h-6 w-px bg-slate-200" />
+
+          <!-- User Profile Dropdown Trigger (Section VI.2) -->
+          <DropdownMenu>
+            <DropdownMenuTrigger as-child>
+              <div
+                class="flex items-center gap-2.5 p-1.5 pr-2.5 rounded-xl cursor-pointer hover:bg-slate-100/80 transition-colors"
+              >
+                <div
+                  class="w-8 h-8 rounded-full bg-[#A7A7C8] flex items-center justify-center text-white text-xs font-bold font-sans shadow-sm"
+                >
+                  {{ userInitials }}
+                </div>
+                <div class="hidden md:flex flex-col text-left">
+                  <span class="text-xs font-semibold font-sans text-slate-800 leading-tight">
+                    {{ auth.user?.name || "User Profile" }}
+                  </span>
+                  <span class="text-[10px] font-normal font-sans text-slate-500 leading-tight">
+                    {{ auth.user?.role || "Staff" }}
+                  </span>
+                </div>
+              </div>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent align="end" class="w-52">
+              <div class="px-3 py-2 border-b border-slate-100">
+                <p class="text-xs font-bold text-slate-800 truncate font-sans">
+                  {{ auth.user?.name }}
+                </p>
+                <p class="text-[11px] text-slate-500 truncate font-sans">
+                  {{ auth.user?.email || auth.user?.role }}
+                </p>
+              </div>
+
+              <DropdownMenuItem class="mt-1" @select="router.push('/profile')">
+                <User class="w-4 h-4 text-slate-500 mr-2" />
+                <span>My Profile</span>
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+
+              <DropdownMenuItem
+                class="text-red-600 hover:bg-red-50 focus:bg-red-50 focus:text-red-700"
+                @select="logout"
+              >
+                <LogOut class="w-4 h-4 text-red-500 mr-2" />
+                <span>Logout</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </header>
 
-      <!-- Active Workspace -->
-      <main
-        class="flex-1 p-6 overflow-y-auto scrollbar-thin animate-fade-in bg-clinical"
-      >
+      <!-- Active Workspace Canvas -->
+      <main class="flex-1 p-6 overflow-y-auto scrollbar-thin bg-clinical">
         <RouterView v-slot="{ Component, route: viewRoute }">
           <div :key="viewRoute.path" class="animate-fade-in">
             <component :is="Component" />
@@ -252,7 +299,7 @@ async function logout() {
 <style scoped>
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.1s linear;
+  transition: opacity 0.15s ease-out;
 }
 .fade-enter-from,
 .fade-leave-to {
@@ -270,18 +317,5 @@ async function logout() {
   to {
     opacity: 1;
   }
-}
-</style>
-
-<style scoped>
-.fade-text-enter-active,
-.fade-text-leave-active {
-  transition:
-    opacity 0.15s ease,
-    width 0.3s ease;
-}
-.fade-text-enter-from,
-.fade-text-leave-to {
-  opacity: 0;
 }
 </style>

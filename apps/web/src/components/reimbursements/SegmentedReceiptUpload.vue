@@ -242,7 +242,7 @@ function handleSubmit() {
       </button>
       <button
         type="button"
-        class="btn btn-cta min-h-[38px] text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+        class="btn btn-primary min-h-[38px] text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed"
         :disabled="!canSubmit"
         @click="handleSubmit"
       >

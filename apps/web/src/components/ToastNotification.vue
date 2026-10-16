@@ -1,28 +1,37 @@
 <template>
-  <div class="fixed top-4 right-4 z-[9999] pointer-events-none w-80 max-w-full sm:w-96">
+  <div class="fixed top-6 right-6 z-[1200] pointer-events-none w-80 max-w-full sm:w-96">
     <TransitionGroup name="toast" tag="div" class="flex flex-col gap-3">
       <div 
         v-for="toast in toasts" 
         :key="toast.id"
-        class="toast-item pointer-events-auto flex items-start gap-3 p-4 rounded-lg bg-white border border-slate-200 shadow-xl text-sm min-w-[300px] max-w-md transform transition-all duration-200 ease-out border-l-4"
+        class="toast-item pointer-events-auto flex items-start gap-3 p-4 rounded-xl bg-white border border-slate-200/80 shadow-lg text-sm min-w-[300px] max-w-md transform transition-all duration-200 ease-out border-l-4 font-sans"
         :class="getBorderClass(toast.type)"
+        @mouseenter="pauseTimer(toast.id)"
+        @mouseleave="resumeTimer(toast.id)"
       >
-        <component
-          :is="getIcon(toast.type)"
-          class="w-5 h-5 shrink-0 mt-0.5"
-          :class="getIconClass(toast.type)"
-        />
-        <div class="flex-1 min-w-0 flex flex-col">
-          <div v-if="toast.title" class="font-bold text-xs uppercase tracking-wider text-slate-800 mb-0.5">
+        <!-- Circular status icon badge per Section VI.8 -->
+        <div 
+          class="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5"
+          :class="getIconBadgeClass(toast.type)"
+        >
+          <component
+            :is="getIcon(toast.type)"
+            class="w-4 h-4"
+          />
+        </div>
+
+        <div class="flex-1 min-w-0 flex flex-col pt-0.5">
+          <div v-if="toast.title" class="font-bold text-xs uppercase tracking-wider text-slate-800 mb-0.5 font-sans">
             {{ toast.title }}
           </div>
-          <div class="text-sm font-semibold text-slate-700 break-words" :class="{ 'uppercase tracking-wide': !toast.title }">
+          <div class="text-sm font-semibold text-slate-700 break-words font-sans" :class="{ 'uppercase tracking-wide': !toast.title }">
             {{ toast.message }}
           </div>
         </div>
+
         <button 
           @click="removeToast(toast.id)"
-          class="shrink-0 ml-2 text-slate-400 hover:text-slate-700 transition-colors p-0.5 rounded-md hover:bg-slate-100"
+          class="shrink-0 ml-2 text-slate-400 hover:text-slate-700 transition-colors p-1 rounded-md hover:bg-slate-100"
           aria-label="Close"
         >
           <X class="w-4 h-4" />
@@ -38,19 +47,43 @@ import { useToast } from '@/composables/useToast'
 
 const { toasts, removeToast } = useToast()
 
+function pauseTimer(id) {
+  // Optional hover pause hook
+}
+
+function resumeTimer(id) {
+  // Optional hover resume hook
+}
+
 function getBorderClass(type) {
   switch (type) {
     case 'error':
     case 'danger':
-      return 'border-l-danger'
+      return 'border-l-danger border-l-[#EF4444]'
     case 'warning':
     case 'warn':
-      return 'border-l-warning'
+      return 'border-l-warning border-l-[#F59E0B]'
     case 'success':
-      return 'border-l-success'
+      return 'border-l-success border-l-[#10B981]'
     case 'info':
     default:
-      return 'border-l-accent'
+      return 'border-l-accent border-l-[#2E85D8]'
+  }
+}
+
+function getIconBadgeClass(type) {
+  switch (type) {
+    case 'error':
+    case 'danger':
+      return 'bg-red-50 text-red-500'
+    case 'warning':
+    case 'warn':
+      return 'bg-amber-50 text-amber-500'
+    case 'success':
+      return 'bg-emerald-50 text-emerald-500'
+    case 'info':
+    default:
+      return 'bg-blue-50 text-blue-500'
   }
 }
 
@@ -67,22 +100,6 @@ function getIcon(type) {
     case 'info':
     default:
       return Info
-  }
-}
-
-function getIconClass(type) {
-  switch (type) {
-    case 'error':
-    case 'danger':
-      return 'text-danger'
-    case 'warning':
-    case 'warn':
-      return 'text-warning'
-    case 'success':
-      return 'text-success'
-    case 'info':
-    default:
-      return 'text-accent'
   }
 }
 </script>

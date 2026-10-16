@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch } from "vue";
 import BaseModal from "@/components/base/BaseModal.vue";
+import BaseButton from "@/components/base/BaseButton.vue";
 import { Activity, CheckCircle, XCircle, AlertTriangle, Eye, EyeOff, Wallet } from "lucide-vue-next";
 import { useAuthStore } from "@/stores/auth";
 
@@ -133,7 +134,7 @@ const config = computed(() => {
       promptMessage:
         props.description ||
         "Are you sure you want to return this request for revision? The applicant will be asked to revise and resubmit. After 3 revisions, it will be automatically rejected.",
-      proceedBtnClass: "btn-cta",
+      proceedBtnClass: "btn-primary",
     };
   }
   return {
@@ -246,23 +247,22 @@ function handleFinalConfirm() {
         </div>
 
         <div class="flex items-center justify-end gap-2 mt-2 pt-2 border-t border-slate-100">
-          <button
-            class="btn btn-secondary min-h-9 px-4"
-            type="button"
+          <BaseButton
+            variant="secondary"
+            class="min-h-9 px-4"
             :disabled="isSubmitting"
             @click="handleClose"
           >
             Cancel
-          </button>
-          <button
-            class="btn min-h-9 px-4"
-            :class="mode === 'revise' ? 'btn-cta' : 'btn-danger'"
-            type="button"
+          </BaseButton>
+          <BaseButton
+            :variant="mode === 'revise' ? 'primary' : 'destructive'"
+            class="min-h-9 px-4"
             :disabled="isRejectNextDisabled"
             @click="handleRejectNext"
           >
             {{ mode === 'revise' ? 'Confirm Revise' : 'Confirm Reject' }}
-          </button>
+          </BaseButton>
         </div>
       </template>
 
@@ -315,27 +315,23 @@ function handleFinalConfirm() {
         </div>
 
         <div class="flex items-center justify-end gap-2 mt-2 pt-2 border-t border-slate-100">
-          <button
-            class="btn btn-secondary min-h-9 px-4"
-            type="button"
+          <BaseButton
+            variant="secondary"
+            class="min-h-9 px-4"
             :disabled="isSubmitting"
             @click="isConfirmStep = false"
           >
             Back
-          </button>
-          <button
-            class="btn btn-danger min-h-9 px-5"
-            type="button"
+          </BaseButton>
+          <BaseButton
+            variant="destructive"
+            class="min-h-9 px-5"
+            :loading="isSubmitting"
             :disabled="isProceedDisabled"
             @click="handleFinalConfirm"
           >
-            <span
-              v-if="isSubmitting"
-              class="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin"
-              aria-hidden="true"
-            />
             {{ isSubmitting ? "Processing..." : "Proceed" }}
-          </button>
+          </BaseButton>
         </div>
       </template>
 
@@ -379,28 +375,24 @@ function handleFinalConfirm() {
         </div>
 
         <div class="flex items-center justify-end gap-2 mt-2 pt-2 border-t border-slate-100">
-          <button
-            class="btn btn-secondary min-h-9 px-4"
-            type="button"
+          <BaseButton
+            variant="secondary"
+            class="min-h-9 px-4"
             :disabled="isSubmitting"
             @click="handleClose"
           >
             Cancel
-          </button>
-          <button
-            class="btn min-h-9 px-5"
+          </BaseButton>
+          <BaseButton
+            variant="primary"
             :class="config.proceedBtnClass"
-            type="button"
+            class="min-h-9 px-5"
+            :loading="isSubmitting"
             :disabled="isProceedDisabled"
             @click="handleFinalConfirm"
           >
-            <span
-              v-if="isSubmitting"
-              class="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin"
-              aria-hidden="true"
-            />
             {{ isSubmitting ? "Processing..." : "Proceed" }}
-          </button>
+          </BaseButton>
         </div>
       </template>
     </div>

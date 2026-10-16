@@ -272,8 +272,8 @@ onMounted(() => store.fetchAll());
       <template #actions>
         <BaseButton
           id="new-reimbursement-btn"
-          variant="cta"
-          class="min-h-[42px] w-full sm:w-fit"
+          variant="primary"
+          class="min-h-[42px] px-5 w-full sm:w-fit font-bold whitespace-nowrap"
           @click="handleNewRequest"
         >
           <Plus class="w-4 h-4" /> New Request

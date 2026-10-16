@@ -502,7 +502,7 @@ function dismiss() {
         <!--  Footer Actions  -->
         <div class="flex justify-end gap-4 pb-4">
           <button
-            class="btn btn-cta min-h-[42px] w-full sm:w-fit disabled:cursor-not-allowed disabled:opacity-60"
+            class="btn btn-primary btn-cta min-h-[42px] w-full sm:w-fit disabled:cursor-not-allowed disabled:opacity-60"
             :disabled="!canProceed || submitting"
             @click="promptSubmit"
           >

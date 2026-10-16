@@ -1,6 +1,7 @@
 <script setup>
 import BaseModal from "./BaseModal.vue";
-import { AlertTriangle, Info } from "lucide-vue-next";
+import BaseButton from "./BaseButton.vue";
+import { AlertTriangle, CheckCircle, Info } from "lucide-vue-next";
 
 defineProps({
   isOpen: {
@@ -27,6 +28,10 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  loading: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(["close", "confirm"]);
@@ -35,34 +40,42 @@ const emit = defineEmits(["close", "confirm"]);
 <template>
   <BaseModal :is-open="isOpen" @close="$emit('close')" max-width-class="max-w-sm">
     <div class="p-6">
+      <!-- Centered Header per Section VI.5 -->
       <div class="flex flex-col items-center text-center gap-4">
         <div
-          class="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
-          :class="danger ? 'bg-red-50 text-danger' : 'bg-accent/10 text-accent'"
+          class="w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0"
+          :class="danger ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-emerald-50 text-emerald-600 border border-emerald-200'"
         >
-          <AlertTriangle v-if="danger" class="w-6 h-6" />
-          <Info v-else class="w-6 h-6" />
+          <AlertTriangle v-if="danger" class="w-7 h-7" />
+          <CheckCircle v-else class="w-7 h-7" />
         </div>
         <div>
-          <h3 class="text-lg font-bold text-slate-800" style="font-family: 'Poppins', sans-serif">
+          <h3 class="font-sans text-xl font-bold text-slate-800">
             {{ title }}
           </h3>
-          <p class="text-sm text-slate-500 mt-2 leading-relaxed">
+          <p class="font-sans text-sm text-slate-500 mt-2 leading-relaxed">
             {{ message }}
           </p>
         </div>
       </div>
+
+      <!-- Action Footer with BaseButton -->
       <div class="flex gap-3 mt-8">
-        <button class="btn btn-secondary flex-1 min-h-10 px-4" @click="$emit('close')">
+        <BaseButton
+          variant="secondary"
+          class="flex-1 min-h-10"
+          @click="$emit('close')"
+        >
           {{ cancelText }}
-        </button>
-        <button
-          class="btn flex-1 min-h-10 px-4"
-          :class="danger ? 'btn-danger' : 'btn-primary'"
+        </BaseButton>
+        <BaseButton
+          :variant="danger ? 'destructive' : 'primary'"
+          :loading="loading"
+          class="flex-1 min-h-10"
           @click="$emit('confirm')"
         >
           {{ confirmText }}
-        </button>
+        </BaseButton>
       </div>
     </div>
   </BaseModal>

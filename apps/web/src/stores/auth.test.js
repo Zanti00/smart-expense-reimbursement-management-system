@@ -40,6 +40,23 @@ describe("resolveAuthModuleUrl", () => {
     const logoutUrl = resolveAuthModuleUrl("logout");
     expect(logoutUrl).toBe("http://localhost:5173/logout");
   });
+
+  it("dynamically adapts localhost base to current window origin when accessed via tunnel/remote hostname", () => {
+    import.meta.env.VITE_AUTH_MODULE_URL = "http://localhost:5173";
+    const originalLocation = window.location;
+    delete window.location;
+    window.location = {
+      origin: "https://my-tunnel.trycloudflare.com",
+      hostname: "my-tunnel.trycloudflare.com",
+    };
+
+    try {
+      const loginUrl = resolveAuthModuleUrl("/login");
+      expect(loginUrl).toBe("https://my-tunnel.trycloudflare.com/login");
+    } finally {
+      window.location = originalLocation;
+    }
+  });
 });
 
 describe("useAuthStore logout", () => {

@@ -520,7 +520,7 @@ function goBack() {
         >
           <button
             id="submit-advance-btn"
-            class="btn btn-cta min-h-[42px] w-full sm:w-fit disabled:opacity-60 disabled:cursor-not-allowed"
+            class="btn btn-primary min-h-[42px] w-full sm:w-fit disabled:opacity-60 disabled:cursor-not-allowed"
             :disabled="
               submitting ||
               !form.purpose ||

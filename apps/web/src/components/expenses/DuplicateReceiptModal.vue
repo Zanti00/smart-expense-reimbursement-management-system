@@ -78,7 +78,7 @@ function handleUploadNew() {
         </div>
         
         <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
-          <button @click="handleUploadNew" class="btn btn-cta flex items-center gap-2">
+          <button @click="handleUploadNew" class="btn btn-primary flex items-center gap-2">
             <RefreshCw class="w-4 h-4" />
             Upload New One
           </button>

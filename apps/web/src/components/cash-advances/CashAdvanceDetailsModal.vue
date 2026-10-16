@@ -5,6 +5,7 @@ import { useCashAdvanceStore } from "@/stores/cashAdvance";
 import { useLiquidationStore } from "@/stores/liquidation";
 import { useToast } from "@/composables/useToast";
 import BaseModal from "@/components/base/BaseModal.vue";
+import BaseButton from "@/components/base/BaseButton.vue";
 import StatusBadge from "@/components/base/StatusBadge.vue";
 import DecisionConfirmationModal from "@/components/base/DecisionConfirmationModal.vue";
 import UnifiedRoadmapStepper from "@/components/base/UnifiedRoadmapStepper.vue";
@@ -885,20 +886,22 @@ async function confirmAcknowledge() {
       </p>
 
       <div class="mt-6 flex gap-3">
-        <button
-          class="btn btn-secondary flex-1"
+        <BaseButton
+          variant="secondary"
+          class="flex-1"
           type="button"
           @click="showAcknowledgeModal = false"
         >
           Cancel
-        </button>
-        <button
-          class="btn btn-cta flex-1"
+        </BaseButton>
+        <BaseButton
+          variant="primary"
+          class="flex-1"
           type="button"
           @click="confirmAcknowledge"
         >
           Yes, I Acknowledge
-        </button>
+        </BaseButton>
       </div>
     </BaseModal>
 

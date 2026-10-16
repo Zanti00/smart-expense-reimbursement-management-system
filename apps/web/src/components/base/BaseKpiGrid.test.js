@@ -25,4 +25,16 @@ describe("BaseKpiGrid", () => {
       "₱44,750.00",
     ]);
   });
+
+  it("renders plain white KPI cards without top colored border strip", () => {
+    const kpis = [
+      { label: "Active Advances", value: 8, sub: "To reconcile", accent: "bg-amber-500" },
+    ];
+
+    const wrapper = mount(BaseKpiGrid, {
+      props: { kpis, isLoading: false },
+    });
+
+    expect(wrapper.find(".h-0\\.5").exists()).toBe(false);
+  });
 });

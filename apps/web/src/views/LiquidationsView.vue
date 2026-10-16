@@ -1297,16 +1297,17 @@ function finalizeLiquidation() {
         />
       </div>
       <div v-if="auth.isAdmin" class="flex w-full justify-end lg:w-auto">
-        <button
+        <BaseButton
           v-if="!showAdminRequestForm"
           id="admin-new-liquidation-request-btn"
-          class="btn btn-cta min-h-[42px] w-full sm:w-fit"
+          variant="primary"
+          class="min-h-[42px] px-5 w-full sm:w-fit font-bold whitespace-nowrap"
           type="button"
           @click="openAdminRequestForm"
         >
           <Upload class="w-4 h-4" />
           New Request
-        </button>
+        </BaseButton>
         <button
           v-else
           class="inline-flex min-h-[42px] w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-5 font-heading text-sm font-bold text-slate-700 shadow-sm transition-all duration-200 ease-out hover:bg-slate-50 hover:shadow-md sm:w-fit"

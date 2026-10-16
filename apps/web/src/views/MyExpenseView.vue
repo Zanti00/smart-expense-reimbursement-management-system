@@ -399,7 +399,7 @@ const kpis = computed(() => [
           <!-- Upload Receipt -->
           <button
             @click="uploadModalOpen = true"
-            class="btn btn-cta min-h-[42px]"
+            class="btn btn-primary min-h-[42px]"
           >
             <UploadCloud class="w-4 h-4" />
             Upload Receipt
@@ -493,7 +493,7 @@ const kpis = computed(() => [
               </div>
               <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <button
-                  class="btn btn-cta"
+                  class="btn btn-primary"
                   @click="finalizeReceiptReview(receipt, 'approve')"
                 >
                   <ShieldCheck class="w-4 h-4" />
@@ -581,7 +581,7 @@ const kpis = computed(() => [
             Try a different category filter or upload a new receipt.
           </p>
         </div>
-        <button @click="uploadModalOpen = true" class="mt-2 btn btn-cta">
+        <button @click="uploadModalOpen = true" class="mt-2 btn btn-primary">
           <UploadCloud class="w-4 h-4" /> Upload Receipt
         </button>
       </div>

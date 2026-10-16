@@ -1,3 +1,5 @@
+import animate from 'tailwindcss-animate'
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
@@ -7,8 +9,14 @@ export default {
   theme: {
     extend: {
       colors: {
+        border: '#E2E8F0',
+        input: '#E2E8F0',
+        ring: '#2E85D8',
+        background: '#F8F9FA',
+        foreground: '#1E293B',
         primary: {
           DEFAULT: '#252578',
+          foreground: '#FFFFFF',
           50: '#F4F5FF',
           100: '#E6E8FF',
           200: '#C8CCFF',
@@ -21,20 +29,8 @@ export default {
           900: '#090923',
         },
         secondary: {
-          DEFAULT: '#2F2F7E',
-          50: '#F4F4FF',
-          100: '#E8E8FF',
-          200: '#CBCBFF',
-          300: '#A2A2F4',
-          400: '#6C6CCD',
-          500: '#2F2F7E',
-          600: '#28286F',
-          700: '#20205B',
-          800: '#171746',
-          900: '#0B0B26',
-        },
-        accent: {
           DEFAULT: '#2E85D8',
+          foreground: '#FFFFFF',
           50: '#EFF7FF',
           100: '#DCEEFF',
           200: '#B9DCFA',
@@ -46,41 +42,81 @@ export default {
           800: '#153F6C',
           900: '#102A47',
         },
-        clinical: '#F7F9FD',
+        brand: {
+          deep: '#3A3A85',
+          'deep-border': '#4E4E91',
+        },
+        destructive: {
+          DEFAULT: '#EF4444',
+          foreground: '#FFFFFF',
+        },
+        success: {
+          DEFAULT: '#10B981',
+          foreground: '#FFFFFF',
+        },
+        warning: {
+          DEFAULT: '#F59E0B',
+          foreground: '#FFFFFF',
+        },
+        muted: {
+          DEFAULT: '#F1F5F9',
+          foreground: '#8D8B8F',
+        },
+        accent: {
+          DEFAULT: '#2E85D8',
+          foreground: '#FFFFFF',
+          50: '#EFF7FF',
+          100: '#DCEEFF',
+          200: '#B9DCFA',
+          300: '#86C2F4',
+          400: '#54A5EA',
+          500: '#2E85D8',
+          600: '#1F6EBB',
+          700: '#185695',
+          800: '#153F6C',
+          900: '#102A47',
+        },
+        card: {
+          DEFAULT: '#FFFFFF',
+          foreground: '#1E293B',
+        },
+        popover: {
+          DEFAULT: '#FFFFFF',
+          foreground: '#1E293B',
+        },
+        clinical: '#F8F9FA',
         sterile: '#FFFFFF',
         slate: {
-          300: '#94A3B8', // Previously 400
-          400: '#64748B', // Previously 500
-          500: '#475569', // Previously 600
-          600: '#334155', // Previously 700
-          700: '#1E293B', // Previously 800 (Deep Charcoal)
-          800: '#0F172A', // Previously 900
-          900: '#020617', // Near Black
+          300: '#94A3B8',
+          400: '#64748B',
+          500: '#475569',
+          600: '#334155',
+          700: '#1E293B',
+          800: '#0F172A',
+          900: '#020617',
         },
-        success: '#059669',
-        warning: '#D97706',
-        danger: '#DC2626',
-        ocr: {
-          alert: '#FEF9C3',
-        },
-        neutral: '#334155',
-        'slate-600': '#334155', // Match definition
+        danger: '#EF4444',
+      },
+      borderRadius: {
+        lg: 'var(--radius)',
+        md: 'calc(var(--radius) - 2px)',
+        sm: 'calc(var(--radius) - 4px)',
+        card: '14px',
+      },
+      boxShadow: {
+        sm: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        md: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06)',
+        lg: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05)',
+        '2xl': '0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.08)',
+        'xl-soft': '0 24px 72px -48px rgba(37,37,120,0.5)',
       },
       fontFamily: {
         sans: ['Poppins', 'Montserrat', 'Open Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         heading: ['Poppins', 'Montserrat', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         display: ['Montserrat', 'Poppins', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
-      },
-      boxShadow: {
-        sm: '0 1px 2px 0 rgba(0,0,0,0.05)',
-        'xl-soft': '0 24px 72px -48px rgba(37,37,120,0.5)',
-      },
-      borderRadius: {
-        card: '0.5rem',
-        sm: '0.375rem',
       }
     }
   },
-  plugins: []
+  plugins: [animate]
 }
