@@ -35,7 +35,7 @@ defineProps({
     <template v-else>
       <div v-for="kpi in kpis" :key="kpi.label" class="kpi-card group">
         <div class="flex items-center justify-between mb-4">
-          <span class="text-xs text-slate-400">
+          <span class="text-xs text-eyebrow">
             {{ kpi.sub }}
           </span>
         </div>
