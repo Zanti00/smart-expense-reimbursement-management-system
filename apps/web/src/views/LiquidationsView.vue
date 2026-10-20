@@ -9,6 +9,7 @@ import { useToast } from "@/composables/useToast";
 import StatusBadge from "@/components/base/StatusBadge.vue";
 import FileUpload from "@/components/base/FileUpload.vue";
 import BaseButton from "@/components/base/BaseButton.vue";
+import BaseModal from "@/components/base/BaseModal.vue";
 import BaseToggleSwitch from "@/components/base/BaseToggleSwitch.vue";
 import BaseKpiGrid from "@/components/base/BaseKpiGrid.vue";
 import BasePagination from "@/components/base/BasePagination.vue";
@@ -22,7 +23,6 @@ import LiquidationTable from "@/components/liquidations/LiquidationTable.vue";
 import LiquidationReceiptModal from "@/components/liquidations/LiquidationReceiptModal.vue";
 import LiquidationReviewModal from "@/components/liquidations/LiquidationReviewModal.vue";
 import LiquidationSettlementForm from "@/components/liquidations/LiquidationSettlementForm.vue";
-import LiquidationAdvancesList from "@/components/liquidations/LiquidationAdvancesList.vue";
 import { useLiquidationDecisions } from "@/composables/liquidations/useLiquidationDecisions";
 import { useLiquidationForwarding } from "@/composables/liquidations/useLiquidationForwarding";
 import { useLiquidationSubmit } from "@/composables/liquidations/useLiquidationSubmit";
@@ -40,9 +40,11 @@ import {
   Eye,
   FilePieChart,
   Pencil,
+  Plus,
   Trash2,
   Upload,
   Wallet,
+  X,
 } from "lucide-vue-next";
 
 const store = useCashAdvanceStore();
@@ -65,7 +67,6 @@ async function refreshAll() {
 onMounted(() => refreshAll());
 
 const selectedAdvance = ref(null);
-const advancePanelCollapsed = ref(false);
 const receipts = ref([]);
 const reportAttachment = ref(null);
 const reportAttachmentInput = ref(null);
@@ -73,13 +74,46 @@ const { submitting, submitLiquidation: performSubmitLiquidation } = useLiquidati
 const submitted = ref(false);
 const shortfallExplanation = ref("");
 const showAdminRequestForm = ref(false);
+const settlementModalMode = ref("settle"); // "settle" | "view"
+
+function liquidationDraftSignature() {
+  return JSON.stringify({
+    receipts: receipts.value.map((r) => ({
+      id: r.id ?? null,
+      name: r.name ?? "",
+      fileName: r.fileName ?? "",
+      merchantName: r.merchantName ?? "",
+      date: r.date ?? "",
+      tin: r.tin ?? "",
+      invoiceNumber: r.invoiceNumber ?? "",
+      location: r.location ?? "",
+      currency: r.currency ?? "",
+      vatClassification: r.vatClassification ?? "",
+      category: r.category ?? "",
+      categoryId: r.categoryId ?? null,
+      subtotal: r.subtotal ?? "",
+      tax: r.tax ?? "",
+      amount: r.amount ?? null,
+      filePath: r.filePath ?? null,
+      items: (r.items || []).map((item) => ({
+        name: item.name ?? "",
+        qty: item.qty ?? null,
+        price: item.price ?? null,
+      })),
+    })),
+    reportAttachment:
+      reportAttachment.value && typeof reportAttachment.value === "object"
+        ? reportAttachment.value.name || reportAttachment.value.fileName || "attached"
+        : reportAttachment.value,
+    shortfallExplanation: shortfallExplanation.value,
+  });
+}
+const hydrationSignature = ref(liquidationDraftSignature());
 
 const isDirty = computed(() => {
-  return (
-    receipts.value.length > 0 ||
-    reportAttachment.value !== null ||
-    shortfallExplanation.value !== ""
-  );
+  // Do not blanket-force view mode clean: a hydrated baseline already keeps
+  // untouched records clean while still catching real field edits.
+  return liquidationDraftSignature() !== hydrationSignature.value;
 });
 
 const {
@@ -151,10 +185,14 @@ const employeeStatusFilters = [
   "Rejected",
   "Overdue",
 ];
-const employeeSortOptions = [
-  { value: "date", label: "Date" },
-  { value: "status", label: "Status" },
-  { value: "amount", label: "Total Amount" },
+const employeeLiquidationColumns = [
+  { key: "purpose", label: "Purpose", sortKey: "purpose" },
+  { key: "date", label: "Date Issued", sortKey: "date" },
+  { key: "dueDate", label: "Due Date", sortKey: "dueDate" },
+  { key: "amount", label: "Amount", align: "right", sortKey: "amount" },
+  { key: "balance", label: "Balance", align: "right", sortKey: "balance" },
+  { key: "status", label: "Status", align: "center", sortKey: "status" },
+  { key: "actions", label: "Action", align: "center" },
 ];
 const receiptCategoryOptions = computed(() => receiptStore.categories || []);
 
@@ -346,6 +384,26 @@ const employeeFilteredAdvances = computed(() => {
       }) * direction
     );
   });
+});
+
+const employeePageSize = 10;
+const employeeCurrentPage = ref(1);
+const employeeTotalPages = computed(() =>
+  Math.max(
+    1,
+    Math.ceil(employeeFilteredAdvances.value.length / employeePageSize),
+  ),
+);
+const employeePaginatedAdvances = computed(() => {
+  const start = (employeeCurrentPage.value - 1) * employeePageSize;
+  return employeeFilteredAdvances.value.slice(start, start + employeePageSize);
+});
+
+watch([employeeSearchQuery, employeeActiveStatus], () => {
+  employeeCurrentPage.value = 1;
+});
+watch(employeeTotalPages, (pages) => {
+  if (employeeCurrentPage.value > pages) employeeCurrentPage.value = pages;
 });
 
 const tableColumns = [
@@ -776,6 +834,14 @@ function employeeAdvanceBadgeStatus(advance) {
 
 function employeeSortValue(advance, key) {
   if (key === "amount") return numberOrZero(advance.amount);
+  if (key === "balance") return numberOrZero(advance.balance);
+  if (key === "purpose") return String(advance.purpose || "").toLowerCase();
+  if (key === "dueDate") {
+    const timestamp = new Date(
+      advance.dueDate || advance.expected_liquidation_date || 0,
+    ).getTime();
+    return Number.isFinite(timestamp) ? timestamp : 0;
+  }
   if (key === "date") {
     const timestamp = new Date(
       advance.submitted_at ||
@@ -789,6 +855,119 @@ function employeeSortValue(advance, key) {
     return Number.isFinite(timestamp) ? timestamp : 0;
   }
   return employeeAdvanceStatus(advance);
+}
+
+function employeeToggleSort(column) {
+  const key = column.sortKey || column.key;
+  if (key === "actions") return;
+  if (employeeSortKey.value === key) {
+    employeeSortDirection.value =
+      employeeSortDirection.value === "asc" ? "desc" : "asc";
+  } else {
+    employeeSortKey.value = key;
+    employeeSortDirection.value = ["date", "dueDate"].includes(key)
+      ? "desc"
+      : "asc";
+  }
+  employeeCurrentPage.value = 1;
+}
+
+const isSettlementModalOpen = ref(false);
+
+function openSettlementModal(row = null, mode = "settle") {
+  settlementModalMode.value = mode;
+  if (row && String(row.id) === String(selectedAdvance.value?.id)) {
+    isSettlementModalOpen.value = true;
+    return;
+  }
+  const show = () => {
+    if (row) selectAdvance(row);
+    settlementModalMode.value = mode;
+    isSettlementModalOpen.value = true;
+  };
+  if (row) {
+    dismissWithConfirm(show);
+  } else if (selectedAdvance.value) {
+    isSettlementModalOpen.value = true;
+  }
+}
+
+function closeSettlementModal() {
+  if (settlementModalMode.value === "view") {
+    isSettlementModalOpen.value = false;
+    settlementModalMode.value = "settle";
+    resetLiquidationComposer();
+    return;
+  }
+
+  dismissWithConfirm(() => {
+    isSettlementModalOpen.value = false;
+    settlementModalMode.value = "settle";
+    resetLiquidationComposer();
+  });
+}
+
+function handleReloadConsole() {
+  isSettlementModalOpen.value = false;
+  settlementModalMode.value = "settle";
+  resetLiquidationComposer();
+}
+
+function handleNewLiquidation() {
+  const eligible = employeeOutstandingAdvances.value;
+  if (eligible.length === 0) {
+    addToast({
+      title: "No Eligible Advance",
+      message: "You have no cash advance available to liquidate yet.",
+      type: "info",
+    });
+    return;
+  }
+  const target =
+    eligible.find((adv) => adv.id !== selectedAdvance.value?.id) ??
+    eligible[0];
+  openSettlementModal(target, "settle");
+}
+
+function findLiquidationForAdvance(advance) {
+  if (!advance) return null;
+  return (
+    liqStore.settlements.find(
+      (settlement) =>
+        String(settlement.cash_advance_id ?? settlement.cashAdvanceId) ===
+        String(advance.id),
+    ) || null
+  );
+}
+
+function employeeAdvanceActions(row) {
+  const settlement = findLiquidationForAdvance(row);
+
+  return [
+    {
+      label: "Settle",
+      icon: Wallet,
+      disabled: String(selectedAdvance.value?.id) === String(row.id),
+      handler: () => openSettlementModal(row, "settle"),
+    },
+    {
+      label: "View",
+      icon: Eye,
+      handler: () => openSettlementModal(row, "view"),
+    },
+    {
+      label: "Delete",
+      icon: Trash2,
+      variant: "danger",
+      visible:
+        !!settlement &&
+        String(settlement.status || "").toLowerCase() === "pending",
+      handler: () => {
+        deletingLiqId.value = settlement.id;
+        isDeleteLiqModalOpen.value = true;
+      },
+    },
+  ];
 }
 
 const selectedAdvanceAcknowledged = computed(() => {
@@ -818,6 +997,7 @@ const selectedAdvanceCanLiquidate = computed(() => {
 const showSubmitConfirmModal = ref(false);
 
 function promptSubmitLiquidation() {
+  if (settlementModalMode.value === "view") return;
   // Preview-only until acknowledged / Phase 2 — block submit with feedback
   if (!selectedAdvanceCanLiquidate.value) {
     addToast({
@@ -876,11 +1056,7 @@ async function submitLiquidation() {
 
 const existingLiquidation = computed(() => {
   if (!selectedAdvance.value) return null;
-  return (
-    liqStore.settlements.find(
-      (s) => s.cash_advance_id === selectedAdvance.value.id,
-    ) || null
-  );
+  return findLiquidationForAdvance(selectedAdvance.value);
 });
 
 const isDeleteLiqModalOpen = ref(false);
@@ -904,7 +1080,8 @@ async function confirmDeleteLiquidation(password) {
     });
     isDeleteLiqModalOpen.value = false;
     deletingLiqId.value = null;
-    selectedAdvance.value = null; // Close form
+    isSettlementModalOpen.value = false;
+    resetLiquidationComposer();
     await refreshAll();
   } catch (error) {
     addToast({
@@ -969,9 +1146,7 @@ function selectAdvance(adv) {
     submitted.value = false;
 
     // Find if there is an existing liquidation in liqStore.settlements
-    const existingLiq = liqStore.settlements.find(
-      (s) => s.cash_advance_id === adv.id,
-    );
+    const existingLiq = findLiquidationForAdvance(adv);
 
     if (existingLiq) {
       shortfallExplanation.value = existingLiq.shortfall_explanation || "";
@@ -1041,6 +1216,8 @@ function selectAdvance(adv) {
       reportAttachment.value = null;
       shortfallExplanation.value = "";
     }
+
+    hydrationSignature.value = liquidationDraftSignature();
   });
 }
 
@@ -1050,6 +1227,7 @@ function resetLiquidationComposer() {
   reportAttachment.value = null;
   shortfallExplanation.value = "";
   submitted.value = false;
+  hydrationSignature.value = liquidationDraftSignature();
 }
 
 function openAdminRequestForm() {
@@ -1455,7 +1633,19 @@ function finalizeLiquidation() {
       v-model:status-value="employeeActiveStatus"
       :statuses="employeeStatusFilters"
       searchPlaceholder="Search purpose, status, or amount..."
-    />
+    >
+      <template #actions>
+        <BaseButton
+          id="new-liquidation-btn"
+          variant="primary"
+          class="min-h-[42px] px-5 w-full sm:w-fit font-bold whitespace-nowrap"
+          type="button"
+          @click="handleNewLiquidation"
+        >
+          <Plus class="w-4 h-4" /> New Liquidation
+        </BaseButton>
+      </template>
+    </BaseUtilityToolbar>
 
     <div
       v-if="!auth.isAdmin || showAdminRequestForm"
@@ -1473,60 +1663,135 @@ function finalizeLiquidation() {
       </p>
     </div>
 
-    <div
+    <section
       v-if="!auth.isAdmin || showAdminRequestForm"
-      class="grid grid-cols-1 gap-6"
-      :class="advancePanelCollapsed ? 'xl:grid-cols-[auto_1fr]' : 'xl:grid-cols-5'"
+      class="overflow-hidden bg-white border shadow-sm rounded-xl border-slate-200"
     >
-      <LiquidationAdvancesList
-        :sort-options="employeeSortOptions"
+      <div
+        class="flex flex-col gap-1 px-5 py-4 bg-white border-b border-slate-200 sm:flex-row sm:items-center sm:justify-between"
+      >
+        <h2 class="text-sm font-semibold text-slate-700">Cash Advances</h2>
+        <span class="text-xs text-slate-400">
+          <template v-if="store.isLoading">Loading...</template>
+          <template v-else>{{ employeeFilteredAdvances.length }} advances</template>
+        </span>
+      </div>
+
+      <LiquidationTable
+        :columns="employeeLiquidationColumns"
+        :rows="employeePaginatedAdvances"
+        :is-loading="store.isLoading"
+        :page-size="employeePageSize"
         :sort-key="employeeSortKey"
         :sort-direction="employeeSortDirection"
-        @update:sort-key="employeeSortKey = $event"
-        @update:sort-direction="employeeSortDirection = $event"
-        :is-loading="store.isLoading"
-        :advances="employeeFilteredAdvances"
-        :selected-advance="selectedAdvance"
-        :get-badge-status="employeeAdvanceBadgeStatus"
-        :calculate-aging="liqStore.calculateAging"
-        :collapsed="advancePanelCollapsed"
-        @select="selectAdvance"
-        @toggle-collapse="advancePanelCollapsed = !advancePanelCollapsed"
-      />
+        @sort="employeeToggleSort"
+      >
+        <template #cell-purpose="{ row }">
+          <div class="max-w-[200px] sm:max-w-[260px]">
+            <span
+              class="block truncate text-sm font-medium text-slate-800"
+              :title="row.purpose"
+            >
+              {{ row.purpose || "—" }}
+            </span>
+          </div>
+        </template>
+        <template #cell-date="{ row }">
+          <span class="text-sm text-slate-500">{{ formatDate(row.date) }}</span>
+        </template>
+        <template #cell-dueDate="{ row }">
+          <span
+            class="text-sm"
+            :class="liqStore.calculateAging(row).isOverdue ? 'font-medium text-danger' : 'text-slate-500'"
+          >
+            {{ formatDate(row.dueDate) }}
+          </span>
+        </template>
+        <template #cell-amount="{ row }">
+          <span class="text-sm font-semibold text-slate-700">{{
+            formatPeso(row.amount || 0)
+          }}</span>
+        </template>
+        <template #cell-balance="{ row }">
+          <span class="text-sm font-bold text-primary">{{
+            formatPeso(row.balance || 0)
+          }}</span>
+        </template>
+        <template #cell-status="{ row }">
+          <StatusBadge :status="employeeAdvanceBadgeStatus(row)" />
+        </template>
+        <template #cell-actions="{ row }">
+          <ActionDropdownMenu :actions="employeeAdvanceActions(row)" />
+        </template>
+      </LiquidationTable>
 
-      <div :class="advancePanelCollapsed ? 'min-w-0' : 'xl:col-span-3 min-w-0'">>
-        <LiquidationSettlementForm
-          :selected-advance="selectedAdvance"
-          :submitted="submitted"
-          :receipts="receipts"
-          @update:receipts="receipts = $event"
-          :receipt-category-options="receiptCategoryOptions"
-          :report-attachment="reportAttachment"
-          @file-selected="selectReportAttachment"
-          @file-cleared="clearReportAttachment"
-          :existing-liquidation="existingLiquidation"
-          :needs-report-attachment-reminder="needsReportAttachmentReminder"
-          :variance="variance"
-          :shortfall-explanation="shortfallExplanation"
-          @update:shortfall-explanation="shortfallExplanation = $event"
-          :total-expense-amount="totalExpenseAmount"
-          :liquidation-status="liquidationStatus"
-          :liquidation-outstanding-balance="liquidationOutstandingBalance"
-          :overpayment-amount="overpaymentAmount"
-          :submitting="submitting"
-          :disabled="!selectedAdvanceCanLiquidate"
-          :has-incomplete-receipt-fields="hasIncompleteReceiptFields"
-          @reload-console="
-            selectedAdvance = null;
-            submitted = false;
-          "
-          @upload-error="handleReceiptUploadError"
-          @forward-overpayment="forwardOverpaymentToReimbursement"
-          @delete-liquidation="handleDeleteLiquidation"
-          @submit-liquidation="promptSubmitLiquidation"
-        />
+      <BasePagination
+        v-if="!store.isLoading && employeeFilteredAdvances.length > employeePageSize"
+        v-model:page="employeeCurrentPage"
+        :page-size="employeePageSize"
+        :total="employeeFilteredAdvances.length"
+        label="advances"
+      />
+    </section>
+
+    <BaseModal
+      :is-open="isSettlementModalOpen"
+      max-width-class="max-w-4xl"
+      title="Liquidation Request"
+      description="View or settle a cash advance liquidation."
+      @close="closeSettlementModal"
+    >
+      <div class="flex max-h-[90vh] flex-col">
+        <div class="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+          <div class="min-w-0">
+            <h2 class="text-base font-bold font-heading text-slate-800">
+              {{ settlementModalMode === "view" ? "Liquidation Details" : "Settle Cash Advance" }}
+            </h2>
+            <p class="mt-0.5 truncate text-xs text-slate-400">
+              {{ selectedAdvance?.purpose || "Cash advance details" }}
+            </p>
+          </div>
+          <button
+            id="settlement-modal-close"
+            type="button"
+            aria-label="Close liquidation details"
+            class="-mr-1 mt-0.5 flex shrink-0 items-center justify-center rounded-full p-1.5 text-slate-400 transition-colors hover:bg-slate-100"
+            @click="closeSettlementModal"
+          >
+            <X class="w-4 h-4" />
+          </button>
+        </div>
+        <div class="overflow-y-auto">
+          <LiquidationSettlementForm
+            :selected-advance="selectedAdvance"
+            :submitted="submitted"
+            :receipts="receipts"
+            @update:receipts="receipts = $event"
+            :receipt-category-options="receiptCategoryOptions"
+            :report-attachment="reportAttachment"
+            @file-selected="selectReportAttachment"
+            @file-cleared="clearReportAttachment"
+            :existing-liquidation="existingLiquidation"
+            :needs-report-attachment-reminder="needsReportAttachmentReminder"
+            :variance="variance"
+            :shortfall-explanation="shortfallExplanation"
+            @update:shortfall-explanation="shortfallExplanation = $event"
+            :total-expense-amount="totalExpenseAmount"
+            :liquidation-status="liquidationStatus"
+            :liquidation-outstanding-balance="liquidationOutstandingBalance"
+            :overpayment-amount="overpaymentAmount"
+            :submitting="submitting"
+            :disabled="settlementModalMode === 'view' || !selectedAdvanceCanLiquidate"
+            :has-incomplete-receipt-fields="hasIncompleteReceiptFields"
+            @reload-console="handleReloadConsole"
+            @upload-error="handleReceiptUploadError"
+            @forward-overpayment="forwardOverpaymentToReimbursement"
+            @delete-liquidation="handleDeleteLiquidation"
+            @submit-liquidation="promptSubmitLiquidation"
+          />
+        </div>
       </div>
-    </div>
+    </BaseModal>
 
     <ConfirmModal
       :is-open="showSubmitConfirmModal"

@@ -127,11 +127,17 @@ describe("LiquidationsView — Submit Confirmation Modal & Toast", () => {
           BaseToggleSwitch: true,
           BasePagination: true,
           LiquidationTable: true,
-          LiquidationAdvancesList: true,
           LiquidationReviewModal: true,
           LiquidationReceiptModal: true,
           DecisionConfirmationModal: true,
           DeleteConfirmModal: true,
+          // Permissive modal stub: always renders its slot so the form is
+          // findable regardless of the modal's open state.
+          BaseModal: {
+            name: "BaseModal",
+            props: ["isOpen"],
+            template: "<div><slot /></div>",
+          },
           // Let LiquidationSettlementForm be a simple stub that can emit submit-liquidation
           LiquidationSettlementForm: {
             name: "LiquidationSettlementForm",
