@@ -327,6 +327,7 @@ describe("LiquidationsView — Employee table plumbing", () => {
 
     expect(wrapper.vm.isSettlementModalOpen).toBe(true);
     expect(wrapper.vm.settlementModalMode).toBe("settle");
+    expect(wrapper.find("#back-to-advance-selection").exists()).toBe(false);
     form = wrapper.findComponent({ name: "LiquidationSettlementForm" });
     expect(form.props("disabled")).toBe(false);
 
@@ -499,7 +500,7 @@ describe("LiquidationsView — Employee table plumbing", () => {
     expect(wrapper.findComponent(BasePagination).exists()).toBe(true);
   });
 
-  it("renders a New Liquidation button in the toolbar actions slot and selects the first eligible advance", async () => {
+  it("renders a New Liquidation button that opens the advance card picker before the form", async () => {
     const wrapper = mountView();
 
     const btn = wrapper.find("#new-liquidation-btn");
@@ -509,10 +510,20 @@ describe("LiquidationsView — Employee table plumbing", () => {
     await wrapper.findComponent(BaseButton).vm.$emit("click");
     await wrapper.vm.$nextTick();
 
-    expect(wrapper.vm.selectedAdvance).toBeTruthy();
-    expect(wrapper.vm.selectedAdvance.id).toBe("ca-1");
     expect(wrapper.vm.isSettlementModalOpen).toBe(true);
     expect(wrapper.vm.settlementModalMode).toBe("settle");
+    expect(wrapper.vm.settlementModalStep).toBe("select");
+    expect(wrapper.vm.selectedAdvance).toBeNull();
+    expect(
+      wrapper.findAll('[data-testid="liquidation-advance-card"]'),
+    ).toHaveLength(12);
+
+    await wrapper
+      .find('[data-testid="liquidation-advance-card"][data-advance-id="ca-1"]')
+      .trigger("click");
+
+    expect(wrapper.vm.selectedAdvance?.id).toBe("ca-1");
+    expect(wrapper.vm.settlementModalStep).toBe("form");
   });
 
   it("shows an info toast and keeps state unchanged when no eligible advance exists", async () => {
