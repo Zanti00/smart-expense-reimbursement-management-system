@@ -275,9 +275,12 @@ async function handleRequest() {
 }
 
 function goBack() {
-  dismissWithConfirm(() => {
-    router.push("/cash-advances");
-  });
+  dismissWithConfirm(
+    () => {
+      router.push("/cash-advances");
+    },
+    { navigates: true },
+  );
 }
 </script>
 

@@ -51,22 +51,22 @@ SERMS is a high-precision, Modular Monolith financial compliance application bui
 
 When debugging authentication, role-based access control (RBAC), approval thresholds, disbursements, and submission flows, use these pre-seeded test accounts:
 
-| Role / Persona                 | Email                          | Password          | Department / Grade             | Purpose & Scopes                                                                       |
-| ------------------------------ | ------------------------------ | ----------------- | ------------------------------ | -------------------------------------------------------------------------------------- |
-| **Employee (Standard)**        | `employee@example.com`         | `password`        | Operations / L2                | Regular expense upload, reimbursement requests, cash advances, liquidation submissions |
-| **Accounting / Finance**       | `sum@sbsi.com`                 | `@.Akirasendoh07` | Accounting / Finance           | Primary accounting verification, disbursements, settlement validation                  |
-| **IT Administrator**           | `admin@example.com`            | `password`        | IT / L5                        | System administration, user management, audit log inspection, global settings          |
-| **Approver / Finance Manager** | `approver@example.com`         | `password`        | Finance / L4                   | Cash advance approvals, threshold sign-offs, reimbursement approvals                   |
-| **Finance Administrator**      | `finance-admin@example.com`    | `password`        | Finance / Admin                | Financial compliance, expense category oversight, audit reporting                      |
-| **Finance Officer**            | `finance@example.com`          | `password`        | Finance / Employee             | Financial operations, receipt verification, payment matching                           |
-| **Operations Manager**         | `manager@example.com`          | `password`        | Operations / Manager           | Departmental expense approval, operational budget sign-off                             |
-| **Sales Representative**       | `sales@example.com`            | `password`        | Operations / Sales             | Field sales reimbursements, client entertainment claims, travel advances               |
-| **Accounting Staff (SBSI)**    | `employee.accounting@sbsi.com` | `password`        | Accounting / Accountant        | Client-specific accounting reviews, BIR VAT compliance                                 |
-| **Finance Manager (SBSI)**     | `manager.finance@sbsi.com`     | `password`        | Finance / Manager              | High-tier approval thresholds, budget disbursements                                    |
-| **Operations Manager (SBSI)**  | `manager.operations@sbsi.com`  | `password`        | Operations / Manager           | Field operations oversight, regional cash advance sign-offs                            |
-| **Sales Supervisor (SBSI)**    | `supervisor.sales@sbsi.com`    | `password`        | Sales & Marketing / Supervisor | First-line expense validations, team travel approvals                                  |
-| **Super Admin (SBSI)**         | `superadmin@sbsi.com`          | `password`        | Executive / Super Admin        | Full ecosystem administrative privileges across integrated systems                     |
-| **IT Support Engineer (SBSI)** | `employee.it@sbsi.com`         | `password`        | IT / Employee                  | IT support tickets, technical access verification                                      |
+| Role / Persona                 | Email                          | Password   | Department / Grade             | Purpose & Scopes                                                                       |
+| ------------------------------ | ------------------------------ | ---------- | ------------------------------ | -------------------------------------------------------------------------------------- |
+| **Employee (Standard)**        | `employee@example.com`         | `password` | Operations / L2                | Regular expense upload, reimbursement requests, cash advances, liquidation submissions |
+| **Accounting / Finance**       | `sum@sbsi.com`                 | `password` | Accounting / Finance           | Primary accounting verification, disbursements, settlement validation                  |
+| **IT Administrator**           | `admin@example.com`            | `password` | IT / L5                        | System administration, user management, audit log inspection, global settings          |
+| **Approver / Finance Manager** | `approver@example.com`         | `password` | Finance / L4                   | Cash advance approvals, threshold sign-offs, reimbursement approvals                   |
+| **Finance Administrator**      | `finance-admin@example.com`    | `password` | Finance / Admin                | Financial compliance, expense category oversight, audit reporting                      |
+| **Finance Officer**            | `finance@example.com`          | `password` | Finance / Employee             | Financial operations, receipt verification, payment matching                           |
+| **Operations Manager**         | `manager@example.com`          | `password` | Operations / Manager           | Departmental expense approval, operational budget sign-off                             |
+| **Sales Representative**       | `sales@example.com`            | `password` | Operations / Sales             | Field sales reimbursements, client entertainment claims, travel advances               |
+| **Accounting Staff (SBSI)**    | `employee.accounting@sbsi.com` | `password` | Accounting / Accountant        | Client-specific accounting reviews, BIR VAT compliance                                 |
+| **Finance Manager (SBSI)**     | `manager.finance@sbsi.com`     | `password` | Finance / Manager              | High-tier approval thresholds, budget disbursements                                    |
+| **Operations Manager (SBSI)**  | `manager.operations@sbsi.com`  | `password` | Operations / Manager           | Field operations oversight, regional cash advance sign-offs                            |
+| **Sales Supervisor (SBSI)**    | `supervisor.sales@sbsi.com`    | `password` | Sales & Marketing / Supervisor | First-line expense validations, team travel approvals                                  |
+| **Super Admin (SBSI)**         | `superadmin@sbsi.com`          | `password` | Executive / Super Admin        | Full ecosystem administrative privileges across integrated systems                     |
+| **IT Support Engineer (SBSI)** | `employee.it@sbsi.com`         | `password` | IT / Employee                  | IT support tickets, technical access verification                                      |
 
 ## Definition of Done
 

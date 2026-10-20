@@ -385,11 +385,14 @@ onBeforeUnmount(() => {
 
 //  Dismiss ─
 function dismiss() {
-  dismissWithConfirm(() => {
-    emit("close");
-    // If opened standalone (via route), go back
-    router.back();
-  });
+  dismissWithConfirm(
+    () => {
+      emit("close");
+      // If opened standalone (via route), go back
+      router.back();
+    },
+    { navigates: true },
+  );
 }
 </script>
 

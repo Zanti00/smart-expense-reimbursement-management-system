@@ -3,6 +3,7 @@ import { computed } from "vue";
 import { X, XCircle, ShieldCheck, Eye, FileText, Download } from "lucide-vue-next";
 import { formatPeso, formatDate } from "@/utils/formatters";
 import StatusBadge from "@/components/base/StatusBadge.vue";
+import DaysLeftBadge from "@/components/base/DaysLeftBadge.vue";
 import BaseReceiptImage from "@/components/base/BaseReceiptImage.vue";
 import ReceiptImagePreview from "@/components/base/ReceiptImagePreview.vue";
 import UnifiedRoadmapStepper from "@/components/base/UnifiedRoadmapStepper.vue";
@@ -119,6 +120,18 @@ const roadmapOverpayment = computed(() => {
   return Math.max(0, total - bal);
 });
 
+const isCaseOverdue = computed(() => {
+  if (String(props.reviewStatus).toLowerCase().trim() === "overdue") return true;
+  if (roadmapAging.value?.isOverdue) return true;
+  const due = props.reviewingCase?.dueDate || props.reviewingCase?.expected_liquidation_date || roadmapCashAdvance.value?.expected_liquidation_date;
+  if (!due) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const d = new Date(due);
+  d.setHours(0, 0, 0, 0);
+  return d < today;
+});
+
 function handleRoadmapNavigate(payload) {
   emit("navigate", payload);
 }
@@ -153,7 +166,16 @@ function handleRoadmapNavigate(payload) {
                 {{ formatPeso(reviewingCase.cashAdvanceAmount) }}
               </h2>
             </div>
-            <StatusBadge :status="reviewStatus" />
+            <div class="flex items-center gap-2 sm:gap-2.5 shrink-0">
+              <DaysLeftBadge
+                v-if="reviewingCase.dueDate || roadmapCashAdvance?.expected_liquidation_date"
+                :due-date="reviewingCase.dueDate || roadmapCashAdvance?.expected_liquidation_date"
+                :start-date="reviewingCase.dateOfAdvances || reviewingCase.createdAt || roadmapCashAdvance?.date"
+                :status="reviewStatus"
+                :is-overdue="isCaseOverdue"
+              />
+              <StatusBadge :status="reviewStatus" />
+            </div>
           </div>
         </div>
 
