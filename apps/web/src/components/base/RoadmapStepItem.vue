@@ -184,7 +184,7 @@ function handleClick() {
         class="mt-1 inline-flex items-center gap-1 rounded-full bg-red-50 px-1.5 py-0.5 text-[9px] font-bold leading-none text-red-700 ring-1 ring-red-200"
       >
         <AlertTriangle class="h-2.5 w-2.5 shrink-0" />
-        PHP {{ totalPenalty.toLocaleString() }} (Day {{ overdueDays }})
+        PHP {{ totalPenalty.toLocaleString() }}
       </span>
 
       <!-- Overpayment Amount Badge on Step 8 or Step 9 -->
