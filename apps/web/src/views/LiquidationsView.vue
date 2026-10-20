@@ -29,7 +29,7 @@ import { useLiquidationForwarding } from "@/composables/liquidations/useLiquidat
 import { useLiquidationSubmit } from "@/composables/liquidations/useLiquidationSubmit";
 import { useOcrMode } from "@/composables/useOcrMode";
 import { useUnsavedChanges } from "@/composables/useUnsavedChanges";
-import { formatPeso, formatDate } from "@/utils/formatters";
+import { formatPeso, formatDate, truncateText } from "@/utils/formatters";
 import { numberOrZero } from "@/utils/numbers";
 import { getFileUrl } from "@/utils/fileUtils";
 import { firstFilePathField } from "@/utils/receiptUtils";
@@ -1582,12 +1582,12 @@ function finalizeLiquidation() {
         @sort="toggleSort"
       >
         <template #cell-purpose="{ row }">
-          <div class="max-w-[200px] sm:max-w-[260px]">
+          <div class="max-w-[18ch]">
             <span
               class="block truncate text-sm font-medium text-slate-800"
               :title="row.purpose"
             >
-              {{ row.purpose || "—" }}
+              {{ truncateText(row.purpose, 18) }}
             </span>
           </div>
         </template>
@@ -1750,12 +1750,12 @@ function finalizeLiquidation() {
         @sort="employeeToggleSort"
       >
         <template #cell-purpose="{ row }">
-          <div class="max-w-[200px] sm:max-w-[260px]">
+          <div class="max-w-[18ch]">
             <span
               class="block truncate text-sm font-medium text-slate-800"
               :title="row.purpose"
             >
-              {{ row.purpose || "—" }}
+              {{ truncateText(row.purpose, 18) }}
             </span>
           </div>
         </template>

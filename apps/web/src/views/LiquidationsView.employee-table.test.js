@@ -545,4 +545,23 @@ describe("LiquidationsView — Employee table plumbing", () => {
       mockItems.push(...backup);
     }
   });
+
+  it("truncates purpose text longer than 18 characters (< 20) in the table cell while preserving full text in title attribute", async () => {
+    mockItems[0].purpose = "Purchased office supplies and materials for Q4 conference";
+    try {
+      const wrapper = mountView();
+      const firstRow = wrapper.find("tbody tr");
+      const purposeDiv = firstRow.find(".max-w-\\[18ch\\]");
+      expect(purposeDiv.exists()).toBe(true);
+
+      const purposeSpan = purposeDiv.find("span.truncate");
+      expect(purposeSpan.exists()).toBe(true);
+      expect(purposeSpan.text()).toBe("Purchased office s...");
+      expect(purposeSpan.attributes("title")).toBe(
+        "Purchased office supplies and materials for Q4 conference",
+      );
+    } finally {
+      mockItems[0].purpose = "Purpose 1";
+    }
+  });
 });

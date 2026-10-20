@@ -222,3 +222,17 @@ export function getCurrencySymbol(currencyCode = "PHP") {
   }
 }
 
+/**
+ * Truncate a string to a maximum length (including spaces) and append an ellipsis if truncated.
+ *
+ * @param {string|null|undefined} text - The text to truncate.
+ * @param {number} [maxLength=18] - Maximum character length including spaces.
+ * @returns {string} The truncated string or fallback.
+ */
+export function truncateText(text, maxLength = 18) {
+  if (text === null || text === undefined || text === "") return "—";
+  const str = String(text);
+  if (str.length <= maxLength) return str;
+  return str.slice(0, maxLength).trimEnd() + "...";
+}
+

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatPeso, formatAmount, formatKpiValue, formatDate, formatCutoffPeriod } from "./formatters";
+import { formatPeso, formatAmount, formatKpiValue, formatDate, formatCutoffPeriod, truncateText } from "./formatters";
 
 describe("formatters", () => {
   describe("formatPeso", () => {
@@ -92,6 +92,40 @@ describe("formatters", () => {
       expect(formatKpiValue("—")).toBe("—");
       expect(formatKpiValue(null)).toBe("—");
       expect(formatKpiValue(undefined)).toBe("—");
+    });
+  });
+
+  describe("truncateText", () => {
+    it("returns '—' for null, undefined, or empty text", () => {
+      expect(truncateText(null)).toBe("—");
+      expect(truncateText(undefined)).toBe("—");
+      expect(truncateText("")).toBe("—");
+    });
+
+    it("leaves strings at or below maxLength untouched", () => {
+      expect(truncateText("Short text")).toBe("Short text");
+      expect(truncateText("123456789012345678")).toBe("123456789012345678");
+    });
+
+    it("truncates strings exceeding default cap of 18 characters (< 20) including spaces and appends '...'", () => {
+      // 25 characters with spaces:
+      // "Purchased office s" is 18 chars (9 + 1 + 6 + 1 + 1)
+      const input = "Purchased office supplies";
+      const result = truncateText(input);
+      expect(result).toBe("Purchased office s...");
+      expect("Purchased office s".length).toBe(18);
+    });
+
+    it("trims trailing spaces before the ellipsis", () => {
+      // Character 18 is a space
+      const textWithSpaceAt18 = "12345678 12345678 ABC";
+      expect(textWithSpaceAt18.slice(0, 18)).toBe("12345678 12345678 ");
+      expect(truncateText(textWithSpaceAt18, 18)).toBe("12345678 12345678...");
+    });
+
+    it("supports custom maxLength", () => {
+      expect(truncateText("Hello World!", 5)).toBe("Hello...");
+      expect(truncateText("Purchased office supplies and materials for Q4", 30)).toBe("Purchased office supplies and...");
     });
   });
 });
