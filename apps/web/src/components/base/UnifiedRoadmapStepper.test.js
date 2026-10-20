@@ -451,4 +451,23 @@ describe("UnifiedRoadmapStepper", () => {
     expect(step4.props("historyEntry")).not.toBeNull();
     expect(step4.props("historyEntry").actor).toBe("General Employee");
   });
+
+  it("renders penalty amount without (Day X) on overdue roadmap step badges", () => {
+    const wrapper = mount(UnifiedRoadmapStepper, {
+      props: {
+        cashAdvance: {
+          ...baseCashAdvance,
+          status: "overdue",
+          expected_liquidation_date: "2026-08-01",
+        },
+        penalties: [
+          { penalty_amount: 2250 },
+        ],
+        statusHistory: [],
+      },
+    });
+
+    expect(wrapper.text()).toContain("PHP 2,250");
+    expect(wrapper.text()).not.toContain("(Day");
+  });
 });
