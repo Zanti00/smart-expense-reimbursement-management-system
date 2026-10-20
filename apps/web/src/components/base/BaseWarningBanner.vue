@@ -23,11 +23,11 @@ const isVisible = ref(true);
 
 const themeConfig = {
   warning: {
-    bg: "bg-amber-50/70 border-l-4 border-l-warning",
+    bg: "bg-warning-banner border border-amber-300",
     text: "text-amber-900",
     titleColor: "text-amber-800",
     icon: AlertTriangle,
-    iconColor: "text-warning",
+    iconColor: "text-warning-icon",
   },
   danger: {
     bg: "bg-red-50/70 border-l-4 border-l-danger",
