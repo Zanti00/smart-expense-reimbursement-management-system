@@ -75,6 +75,12 @@ const routes = [
         meta: { title: "My Expense" },
       },
       {
+        path: "payout",
+        name: "Payout",
+        component: () => import("@/views/PayoutView.vue"),
+        meta: { title: "Payout" },
+      },
+      {
         path: "admin/policy",
         name: "Policy",
         component: () => import("@/views/admin/PolicyView.vue"),

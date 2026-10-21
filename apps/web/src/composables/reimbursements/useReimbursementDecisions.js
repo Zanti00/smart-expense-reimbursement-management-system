@@ -177,12 +177,13 @@ export function useReimbursementDecisions(store, addToast, viewingRecord) {
     confirmPassword.value = "";
   }
 
-  async function confirmGrant() {
+  async function confirmGrant(payoutPayload) {
     if (!grantingId.value) return;
 
     isReviewSubmitting.value = true;
     try {
-      const updated = await store.grant(grantingId.value, confirmPassword.value);
+      const payload = payoutPayload || confirmPassword.value;
+      const updated = await store.grant(grantingId.value, payload);
       if (viewingRecord.value?.id === grantingId.value) {
         viewingRecord.value = updated;
       }

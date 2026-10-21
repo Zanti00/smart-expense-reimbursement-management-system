@@ -15,6 +15,8 @@ describe("buildNavLinks", () => {
       "Cash Advances",
       "Liquidations",
       "My Expense",
+      "Payout",
     ]);
   });
 });
+

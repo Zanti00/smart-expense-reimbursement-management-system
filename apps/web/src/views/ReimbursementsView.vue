@@ -11,6 +11,7 @@ import BaseUtilityToolbar from "@/components/base/BaseUtilityToolbar.vue";
 import ReimbursementDetailsModal from "@/components/reimbursements/ReimbursementDetailsModal.vue";
 import ReceiptDetailsModal from "@/components/reimbursements/ReceiptDetailsModal.vue";
 import DecisionConfirmationModal from "@/components/base/DecisionConfirmationModal.vue";
+import GrantPayoutModal from "@/components/reimbursements/GrantPayoutModal.vue";
 import DeleteConfirmModal from "@/components/base/DeleteConfirmModal.vue";
 import ReimbursementsTable from "@/components/reimbursements/ReimbursementsTable.vue";
 import { formatPeso } from "@/utils/formatters";
@@ -331,15 +332,25 @@ onMounted(() => store.fetchAll());
       @confirm-decision="confirmReceiptDecision"
     />
 
-    <!-- Approve / Revise / Reject / Grant Confirmation Modal -->
+    <!-- Approve / Revise / Reject Confirmation Modal -->
     <DecisionConfirmationModal
-      :is-open="!!approvingId || !!rejectingId || !!grantingId"
-      :mode="grantingId ? 'grant' : approvingId ? 'approve' : (revisionAction || 'revise')"
+      :is-open="!!approvingId || !!rejectingId"
+      :mode="approvingId ? 'approve' : (revisionAction || 'revise')"
       :is-submitting="isReviewSubmitting"
       v-model:password="confirmPassword"
       v-model:comment="rejectionComment"
-      @close="grantingId ? cancelGrant() : approvingId ? cancelApprove() : cancelReject()"
-      @confirm="grantingId ? confirmGrant() : approvingId ? confirmApprove() : confirmReject()"
+      @close="approvingId ? cancelApprove() : cancelReject()"
+      @confirm="approvingId ? confirmApprove() : confirmReject()"
+    />
+
+    <!-- Grant Reimbursement Payout Modal (G2-043 to G2-046) -->
+    <GrantPayoutModal
+      :is-open="!!grantingId"
+      :record="viewingRecord || store.items.find((i) => i.id === grantingId)"
+      :default-granted-by="auth.user?.name"
+      :is-submitting="isReviewSubmitting"
+      @close="cancelGrant"
+      @confirm="confirmGrant"
     />
 
     <!-- Delete Confirmation Modal -->
