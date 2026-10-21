@@ -2,12 +2,14 @@
 import { computed } from "vue";
 import { X, XCircle, ShieldCheck, Eye, FileText, Download } from "lucide-vue-next";
 import { formatPeso, formatDate } from "@/utils/formatters";
+import BaseButton from "@/components/base/BaseButton.vue";
 import StatusBadge from "@/components/base/StatusBadge.vue";
 import DaysLeftBadge from "@/components/base/DaysLeftBadge.vue";
 import BaseReceiptImage from "@/components/base/BaseReceiptImage.vue";
 import ReceiptImagePreview from "@/components/base/ReceiptImagePreview.vue";
 import UnifiedRoadmapStepper from "@/components/base/UnifiedRoadmapStepper.vue";
 import { useLiquidationStore } from "@/stores/liquidation";
+import { useReportExport } from "@/composables/useReportExport";
 
 const props = defineProps({
   isOpen: {
@@ -51,6 +53,7 @@ const props = defineProps({
 const emit = defineEmits(["close", "view-receipt", "reject", "approve", "navigate"]);
 
 const liqStore = useLiquidationStore();
+const { isExporting, exportReport } = useReportExport();
 
 /* Bridge unified roadmap props from reviewingCase */
 const roadmapCashAdvance = computed(() => {
@@ -218,9 +221,23 @@ function handleRoadmapNavigate(payload) {
 
           <!-- Receipts -->
           <div>
-            <h3 class="text-sm font-medium text-slate-700 mb-3">
-              Receipts ({{ reviewReceipts.length }})
-            </h3>
+            <div class="flex items-center justify-between gap-3 mb-3">
+              <h3 class="text-sm font-medium text-slate-700">
+                Receipts ({{ reviewReceipts.length }})
+              </h3>
+              <BaseButton
+                data-testid="export-admin-liquidation-report-btn"
+                variant="secondary"
+                size="sm"
+                type="button"
+                :loading="isExporting"
+                :disabled="isExporting"
+                @click="exportReport('liquidation', reviewingCase.databaseId ?? reviewingCase.id)"
+              >
+                <Download class="w-3.5 h-3.5" />
+                <span>{{ isExporting ? "Exporting..." : "Export Report" }}</span>
+              </BaseButton>
+            </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <article

@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   AlertCircle,
   ArrowRight,
+  Download,
 } from "lucide-vue-next";
 import BaseButton from "@/components/base/BaseButton.vue";
 import BaseToggleSwitch from "@/components/base/BaseToggleSwitch.vue";
@@ -17,6 +18,7 @@ import ScannedReceiptsList from "@/components/reimbursements/ScannedReceiptsList
 import UnifiedRoadmapStepper from "@/components/base/UnifiedRoadmapStepper.vue";
 import { useLiquidationStore } from "@/stores/liquidation";
 import { useOcrMode } from "@/composables/useOcrMode";
+import { useReportExport } from "@/composables/useReportExport";
 import { formatPeso } from "@/utils/formatters";
 
 const props = defineProps({
@@ -101,6 +103,15 @@ const emit = defineEmits([
 const reportAttachmentInput = ref(null);
 
 const { isMockOcr, setMockMode } = useOcrMode();
+const { isExporting, exportReport } = useReportExport();
+
+function handleExportLiquidationReport() {
+  if (props.existingLiquidation?.id) {
+    exportReport("liquidation", props.existingLiquidation.id);
+  } else if (props.selectedAdvance?.id) {
+    exportReport("liquidation", props.selectedAdvance.id, { byCashAdvance: true });
+  }
+}
 
 const normalizeStatus = (val) =>
   String(val || "")
@@ -361,31 +372,49 @@ function attachmentFileSize(file) {
       </span>
     </div>
 
-    <div v-if="!isFormDisabled" class="pt-4 border-t input-wrapper border-slate-100">
-      <div
-        class="flex flex-col gap-2 mb-3 sm:flex-row sm:items-center sm:justify-between"
-      >
-        <label class="input-label !mb-0">Receipt Attachments</label>
-        <BaseToggleSwitch
-          :model-value="isMockOcr"
-          @update:model-value="setMockMode"
-          on-label="Mock OCR"
-          off-label="Real OCR"
-          hint="Mock uploads file, fills instantly, skips OCR wait"
-        />
+    <div class="pt-4 border-t border-slate-100 space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <label class="input-label !mb-0">
+          Receipt Attachments ({{ receipts.length }})
+        </label>
+        <div class="flex items-center gap-3">
+          <BaseToggleSwitch
+            v-if="!isFormDisabled"
+            :model-value="isMockOcr"
+            @update:model-value="setMockMode"
+            on-label="Mock OCR"
+            off-label="Real OCR"
+            hint="Mock uploads file, fills instantly, skips OCR wait"
+          />
+          <BaseButton
+            data-testid="export-liquidation-report-btn"
+            variant="secondary"
+            size="sm"
+            type="button"
+            :loading="isExporting"
+            :disabled="isExporting"
+            @click="handleExportLiquidationReport"
+          >
+            <Download class="w-3.5 h-3.5" />
+            <span>{{ isExporting ? "Exporting..." : "Export Report" }}</span>
+          </BaseButton>
+        </div>
       </div>
-      <p class="mb-3 text-[11px] text-slate-400">
-        {{ isMockOcr ? "Fast — real file upload, instant mock data." : "Online — uses ocr-pipeline with polling." }}
-      </p>
-      <FileUpload
-        :model-value="receipts"
-        @update:model-value="$emit('update:receipts', $event)"
-        :max-size-mb="2"
-        :mock-mode="isMockOcr"
-        empty-action-label="Upload Receipt"
-        add-action-label="Upload Receipt"
-        @upload-error="$emit('upload-error', $event)"
-      />
+
+      <template v-if="!isFormDisabled">
+        <p class="text-[11px] text-slate-400">
+          {{ isMockOcr ? "Fast — real file upload, instant mock data." : "Online — uses ocr-pipeline with polling." }}
+        </p>
+        <FileUpload
+          :model-value="receipts"
+          @update:model-value="$emit('update:receipts', $event)"
+          :max-size-mb="2"
+          :mock-mode="isMockOcr"
+          empty-action-label="Upload Receipt"
+          add-action-label="Upload Receipt"
+          @upload-error="$emit('upload-error', $event)"
+        />
+      </template>
     </div>
 
     <ScannedReceiptsList

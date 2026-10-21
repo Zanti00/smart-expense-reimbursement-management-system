@@ -2,8 +2,10 @@
 import { computed } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { formatAmount, formatDate, formatCutoffPeriod } from "@/utils/formatters";
+import BaseButton from "@/components/base/BaseButton.vue";
 import StatusBadge from "@/components/base/StatusBadge.vue";
 import BaseReceiptImage from "@/components/base/BaseReceiptImage.vue";
+import { useReportExport } from "@/composables/useReportExport";
 import {
   X,
   FileText,
@@ -38,6 +40,7 @@ const emit = defineEmits([
 ]);
 
 const auth = useAuthStore();
+const { isExporting, exportReport } = useReportExport();
 
 const activeReceiptItems = computed(() => props.viewingRecord?.receipts || []);
 const isOwnSubmission = computed(() => {
@@ -290,9 +293,23 @@ function categoryName(record) {
 
             <!-- Receipts -->
             <div>
-              <h3 class="text-sm font-medium text-slate-700 mb-3">
-                Receipts ({{ activeReceiptItems.length }})
-              </h3>
+              <div class="flex items-center justify-between gap-3 mb-3">
+                <h3 class="text-sm font-medium text-slate-700">
+                  Receipts ({{ activeReceiptItems.length }})
+                </h3>
+                <BaseButton
+                  data-testid="export-reimbursement-report-btn"
+                  variant="secondary"
+                  size="sm"
+                  type="button"
+                  :loading="isExporting"
+                  :disabled="isExporting"
+                  @click="exportReport('reimbursement', viewingRecord.id)"
+                >
+                  <Download class="w-3.5 h-3.5" />
+                  <span>{{ isExporting ? "Exporting..." : "Export Report" }}</span>
+                </BaseButton>
+              </div>
 
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 <article
