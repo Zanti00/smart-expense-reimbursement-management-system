@@ -7,6 +7,7 @@ import { useReceiptStore } from "@/stores/receipts";
 import { useAuthStore } from "@/stores/auth";
 import { useToast } from "@/composables/useToast";
 import StatusBadge from "@/components/base/StatusBadge.vue";
+import DaysLeftBadge from "@/components/base/DaysLeftBadge.vue";
 import FileUpload from "@/components/base/FileUpload.vue";
 import BaseButton from "@/components/base/BaseButton.vue";
 import BaseModal from "@/components/base/BaseModal.vue";
@@ -846,6 +847,26 @@ function employeeAdvanceBadgeStatus(advance) {
     ? "overdue"
     : derivedStatus.toLowerCase().replace(/\s+/g, "-");
 }
+
+const modalAdvanceStatus = computed(() => {
+  if (!selectedAdvance.value) return "";
+  return employeeAdvanceBadgeStatus(selectedAdvance.value);
+});
+
+const isModalAdvanceOverdue = computed(() => {
+  if (!selectedAdvance.value) return false;
+  if (modalAdvanceStatus.value === "overdue") return true;
+  if (liqStore.calculateAging(selectedAdvance.value)?.isOverdue) return true;
+  const due =
+    selectedAdvance.value.dueDate ||
+    selectedAdvance.value.expected_liquidation_date;
+  if (!due) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const d = new Date(due);
+  d.setHours(0, 0, 0, 0);
+  return d < today;
+});
 
 function employeeSortValue(advance, key) {
   if (key === "amount") return numberOrZero(advance.amount);
@@ -1865,15 +1886,39 @@ function finalizeLiquidation() {
               </p>
             </div>
           </div>
-          <button
-            id="settlement-modal-close"
-            type="button"
-            aria-label="Close liquidation details"
-            class="-mr-1 mt-0.5 flex shrink-0 items-center justify-center rounded-full p-1.5 text-slate-400 transition-colors hover:bg-slate-100"
-            @click="closeSettlementModal"
-          >
-            <X class="w-4 h-4" />
-          </button>
+          <div class="flex items-center gap-2 sm:gap-2.5 shrink-0">
+            <DaysLeftBadge
+              v-if="
+                settlementModalStep === 'form' &&
+                (selectedAdvance?.dueDate ||
+                  selectedAdvance?.expected_liquidation_date)
+              "
+              :due-date="
+                selectedAdvance?.dueDate ||
+                selectedAdvance?.expected_liquidation_date
+              "
+              :start-date="
+                selectedAdvance?.date ||
+                selectedAdvance?.dateOfAdvances ||
+                selectedAdvance?.createdAt
+              "
+              :status="modalAdvanceStatus"
+              :is-overdue="isModalAdvanceOverdue"
+            />
+            <StatusBadge
+              v-if="settlementModalStep === 'form' && selectedAdvance"
+              :status="modalAdvanceStatus"
+            />
+            <button
+              id="settlement-modal-close"
+              type="button"
+              aria-label="Close liquidation details"
+              class="-mr-1 mt-0.5 flex shrink-0 items-center justify-center rounded-full p-1.5 text-slate-400 transition-colors hover:bg-slate-100"
+              @click="closeSettlementModal"
+            >
+              <X class="w-4 h-4" />
+            </button>
+          </div>
         </div>
         <div class="overflow-y-auto">
           <LiquidationAdvancePicker
