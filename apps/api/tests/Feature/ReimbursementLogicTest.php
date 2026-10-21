@@ -567,5 +567,245 @@ class ReimbursementLogicTest extends TestCase
             'user_comment' => $updatedComment,
         ]);
     }
+
+    public function test_reimbursement_eager_loads_payout_relation(): void
+    {
+        $reimbursement = Reimbursement::create([
+            'user_id' => $this->employee->id,
+            'description' => 'Granted Reimbursement',
+            'amount' => 1500.00,
+            'date' => '2026-10-01',
+            'cutoff_period' => '2026-10-A',
+            'status' => 'granted',
+            'submitted_by_name' => $this->employee->name,
+        ]);
+
+        \App\Modules\Reimbursements\Models\Payout::create([
+            'reimbursement_id' => $reimbursement->id,
+            'request_date' => '2026-10-01',
+            'approved_at' => '2026-10-05 14:00:00',
+            'granted_at' => '2026-10-10 10:00:00',
+            'approved_by' => 'Finance Manager',
+            'granted_by' => 'Cashier Jane',
+            'payout_method' => 'E-wallet',
+            'amount' => 1500.00,
+            'granter_signature' => 'data:image/png;base64,granterSig',
+        ]);
+
+        $token = $this->generateMockToken([
+            'email' => $this->employee->email,
+            'role' => $this->employee->role,
+            'first_name' => 'John',
+            'last_name' => 'Doe',
+        ]);
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'Accept' => 'application/json',
+        ])->get('/api/reimbursements');
+
+        $response->assertStatus(200);
+        $this->assertEquals('E-wallet', $response->json('0.payout.payout_method'));
+        $this->assertEquals('Cashier Jane', $response->json('0.payout.granted_by'));
+    }
+
+    public function test_approve_saves_approving_admin_and_timestamp(): void
+    {
+        $reimbursement = Reimbursement::create([
+            'user_id' => $this->employee->id,
+            'description' => 'Client Lunch',
+            'amount' => 1200.00,
+            'date' => '2026-10-01',
+            'cutoff_period' => '2026-10-A',
+            'status' => 'pending',
+            'submitted_by_name' => $this->employee->name,
+        ]);
+
+        $token = $this->generateMockToken([
+            'email' => $this->admin->email,
+            'role' => $this->admin->role,
+            'first_name' => 'Admin',
+            'last_name' => 'User',
+        ]);
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'Accept' => 'application/json',
+        ])->postJson('/api/reimbursements/' . $reimbursement->id . '/approve', []);
+
+        $response->assertStatus(200);
+        $this->assertEquals('approved', $response->json('data.status'));
+        $this->assertEquals($this->admin->name, $response->json('data.approved_by'));
+        $this->assertNotNull($response->json('data.approved_at'));
+    }
+
+    public function test_grant_creates_payout_record_and_blocks_duplicate_or_unapproved_grant(): void
+    {
+        $reimbursement = Reimbursement::create([
+            'user_id' => $this->employee->id,
+            'description' => 'Conference Travel',
+            'amount' => 3500.00,
+            'date' => '2026-10-02',
+            'cutoff_period' => '2026-10-A',
+            'status' => 'approved',
+            'approved_by' => 'Finance Approver',
+            'approved_at' => '2026-10-05 12:00:00',
+            'submitted_by_name' => $this->employee->name,
+        ]);
+
+        $token = $this->generateMockToken([
+            'email' => $this->admin->email,
+            'role' => $this->admin->role,
+            'first_name' => 'Admin',
+            'last_name' => 'User',
+        ]);
+
+        // Selecting Other without payout_method_other fails validation (G2-045)
+        $invalidResponse = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'Accept' => 'application/json',
+        ])->postJson('/api/reimbursements/' . $reimbursement->id . '/grant', [
+            'granted_by' => 'Cashier Jane',
+            'payout_method' => 'Other',
+            'granter_signature' => 'data:image/png;base64,granterSig',
+        ]);
+        $invalidResponse->assertStatus(422);
+
+        // Valid grant (G2-044, G2-045, G2-046, G2-047)
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'Accept' => 'application/json',
+        ])->postJson('/api/reimbursements/' . $reimbursement->id . '/grant', [
+            'granted_by' => 'Cashier Jane',
+            'payout_method' => 'Other',
+            'payout_method_other' => 'GCash Corporate',
+            'granter_signature' => 'data:image/png;base64,granterSig',
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertEquals('granted', $response->json('data.status'));
+        $this->assertEquals('Cashier Jane', $response->json('data.payout.granted_by'));
+        $this->assertEquals('Finance Approver', $response->json('data.payout.approved_by'));
+        $this->assertEquals('Other', $response->json('data.payout.payout_method'));
+        $this->assertEquals('GCash Corporate', $response->json('data.payout.payout_method_other'));
+        $this->assertEquals('3500.00', $response->json('data.payout.amount'));
+
+        // Duplicate grant is blocked (G2-047)
+        $secondGrant = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'Accept' => 'application/json',
+        ])->postJson('/api/reimbursements/' . $reimbursement->id . '/grant', [
+            'granted_by' => 'Cashier Jane',
+            'payout_method' => 'Cash',
+            'granter_signature' => 'data:image/png;base64,granterSig',
+        ]);
+        $secondGrant->assertStatus(403);
+    }
+
+    public function test_employee_can_acknowledge_own_granted_payout_once_and_not_others(): void
+    {
+        $reimbursement = Reimbursement::create([
+            'user_id' => $this->employee->id,
+            'description' => 'Granted Reimbursement',
+            'amount' => 1500.00,
+            'date' => '2026-10-01',
+            'cutoff_period' => '2026-10-A',
+            'status' => 'granted',
+            'submitted_by_name' => $this->employee->name,
+        ]);
+
+        \App\Modules\Reimbursements\Models\Payout::create([
+            'reimbursement_id' => $reimbursement->id,
+            'request_date' => '2026-10-01',
+            'approved_at' => '2026-10-05 14:00:00',
+            'granted_at' => '2026-10-10 10:00:00',
+            'approved_by' => 'Finance Manager',
+            'granted_by' => 'Cashier Jane',
+            'payout_method' => 'Cash',
+            'amount' => 1500.00,
+            'granter_signature' => 'data:image/png;base64,granterSig',
+        ]);
+
+        $otherUser = User::create([
+            'name' => 'Other Emp',
+            'email' => 'other@example.com',
+            'role' => 'employee',
+            'grade' => 'L1',
+            'department' => 'IT',
+        ]);
+
+        $otherToken = $this->generateMockToken([
+            'email' => $otherUser->email,
+            'role' => $otherUser->role,
+            'first_name' => 'Other',
+            'last_name' => 'Emp',
+        ]);
+
+        // Other employee cannot acknowledge (G2-050, G2-053)
+        $forbidden = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $otherToken,
+            'Accept' => 'application/json',
+        ])->postJson('/api/reimbursements/' . $reimbursement->id . '/acknowledge', [
+            'employee_signature' => 'data:image/png;base64,empSig',
+        ]);
+        $forbidden->assertStatus(403);
+
+        // Owning employee acknowledges (G2-050)
+        $empToken = $this->generateMockToken([
+            'email' => $this->employee->email,
+            'role' => $this->employee->role,
+            'first_name' => 'John',
+            'last_name' => 'Doe',
+        ]);
+
+        $ok = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $empToken,
+            'Accept' => 'application/json',
+        ])->postJson('/api/reimbursements/' . $reimbursement->id . '/acknowledge', [
+            'employee_signature' => 'data:image/png;base64,empSig',
+        ]);
+        $ok->assertStatus(200);
+        $this->assertEquals('data:image/png;base64,empSig', $ok->json('data.payout.employee_signature'));
+        $this->assertNotNull($ok->json('data.payout.acknowledged_at'));
+
+        // Cannot re-sign once acknowledged (G2-050 Task 3)
+        $resign = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $empToken,
+            'Accept' => 'application/json',
+        ])->postJson('/api/reimbursements/' . $reimbursement->id . '/acknowledge', [
+            'employee_signature' => 'data:image/png;base64,newSig',
+        ]);
+        $resign->assertStatus(403);
+    }
+
+    public function test_granted_reimbursement_cannot_be_updated_or_deleted(): void
+    {
+        $reimbursement = Reimbursement::create([
+            'user_id' => $this->employee->id,
+            'description' => 'Locked Granted Claim',
+            'amount' => 1500.00,
+            'date' => '2026-10-01',
+            'cutoff_period' => '2026-10-A',
+            'status' => 'granted',
+            'submitted_by_name' => $this->employee->name,
+        ]);
+
+        $adminToken = $this->generateMockToken([
+            'email' => $this->admin->email,
+            'role' => $this->admin->role,
+            'first_name' => 'Admin',
+            'last_name' => 'User',
+        ]);
+
+        $patchRes = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $adminToken,
+            'Accept' => 'application/json',
+        ])->patchJson('/api/reimbursements/' . $reimbursement->id, [
+            'admin_notes' => 'Trying to edit granted record',
+        ]);
+        $patchRes->assertStatus(403);
+    }
 }
+
+
 

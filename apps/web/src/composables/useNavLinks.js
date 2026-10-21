@@ -4,6 +4,7 @@ import {
   Wallet,
   FilePieChart,
   FileCheck,
+  Banknote,
 } from "lucide-vue-next";
 
 const base = [
@@ -13,8 +14,12 @@ const base = [
   { name: "Liquidations", to: "/liquidations", icon: FilePieChart },
 ];
 
-const employee = [{ name: "My Expense", to: "/my-expense", icon: FileCheck }];
+const employee = [
+  { name: "My Expense", to: "/my-expense", icon: FileCheck },
+  { name: "Payout", to: "/payout", icon: Banknote },
+];
 
 export function buildNavLinks() {
   return [...base, ...employee];
 }
+

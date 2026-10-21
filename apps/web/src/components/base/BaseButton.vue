@@ -54,10 +54,27 @@ function updateProgress(timestamp) {
   }
 }
 
+let clickEmittedByMouseDown = false
+
+function handleClick(e) {
+  if (props.disabled || props.loading) return
+  if (!props.requireHold) {
+    if (clickEmittedByMouseDown) {
+      clickEmittedByMouseDown = false
+      return
+    }
+    emit('click', e)
+  }
+}
+
 function startHold(e) {
   if (props.disabled || props.loading) return
   if (!props.requireHold) {
+    clickEmittedByMouseDown = true
     emit('click', e)
+    setTimeout(() => {
+      clickEmittedByMouseDown = false
+    }, 100)
     return
   }
   
@@ -83,6 +100,7 @@ onUnmounted(() => {
     :size="mappedSize"
     :disabled="disabled || loading"
     class="relative overflow-hidden"
+    @click="handleClick"
     @mousedown="startHold"
     @mouseup="cancelHold"
     @mouseleave="cancelHold"

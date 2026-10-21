@@ -147,6 +147,18 @@ const statusConfig = {
     medium: 'bg-red-50 text-red-700 border border-red-300',
     low: 'bg-red-50/70 text-red-700',
   },
+  acknowledged: {
+    label: 'Acknowledged',
+    high: 'bg-emerald-600 text-white',
+    medium: 'bg-emerald-50 text-emerald-700 border border-emerald-300',
+    low: 'bg-emerald-50/70 text-emerald-700',
+  },
+  'awaiting-acknowledgement': {
+    label: 'Awaiting Acknowledgement',
+    high: 'bg-amber-500 text-white',
+    medium: 'bg-amber-50 text-amber-700 border border-amber-300',
+    low: 'bg-amber-50/70 text-amber-700',
+  },
 }
 
 function toTitleCase(str) {

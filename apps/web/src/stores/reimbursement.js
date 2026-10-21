@@ -209,16 +209,50 @@ export const useReimbursementStore = defineStore("reimbursement", () => {
     }
   }
 
-  async function grant(id, password) {
+  async function grant(id, payload) {
     isLoading.value = true;
     try {
+      const body = typeof payload === "string" ? { password: payload } : payload;
       const response = await apiFetch(`/api/serms/reimbursements/${id}/grant`, {
         method: "POST",
-        body: JSON.stringify({ password }),
+        body: JSON.stringify(body),
       });
       if (!response.ok) {
         const errJson = await response.json().catch(() => ({}));
-        const errMsg = errJson.errors?.password?.[0] || errJson.message || "Failed to grant";
+        const errMsg =
+          errJson.errors?.password?.[0] ||
+          errJson.errors?.granter_signature?.[0] ||
+          errJson.errors?.granted_by?.[0] ||
+          errJson.message ||
+          "Failed to grant";
+        throw new Error(errMsg);
+      }
+      const json = await response.json();
+      const index = items.value.findIndex((i) => i.id == id);
+      if (index !== -1) items.value[index] = json.data;
+      if (currentItem.value?.id == id) currentItem.value = json.data;
+      return json.data;
+    } catch (e) {
+      console.error(e);
+      throw e;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function acknowledgePayout(id, employeeSignature) {
+    isLoading.value = true;
+    try {
+      const response = await apiFetch(`/api/serms/reimbursements/${id}/acknowledge`, {
+        method: "POST",
+        body: JSON.stringify({ employee_signature: employeeSignature }),
+      });
+      if (!response.ok) {
+        const errJson = await response.json().catch(() => ({}));
+        const errMsg =
+          errJson.errors?.employee_signature?.[0] ||
+          errJson.message ||
+          "Failed to acknowledge payout";
         throw new Error(errMsg);
       }
       const json = await response.json();
@@ -250,6 +284,7 @@ export const useReimbursementStore = defineStore("reimbursement", () => {
     reject,
     revise,
     grant,
+    acknowledgePayout,
     updateNotes,
     updateRequest,
     deleteRequest,

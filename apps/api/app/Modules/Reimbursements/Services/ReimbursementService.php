@@ -29,7 +29,7 @@ class ReimbursementService
      */
     public function listReimbursements(User $user, bool $canManage)
     {
-        $query = Reimbursement::with(['receipts.category', 'user', 'expenseCategory'])
+        $query = Reimbursement::with(['receipts.category', 'user', 'expenseCategory', 'payout'])
             ->orderByDesc('created_at')
             ->orderByDesc('id');
 
@@ -125,7 +125,7 @@ class ReimbursementService
      */
     public function showReimbursement(User $user, int $id, bool $canManage)
     {
-        $reimbursement = Reimbursement::with(['receipts.items', 'receipts.category', 'user', 'expenseCategory'])->findOrFail($id);
+        $reimbursement = Reimbursement::with(['receipts.items', 'receipts.category', 'user', 'expenseCategory', 'payout'])->findOrFail($id);
 
         if (!$canManage && $reimbursement->user_id !== $user->id) {
             throw new \Illuminate\Auth\Access\AuthorizationException('Forbidden.');
@@ -154,8 +154,16 @@ class ReimbursementService
                 throw new \Illuminate\Auth\Access\AuthorizationException('Conflict. Self-approval is strictly prohibited.');
             }
 
+            if (!in_array($reimbursement->status, ['pending', 'submitted'])) {
+                throw new \Illuminate\Auth\Access\AuthorizationException('Only pending reimbursements can be approved.');
+            }
+
             $beforeState = $reimbursement->toArray();
-            $reimbursement->update(['status' => 'approved']);
+            $reimbursement->update([
+                'status' => 'approved',
+                'approved_by' => $user->name,
+                'approved_at' => now(),
+            ]);
             $this->updateReceiptStatuses($reimbursement->receipts()->pluck('receipts.id')->all(), 'approved');
             $afterState = $reimbursement->toArray();
 
@@ -175,7 +183,7 @@ class ReimbursementService
                 UpdatePrsReimbursementStatusJob::dispatch($reimbursement->source_submission_id);
             }
 
-            return $reimbursement;
+            return $reimbursement->load(['receipts.category', 'user', 'expenseCategory', 'payout']);
         });
     }
 
@@ -255,9 +263,9 @@ class ReimbursementService
     /**
      * Grant (disburse) a previously approved claim.
      */
-    public function grantReimbursement(User $user, int $id, ?string $password, string $ipAddress, Request $requestContext)
+    public function grantReimbursement(User $user, int $id, ?string $password, string $ipAddress, Request $requestContext, array $payoutData = [])
     {
-        return DB::transaction(function () use ($user, $id, $password, $ipAddress, $requestContext) {
+        return DB::transaction(function () use ($user, $id, $password, $ipAddress, $requestContext, $payoutData) {
             // Verify password against external auth service if provided
             if (!empty($password) && !PasswordVerificationService::verify($requestContext, $password)) {
                 throw ValidationException::withMessages([
@@ -265,11 +273,11 @@ class ReimbursementService
                 ]);
             }
 
-            $reimbursement = Reimbursement::findOrFail($id);
+            $reimbursement = Reimbursement::with('payout')->findOrFail($id);
 
-            // Status guard: only approved reimbursements can be granted
-            if ($reimbursement->status !== 'approved') {
-                throw new \Illuminate\Auth\Access\AuthorizationException('Only approved reimbursements can be granted.');
+            // Status guard: only approved reimbursements can be granted and only once
+            if ($reimbursement->status !== 'approved' || $reimbursement->payout()->exists()) {
+                throw new \Illuminate\Auth\Access\AuthorizationException('Only approved reimbursements can be granted, and cannot be granted again.');
             }
 
             // Self-grant check
@@ -280,6 +288,29 @@ class ReimbursementService
             $beforeState = $reimbursement->toArray();
             $reimbursement->update(['status' => 'granted']);
             $this->updateReceiptStatuses($reimbursement->receipts()->pluck('receipts.id')->all(), 'granted');
+
+            // Create linked Payout record
+            $requestDate = $reimbursement->date ?? $reimbursement->created_at;
+            $approvedAt = $reimbursement->approved_at ?? now();
+            $approvedBy = $reimbursement->approved_by ?? ($payoutData['approved_by'] ?? 'Approver');
+            $grantedBy = $payoutData['granted_by'] ?? $user->name;
+            $payoutMethod = $payoutData['payout_method'] ?? 'Cash';
+            $payoutMethodOther = $payoutData['payout_method_other'] ?? null;
+            $granterSignature = $payoutData['granter_signature'] ?? null;
+
+            \App\Modules\Reimbursements\Models\Payout::create([
+                'reimbursement_id' => $reimbursement->id,
+                'request_date' => $requestDate,
+                'approved_at' => $approvedAt,
+                'granted_at' => now(),
+                'approved_by' => $approvedBy,
+                'granted_by' => $grantedBy,
+                'payout_method' => $payoutMethod,
+                'payout_method_other' => $payoutMethodOther,
+                'amount' => $reimbursement->amount,
+                'granter_signature' => $granterSignature,
+            ]);
+
             $afterState = $reimbursement->toArray();
 
             // Immutable Audit Log
@@ -298,7 +329,50 @@ class ReimbursementService
                 UpdatePrsReimbursementStatusJob::dispatch($reimbursement->source_submission_id);
             }
 
-            return $reimbursement;
+            return $reimbursement->load(['receipts.category', 'user', 'expenseCategory', 'payout']);
+        });
+    }
+
+    /**
+     * Employee signs to acknowledge their granted payout.
+     */
+    public function acknowledgePayout(User $user, int $id, string $employeeSignature, string $ipAddress)
+    {
+        return DB::transaction(function () use ($user, $id, $employeeSignature, $ipAddress) {
+            $reimbursement = Reimbursement::with('payout')->findOrFail($id);
+
+            if ($reimbursement->user_id !== $user->id) {
+                throw new \Illuminate\Auth\Access\AuthorizationException('Forbidden. You do not own this reimbursement.');
+            }
+
+            if ($reimbursement->status !== 'granted' || !$reimbursement->payout) {
+                throw new \Illuminate\Auth\Access\AuthorizationException('Only granted payouts can be acknowledged.');
+            }
+
+            $payout = $reimbursement->payout;
+            if (!empty($payout->acknowledged_at) || !empty($payout->employee_signature)) {
+                throw new \Illuminate\Auth\Access\AuthorizationException('Payout has already been acknowledged and is locked.');
+            }
+
+            $beforeState = $payout->toArray();
+            $payout->update([
+                'employee_signature' => $employeeSignature,
+                'acknowledged_at' => now(),
+            ]);
+            $afterState = $payout->toArray();
+
+            AuditLogService::log(
+                actorId: $user->id,
+                actorRole: $user->role,
+                actionType: 'PAYOUT_ACKNOWLEDGED',
+                entityType: 'reimbursement',
+                entityId: $reimbursement->id,
+                beforeState: $beforeState,
+                afterState: $afterState,
+                ipAddress: $ipAddress
+            );
+
+            return $reimbursement->load(['receipts.category', 'user', 'expenseCategory', 'payout']);
         });
     }
 
@@ -312,6 +386,10 @@ class ReimbursementService
     public function updateReimbursement(User $user, int $id, array $data, bool $canManage, $reportFile = null)
     {
         $reimbursement = Reimbursement::findOrFail($id);
+
+        if ($reimbursement->status === 'granted') {
+            throw new \Illuminate\Auth\Access\AuthorizationException('Granted reimbursement records are locked and cannot be modified.');
+        }
 
         // Admin mode — existing behaviour
         if ($canManage && ($user->id !== $reimbursement->user_id)) {

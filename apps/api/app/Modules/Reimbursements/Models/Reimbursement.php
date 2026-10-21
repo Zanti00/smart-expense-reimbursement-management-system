@@ -22,6 +22,8 @@ class Reimbursement extends Model
         'report_file_path',
         'admin_notes',
         'submitted_by_name',
+        'approved_by',
+        'approved_at',
         'source_system',
         'source_submission_id',
         'is_request',
@@ -30,6 +32,7 @@ class Reimbursement extends Model
     protected $casts = [
         'amount' => 'decimal:2',
         'date' => 'date',
+        'approved_at' => 'datetime',
         'is_request' => 'boolean',
     ];
 
@@ -52,4 +55,10 @@ class Reimbursement extends Model
     {
         return $this->belongsTo(ExpenseCategory::class, 'expense_category_id');
     }
+
+    public function payout()
+    {
+        return $this->hasOne(Payout::class);
+    }
 }
+

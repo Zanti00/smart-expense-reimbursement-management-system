@@ -234,6 +234,15 @@ function categoryName(record) {
                 <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-0.5">Period</p>
                 <p class="text-sm text-slate-700">{{ getCutoffPeriod(viewingRecord) }}</p>
               </div>
+              <div v-if="['approved', 'granted'].includes(normalizeStatus(viewingRecord.status)) || viewingRecord.approved_by">
+                <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-0.5">Approved By</p>
+                <p class="text-sm text-slate-700">
+                  {{ viewingRecord.approved_by || "Approver" }}
+                  <span v-if="viewingRecord.approved_at" class="text-xs text-slate-400">
+                    &bull; {{ formatDate(viewingRecord.approved_at) }}
+                  </span>
+                </p>
+              </div>
               <div v-if="viewingRecord.report_url || viewingRecord.report_file_path" class="col-span-2">
                 <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-1">Report</p>
                 <a
