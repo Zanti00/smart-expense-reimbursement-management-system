@@ -4,6 +4,7 @@ import { useAuthStore } from "@/stores/auth";
 import { useCashAdvanceStore } from "@/stores/cashAdvance";
 import { useLiquidationStore } from "@/stores/liquidation";
 import { useToast } from "@/composables/useToast";
+import { useReportExport } from "@/composables/useReportExport";
 import BaseModal from "@/components/base/BaseModal.vue";
 import BaseButton from "@/components/base/BaseButton.vue";
 import StatusBadge from "@/components/base/StatusBadge.vue";
@@ -38,6 +39,7 @@ const auth = useAuthStore();
 const store = useCashAdvanceStore();
 const liquidationStore = useLiquidationStore();
 const { addToast } = useToast();
+const { isExporting, exportReport } = useReportExport();
 
 /** Unified roadmap helpers */
 const linkedLiquidation = computed(() => {
@@ -638,47 +640,63 @@ async function confirmAcknowledge() {
           </section>
         </div>
 
-        <!-- Footer (Admin: Pending / Approved) -->
+        <!-- Footer (Admin) -->
         <footer
-          v-if="['pending', 'approved'].includes(record.status)"
-          class="px-6 py-4 border-t border-slate-100 flex flex-col gap-3 sm:flex-row shrink-0"
+          class="px-6 py-4 border-t border-slate-100 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between shrink-0"
         >
-          <p
-            v-if="isOwnSubmission"
-            class="text-sm text-danger text-center sm:text-left w-full"
+          <BaseButton
+            data-testid="export-cash-advance-report-btn"
+            variant="secondary"
+            type="button"
+            class="sm:w-auto"
+            :loading="isExporting"
+            :disabled="isExporting"
+            @click="exportReport('cash-advance', record.id)"
           >
-            You cannot process your own request.
-          </p>
-          <template v-else>
-            <template v-if="['pending','revise'].includes(record.status)">
-              <div class="flex-1">
-                <select
-                  @change="requestConfirmation($event.target.value); $event.target.value=''"
-                  class="w-full py-2.5 border border-slate-200 text-slate-700 text-sm font-medium rounded-lg bg-white hover:bg-slate-50 transition-colors text-center"
-                  value=""
+            <Download class="w-4 h-4" />
+            <span>{{ isExporting ? "Exporting..." : "Export Report" }}</span>
+          </BaseButton>
+
+          <template v-if="['pending', 'revise', 'approved'].includes(record.status)">
+            <p
+              v-if="isOwnSubmission"
+              class="text-sm text-danger text-center sm:text-right"
+            >
+              You cannot process your own request.
+            </p>
+            <div v-else class="flex flex-1 flex-col gap-3 sm:flex-row sm:justify-end">
+              <template v-if="['pending','revise'].includes(record.status)">
+                <div class="flex-1 sm:max-w-[200px]">
+                  <select
+                    @change="requestConfirmation($event.target.value); $event.target.value=''"
+                    class="w-full py-2.5 border border-slate-200 text-slate-700 text-sm font-medium rounded-lg bg-white hover:bg-slate-50 transition-colors text-center"
+                    value=""
+                  >
+                    <option value="" disabled selected>Actions ▾</option>
+                    <option value="revise">Request Revision</option>
+                    <option value="reject">Reject</option>
+                  </select>
+                </div>
+                <button
+                  class="flex-1 sm:max-w-[200px] py-2.5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-sm flex items-center justify-center gap-2"
+                  type="button"
+                  @click="requestConfirmation('approve')"
                 >
-                  <option value="" disabled selected>Actions ▾</option>
-                  <option value="revise">Request Revision</option>
-                  <option value="reject">Reject</option>
-                </select>
-              </div>
-              <button
-                class="flex-1 py-2.5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-sm flex items-center justify-center gap-2"
-                @click="requestConfirmation('approve')"
-              >
-                <CheckCircle class="w-4 h-4" />
-                Approve
-              </button>
-            </template>
-            <template v-if="record.status === 'approved'">
-              <button
-                class="flex-1 py-2.5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-sm flex items-center justify-center gap-2"
-                @click="requestConfirmation('disburse')"
-              >
-                <Wallet class="w-4 h-4" />
-                Disburse
-              </button>
-            </template>
+                  <CheckCircle class="w-4 h-4" />
+                  Approve
+                </button>
+              </template>
+              <template v-if="record.status === 'approved'">
+                <button
+                  class="flex-1 sm:max-w-[220px] py-2.5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-sm flex items-center justify-center gap-2"
+                  type="button"
+                  @click="requestConfirmation('disburse')"
+                >
+                  <Wallet class="w-4 h-4" />
+                  Disburse
+                </button>
+              </template>
+            </div>
           </template>
         </footer>
       </div>
@@ -853,15 +871,29 @@ async function confirmAcknowledge() {
         </div>
 
         <!-- Footer (Employee) -->
-        <footer class="px-6 py-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 shrink-0">
-          <p>
-            <span class="font-bold uppercase tracking-widest">Requested</span>
-            <span class="ml-2 font-semibold text-slate-800">{{ formatDateOnly(record.date) }}</span>
-          </p>
-          <p>
-            <span class="font-bold uppercase tracking-widest">Updated</span>
-            <span class="ml-2 font-semibold text-slate-800">{{ formatDateOnly(record.updatedAt) }}</span>
-          </p>
+        <footer class="px-6 py-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 shrink-0">
+          <div class="flex items-center gap-4">
+            <p>
+              <span class="font-bold uppercase tracking-widest">Requested</span>
+              <span class="ml-2 font-semibold text-slate-800">{{ formatDateOnly(record.date) }}</span>
+            </p>
+            <p>
+              <span class="font-bold uppercase tracking-widest">Updated</span>
+              <span class="ml-2 font-semibold text-slate-800">{{ formatDateOnly(record.updatedAt) }}</span>
+            </p>
+          </div>
+          <BaseButton
+            data-testid="export-cash-advance-report-btn"
+            variant="secondary"
+            size="sm"
+            type="button"
+            :loading="isExporting"
+            :disabled="isExporting"
+            @click="exportReport('cash-advance', record.id)"
+          >
+            <Download class="w-3.5 h-3.5" />
+            <span>{{ isExporting ? "Exporting..." : "Export Report" }}</span>
+          </BaseButton>
         </footer>
       </div>
     </div>

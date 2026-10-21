@@ -66,4 +66,33 @@ describe("ReimbursementDetailsModal — Custom User Comment Display", () => {
     expect(wrapper.text()).toContain("User Comment");
     expect(wrapper.text()).toContain("No comment provided");
   });
+
+  it("renders Export Report button beside Receipts header and triggers reimbursement report export (G2-055, G2-058)", async () => {
+    const wrapper = mount(ReimbursementDetailsModal, {
+      props: {
+        viewingRecord: {
+          id: 42,
+          status: "approved",
+          description: "Client Dinner",
+          user_comment: "Team dinner",
+          user: { name: "John Doe" },
+          cutoff_period: "2026-10-A",
+          amount: 2400,
+          receipts: [],
+        },
+        receiptDetailsOpen: false,
+        modalLoading: false,
+      },
+      global: {
+        stubs: {
+          StatusBadge: true,
+          BaseReceiptImage: true,
+        },
+      },
+    });
+
+    const exportBtn = wrapper.find('[data-testid="export-reimbursement-report-btn"]');
+    expect(exportBtn.exists()).toBe(true);
+    expect(exportBtn.text()).toContain("Export Report");
+  });
 });

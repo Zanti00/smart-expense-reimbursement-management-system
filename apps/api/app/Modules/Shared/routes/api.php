@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Modules\Shared\Http\Controllers\AuthController;
 use App\Modules\Shared\Http\Controllers\CryptoController;
+use App\Modules\Shared\Http\Controllers\ReportController;
 
 Route::prefix('api')->group(function () {
     // Public: server RSA public key for client-side payload encryption (SDD §5).
@@ -12,5 +13,7 @@ Route::prefix('api')->group(function () {
         Route::get('/auth/me', [AuthController::class, 'me']);
 
         Route::post('/auth/verify-password', [AuthController::class, 'verifyPassword']);
+
+        Route::get('/reports/{type}/{id}', [ReportController::class, 'download']);
     });
 });
