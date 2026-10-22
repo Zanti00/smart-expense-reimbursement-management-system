@@ -3,11 +3,13 @@ import { describe, it, expect, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import ReimbursementDetailsModal from "./ReimbursementDetailsModal.vue";
 
+const authState = {
+  isAdmin: true,
+  user: { id: "admin-1", name: "Admin User" },
+};
+
 vi.mock("@/stores/auth", () => ({
-  useAuthStore: () => ({
-    isAdmin: true,
-    user: { id: "admin-1", name: "Admin User" },
-  }),
+  useAuthStore: () => authState,
 }));
 
 describe("ReimbursementDetailsModal — Custom User Comment Display", () => {
@@ -94,5 +96,141 @@ describe("ReimbursementDetailsModal — Custom User Comment Display", () => {
     const exportBtn = wrapper.find('[data-testid="export-reimbursement-report-btn"]');
     expect(exportBtn.exists()).toBe(true);
     expect(exportBtn.text()).toContain("Export Report");
+  });
+});
+
+describe("ReimbursementDetailsModal — Edit & Resubmit button for revised reimbursements", () => {
+  it("renders Edit & Resubmit button and Needs Revision banner when employee views revised reimbursement", async () => {
+    authState.isAdmin = false;
+    authState.user = { id: 10, name: "Employee User" };
+
+    const record = {
+      id: 99,
+      status: "revise",
+      user_id: 10,
+      description: "Travel expenses",
+      amount: 1200,
+      admin_notes: "Please upload official receipts.",
+      receipts: [],
+    };
+
+    const wrapper = mount(ReimbursementDetailsModal, {
+      props: {
+        viewingRecord: record,
+        receiptDetailsOpen: false,
+        modalLoading: false,
+      },
+      global: {
+        stubs: {
+          StatusBadge: true,
+          BaseReceiptImage: true,
+        },
+      },
+    });
+
+    expect(wrapper.text()).toContain("Needs Revision");
+    expect(wrapper.text()).toContain("Please upload official receipts.");
+    const editBtn = wrapper.find("button.bg-orange-500");
+    expect(editBtn.exists()).toBe(true);
+    expect(editBtn.text()).toContain("Edit & Resubmit");
+
+    await editBtn.trigger("click");
+    expect(wrapper.emitted("edit")).toBeTruthy();
+    expect(wrapper.emitted("edit")[0][0]).toEqual(expect.objectContaining({ id: 99 }));
+  });
+
+  it("does not render Edit & Resubmit button when status is pending", () => {
+    authState.isAdmin = false;
+    authState.user = { id: 10, name: "Employee User" };
+
+    const wrapper = mount(ReimbursementDetailsModal, {
+      props: {
+        viewingRecord: {
+          id: 100,
+          status: "pending",
+          user_id: 10,
+          description: "Pending claim",
+          amount: 500,
+          receipts: [],
+        },
+        receiptDetailsOpen: false,
+        modalLoading: false,
+      },
+      global: {
+        stubs: {
+          StatusBadge: true,
+          BaseReceiptImage: true,
+        },
+      },
+    });
+
+    expect(wrapper.text()).not.toContain("Edit & Resubmit");
+  });
+
+  it("does not render Edit & Resubmit button when admin views someone else's revised claim", () => {
+    authState.isAdmin = true;
+    authState.user = { id: 1, name: "Admin User" };
+
+    const wrapper = mount(ReimbursementDetailsModal, {
+      props: {
+        viewingRecord: {
+          id: 101,
+          status: "revise",
+          user_id: 10,
+          description: "Employee claim",
+          amount: 800,
+          admin_notes: "Fix receipt",
+          receipts: [],
+        },
+        receiptDetailsOpen: false,
+        modalLoading: false,
+      },
+      global: {
+        stubs: {
+          StatusBadge: true,
+          BaseReceiptImage: true,
+        },
+      },
+    });
+
+    expect(wrapper.text()).not.toContain("Edit & Resubmit");
+  });
+
+  it("renders Edit & Resubmit button when admin views their OWN revised claim", async () => {
+    authState.isAdmin = true;
+    authState.user = { id: 1, name: "Admin User" };
+
+    const record = {
+      id: 102,
+      status: "revise",
+      user_id: 1,
+      user: { id: 1, name: "Admin User" },
+      description: "Admin's own claim",
+      amount: 1500,
+      admin_notes: "Please re-attach summary",
+      receipts: [],
+    };
+
+    const wrapper = mount(ReimbursementDetailsModal, {
+      props: {
+        viewingRecord: record,
+        receiptDetailsOpen: false,
+        modalLoading: false,
+      },
+      global: {
+        stubs: {
+          StatusBadge: true,
+          BaseReceiptImage: true,
+        },
+      },
+    });
+
+    const editBtn = wrapper.find("button.bg-orange-500");
+    expect(editBtn.exists()).toBe(true);
+    expect(editBtn.text()).toContain("Edit & Resubmit");
+
+    await editBtn.trigger("click");
+    expect(wrapper.emitted("edit")).toBeTruthy();
+    expect(wrapper.emitted("edit")[0][0]).toEqual(expect.objectContaining({ id: 102 }));
   });
 });
