@@ -376,7 +376,7 @@ function categoryName(record) {
         <!-- Footer Actions (Admin: Pending/Revise) -->
         <footer
           v-if="auth.isAdmin && viewingRecord && ['pending','revise'].includes(normalizeStatus(viewingRecord.status))"
-          class="px-6 py-4 border-t border-slate-100 flex flex-col gap-3 sm:flex-row shrink-0"
+          class="px-6 py-4 border-t border-slate-100 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end shrink-0"
         >
           <p
             v-if="isOwnSubmission"
@@ -385,10 +385,10 @@ function categoryName(record) {
             You cannot process your own request.
           </p>
           <template v-else>
-            <div class="flex-1">
+            <div class="w-full sm:w-auto">
               <select
                 @change="emit('reject', viewingRecord.id, ($event.target.value)); $event.target.value=''"
-                class="w-full py-2.5 border border-slate-200 text-slate-700 text-sm font-medium rounded-lg bg-white hover:bg-slate-50 transition-colors text-center"
+                class="w-full sm:w-auto py-2.5 px-4 border border-slate-200 text-slate-700 text-sm font-medium rounded-lg bg-white hover:bg-slate-50 transition-colors text-center cursor-pointer"
                 value=""
               >
                 <option value="" disabled selected>Actions ▾</option>
@@ -397,7 +397,7 @@ function categoryName(record) {
               </select>
             </div>
             <button
-              class="flex-1 py-2.5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-sm"
+              class="w-full sm:w-auto px-5 py-2.5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-sm flex items-center justify-center gap-2"
               @click="emit('approve', viewingRecord.id)"
             >
               Approve Claim
@@ -408,16 +408,16 @@ function categoryName(record) {
         <!-- Footer Actions (Admin: Approved → Grant) -->
         <footer
           v-if="auth.isAdmin && viewingRecord && normalizeStatus(viewingRecord.status) === 'approved'"
-          class="px-6 py-4 border-t border-slate-100 shrink-0"
+          class="px-6 py-4 border-t border-slate-100 shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-end"
         >
           <button
             v-if="!isOwnSubmission"
-            class="w-full py-2.5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-sm flex items-center justify-center gap-2"
+            class="w-full sm:w-auto px-5 py-2.5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-sm flex items-center justify-center gap-2"
             @click="emit('grant', viewingRecord.id)"
           >
             <Wallet class="w-4 h-4" /> Grant Claim
           </button>
-          <p v-else class="text-sm text-danger text-center">
+          <p v-else class="text-sm text-danger text-center sm:text-right">
             You cannot process your own request.
           </p>
         </footer>

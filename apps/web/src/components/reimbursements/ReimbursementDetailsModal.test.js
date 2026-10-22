@@ -266,4 +266,63 @@ describe("ReimbursementDetailsModal — Edit & Resubmit button for revised reimb
     expect(wrapper.text()).toContain("Audit Trail (1)");
     expect(wrapper.text()).toContain("Jane Doe");
   });
+
+  describe("Admin Modal Button Sizing Guardrails", () => {
+    it("sizes Actions select and Approve Claim button intrinsically with sm:justify-end (no flex-1)", () => {
+      const wrapper = mount(ReimbursementDetailsModal, {
+        props: {
+          viewingRecord: {
+            id: 201,
+            status: "pending",
+            user: { id: "user-2", name: "Employee" },
+            amount: 1000,
+            receipts: [],
+          },
+        },
+        global: {
+          stubs: {
+            StatusBadge: true,
+            BaseReceiptImage: true,
+          },
+        },
+      });
+
+      const footer = wrapper.find("footer");
+      expect(footer.exists()).toBe(true);
+      expect(footer.classes()).toContain("sm:justify-end");
+
+      const approveBtn = wrapper.findAll("button").find(b => b.text().includes("Approve Claim"));
+      expect(approveBtn).toBeDefined();
+      expect(approveBtn.classes()).not.toContain("flex-1");
+      expect(approveBtn.classes()).toContain("px-5");
+
+      const selectWrapper = wrapper.find("select").element.parentElement;
+      expect(selectWrapper.classList.contains("flex-1")).toBe(false);
+    });
+
+    it("sizes Grant Claim button intrinsically with sm:w-auto and px-5 in approved state", () => {
+      const wrapper = mount(ReimbursementDetailsModal, {
+        props: {
+          viewingRecord: {
+            id: 202,
+            status: "approved",
+            user: { id: "user-2", name: "Employee" },
+            amount: 2500,
+            receipts: [],
+          },
+        },
+        global: {
+          stubs: {
+            StatusBadge: true,
+            BaseReceiptImage: true,
+          },
+        },
+      });
+
+      const grantBtn = wrapper.findAll("button").find(b => b.text().includes("Grant Claim"));
+      expect(grantBtn).toBeDefined();
+      expect(grantBtn.classes()).toContain("px-5");
+      expect(grantBtn.classes()).toContain("sm:w-auto");
+    });
+  });
 });
