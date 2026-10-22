@@ -22,6 +22,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 > **Note for AI Subagents & Developers:** Always consult this file when you need chronological historical context, previous architectural pivots, or design rationale before modifying codebase features or documentation guides.
 
+## [1.9.0] - 2026-10-22
+
+### Added
+- **Idempotency & Duplicate Request Prevention System (`feat/idempotency`):**
+  - **Design Specification & Implementation Plan:** Authored `docs/superpowers/specs/2026-10-22-idempotency-system-design.md` and `docs/superpowers/plans/2026-10-22-idempotency-system.md` covering application-wide duplicate prevention across all mutating HTTP requests (`POST`, `PUT`, `PATCH`, `DELETE`).
+  - **Database Ledger Table (`idempotency_keys`):** Added migration `apps/api/database/migrations/2026_10_22_000001_create_idempotency_keys_table.php` and Eloquent model `App\Modules\Shared\Models\IdempotencyKey` with unique composite constraint on `(user_id, idempotency_key)`, SHA-256 request hashing, and 24-hour expiration indexing.
+  - **Global Middleware Engine (`EnsureIdempotency`):** Created `apps/api/app/Modules/Shared/Http/Middleware/EnsureIdempotency.php` registered globally in `apps/api/bootstrap/app.php`. Intercepts mutating requests, validates payload digest, returns cached deterministic replays with header `X-Idempotent-Replay: true`, flags payload mismatches with `422 Unprocessable Entity`, and halts concurrent in-flight collisions with `409 Conflict`.
+  - **Automated Ledger Pruning Command:** Created `php artisan idempotency:prune` (`apps/api/app/Console/Commands/PruneIdempotencyKeys.php`) for automatic purging of expired keys.
+  - **Concurrency & Strike Counter Hardening:** Added unique constraint on `cash_advance_disbursements.cash_advance_id` and added `lockForUpdate()` pessimistic row locks across `CashAdvanceService::rejectAdvance`, `ReimbursementService::rejectReimbursement`, and `LiquidationController::audit` to prevent race condition strike double-increments.
+  - **Client-Side Universal UUID Auto-Injection (`apiFetch.js`):** Updated `apps/web/src/utils/apiFetch.js` to automatically attach `X-Idempotency-Key` with a valid UUIDv4 token for all `POST`, `PUT`, `PATCH`, and `DELETE` requests while preserving custom caller keys and safe `GET` method exemptions.
+  - **Root Confirmation Modal Shielding:** Hardened `ConfirmModal.vue` with immediate synchronous `isClicked` lock, `DeleteConfirmModal.vue` with `loading`/`isSubmitting` prop enforcement and Enter-key suppression, and `DecisionConfirmationModal.vue` with `isSubmitting` enter-key guarding.
+  - **View & Composable Re-Entry Guards:** Bound `:loading="submitting"` to `ConfirmModal` in `ReimbursementFormView.vue` and `LiquidationsView.vue`, added re-entry short-circuits in `useReimbursementSubmit.js`, `useLiquidationSubmit.js`, and `useReimbursementDecisions.js`, and hardened action buttons in `CashAdvanceDetailsModal.vue`, `CashAdvanceFormView.vue`, `SegmentedReceiptUpload.vue`, `PolicyView.vue`, and `NotificationsView.vue`.
+  - **Automated Test Suites:** Authored comprehensive PHPUnit feature tests (`IdempotencyModelTest`, `IdempotencyMiddlewareTest`, `IdempotencyPruneCommandTest`, `ConcurrencyStrikeLockTest`) and Vitest test suites (`apiFetch.test.js`, `ConfirmModal.test.js`, `DeleteConfirmModal.test.js`), passing 100% of test assertions.
+
 ## [1.8.0] - 2026-10-22
 
 ### Added

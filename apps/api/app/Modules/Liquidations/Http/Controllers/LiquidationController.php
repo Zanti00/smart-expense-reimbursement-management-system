@@ -642,8 +642,8 @@ class LiquidationController extends Controller
                 ]);
             }
 
-            $liquidation = Liquidation::findOrFail($id);
-            $advance = CashAdvance::findOrFail($liquidation->cash_advance_id);
+            $liquidation = Liquidation::where('id', $id)->lockForUpdate()->firstOrFail();
+            $advance = CashAdvance::where('id', $liquidation->cash_advance_id)->lockForUpdate()->firstOrFail();
             $receiptIds = is_array($liquidation->reimbursement_ids) ? $liquidation->reimbursement_ids : [];
 
             // Self-approval/self-rejection check

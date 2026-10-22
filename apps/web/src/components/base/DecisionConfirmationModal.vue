@@ -162,9 +162,10 @@ function handleRejectNext() {
 }
 
 function handleFinalConfirm() {
-  if (!isProceedDisabled.value) {
-    emit("confirm");
+  if (props.isSubmitting || isProceedDisabled.value) {
+    return;
   }
+  emit("confirm");
 }
 </script>
 

@@ -20,6 +20,7 @@ export function useLiquidationSubmit() {
     shortfallExplanation,
     existingLiquidation,
   }) {
+    if (submitting.value) return false;
     submitting.value = true;
 
     const payload = {

@@ -27,6 +27,17 @@ const FILTERS = [
 ];
 
 const activeFilter = ref("All");
+const isMarkingAllRead = ref(false);
+
+async function handleMarkAllRead() {
+  if (isMarkingAllRead.value) return;
+  isMarkingAllRead.value = true;
+  try {
+    await store.markAllRead();
+  } finally {
+    isMarkingAllRead.value = false;
+  }
+}
 
 const iconMap = {
   warning: { icon: AlertTriangle, cls: "text-amber-600 border-amber-200 bg-amber-50" },
@@ -97,7 +108,9 @@ onMounted(() => {
           data-testid="page-mark-all-read"
           variant="secondary"
           size="sm"
-          @click="store.markAllRead()"
+          :loading="isMarkingAllRead"
+          :disabled="isMarkingAllRead"
+          @click="handleMarkAllRead"
         >
           <CheckCheck class="w-4 h-4 mr-1.5" />
           Mark all as read

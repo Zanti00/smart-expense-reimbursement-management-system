@@ -188,6 +188,7 @@ function removeFile(index) {
 }
 
 async function handleRequest() {
+  if (submitting.value) return;
   if (
     !form.purpose ||
     !form.amount ||
