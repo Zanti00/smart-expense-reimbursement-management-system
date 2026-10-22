@@ -4,6 +4,7 @@ import { formatAmount, formatDate } from "@/utils/formatters";
 import StatusBadge from "@/components/base/StatusBadge.vue";
 import BaseButton from "@/components/base/BaseButton.vue";
 import BaseSignaturePad from "@/components/base/BaseSignaturePad.vue";
+import BaseAuditTrail from "@/components/base/BaseAuditTrail.vue";
 import { X, PenTool, Clock, CheckCircle2 } from "lucide-vue-next";
 
 const props = defineProps({
@@ -229,6 +230,13 @@ function handleAcknowledge() {
               </div>
             </div>
           </section>
+
+          <!-- Audit Trail Section -->
+          <BaseAuditTrail
+            :trail="record.audit_trail || []"
+            :entity-title="`Payout-#${record.id}`"
+            class="mt-4"
+          />
         </div>
 
         <!-- Footer -->

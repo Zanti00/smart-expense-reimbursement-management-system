@@ -8,6 +8,7 @@ import DaysLeftBadge from "@/components/base/DaysLeftBadge.vue";
 import BaseReceiptImage from "@/components/base/BaseReceiptImage.vue";
 import ReceiptImagePreview from "@/components/base/ReceiptImagePreview.vue";
 import UnifiedRoadmapStepper from "@/components/base/UnifiedRoadmapStepper.vue";
+import BaseAuditTrail from "@/components/base/BaseAuditTrail.vue";
 import { useLiquidationStore } from "@/stores/liquidation";
 import { useReportExport } from "@/composables/useReportExport";
 
@@ -316,6 +317,13 @@ function handleRoadmapNavigate(payload) {
               <Download class="w-3 h-3" />
             </a>
           </div>
+
+          <!-- Audit Trail Section -->
+          <BaseAuditTrail
+            :trail="reviewingCase.audit_trail || []"
+            :entity-title="`Liquidation-#${reviewingCase.id}`"
+            class="mt-4"
+          />
         </div>
 
         <!-- Footer -->

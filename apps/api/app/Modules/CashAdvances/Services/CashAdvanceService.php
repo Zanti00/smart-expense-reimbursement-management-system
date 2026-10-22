@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+use App\Modules\AuditLogs\Services\AuditLogService;
 
 class CashAdvanceService
 {
@@ -70,6 +71,16 @@ class CashAdvanceService
                 excludeUserId: $user->id
             );
 
+            AuditLogService::log(
+                actorId: $user->id,
+                actorRole: $user->role ?? 'employee',
+                actionType: 'CASH_ADVANCE_SUBMITTED',
+                entityType: 'cash_advance',
+                entityId: $advance->id,
+                beforeState: null,
+                afterState: $advance->toArray()
+            );
+
             return $advance;
         });
     }
@@ -109,6 +120,16 @@ class CashAdvanceService
                 recordLink: "/cash-advances?view={$advance->id}",
                 recordType: 'cash_advance',
                 recordId: $advance->id
+            );
+
+            AuditLogService::log(
+                actorId: $user->id,
+                actorRole: $user->role ?? 'approver',
+                actionType: 'CASH_ADVANCE_APPROVED',
+                entityType: 'cash_advance',
+                entityId: $advance->id,
+                beforeState: ['status' => 'pending'],
+                afterState: ['status' => 'approved', 'comment' => $comment]
             );
 
             return $advance;
@@ -206,6 +227,16 @@ class CashAdvanceService
                 recordId: $advance->id
             );
 
+            AuditLogService::log(
+                actorId: $user->id,
+                actorRole: $user->role ?? 'approver',
+                actionType: $actionValue === 'rejected' ? 'CASH_ADVANCE_REJECTED' : 'CASH_ADVANCE_REVISED',
+                entityType: 'cash_advance',
+                entityId: $advance->id,
+                beforeState: ['status' => $fromStatus],
+                afterState: ['status' => $newStatus, 'comment' => $comment, 'revision_count' => $newCount]
+            );
+
             return $advance;
         });
     }
@@ -255,6 +286,16 @@ class CashAdvanceService
                 recordId: $advance->id
             );
 
+            AuditLogService::log(
+                actorId: $user->id,
+                actorRole: $user->role ?? 'finance',
+                actionType: 'CASH_ADVANCE_DISBURSED',
+                entityType: 'cash_advance',
+                entityId: $advance->id,
+                beforeState: ['status' => 'approved'],
+                afterState: ['status' => 'disbursed', 'channel' => $data['channel'], 'reference' => $data['reference']]
+            );
+
             return $advance;
         });
     }
@@ -290,6 +331,16 @@ class CashAdvanceService
                 excludeUserId: auth()->id() ?? $advance->user_id
             );
 
+            AuditLogService::log(
+                actorId: $advance->user_id,
+                actorRole: 'employee',
+                actionType: 'CASH_ADVANCE_ACKNOWLEDGED',
+                entityType: 'cash_advance',
+                entityId: $advance->id,
+                beforeState: ['status' => $oldStatus],
+                afterState: ['status' => 'signed']
+            );
+
             return $advance;
         });
     }
@@ -320,6 +371,7 @@ class CashAdvanceService
                 $updatePayload['status'] = 'pending';
             }
 
+            $beforeState = $advance->toArray();
             $advance->update($updatePayload);
 
             // Handle new document uploads — replace existing documents
@@ -351,6 +403,17 @@ class CashAdvanceService
                     'changed_by' => $user->id,
                 ]);
             }
+
+            $actionType = $oldStatus === 'revise' ? 'CASH_ADVANCE_RESUBMITTED' : 'CASH_ADVANCE_UPDATED';
+            AuditLogService::log(
+                actorId: $user->id,
+                actorRole: $user->role ?? 'employee',
+                actionType: $actionType,
+                entityType: 'cash_advance',
+                entityId: $advance->id,
+                beforeState: $beforeState,
+                afterState: $advance->fresh()->toArray()
+            );
 
             NotificationService::notifyAdmins(
                 type: 'admin_cash_advance_resubmitted',

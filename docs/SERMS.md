@@ -217,8 +217,16 @@ sequenceDiagram
     ocr-pipeline (AI Service)-->>Laravel API: Async POST /api/serms/ai/ocr-callback {ocr_data}
     Laravel API->>Laravel API: Verify AI Service API Key & signature
     Laravel API->>MySQL: Update receipt {ocr fields, status: "pending", ocr_flagged: score < 0.80}
-    Frontend->>Laravel API: Poll GET /api/reimbursements/receipts/{id} until status != "processing"
 ```
+
+### 6.4 Request Audit Trail & Lifecycle Hydration Architecture
+To ensure financial compliance, auditability, and transparent lifecycle tracking across Reimbursements, Cash Advances, and Liquidations:
+1. **Zero-Overhead Batch Hydration:** Endpoints (`GET /api/reimbursements`, `GET /api/reimbursements/{id}`, `GET /api/cash-advances`, `GET /api/cash-advances/{id}`, `GET /api/liquidations`, `GET /api/liquidations/{id}`) batch-enrich models with an `audit_trail` array via `AuditLogService` (`enrichReimbursements`, `enrichCashAdvances`, `enrichLiquidations`), avoiding additional HTTP round-trips upon opening modals.
+2. **Dual-Source Chronological Synthesis:** Merges canonical immutable records from `audit_logs` with baseline lifecycle event timestamps and workflow action tables (`approvalActions`, `disbursements`, `penalties`), guaranteeing an unbroken chronological timeline for both legacy records and new submissions.
+3. **Role-Scoped Privacy Masking:** Client IP addresses (`ip_address`) recorded in `audit_logs` are exposed strictly to authorized Administrators (e.g. accounting department with `serms.reimbursements.manage`). Standard employee accounts receive `ip_address: null` at the service layer prior to JSON transmission.
+4. **Field-Level Diff Sanitization:** Attribute diffs (`before_state` vs `after_state`) are cleaned using `computeSanitizedDiff()`, excluding internal metadata (`id`, `created_at`, `updated_at`, `password`, `token`) and formatting monetary values into standard currency strings.
+5. **Universal View Modal Integration:** The reusable `<BaseAuditTrail />` component (`apps/web/src/components/base/BaseAuditTrail.vue`) is integrated across all 5 request and settlement modals (`ReimbursementDetailsModal.vue`, `PayoutDetailsModal.vue`, `CashAdvanceDetailsModal.vue`, `LiquidationReviewModal.vue`, `LiquidationSettlementForm.vue`). It renders a single unified card formatted as a clean, corporate table (`Time`, `User`, `Action`) with sort toggles (Latest / Oldest First), collapsible headers with badge counts, actor role indicators, Medium Date Format timestamps (`MMM D, YYYY · h:mm A`), inline comments, field change diffs, and a 4-event display cap with expand/collapse.
+6. **Multi-Format Export Engine:** Integrated client-side export utility (`apps/web/src/utils/auditTrailExport.js`) supporting instant downloads of the complete audit log in `XLSX` (Excel XML Spreadsheet), `CSV` (RFC-4180 with UTF-8 BOM), `PDF` (pure PDF 1.4 corporate report), and `JSON` directly from the `<BaseAuditTrail />` header.
 
 ---
 

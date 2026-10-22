@@ -233,4 +233,37 @@ describe("ReimbursementDetailsModal — Edit & Resubmit button for revised reimb
     expect(wrapper.emitted("edit")).toBeTruthy();
     expect(wrapper.emitted("edit")[0][0]).toEqual(expect.objectContaining({ id: 102 }));
   });
+
+  it("renders BaseAuditTrail section with audit events", () => {
+    const wrapper = mount(ReimbursementDetailsModal, {
+      props: {
+        viewingRecord: {
+          id: 5,
+          status: "pending",
+          description: "Office Supplies",
+          user: { name: "Jane Doe" },
+          amount: 500,
+          receipts: [],
+          audit_trail: [
+            {
+              id: "trail-1",
+              action_type: "CLAIM_SUBMITTED",
+              label: "Submitted",
+              actor_name: "Jane Doe",
+              created_at: "2026-10-20T08:00:00Z",
+            },
+          ],
+        },
+      },
+      global: {
+        stubs: {
+          StatusBadge: true,
+          BaseReceiptImage: true,
+        },
+      },
+    });
+
+    expect(wrapper.text()).toContain("Audit Trail (1)");
+    expect(wrapper.text()).toContain("Jane Doe");
+  });
 });

@@ -3,11 +3,11 @@
 **Project:** Smart Expense & Reimbursement Management System (SERMS)  
 **Client / Partner:** Science Biotech Specialties Inc. (SBSI) — [https://sbsi.com.ph/about-us/](https://sbsi.com.ph/about-us/)  
 **Academic Context:** 3rd & 4th Year Capstone Project (Capstone 1: Ended July 2026 · Capstone 2: September–December 2026)  
-**Date:** 2026-10-17  
-**Version:** 1.7.0  
+**Date:** 2026-10-22  
+**Version:** 1.8.0  
 **Owner:** SERMS Engineering Team  
 **Status:** Active  
-**Last reconciled:** 2026-10-16 (Refactored component design system to shadcn-vue and Radix Vue primitives)  
+**Last reconciled:** 2026-10-22 (Request audit trail unified lifecycle and BaseAuditTrail component)  
 **Canonical Spec:** [SERMS.md](SERMS.md) · **Related Docs:** [index.md](index.md) · [PRD.md](PRD.md) · [SAD.md](SAD.md) · [SDD.md](SDD.md) · [DSD.md](DSD.md) · [Build.md](Build.md) · [OPS.md](OPS.md) · [QAD.md](QAD.md) · [AGENTS.md](../AGENTS.md)
 
 ---
@@ -21,6 +21,26 @@ All notable changes, architectural decisions, and documentation updates for the 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 > **Note for AI Subagents & Developers:** Always consult this file when you need chronological historical context, previous architectural pivots, or design rationale before modifying codebase features or documentation guides.
+
+## [1.8.0] - 2026-10-22
+
+### Added
+- **Request Audit Trail Section & Unified Lifecycle Timeline (`feat/audit-trail`):**
+  - **Zero-Overhead Batch Hydration:** Extended `AuditLogService` with `enrichReimbursements`, `enrichCashAdvances`, and `enrichLiquidations` to batch-hydrate records with an `audit_trail` array in single API queries (`GET /api/reimbursements`, `GET /api/cash-advances`, `GET /api/liquidations`, and their `{id}` detail endpoints) with zero extra HTTP round-trips when opening detail modals.
+  - **Dual-Source Chronological Synthesis:** Built hybrid chronological synthesis (`buildReimbursementLifecycleTrail`, `buildCashAdvanceLifecycleTrail`, `buildLiquidationLifecycleTrail`) that merges canonical immutable `audit_logs` records with existing entity timestamps and workflow action tables (`approvalActions`, `disbursements`, `penalties`), guaranteeing complete, unbroken chronological timelines for legacy and newly created records alike.
+  - **Role-Scoped IP Address Privacy Masking:** Configured `AuditLogService::formatLogEntry()` to restrict client IP address visibility exclusively to users with administrator privileges (`serms.reimbursements.manage` or accounting department membership). Regular employee accounts receive `ip_address: null` at the service layer before JSON transmission.
+  - **Field-Level Diff Sanitization:** Implemented `computeSanitizedDiff()` in `AuditLogService` to strip internal metadata (`id`, timestamps, credentials) from `before_state` vs `after_state` payloads, formatting currency and dates for clear audit viewing.
+  - **Mutation Logging Across Financial Workflows:** Added `AuditLogService::log()` calls across `ReimbursementService` (create, update, approve, reject, acknowledge), `CashAdvanceService` (create, approve, reject, disburse, acknowledge, update), and `LiquidationController` (update, hydrate) within active database transactions.
+  - **Reusable `<BaseAuditTrail />` Component (`apps/web/src/components/base/BaseAuditTrail.vue`):** Developed a unified, DSD.md-compliant audit trail component structured as a single clean table card with columns for `Time`, `User`, and `Action`. Features collapsible section header, event count badge, sort-order toggle (`Latest First` / `Oldest First`), subtle outline action badges, Medium Date Format timestamps, inline comments, field change diffs, and pagination capping (default 4 items with `"Show all X events"` / `"Show less"` toggle).
+  - **Universal Modal Integration:** Embedded `<BaseAuditTrail />` across all 5 request and settlement view modals:
+    1. `ReimbursementDetailsModal.vue`
+    2. `PayoutDetailsModal.vue`
+    3. `CashAdvanceDetailsModal.vue` (both Admin and Employee templates)
+    4. `LiquidationReviewModal.vue`
+    5. `LiquidationSettlementForm.vue`
+  - **Multi-Format Export Engine (`apps/web/src/utils/auditTrailExport.js`):** Built instant client-side export utility supporting XLSX (Excel Spreadsheet XML), CSV (RFC-4180 with UTF-8 BOM), PDF (pure PDF 1.4 corporate report with table pagination and SBSI header), and JSON downloads directly from the `<BaseAuditTrail />` header links (`Download Log: XLSX / CSV / PDF / JSON`).
+  - **Medium Date & Time Formatter (`apps/web/src/utils/formatters.js`):** Implemented `formatDateTime(dateStr, options)` rendering dates in the canonical Medium Date Format (e.g. `Oct 22, 2026 · 8:30 PM`) per SERMS Section 8.2 Guardrail 12.
+  - **Canonical Documentation Updates:** Documented the request audit trail hydration pattern, privacy masking, and UI component standards in `docs/SERMS.md` (Section 6.4) and `docs/SDD.md` (Sections 3 & 7).
 
 ## [1.7.0] - 2026-10-17
 

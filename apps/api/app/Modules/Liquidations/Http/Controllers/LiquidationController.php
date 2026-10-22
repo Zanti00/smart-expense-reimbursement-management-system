@@ -141,6 +141,9 @@ class LiquidationController extends Controller
             $liq->setAttribute('variance', $snapshot - $expense);
         }
 
+        $canManage = request()?->user()?->can('serms.liquidations.manage') ?? false;
+        AuditLogService::enrichLiquidation($liq, $canManage);
+
         return $liq;
     }
 
@@ -791,6 +794,9 @@ class LiquidationController extends Controller
         ]);
 
         return DB::transaction(function () use ($user, $liquidation, $validated, $request) {
+            $wasRevise = $liquidation->status === 'revise';
+            $beforeState = $liquidation->toArray();
+
             // Handle receipts update
             if (isset($validated['receipts'])) {
                 $receiptsData = is_string($validated['receipts'])
@@ -857,6 +863,18 @@ class LiquidationController extends Controller
             }
 
             $liquidation->save();
+
+            $actionType = $wasRevise ? 'LIQUIDATION_RESUBMITTED' : 'LIQUIDATION_UPDATED';
+            AuditLogService::log(
+                actorId: $user->id,
+                actorRole: $user->role ?? 'employee',
+                actionType: $actionType,
+                entityType: 'liquidation',
+                entityId: $liquidation->id,
+                beforeState: $beforeState,
+                afterState: $liquidation->fresh()->toArray(),
+                ipAddress: $request->ip()
+            );
 
             NotificationService::notifyAdmins(
                 type: 'admin_liquidation_resubmitted',

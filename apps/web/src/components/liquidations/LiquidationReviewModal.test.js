@@ -141,4 +141,73 @@ describe("LiquidationReviewModal Header Chipsets", () => {
     expect(exportBtn.exists()).toBe(true);
     expect(exportBtn.text()).toContain("Export Report");
   });
+
+  it("renders BaseAuditTrail in LiquidationReviewModal", () => {
+    const wrapper = mount(LiquidationReviewModal, {
+      props: {
+        isOpen: true,
+        reviewingCase: {
+          id: "LIQ-099",
+          cashAdvanceAmount: 5000,
+          dueDate: "2026-10-30",
+          requestorName: "Elena Cruz",
+          audit_trail: [
+            {
+              id: "liq-log-1",
+              action_type: "LIQUIDATION_SUBMITTED",
+              label: "Submitted",
+              actor_name: "Elena Cruz",
+              created_at: "2026-10-22T08:30:00Z",
+            },
+          ],
+        },
+        reviewStatus: "pending",
+        reviewOutstandingBalance: 5000,
+        getFileUrl: () => "",
+      },
+      global: {
+        stubs: {
+          UnifiedRoadmapStepper: true,
+          BaseReceiptImage: true,
+        },
+      },
+    });
+
+    expect(wrapper.text()).toContain("Audit Trail (1)");
+    expect(wrapper.text()).toContain("Elena Cruz");
+  });
+
+  it("renders BaseAuditTrail in LiquidationSettlementForm when audit events exist", () => {
+    const wrapper = mount(LiquidationSettlementForm, {
+      props: {
+        selectedAdvance: {
+          id: 55,
+          purpose: "Client Training",
+          balance: 6000,
+          status: "signed",
+          audit_trail: [
+            {
+              id: "ca-log-55",
+              action_type: "CASH_ADVANCE_SUBMITTED",
+              label: "Submitted",
+              actor_name: "Elena Cruz",
+              created_at: "2026-10-22T08:00:00Z",
+            },
+          ],
+        },
+        existingLiquidation: null,
+        receipts: [],
+      },
+      global: {
+        stubs: {
+          UnifiedRoadmapStepper: true,
+          FileUpload: true,
+          ScannedReceiptsList: true,
+        },
+      },
+    });
+
+    expect(wrapper.text()).toContain("Audit Trail (1)");
+    expect(wrapper.text()).toContain("Elena Cruz");
+  });
 });
