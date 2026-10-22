@@ -42,8 +42,8 @@ class EnsureIdempotency
         $requestHash = $this->computeRequestHash($method, $path, $request->all());
 
         // 3. Acquire atomic pending lock or check existing record
-        $existing = IdempotencyKey::where('user_id', $userId)
-            ->where('idempotency_key', $key)
+        $existing = IdempotencyKey::where('idempotency_key', $key)
+            ->when($userId, fn ($q) => $q->where('user_id', $userId))
             ->first();
 
         if ($existing) {
@@ -90,7 +90,9 @@ class EnsureIdempotency
             $response = $next($request);
 
             if ($response->getStatusCode() < 500) {
+                $resolvedUserId = $request->user()?->id ?? $userId;
                 $ledger->update([
+                    'user_id' => $resolvedUserId,
                     'status' => 'completed',
                     'response_status' => $response->getStatusCode(),
                     'response_body' => $response->getContent(),
