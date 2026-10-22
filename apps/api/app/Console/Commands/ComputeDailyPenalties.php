@@ -152,6 +152,9 @@ class ComputeDailyPenalties extends Command
         }
 
         $this->info('Daily penalty calculation complete.');
+
+        $this->call('notifications:check-liquidation-deadlines');
+
         return Command::SUCCESS;
     }
 }

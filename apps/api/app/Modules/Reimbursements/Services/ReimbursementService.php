@@ -6,6 +6,7 @@ use App\Modules\Users\Models\User;
 use App\Modules\Reimbursements\Models\Receipt;
 use App\Modules\Reimbursements\Models\Reimbursement;
 use App\Modules\AuditLogs\Services\AuditLogService;
+use App\Modules\Notifications\Services\NotificationService;
 use App\Modules\Reimbursements\Jobs\UpdatePrsReimbursementStatusJob;
 use App\Modules\Shared\Services\PasswordVerificationService;
 use Illuminate\Http\Request;
@@ -116,6 +117,44 @@ class ReimbursementService
             $reimbursement->receipts()->attach($receiptIds);
             $this->updateReceiptStatuses($receiptIds, 'pending');
 
+            $formattedAmount = NotificationService::formatPeso($reimbursement->amount);
+            $link = "/reimbursements?view={$reimbursement->id}";
+
+            NotificationService::notifyUser(
+                userId: $user->id,
+                type: 'reimbursement_submitted',
+                module: 'Reimbursement',
+                title: 'Reimbursement Submitted',
+                message: "Your reimbursement of {$formattedAmount} was submitted.",
+                recordLink: $link,
+                recordType: 'reimbursement',
+                recordId: $reimbursement->id
+            );
+
+            NotificationService::notifyAdmins(
+                type: 'admin_reimbursement_submitted',
+                module: 'Reimbursement',
+                title: 'New Reimbursement Request',
+                message: "{$user->name} submitted a reimbursement request of {$formattedAmount}.",
+                recordLink: $link,
+                recordType: 'reimbursement',
+                recordId: $reimbursement->id,
+                excludeUserId: $user->id
+            );
+
+            if (!empty($reimbursement->user_comment)) {
+                NotificationService::notifyAdmins(
+                    type: 'admin_employee_note_added',
+                    module: 'Reimbursement',
+                    title: 'Employee Note on Reimbursement',
+                    message: "{$user->name} left a note on Reimbursement #{$reimbursement->id}: \"{$reimbursement->user_comment}\"",
+                    recordLink: $link,
+                    recordType: 'reimbursement',
+                    recordId: $reimbursement->id,
+                    excludeUserId: $user->id
+                );
+            }
+
             return $reimbursement->load('receipts');
         });
     }
@@ -183,6 +222,18 @@ class ReimbursementService
                 UpdatePrsReimbursementStatusJob::dispatch($reimbursement->source_submission_id);
             }
 
+            $formattedAmount = NotificationService::formatPeso($reimbursement->amount);
+            NotificationService::notifyUser(
+                userId: $reimbursement->user_id,
+                type: 'reimbursement_approved',
+                module: 'Reimbursement',
+                title: 'Reimbursement Approved',
+                message: "Your reimbursement of {$formattedAmount} was approved by {$user->name}.",
+                recordLink: "/reimbursements?view={$reimbursement->id}",
+                recordType: 'reimbursement',
+                recordId: $reimbursement->id
+            );
+
             return $reimbursement->load(['receipts.category', 'user', 'expenseCategory', 'payout']);
         });
     }
@@ -246,6 +297,22 @@ class ReimbursementService
                 beforeState: $beforeState,
                 afterState: $afterState,
                 ipAddress: $ipAddress
+            );
+
+            $formattedAmount = NotificationService::formatPeso($reimbursement->amount);
+            $statusType = $isTerminal ? 'reimbursement_rejected' : 'reimbursement_revised';
+            $statusTitle = $isTerminal ? 'Reimbursement Rejected' : 'Reimbursement Needs Revision';
+            $statusVerb = $isTerminal ? 'rejected' : 'returned for revision';
+
+            NotificationService::notifyUser(
+                userId: $reimbursement->user_id,
+                type: $statusType,
+                module: 'Reimbursement',
+                title: $statusTitle,
+                message: "Your reimbursement of {$formattedAmount} was {$statusVerb}. Admin comment: \"{$comment}\"",
+                recordLink: "/reimbursements?view={$reimbursement->id}",
+                recordType: 'reimbursement',
+                recordId: $reimbursement->id
             );
 
             return $reimbursement;
@@ -329,6 +396,18 @@ class ReimbursementService
                 UpdatePrsReimbursementStatusJob::dispatch($reimbursement->source_submission_id);
             }
 
+            $formattedAmount = NotificationService::formatPeso($reimbursement->amount);
+            NotificationService::notifyUser(
+                userId: $reimbursement->user_id,
+                type: 'reimbursement_granted',
+                module: 'Reimbursement',
+                title: 'Reimbursement Granted',
+                message: "Your reimbursement of {$formattedAmount} has been granted ({$payoutMethod}). Please sign to acknowledge receipt.",
+                recordLink: "/reimbursements?view={$reimbursement->id}",
+                recordType: 'reimbursement',
+                recordId: $reimbursement->id
+            );
+
             return $reimbursement->load(['receipts.category', 'user', 'expenseCategory', 'payout']);
         });
     }
@@ -372,6 +451,31 @@ class ReimbursementService
                 ipAddress: $ipAddress
             );
 
+            $formattedAmount = NotificationService::formatPeso($reimbursement->amount);
+            $payoutLink = "/payout?view={$reimbursement->id}";
+
+            NotificationService::notifyUser(
+                userId: $user->id,
+                type: 'payout_acknowledged',
+                module: 'Reimbursement',
+                title: 'Payout Acknowledged',
+                message: "You signed to acknowledge your payout of {$formattedAmount} for Reimbursement #{$reimbursement->id}.",
+                recordLink: $payoutLink,
+                recordType: 'reimbursement',
+                recordId: $reimbursement->id
+            );
+
+            NotificationService::notifyAdmins(
+                type: 'admin_payout_signed',
+                module: 'Reimbursement',
+                title: 'Employee Signed Payout',
+                message: "{$user->name} signed to acknowledge payout of {$formattedAmount} for Reimbursement #{$reimbursement->id}.",
+                recordLink: $payoutLink,
+                recordType: 'reimbursement',
+                recordId: $reimbursement->id,
+                excludeUserId: $user->id
+            );
+
             return $reimbursement->load(['receipts.category', 'user', 'expenseCategory', 'payout']);
         });
     }
@@ -403,6 +507,33 @@ class ReimbursementService
                     $data['status'],
                 );
             }
+
+            if (!empty($data['admin_notes'])) {
+                NotificationService::notifyUser(
+                    userId: $reimbursement->user_id,
+                    type: 'reimbursement_admin_note',
+                    module: 'Reimbursement',
+                    title: 'Admin Note on Reimbursement',
+                    message: "Admin note added to Reimbursement #{$reimbursement->id}: \"{$data['admin_notes']}\"",
+                    recordLink: "/reimbursements?view={$reimbursement->id}",
+                    recordType: 'reimbursement',
+                    recordId: $reimbursement->id
+                );
+            }
+
+            if (!empty($data['status']) && $data['status'] === 'cancelled') {
+                NotificationService::notifyUser(
+                    userId: $reimbursement->user_id,
+                    type: 'reimbursement_cancelled',
+                    module: 'Reimbursement',
+                    title: 'Reimbursement Cancelled',
+                    message: "Your Reimbursement #{$reimbursement->id} was cancelled.",
+                    recordLink: "/reimbursements?view={$reimbursement->id}",
+                    recordType: 'reimbursement',
+                    recordId: $reimbursement->id
+                );
+            }
+
             return $reimbursement;
         }
 
@@ -420,6 +551,9 @@ class ReimbursementService
         }
 
         return DB::transaction(function () use ($reimbursement, $user, $data, $reportFile) {
+            $wasRevise = $reimbursement->status === 'revise';
+            $previousComment = $reimbursement->user_comment;
+
             // Update receipt data if provided
             if (!empty($data['receipts'])) {
                 foreach ($data['receipts'] as $receiptData) {
@@ -489,6 +623,33 @@ class ReimbursementService
             }
 
             $reimbursement->update($updatePayload);
+
+            if ($wasRevise || $reportFile !== null) {
+                $formattedAmount = NotificationService::formatPeso($reimbursement->amount);
+                NotificationService::notifyAdmins(
+                    type: 'admin_reimbursement_resubmitted',
+                    module: 'Reimbursement',
+                    title: 'Reimbursement Resubmitted',
+                    message: "{$user->name} updated and resubmitted Reimbursement #{$reimbursement->id} ({$formattedAmount}).",
+                    recordLink: "/reimbursements?view={$reimbursement->id}",
+                    recordType: 'reimbursement',
+                    recordId: $reimbursement->id,
+                    excludeUserId: $user->id
+                );
+            }
+
+            if (!empty($data['user_comment']) && $data['user_comment'] !== $previousComment) {
+                NotificationService::notifyAdmins(
+                    type: 'admin_employee_note_added',
+                    module: 'Reimbursement',
+                    title: 'Employee Note on Reimbursement',
+                    message: "{$user->name} added a comment on Reimbursement #{$reimbursement->id}: \"{$data['user_comment']}\"",
+                    recordLink: "/reimbursements?view={$reimbursement->id}",
+                    recordType: 'reimbursement',
+                    recordId: $reimbursement->id,
+                    excludeUserId: $user->id
+                );
+            }
 
             return $reimbursement->load('receipts');
         });

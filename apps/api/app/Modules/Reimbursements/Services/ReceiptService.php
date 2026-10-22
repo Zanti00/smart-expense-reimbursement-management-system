@@ -5,6 +5,7 @@ namespace App\Modules\Reimbursements\Services;
 use App\Modules\Users\Models\User;
 use App\Modules\Reimbursements\Models\Receipt;
 use App\Modules\AuditLogs\Services\AuditLogService;
+use App\Modules\Notifications\Services\NotificationService;
 use App\Modules\Ai\Services\MockOcrService;
 use App\Modules\Reimbursements\Jobs\DispatchReceiptToAiService;
 use Illuminate\Support\Facades\Bus;
@@ -89,16 +90,16 @@ class ReceiptService
     }
 
     /**
-     * Get a single receipt by ID, ensuring user owns it unless they can manage.
+     * Get a single receipt by ID, ensuring only the owner can view their My Expense receipt.
      */
-    public function getReceipt(User $user, int $id, bool $canManage)
+    public function getReceipt(User $user, int $id, bool $canManage = false)
     {
         $receipt = Receipt::with('category', 'uploader', 'items')
             ->withCount('reimbursements')
             ->findOrFail($id);
 
-        if (!$canManage && $receipt->uploaded_by !== $user->id) {
-            throw new AuthorizationException('Unauthorized to view this receipt.');
+        if ($receipt->uploaded_by !== $user->id) {
+            throw new AuthorizationException('Access denied. You do not have permission to view this record.');
         }
 
         return $receipt;
@@ -160,6 +161,18 @@ class ReceiptService
                     ipAddress: request()->ip(),
                 );
 
+                $amountText = $receipt->total_amount ? ' (' . NotificationService::formatPeso($receipt->total_amount) . ')' : '';
+                NotificationService::notifyUser(
+                    userId: $user->id,
+                    type: 'receipt_processed',
+                    module: 'My Expense',
+                    title: 'Receipt Processed',
+                    message: "Your My Expense receipt #{$receipt->id}{$amountText} was uploaded and processed.",
+                    recordLink: "/my-expense?view={$receipt->id}",
+                    recordType: 'receipt',
+                    recordId: $receipt->id
+                );
+
                 return $receipt;
             }
 
@@ -179,6 +192,18 @@ class ReceiptService
                 beforeState: null,
                 afterState: $receipt->toArray(),
                 ipAddress: request()->ip(),
+            );
+
+            $amountText = $receipt->total_amount ? ' (' . NotificationService::formatPeso($receipt->total_amount) . ')' : '';
+            NotificationService::notifyUser(
+                userId: $user->id,
+                type: 'receipt_uploaded',
+                module: 'My Expense',
+                title: 'Receipt Uploaded',
+                message: "Your My Expense receipt #{$receipt->id} was uploaded and sent for OCR processing.",
+                recordLink: "/my-expense?view={$receipt->id}",
+                recordType: 'receipt',
+                recordId: $receipt->id
             );
 
             return $receipt;
@@ -252,6 +277,34 @@ class ReceiptService
                 afterState: $receipt->fresh()->toArray(),
                 ipAddress: request()->ip(),
             );
+
+            if ($canManage && (int) $receipt->uploaded_by !== (int) $user->id) {
+                if (!empty($updateData['admin_notes'])) {
+                    NotificationService::notifyUser(
+                        userId: (int) $receipt->uploaded_by,
+                        type: 'receipt_admin_note',
+                        module: 'My Expense',
+                        title: 'Admin Note on Receipt',
+                        message: "Admin note added to Receipt #{$receipt->id}: \"{$updateData['admin_notes']}\"",
+                        recordLink: "/my-expense?view={$receipt->id}",
+                        recordType: 'receipt',
+                        recordId: $receipt->id
+                    );
+                }
+
+                if (!empty($updateData['status'])) {
+                    NotificationService::notifyUser(
+                        userId: (int) $receipt->uploaded_by,
+                        type: "receipt_{$updateData['status']}",
+                        module: 'My Expense',
+                        title: 'Receipt Status Updated',
+                        message: "Your Receipt #{$receipt->id} status was updated to {$updateData['status']}.",
+                        recordLink: "/my-expense?view={$receipt->id}",
+                        recordType: 'receipt',
+                        recordId: $receipt->id
+                    );
+                }
+            }
 
             return $receipt->fresh(['category', 'items', 'uploader'])
                 ->loadCount('reimbursements');

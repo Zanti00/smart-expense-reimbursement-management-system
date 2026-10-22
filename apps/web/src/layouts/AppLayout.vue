@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useNotificationStore } from "@/stores/notification";
@@ -26,6 +26,9 @@ const route = useRoute();
 const { addToast } = useToast();
 
 onMounted(() => {
+  notif.fetchNotifications().catch(() => {});
+  notif.startPolling(30000);
+
   if (route.query.message) {
     addToast({
       message: route.query.message,
@@ -39,13 +42,17 @@ onMounted(() => {
   }
 });
 
+onUnmounted(() => {
+  notif.stopPolling();
+});
+
 const sidebarOpen = ref(true);
 const notifOpen = ref(false);
 const mobileOpen = ref(false);
 
 const navLinks = buildNavLinks();
 
-const unreadCount = computed(() => notif.alerts.filter((a) => !a.read).length);
+const unreadCount = computed(() => notif.unreadCount);
 
 const pageTitle = computed(() => route.meta?.title || "SERMS");
 
@@ -216,12 +223,15 @@ async function logout() {
             title="Notifications"
             @click="notifOpen = !notifOpen"
           >
-            <Bell class="w-5 h-5" />
-            <span
-              v-if="unreadCount > 0"
-              class="absolute top-1.5 right-1.5 w-4 h-4 bg-secondary text-white text-[9px] font-bold flex items-center justify-center rounded-full border-2 border-white shadow-sm"
-            >
-              {{ unreadCount }}
+            <span class="relative inline-flex items-center justify-center">
+              <Bell class="w-5 h-5" />
+              <span
+                v-if="unreadCount > 0"
+                data-testid="notif-badge"
+                class="absolute -top-1.5 -right-2 min-w-[18px] h-[18px] px-1 bg-secondary text-white text-[10px] font-bold leading-none flex items-center justify-center rounded-full border-2 border-white shadow-sm pointer-events-none"
+              >
+                {{ unreadCount > 99 ? "99+" : unreadCount }}
+              </span>
             </span>
           </button>
 

@@ -30,6 +30,7 @@ import { useLiquidationForwarding } from "@/composables/liquidations/useLiquidat
 import { useLiquidationSubmit } from "@/composables/liquidations/useLiquidationSubmit";
 import { useOcrMode } from "@/composables/useOcrMode";
 import { useUnsavedChanges } from "@/composables/useUnsavedChanges";
+import { useNotificationDeepLink } from "@/composables/useNotificationDeepLink";
 import { formatPeso, formatDate, truncateText } from "@/utils/formatters";
 import { numberOrZero } from "@/utils/numbers";
 import { getFileUrl } from "@/utils/fileUtils";
@@ -65,8 +66,6 @@ async function refreshAll() {
     receiptStore.fetchCategories(),
   ]);
 }
-
-onMounted(() => refreshAll());
 
 const selectedAdvance = ref(null);
 const receipts = ref([]);
@@ -1516,6 +1515,38 @@ function finalizeLiquidation() {
   confirmFinalizeOpen.value = false;
   closeReview();
 }
+
+const { checkDeepLink: checkLiquidationDeepLink } = useNotificationDeepLink({
+  verifyUrl: (id) => `/api/serms/liquidations/${id}`,
+  onOpenRecord: (record) => {
+    if (auth.isAdmin) {
+      const row = sourceCases.value.find(
+        (r) => String(r.databaseId) === String(record.id),
+      );
+      if (row) openReview(row);
+    } else {
+      const adv = store.items.find(
+        (a) => String(a.id) === String(record.cash_advance_id),
+      );
+      if (adv) openSettlementModal(adv, "view");
+    }
+  },
+});
+
+const { checkDeepLink: checkAdvanceDeepLink } = useNotificationDeepLink({
+  queryKey: "advance",
+  verifyUrl: (id) => `/api/serms/cash-advances/${id}`,
+  onOpenRecord: (record) => {
+    const adv = store.items.find((a) => String(a.id) === String(record.id)) || record;
+    openSettlementModal(adv, "view");
+  },
+});
+
+onMounted(async () => {
+  await refreshAll();
+  checkLiquidationDeepLink();
+  checkAdvanceDeepLink();
+});
 </script>
 
 <template>

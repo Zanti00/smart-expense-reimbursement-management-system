@@ -11,6 +11,7 @@ import {
   getForwardingBlockReason,
   mapReceiptToReimbursement,
 } from "@/utils/reimbursementForwarding";
+import { useNotificationDeepLink } from "@/composables/useNotificationDeepLink";
 
 import StatusBadge from "@/components/base/StatusBadge.vue";
 import BaseKpiGrid from "@/components/base/BaseKpiGrid.vue";
@@ -249,17 +250,10 @@ function openViewModal(receipt) {
 // ── Upload Modal ──────────────────────────────────────────────────
 const uploadModalOpen = ref(false);
 const receiptBeingEdited = ref(null);
-const adminNotesByReceipt = ref({});
 
 const automaticRejectedReceipts = computed(() =>
   receiptsStore.visibleReceipts.filter(
     (r) => r.status === "automatic-rejected",
-  ),
-);
-
-const pendingReReviewReceipts = computed(() =>
-  receiptsStore.reReviewReceipts.filter(
-    (r) => r.status === "pending-admin-re-review",
   ),
 );
 
@@ -286,33 +280,23 @@ function onExpenseSaved() {
   fetchReceipts(currentPage.value);
 }
 
-async function finalizeReceiptReview(receipt, decision) {
-  const notes = adminNotesByReceipt.value[receipt.id] || "";
-  if (notes.trim().length < 10) {
-    addToast({
-      message: "Admin notes must be at least 10 characters.",
-      type: "error",
-    });
-    return;
-  }
-
-  await receiptsStore.finalizeReReview(receipt.id, decision, notes);
-  addToast({
-    message:
-      decision === "approve"
-        ? "Receipt approved by override."
-        : "Final rejection confirmed.",
-    type: "success",
-  });
-}
-
 // ── Lifecycle ─────────────────────────────────────────────────────
 const handleOpenReceiptUpload = () => { uploadModalOpen.value = true; };
 
+const { checkDeepLink } = useNotificationDeepLink({
+  verifyUrl: (id) => `/api/serms/reimbursements/receipts/${id}`,
+  onOpenRecord: (record) => {
+    const existing = receiptsStore.visibleReceipts.find(
+      (r) => String(r.dbId ?? r.id) === String(record.id),
+    );
+    openViewModal(existing || record);
+  },
+});
+
 onMounted(async () => {
   const tasks = [fetchReceipts(1), receiptsStore.fetchCategories()];
-  if (auth.isAdmin) tasks.push(receiptsStore.fetchReReviewReceipts());
   await Promise.all(tasks);
+  checkDeepLink();
   ensureOcrWatch();
   window.addEventListener('open-receipt-upload', handleOpenReceiptUpload);
 });
@@ -434,82 +418,6 @@ const kpis = computed(() => [
           </div>
         </div>
       </div>
-
-      <section
-        v-if="auth.isAdmin && pendingReReviewReceipts.length > 0"
-        class="overflow-hidden bg-white border shadow-sm rounded-xl border-accent/20"
-      >
-        <div
-          class="flex items-center justify-between px-5 py-4 border-b border-slate-200 bg-accent-50"
-        >
-          <div>
-            <h2 class="text-base font-bold font-heading text-primary">
-              Pending Admin Re-review
-            </h2>
-            <p class="mt-0.5 text-xs text-slate-500">
-              Previously system rejected, then modified and resubmitted by
-              employee.
-            </p>
-          </div>
-          <span class="kpi-label text-accent"
-            >{{ pendingReReviewReceipts.length }} queued</span
-          >
-        </div>
-        <div class="divide-y divide-slate-100">
-          <div
-            v-for="receipt in pendingReReviewReceipts"
-            :key="receipt.id"
-            class="grid gap-4 p-5 lg:grid-cols-[1fr_320px]"
-          >
-            <div class="space-y-2">
-              <div class="flex flex-wrap items-center gap-2">
-                <StatusBadge status="pending-admin-re-review" />
-                <StatusBadge status="automatic-rejected" />
-              </div>
-              <h3 class="text-sm font-bold font-heading text-slate-900">
-                {{ receipt.vendorName || "Unknown Vendor" }}
-              </h3>
-              <p class="text-xs text-slate-500">
-                {{ receipt.id }} | {{ receipt.fileName }} |
-                {{ formatPeso(receipt.amount || 0) }}
-              </p>
-              <p class="text-xs text-slate-400">
-                {{
-                  receipt.complianceReason ||
-                  "Modified by employee after automatic system rejection."
-                }}
-              </p>
-            </div>
-            <div class="space-y-3">
-              <div class="input-wrapper">
-                <label class="input-label"
-                  >Admin Notes <span class="text-danger">*</span></label
-                >
-                <textarea
-                  v-model="adminNotesByReceipt[receipt.id]"
-                  class="input min-h-[88px] resize-none"
-                  placeholder="Explain the final decision..."
-                />
-              </div>
-              <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <button
-                  class="btn btn-primary"
-                  @click="finalizeReceiptReview(receipt, 'approve')"
-                >
-                  <ShieldCheck class="w-4 h-4" />
-                  Approve Override
-                </button>
-                <button
-                  class="btn btn-danger !py-2"
-                  @click="finalizeReceiptReview(receipt, 'reject')"
-                >
-                  Confirm Final Rejection
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       <!-- ── Search / Popup Filters ── -->
       <BaseUtilityToolbar

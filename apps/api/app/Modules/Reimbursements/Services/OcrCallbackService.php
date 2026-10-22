@@ -3,6 +3,7 @@
 namespace App\Modules\Reimbursements\Services;
 
 use App\Modules\AuditLogs\Services\AuditLogService;
+use App\Modules\Notifications\Services\NotificationService;
 use App\Modules\Reimbursements\Models\ExpenseCategory;
 use App\Modules\Reimbursements\Models\Receipt;
 use Illuminate\Support\Facades\DB;
@@ -100,6 +101,32 @@ class OcrCallbackService
                 afterState:  $receipt->fresh()->toArray(),
                 ipAddress:   request()->ip(),
             );
+
+            $amountText = $receipt->total_amount ? ' of ' . NotificationService::formatPeso($receipt->total_amount) : '';
+            if ($isRejected) {
+                $reasonText = $rejectionReason ? " Reason: {$rejectionReason}" : '';
+                NotificationService::notifyUser(
+                    userId: (int) $receipt->uploaded_by,
+                    type: 'receipt_auto_rejected',
+                    module: 'My Expense',
+                    title: 'Receipt Auto-Rejected',
+                    message: "Your My Expense receipt #{$receipt->id}{$amountText} was automatically rejected.{$reasonText}",
+                    recordLink: "/my-expense?view={$receipt->id}",
+                    recordType: 'receipt',
+                    recordId: $receipt->id
+                );
+            } else {
+                NotificationService::notifyUser(
+                    userId: (int) $receipt->uploaded_by,
+                    type: 'receipt_processed',
+                    module: 'My Expense',
+                    title: 'Receipt Processed',
+                    message: "Your My Expense receipt #{$receipt->id}{$amountText} has been processed.",
+                    recordLink: "/my-expense?view={$receipt->id}",
+                    recordType: 'receipt',
+                    recordId: $receipt->id
+                );
+            }
 
             Log::info('OcrCallbackService: OCR results applied.', [
                 'receipt_id'    => $receiptId,

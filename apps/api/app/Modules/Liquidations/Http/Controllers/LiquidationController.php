@@ -11,6 +11,7 @@ use App\Modules\Ai\Contracts\AsyncOcrEngineInterface;
 use App\Modules\Ai\Services\MockOcrService;
 use App\Modules\Shared\Services\PasswordVerificationService;
 use App\Modules\AuditLogs\Services\AuditLogService;
+use App\Modules\Notifications\Services\NotificationService;
 use App\Modules\Reimbursements\Jobs\DispatchReceiptToAiService;
 use App\Modules\Shared\Traits\ValidatesReceiptDuplicates;
 use Illuminate\Support\Facades\Bus;
@@ -553,6 +554,41 @@ class LiquidationController extends Controller
                 ipAddress: $request->ip()
             );
 
+            NotificationService::notifyUser(
+                userId: $user->id,
+                type: 'liquidation_submitted',
+                module: 'Liquidation',
+                title: 'Liquidation Submitted',
+                message: "Your liquidation of " . NotificationService::formatPeso($liquidation->total_expense_amount) . " for Cash Advance #{$advance->id} was submitted.",
+                recordLink: "/liquidations?view={$liquidation->id}",
+                recordType: 'liquidation',
+                recordId: $liquidation->id
+            );
+
+            NotificationService::notifyAdmins(
+                type: 'admin_liquidation_submitted',
+                module: 'Liquidation',
+                title: 'New Liquidation Settlement',
+                message: "{$user->name} submitted a liquidation of " . NotificationService::formatPeso($liquidation->total_expense_amount) . " for Cash Advance #{$advance->id}.",
+                recordLink: "/liquidations?view={$liquidation->id}",
+                recordType: 'liquidation',
+                recordId: $liquidation->id,
+                excludeUserId: $user->id
+            );
+
+            if (!empty($liquidation->shortfall_explanation)) {
+                NotificationService::notifyAdmins(
+                    type: 'admin_employee_note_added',
+                    module: 'Liquidation',
+                    title: 'Employee Note on Liquidation',
+                    message: "{$user->name} added a note on Liquidation #{$liquidation->id}: \"{$liquidation->shortfall_explanation}\"",
+                    recordLink: "/liquidations?view={$liquidation->id}",
+                    recordType: 'liquidation',
+                    recordId: $liquidation->id,
+                    excludeUserId: $user->id
+                );
+            }
+
             return response()->json([
                 'message' => 'Liquidation settlement submitted for audit successfully.',
                 'data' => $liquidation,
@@ -691,6 +727,35 @@ class LiquidationController extends Controller
                 ipAddress: $request->ip()
             );
 
+            $formattedAmount = NotificationService::formatPeso($liquidation->total_expense_amount);
+            $noteText = !empty($validated['admin_note']) ? " Admin note: \"{$validated['admin_note']}\"" : '';
+            if ($actionType === 'LIQUIDATION_APPROVED') {
+                NotificationService::notifyUser(
+                    userId: $liquidation->user_id,
+                    type: 'liquidation_settled',
+                    module: 'Liquidation',
+                    title: 'Liquidation Settled',
+                    message: "Your liquidation of {$formattedAmount} for Cash Advance #{$advance->id} was approved and settled.{$noteText}",
+                    recordLink: "/liquidations?view={$liquidation->id}",
+                    recordType: 'liquidation',
+                    recordId: $liquidation->id
+                );
+            } else {
+                $statusType = $isTerminal ? 'liquidation_rejected' : 'liquidation_revised';
+                $statusTitle = $isTerminal ? 'Liquidation Rejected' : 'Liquidation Needs Revision';
+                $statusVerb = $isTerminal ? 'rejected' : 'returned for revision';
+                NotificationService::notifyUser(
+                    userId: $liquidation->user_id,
+                    type: $statusType,
+                    module: 'Liquidation',
+                    title: $statusTitle,
+                    message: "Your liquidation of {$formattedAmount} for Cash Advance #{$advance->id} was {$statusVerb}.{$noteText}",
+                    recordLink: "/liquidations?view={$liquidation->id}",
+                    recordType: 'liquidation',
+                    recordId: $liquidation->id
+                );
+            }
+
             return response()->json([
                 'message' => 'Liquidation settlement audit complete.',
                 'data' => $liquidation,
@@ -792,6 +857,17 @@ class LiquidationController extends Controller
             }
 
             $liquidation->save();
+
+            NotificationService::notifyAdmins(
+                type: 'admin_liquidation_resubmitted',
+                module: 'Liquidation',
+                title: 'Liquidation Resubmitted',
+                message: "{$user->name} updated/resubmitted Liquidation #{$liquidation->id} (" . NotificationService::formatPeso($liquidation->total_expense_amount) . ").",
+                recordLink: "/liquidations?view={$liquidation->id}",
+                recordType: 'liquidation',
+                recordId: $liquidation->id,
+                excludeUserId: $user->id
+            );
 
             return response()->json([
                 'message' => 'Liquidation updated successfully.',
