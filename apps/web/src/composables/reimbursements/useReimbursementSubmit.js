@@ -10,6 +10,7 @@ export function useReimbursementSubmit(emit, router) {
   const submitting = ref(false);
 
   async function submitReimbursement({ receipts, cutoffPeriod, reportFile, totalAmount, userComment }) {
+    if (submitting.value) return false;
     if (!receipts.length || !cutoffPeriod || !reportFile || receipts.some(r => r.isUploading)) {
       return false;
     }
@@ -147,6 +148,7 @@ export function useReimbursementSubmit(emit, router) {
   }
 
   async function updateReimbursement(id, { receipts, cutoffPeriod, reportFile, totalAmount, userComment }) {
+    if (submitting.value) return false;
     if (!receipts.length || !cutoffPeriod || receipts.some(r => r.isUploading)) {
       return false;
     }

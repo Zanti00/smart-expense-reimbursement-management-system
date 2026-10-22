@@ -216,6 +216,7 @@ const adminReviewNotes = ref("");
 const confirmationAction = ref("");
 const isAdminDecisionSubmitting = ref(false);
 const showAcknowledgeModal = ref(false);
+const isAcknowledging = ref(false);
 const adminPassword = ref("");
 
 const documentData = ref(null);
@@ -481,12 +482,13 @@ function clearSignature() {
 }
 
 async function confirmAcknowledge() {
-  if (!props.record) return;
+  if (!props.record || isAcknowledging.value) return;
   const canvas = signatureCanvas.value;
   if (!canvas) return;
   const signatureData = canvas.toDataURL("image/png");
 
   try {
+    isAcknowledging.value = true;
     await store.acknowledgeRequest(props.record.id, signatureData);
     addToast({
       message: "Cash advance acknowledged successfully.",
@@ -496,6 +498,8 @@ async function confirmAcknowledge() {
     closeDetails();
   } catch (error) {
     addToast({ message: error.message || "Action failed", type: "error" });
+  } finally {
+    isAcknowledging.value = false;
   }
 }
 </script>
@@ -970,6 +974,8 @@ async function confirmAcknowledge() {
           variant="primary"
           class="px-5 min-h-10"
           type="button"
+          :loading="isAcknowledging"
+          :disabled="isAcknowledging"
           @click="confirmAcknowledge"
         >
           Yes, I Acknowledge

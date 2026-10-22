@@ -46,7 +46,7 @@ export function useReimbursementDecisions(store, addToast, viewingRecord) {
   }
 
   async function confirmApprove() {
-    if (!approvingId.value) return;
+    if (!approvingId.value || isReviewSubmitting.value) return;
     if (!confirmPassword.value?.trim()) {
       addToast({
         message: "Password is required to approve this request.",
@@ -105,6 +105,7 @@ export function useReimbursementDecisions(store, addToast, viewingRecord) {
   }
 
   async function confirmReject() {
+    if (!rejectingId.value || isReviewSubmitting.value) return;
     if (!confirmPassword.value?.trim()) {
       addToast({
         message: `Password is required to ${revisionAction.value} this request.`,
@@ -178,7 +179,7 @@ export function useReimbursementDecisions(store, addToast, viewingRecord) {
   }
 
   async function confirmGrant(payoutPayload) {
-    if (!grantingId.value) return;
+    if (!grantingId.value || isReviewSubmitting.value) return;
 
     isReviewSubmitting.value = true;
     try {

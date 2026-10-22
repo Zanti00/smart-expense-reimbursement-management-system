@@ -558,6 +558,7 @@ function dismiss() {
       confirm-text="Done"
       cancel-text="Cancel"
       :danger="false"
+      :loading="submitting"
       @confirm="handleConfirmSubmit"
       @close="handleCancelSubmit"
     />

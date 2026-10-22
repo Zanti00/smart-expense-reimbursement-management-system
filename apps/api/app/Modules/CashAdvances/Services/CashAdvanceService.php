@@ -145,20 +145,23 @@ class CashAdvanceService
                 ]);
             }
 
-            if (!in_array($advance->status, ['pending', 'revise'])) {
+            $lockedAdvance = CashAdvance::where('id', $advance->id)->lockForUpdate()->firstOrFail();
+
+            if (!in_array($lockedAdvance->status, ['pending', 'revise'])) {
                 throw new \Illuminate\Auth\Access\AuthorizationException('Only pending or revise cash advances can be revised/rejected.');
             }
 
-            $currentCount = (int) ($advance->revision_count ?? 0);
+            $currentCount = (int) ($lockedAdvance->revision_count ?? 0);
             $newCount = $currentCount + 1;
             // 3 revises allowed: 1st-3rd = revise, 4th (>3) = terminal rejected
             $newStatus = $newCount > 3 ? 'rejected' : 'revise';
-            $fromStatus = $advance->status;
+            $fromStatus = $lockedAdvance->status;
 
-            $advance->update([
+            $lockedAdvance->update([
                 'status' => $newStatus,
                 'revision_count' => $newCount,
             ]);
+            $advance = $lockedAdvance;
 
             // Map request action (present tense: revise/reject) to stored action (past tense: revised/rejected).
             // Terminal 3rd strike (newCount >=3 / <=2 allowed) — 2 strikes revise, 3rd rejected, 3 total — always forces 'rejected' regardless of $action input —

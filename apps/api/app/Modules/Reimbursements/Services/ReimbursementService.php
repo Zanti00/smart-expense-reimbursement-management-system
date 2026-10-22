@@ -270,7 +270,7 @@ class ReimbursementService
                 ]);
             }
 
-            $reimbursement = Reimbursement::findOrFail($id);
+            $reimbursement = Reimbursement::where('id', $id)->lockForUpdate()->firstOrFail();
 
             // Self-rejection check
             if ($reimbursement->user_id === $user->id) {
