@@ -154,12 +154,23 @@ const roadmapAging = computed(() => {
 
 const roadmapOverpayment = computed(() => {
   const liq = linkedLiquidation.value;
-  if (!liq) return 0;
+  if (!liq) {
+    return Number(
+      props.record?.overpayment_amount ??
+        props.record?.overpaymentAmount ??
+        0,
+    );
+  }
   const total = Number(
     liq.total_expense_amount ?? liq.totalExpenseAmount ?? liq.total_amount ?? 0,
   );
   const bal = Number(props.record?.balance ?? props.record?.amount ?? 0);
   return Math.max(0, total - bal);
+});
+
+const roadmapLayout = computed(() => {
+  if (roadmapOverpayment.value > 0) return "serpentine";
+  return "horizontal";
 });
 
 function handleRoadmapNavigate(payload) {
@@ -528,6 +539,7 @@ async function confirmAcknowledge() {
             :penalties="roadmapPenalties"
             :overpayment-amount="roadmapOverpayment"
             :aging="roadmapAging"
+            :layout="roadmapLayout"
             @navigate="handleRoadmapNavigate"
           />
 
@@ -750,6 +762,7 @@ async function confirmAcknowledge() {
             :penalties="roadmapPenalties"
             :overpayment-amount="roadmapOverpayment"
             :aging="roadmapAging"
+            :layout="roadmapLayout"
             @navigate="handleRoadmapNavigate"
           />
 

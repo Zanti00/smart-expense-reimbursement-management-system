@@ -94,4 +94,68 @@ describe("CashAdvanceDetailsModal — Export Report (G2-056, G2-059)", () => {
     await exportBtn.trigger("click");
     expect(mockExportReport).toHaveBeenCalledWith("cash-advance", 21);
   });
+
+  it("passes layout='serpentine' to UnifiedRoadmapStepper when overpayment exists (Admin)", async () => {
+    mockAuth.isAdmin = true;
+    const wrapper = mount(CashAdvanceDetailsModal, {
+      props: {
+        isOpen: true,
+        record: {
+          id: 15,
+          userId: 10,
+          amount: 5000,
+          balance: 5000,
+          overpayment_amount: 1500,
+          status: "settled",
+        },
+      },
+      global: {
+        stubs: {
+          UnifiedRoadmapStepper: {
+            name: "UnifiedRoadmapStepper",
+            props: ["layout", "overpaymentAmount"],
+            template: "<div data-testid='stepper' :data-layout='layout'></div>",
+          },
+          StatusBadge: true,
+          DecisionConfirmationModal: true,
+          BaseModal: true,
+        },
+      },
+    });
+
+    const stepper = wrapper.find('[data-testid="stepper"]');
+    expect(stepper.attributes("data-layout")).toBe("serpentine");
+  });
+
+  it("passes layout='serpentine' to UnifiedRoadmapStepper when overpayment exists (Employee)", async () => {
+    mockAuth.isAdmin = false;
+    const wrapper = mount(CashAdvanceDetailsModal, {
+      props: {
+        isOpen: true,
+        record: {
+          id: 21,
+          userId: 99,
+          amount: 3200,
+          balance: 3200,
+          overpayment_amount: 800,
+          status: "settled",
+        },
+      },
+      global: {
+        stubs: {
+          UnifiedRoadmapStepper: {
+            name: "UnifiedRoadmapStepper",
+            props: ["layout", "overpaymentAmount"],
+            template: "<div data-testid='stepper' :data-layout='layout'></div>",
+          },
+          StatusBadge: true,
+          DecisionConfirmationModal: true,
+          BaseModal: true,
+        },
+      },
+    });
+
+    const stepper = wrapper.find('[data-testid="stepper"]');
+    expect(stepper.attributes("data-layout")).toBe("serpentine");
+  });
 });
