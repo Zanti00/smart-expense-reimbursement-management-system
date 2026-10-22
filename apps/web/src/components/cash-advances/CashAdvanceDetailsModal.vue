@@ -696,12 +696,12 @@ async function confirmAcknowledge() {
             >
               You cannot process your own request.
             </p>
-            <div v-else class="flex flex-1 flex-col gap-3 sm:flex-row sm:justify-end">
+            <div v-else class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
               <template v-if="['pending','revise'].includes(record.status)">
-                <div class="flex-1 sm:max-w-[200px]">
+                <div class="w-full sm:w-auto">
                   <select
                     @change="requestConfirmation($event.target.value); $event.target.value=''"
-                    class="w-full py-2.5 border border-slate-200 text-slate-700 text-sm font-medium rounded-lg bg-white hover:bg-slate-50 transition-colors text-center"
+                    class="w-full sm:w-auto py-2.5 px-4 border border-slate-200 text-slate-700 text-sm font-medium rounded-lg bg-white hover:bg-slate-50 transition-colors text-center cursor-pointer"
                     value=""
                   >
                     <option value="" disabled selected>Actions ▾</option>
@@ -710,7 +710,7 @@ async function confirmAcknowledge() {
                   </select>
                 </div>
                 <button
-                  class="flex-1 sm:max-w-[200px] py-2.5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-sm flex items-center justify-center gap-2"
+                  class="w-full sm:w-auto py-2.5 px-5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-sm flex items-center justify-center gap-2"
                   type="button"
                   @click="requestConfirmation('approve')"
                 >
@@ -720,7 +720,7 @@ async function confirmAcknowledge() {
               </template>
               <template v-if="record.status === 'approved'">
                 <button
-                  class="flex-1 sm:max-w-[220px] py-2.5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-sm flex items-center justify-center gap-2"
+                  class="w-full sm:w-auto py-2.5 px-5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-sm flex items-center justify-center gap-2"
                   type="button"
                   @click="requestConfirmation('disburse')"
                 >
@@ -957,10 +957,10 @@ async function confirmAcknowledge() {
         This action will finalize your receipt of the funds.
       </p>
 
-      <div class="mt-6 flex gap-3">
+      <div class="mt-6 flex justify-center gap-3">
         <BaseButton
           variant="secondary"
-          class="flex-1"
+          class="px-5 min-h-10"
           type="button"
           @click="showAcknowledgeModal = false"
         >
@@ -968,7 +968,7 @@ async function confirmAcknowledge() {
         </BaseButton>
         <BaseButton
           variant="primary"
-          class="flex-1"
+          class="px-5 min-h-10"
           type="button"
           @click="confirmAcknowledge"
         >

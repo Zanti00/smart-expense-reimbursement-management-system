@@ -230,4 +230,72 @@ describe("CashAdvanceDetailsModal — Export Report (G2-056, G2-059)", () => {
     expect(wrapper.text()).toContain("Audit Trail (1)");
     expect(wrapper.text()).toContain("Elena Cruz");
   });
+
+  describe("Modal Button Sizing Guardrails", () => {
+    it("sizes admin action buttons intrinsically without flex-1 or fixed max-w", () => {
+      mockAuth.isAdmin = true;
+      const wrapper = mount(CashAdvanceDetailsModal, {
+        props: {
+          isOpen: true,
+          record: {
+            id: 40,
+            userId: 10,
+            requestedBy: "Pedro Cruz",
+            amount: 3000,
+            balance: 3000,
+            status: "pending",
+          },
+        },
+        global: {
+          stubs: {
+            UnifiedRoadmapStepper: true,
+            StatusBadge: true,
+            DecisionConfirmationModal: true,
+            BaseModal: true,
+          },
+        },
+      });
+
+      const approveBtn = wrapper.findAll("button").find((b) => b.text().includes("Approve"));
+      expect(approveBtn).toBeDefined();
+      expect(approveBtn.classes()).not.toContain("flex-1");
+      expect(approveBtn.classes()).not.toContain("sm:max-w-[200px]");
+      expect(approveBtn.classes()).toContain("px-5");
+
+      const selectWrapper = wrapper.find("select").element.parentElement;
+      expect(selectWrapper.classList.contains("flex-1")).toBe(false);
+      expect(selectWrapper.classList.contains("sm:max-w-[200px]")).toBe(false);
+    });
+
+    it("sizes disburse button intrinsically without flex-1 or fixed max-w", () => {
+      mockAuth.isAdmin = true;
+      const wrapper = mount(CashAdvanceDetailsModal, {
+        props: {
+          isOpen: true,
+          record: {
+            id: 41,
+            userId: 10,
+            requestedBy: "Pedro Cruz",
+            amount: 3000,
+            balance: 3000,
+            status: "approved",
+          },
+        },
+        global: {
+          stubs: {
+            UnifiedRoadmapStepper: true,
+            StatusBadge: true,
+            DecisionConfirmationModal: true,
+            BaseModal: true,
+          },
+        },
+      });
+
+      const disburseBtn = wrapper.findAll("button").find((b) => b.text().includes("Disburse"));
+      expect(disburseBtn).toBeDefined();
+      expect(disburseBtn.classes()).not.toContain("flex-1");
+      expect(disburseBtn.classes()).not.toContain("sm:max-w-[220px]");
+      expect(disburseBtn.classes()).toContain("px-5");
+    });
+  });
 });
