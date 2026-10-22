@@ -52,15 +52,15 @@ const normalizedReceipt = computed(() => {
         </div>
 
         <!-- Decision Buttons -->
-        <div v-else class="flex gap-2">
+        <div v-else class="flex items-center justify-end gap-2">
           <button
-            class="flex-1 py-2.5 border border-red-200 text-red-600 text-xs font-medium rounded-lg hover:bg-red-50 flex items-center justify-center gap-1.5"
+            class="px-4 py-2 border border-red-200 text-red-600 text-xs font-medium rounded-lg hover:bg-red-50 flex items-center justify-center gap-1.5 transition-colors"
             @click="emit('request-decision', 'rejected')"
           >
             <XCircle class="w-3.5 h-3.5" /> Reject
           </button>
           <button
-            class="flex-1 py-2.5 bg-primary text-white text-xs font-medium rounded-lg hover:bg-primary/90 flex items-center justify-center gap-1.5"
+            class="px-5 py-2 bg-primary text-white text-xs font-medium rounded-lg hover:bg-primary/90 flex items-center justify-center gap-1.5 transition-colors shadow-sm"
             @click="emit('request-decision', 'accepted')"
           >
             <CheckCircle class="w-3.5 h-3.5" /> Accept

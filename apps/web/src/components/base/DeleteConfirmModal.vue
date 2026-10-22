@@ -102,17 +102,17 @@ function close() {
       </div>
 
       <!-- Centered Action Footer per Section VI.5 -->
-      <div class="flex gap-3 mt-6">
+      <div class="flex justify-center gap-3 mt-6">
         <BaseButton
           variant="secondary"
-          class="flex-1 min-h-10"
+          class="px-5 min-h-10"
           @click="close"
         >
           Cancel
         </BaseButton>
         <BaseButton
           variant="destructive"
-          class="flex-1 min-h-10"
+          class="px-5 min-h-10"
           :disabled="password.length === 0"
           @click="handleConfirm"
         >

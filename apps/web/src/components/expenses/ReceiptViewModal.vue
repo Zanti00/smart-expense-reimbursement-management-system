@@ -51,18 +51,18 @@ const normalizedReceipt = computed(() => {
     @close="close"
   >
     <template #actions>
-      <div class="flex gap-2">
+      <div class="flex items-center justify-end gap-2">
         <button
           v-if="canEdit"
           @click="editReceipt"
-          class="btn btn-secondary flex-1"
+          class="btn btn-secondary px-4 py-2"
         >
           <Pencil class="w-4 h-4" /> Edit
         </button>
         <button
           v-if="canDelete"
           @click="emit('delete', receipt.id); close();"
-          class="btn btn-danger !px-3"
+          class="btn btn-danger !px-3 py-2"
         >
           <Trash2 class="w-4 h-4" />
         </button>
