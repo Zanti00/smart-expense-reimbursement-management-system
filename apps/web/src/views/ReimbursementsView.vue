@@ -22,6 +22,7 @@ import {
 import { useReimbursementDetails } from "@/composables/reimbursements/useReimbursementDetails";
 import { useReimbursementDecisions } from "@/composables/reimbursements/useReimbursementDecisions";
 import { useOcrMode } from "@/composables/useOcrMode";
+import { useNotificationDeepLink } from "@/composables/useNotificationDeepLink";
 import {
   Plus,
   ShieldCheck,
@@ -213,7 +214,15 @@ async function confirmDelete(password) {
   }
 }
 
-onMounted(() => store.fetchAll());
+const { checkDeepLink } = useNotificationDeepLink({
+  verifyUrl: (id) => `/api/serms/reimbursements/${id}`,
+  onOpenRecord: (record) => openDetails(record),
+});
+
+onMounted(async () => {
+  await store.fetchAll();
+  checkDeepLink();
+});
 </script>
 
 <template>

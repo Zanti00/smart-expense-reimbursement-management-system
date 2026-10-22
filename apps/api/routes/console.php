@@ -10,4 +10,5 @@ Artisan::command('inspire', function () {
 
 Schedule::command('receipts:warn-deletion')->daily();
 Schedule::command('penalties:calculate')->daily();
+Schedule::command('notifications:check-liquidation-deadlines')->daily();
 

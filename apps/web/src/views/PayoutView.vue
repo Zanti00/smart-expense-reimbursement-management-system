@@ -9,6 +9,7 @@ import PayoutsTable from "@/components/payouts/PayoutsTable.vue";
 import PayoutDetailsModal from "@/components/payouts/PayoutDetailsModal.vue";
 import { formatPeso } from "@/utils/formatters";
 import { usePayoutFilters } from "@/composables/payouts/usePayoutFilters";
+import { useNotificationDeepLink } from "@/composables/useNotificationDeepLink";
 import {
   Banknote,
   Wallet,
@@ -187,7 +188,18 @@ async function handleAcknowledge(signature) {
   }
 }
 
-onMounted(() => store.fetchAll());
+const { checkDeepLink } = useNotificationDeepLink({
+  verifyUrl: (id) => `/api/serms/reimbursements/${id}`,
+  onOpenRecord: (record) => {
+    const row = tableRows.value.find((r) => String(r.id) === String(record.id));
+    if (row) openDetails(row);
+  },
+});
+
+onMounted(async () => {
+  await store.fetchAll();
+  checkDeepLink();
+});
 </script>
 
 <template>

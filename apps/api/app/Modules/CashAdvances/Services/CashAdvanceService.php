@@ -7,6 +7,7 @@ use App\Modules\CashAdvances\Models\CashAdvanceDocument;
 use App\Modules\CashAdvances\Models\CashAdvanceApprovalAction;
 use App\Modules\CashAdvances\Models\CashAdvanceDisbursement;
 use App\Modules\CashAdvances\Models\CashAdvanceStatusHistory;
+use App\Modules\Notifications\Services\NotificationService;
 use App\Modules\Users\Models\User;
 use App\Modules\Shared\Services\PasswordVerificationService;
 use Illuminate\Http\Request;
@@ -47,6 +48,28 @@ class CashAdvanceService
                 ]);
             }
 
+            NotificationService::notifyUser(
+                userId: $user->id,
+                type: 'cash_advance_submitted',
+                module: 'Cash Advance',
+                title: 'Cash Advance Submitted',
+                message: "Your cash advance request of " . NotificationService::formatPeso($advance->amount) . " was submitted.",
+                recordLink: "/cash-advances?view={$advance->id}",
+                recordType: 'cash_advance',
+                recordId: $advance->id
+            );
+
+            NotificationService::notifyAdmins(
+                type: 'admin_cash_advance_submitted',
+                module: 'Cash Advance',
+                title: 'New Cash Advance Request',
+                message: "{$user->name} submitted a cash advance request of " . NotificationService::formatPeso($advance->amount) . ".",
+                recordLink: "/cash-advances?view={$advance->id}",
+                recordType: 'cash_advance',
+                recordId: $advance->id,
+                excludeUserId: $user->id
+            );
+
             return $advance;
         });
     }
@@ -75,6 +98,18 @@ class CashAdvanceService
                 'to_status' => 'approved',
                 'changed_by' => $user->id,
             ]);
+
+            $commentText = $comment ? " Approver note: \"{$comment}\"" : '';
+            NotificationService::notifyUser(
+                userId: $advance->user_id,
+                type: 'cash_advance_approved',
+                module: 'Cash Advance',
+                title: 'Cash Advance Approved',
+                message: "Your cash advance request of " . NotificationService::formatPeso($advance->amount) . " was approved by {$user->name}.{$commentText}",
+                recordLink: "/cash-advances?view={$advance->id}",
+                recordType: 'cash_advance',
+                recordId: $advance->id
+            );
 
             return $advance;
         });
@@ -156,6 +191,21 @@ class CashAdvanceService
                 'changed_by' => $user->id,
             ]);
 
+            $isTerminal = $newStatus === 'rejected';
+            $statusType = $isTerminal ? 'cash_advance_rejected' : 'cash_advance_revised';
+            $statusTitle = $isTerminal ? 'Cash Advance Rejected' : 'Cash Advance Needs Revision';
+            $statusVerb = $isTerminal ? 'rejected' : 'returned for revision';
+            NotificationService::notifyUser(
+                userId: $advance->user_id,
+                type: $statusType,
+                module: 'Cash Advance',
+                title: $statusTitle,
+                message: "Your cash advance request of " . NotificationService::formatPeso($advance->amount) . " was {$statusVerb}. Approver note: \"{$comment}\"",
+                recordLink: "/cash-advances?view={$advance->id}",
+                recordType: 'cash_advance',
+                recordId: $advance->id
+            );
+
             return $advance;
         });
     }
@@ -194,6 +244,17 @@ class CashAdvanceService
                 'changed_by' => $user->id,
             ]);
 
+            NotificationService::notifyUser(
+                userId: $advance->user_id,
+                type: 'cash_advance_disbursed',
+                module: 'Cash Advance',
+                title: 'Cash Advance Disbursed',
+                message: "Your cash advance of " . NotificationService::formatPeso($advance->amount) . " was disbursed via {$data['channel']} (Ref: {$data['reference']}).",
+                recordLink: "/cash-advances?view={$advance->id}",
+                recordType: 'cash_advance',
+                recordId: $advance->id
+            );
+
             return $advance;
         });
     }
@@ -215,6 +276,19 @@ class CashAdvanceService
                 'to_status' => 'signed',
                 'changed_by' => auth()->id() ?? $advance->user_id,
             ]);
+
+            $advance->loadMissing('requester');
+            $empName = $advance->requester?->name ?? 'Employee';
+            NotificationService::notifyAdmins(
+                type: 'admin_cash_advance_signed',
+                module: 'Cash Advance',
+                title: 'Employee Signed Cash Advance',
+                message: "{$empName} signed to acknowledge Cash Advance #{$advance->id} (" . NotificationService::formatPeso($advance->amount) . ").",
+                recordLink: "/cash-advances?view={$advance->id}",
+                recordType: 'cash_advance',
+                recordId: $advance->id,
+                excludeUserId: auth()->id() ?? $advance->user_id
+            );
 
             return $advance;
         });
@@ -277,6 +351,17 @@ class CashAdvanceService
                     'changed_by' => $user->id,
                 ]);
             }
+
+            NotificationService::notifyAdmins(
+                type: 'admin_cash_advance_resubmitted',
+                module: 'Cash Advance',
+                title: 'Cash Advance Resubmitted',
+                message: "{$user->name} updated/resubmitted Cash Advance #{$advance->id} (" . NotificationService::formatPeso($advance->amount) . ").",
+                recordLink: "/cash-advances?view={$advance->id}",
+                recordType: 'cash_advance',
+                recordId: $advance->id,
+                excludeUserId: $user->id
+            );
 
             return $advance;
         });
