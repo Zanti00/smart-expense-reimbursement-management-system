@@ -60,10 +60,10 @@ const emit = defineEmits(["close", "confirm"]);
       </div>
 
       <!-- Action Footer with BaseButton -->
-      <div class="flex gap-3 mt-8">
+      <div class="flex justify-center gap-3 mt-8">
         <BaseButton
           variant="secondary"
-          class="flex-1 min-h-10"
+          class="px-5 min-h-10"
           @click="$emit('close')"
         >
           {{ cancelText }}
@@ -71,7 +71,7 @@ const emit = defineEmits(["close", "confirm"]);
         <BaseButton
           :variant="danger ? 'destructive' : 'primary'"
           :loading="loading"
-          class="flex-1 min-h-10"
+          class="px-5 min-h-10"
           @click="$emit('confirm')"
         >
           {{ confirmText }}
