@@ -47,11 +47,17 @@ const props = defineProps({
   layout: {
     type: String,
     default: "horizontal",
-    validator: (val) => ["serpentine", "horizontal"].includes(val),
+    validator: (val) => ["serpentine", "horizontal", "auto"].includes(val),
   },
 });
 
 const emit = defineEmits(["navigate", "view-cash-advance", "view-liquidation"]);
+
+const effectiveLayout = computed(() => {
+  if (props.layout === "serpentine") return "serpentine";
+  if (allSteps.value.length > 6) return "serpentine";
+  return props.layout;
+});
 
 function normalize(val) {
   return String(val || "")
@@ -641,7 +647,7 @@ const allSteps = computed(() => {
     },
   ];
 
-  if (Number(props.overpaymentAmount) > 0 && props.layout === "horizontal") {
+  if (Number(props.overpaymentAmount) > 0) {
     steps.push({
       idx: 6,
       id: 7,
@@ -865,7 +871,7 @@ function handleStepClick(step, state) {
     ></div>
 
     <!-- 1. SERPENTINE / REVERTED 'S' LAYOUT (Default 4x2 Grid) -->
-    <div v-if="layout === 'serpentine'" class="relative flex flex-col gap-4 sm:gap-5">
+    <div v-if="effectiveLayout === 'serpentine'" class="relative flex flex-col gap-4 sm:gap-5">
       <!-- Phase 1: Cash Advance (Steps 1 -> 4, Left to Right) -->
       <div class="relative">
         <div class="mb-2 flex items-center justify-between px-1">

@@ -470,4 +470,26 @@ describe("UnifiedRoadmapStepper", () => {
     expect(wrapper.text()).toContain("PHP 2,250");
     expect(wrapper.text()).not.toContain("(Day");
   });
+
+  it("splits into 2-row serpentine layout when overpayment is added (>6 steps)", () => {
+    const wrapper = mount(UnifiedRoadmapStepper, {
+      props: {
+        cashAdvance: {
+          ...baseCashAdvance,
+          status: "settled",
+        },
+        overpaymentAmount: 5000,
+        statusHistory: [],
+      },
+    });
+
+    const text = wrapper.text();
+    expect(text).toContain("Phase 1: Cash Advance");
+    expect(text).toContain("Phase 2: Liquidation & Settlement");
+    expect(text).toContain("Overpayment");
+    expect(text).toContain("₱5,000.00 → Reimbursement");
+
+    const stepItems = wrapper.findAllComponents({ name: "RoadmapStepItem" });
+    expect(stepItems.length).toBe(7);
+  });
 });
