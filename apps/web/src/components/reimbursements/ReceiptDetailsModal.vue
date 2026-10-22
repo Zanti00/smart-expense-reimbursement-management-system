@@ -126,11 +126,19 @@ const normalizedReceipt = computed(() => {
         </div>
 
         <!-- Decision Buttons -->
-        <div v-else class="flex gap-2">
-          <button class="flex-1 py-2.5 border border-red-200 text-red-600 text-xs font-medium rounded-lg hover:bg-red-50 flex items-center justify-center gap-1.5 disabled:opacity-50" :disabled="isProcessing || isSubmitting || isOwnSubmission" @click="emit('request-decision', 'Reject')">
+        <div v-else class="flex items-center justify-end gap-2">
+          <button
+            class="px-4 py-2 border border-red-200 text-red-600 text-xs font-medium rounded-lg hover:bg-red-50 flex items-center justify-center gap-1.5 disabled:opacity-50 transition-colors"
+            :disabled="isProcessing || isSubmitting || isOwnSubmission"
+            @click="emit('request-decision', 'Reject')"
+          >
             <XCircle class="w-3.5 h-3.5" /> Reject
           </button>
-          <button class="flex-1 py-2.5 bg-primary text-white text-xs font-medium rounded-lg hover:bg-primary/90 flex items-center justify-center gap-1.5 disabled:opacity-50" :disabled="isApproveDisabled" @click="emit('request-decision', 'Approve')">
+          <button
+            class="px-5 py-2 bg-primary text-white text-xs font-medium rounded-lg hover:bg-primary/90 flex items-center justify-center gap-1.5 disabled:opacity-50 transition-colors shadow-sm"
+            :disabled="isApproveDisabled"
+            @click="emit('request-decision', 'Approve')"
+          >
             <CheckCircle class="w-3.5 h-3.5" /> Approve
           </button>
         </div>
