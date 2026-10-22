@@ -181,7 +181,8 @@ const canProceed = computed(
         !r.isRejected &&
         !String(r.id || "").startsWith("temp-") &&
         r.date &&
-        (isEditMode.value || r.categoryId),
+        (isEditMode.value || r.categoryId) &&
+        (isEditMode.value || r.eventType),
     ),
 );
 
@@ -321,6 +322,7 @@ onMounted(async () => {
             location: r.location || "",
             category: r.category?.name || data.expense_category?.name || "",
             categoryId: r.expense_category_id || data.expense_category_id || null,
+            eventType: r.event_type || data.event_type || "",
             thumbnail: getFileUrl(r.file_url || r.file_path) || null,
             items,
             isUploading: false,

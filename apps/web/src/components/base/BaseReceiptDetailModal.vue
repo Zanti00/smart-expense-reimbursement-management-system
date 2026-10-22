@@ -128,6 +128,10 @@ const subtotal = computed(() => {
               <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-0.5">Category</p>
               <p class="text-sm text-slate-700">{{ receipt.category || "—" }}</p>
             </div>
+            <div v-if="receipt.eventType">
+              <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-0.5">Type of Event</p>
+              <p class="text-sm text-slate-700">{{ receipt.eventType }}</p>
+            </div>
             <div>
               <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-0.5">TIN</p>
               <p class="text-sm text-slate-700">{{ receipt.tin || "—" }}</p>

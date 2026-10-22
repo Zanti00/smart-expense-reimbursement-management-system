@@ -69,6 +69,7 @@ const normalizedReceipt = computed(() => {
     date: formatDate(props.receipt.transaction_date || props.receipt.transactionDate || props.receipt.date),
     vendor: props.receipt.vendor_name || "Unknown Vendor",
     category: categoryName.value,
+    eventType: props.receipt?.event_type || props.receipt?.eventType || "",
     tin: props.receipt.tin || "—",
     vatClassification: selectedVatClassification.value,
     currency: props.receipt.currency || "PHP",

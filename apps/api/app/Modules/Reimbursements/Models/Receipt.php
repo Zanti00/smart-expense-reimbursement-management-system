@@ -30,6 +30,7 @@ class Receipt extends Model
         'is_archived',
         'category',
         'expense_category_id',
+        'event_type',
         'deletion_warning_sent',
         'admin_notes',
         'status',

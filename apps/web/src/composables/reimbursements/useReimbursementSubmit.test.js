@@ -32,6 +32,7 @@ describe("useReimbursementSubmit — userComment handling", () => {
     fileName: "receipt.png",
     merchantName: "Vendor Inc",
     categoryId: 2,
+    eventType: "Client Meeting",
     date: "2026-10-01",
     amount: 250,
     tax: 30,
@@ -92,5 +93,46 @@ describe("useReimbursementSubmit — userComment handling", () => {
 
     const sentFormData = updateRequestMock.mock.calls[0][1];
     expect(sentFormData.get("user_comment")).toBe("Updated rationale.");
+  });
+
+  it("blocks submission and shows error toast when any receipt is missing eventType", async () => {
+    const { submitReimbursement } = useReimbursementSubmit(emit, router);
+    const receiptWithoutEventType = { ...validReceipt, eventType: "" };
+
+    const reportFile = new File(["dummy"], "report.pdf", { type: "application/pdf" });
+    const success = await submitReimbursement({
+      receipts: [receiptWithoutEventType],
+      cutoffPeriod: "2026-10-01 - 2026-10-15",
+      reportFile,
+      totalAmount: 250,
+    });
+
+    expect(success).toBe(false);
+    expect(submitMock).not.toHaveBeenCalled();
+    expect(addToastMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: "Type of event is required for every receipt.",
+        type: "error",
+      }),
+    );
+  });
+
+  it("appends event_type to form data for request and receipts when submitting", async () => {
+    const { submitReimbursement } = useReimbursementSubmit(emit, router);
+    const receiptWithEvent = { ...validReceipt, eventType: "Client Meeting" };
+
+    const reportFile = new File(["dummy"], "report.pdf", { type: "application/pdf" });
+    const success = await submitReimbursement({
+      receipts: [receiptWithEvent],
+      cutoffPeriod: "2026-10-01 - 2026-10-15",
+      reportFile,
+      totalAmount: 250,
+    });
+
+    expect(success).toBe(true);
+    expect(submitMock).toHaveBeenCalledTimes(1);
+    const sentFormData = submitMock.mock.calls[0][0];
+    expect(sentFormData.get("event_type")).toBe("Client Meeting");
+    expect(sentFormData.get("receipts[0][event_type]")).toBe("Client Meeting");
   });
 });

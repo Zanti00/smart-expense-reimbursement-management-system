@@ -66,4 +66,41 @@ describe("ScannedReceiptsList — Required Field Highlighting", () => {
 
     expect(invoiceInput.classes()).not.toContain("input-error");
   });
+
+  it("renders Type of Event dropdown with options beside Category and binds eventType", async () => {
+    const receipt = {
+      ...baseReceipt,
+      hasOcrReturned: true,
+      categoryId: 1,
+      eventType: "",
+    };
+    const wrapper = mount(ScannedReceiptsList, {
+      props: {
+        receipts: [receipt],
+        categories: [{ id: 1, name: "Meals" }],
+      },
+    });
+
+    const eventSelect = wrapper.find("[data-testid='receipt-event-type-select']");
+    expect(eventSelect.exists()).toBe(true);
+
+    // Verify default options exist
+    const options = eventSelect.findAll("option").map((opt) => opt.text());
+    expect(options).toContain("Select type of event");
+    expect(options).toContain("Client Meeting");
+    expect(options).toContain("Conference / Seminar");
+    expect(options).toContain("Training / Workshop");
+    expect(options).toContain("Team Building");
+    expect(options).toContain("Project Deployment / Field Work");
+    expect(options).toContain("Company Celebration / Gathering");
+    expect(options).toContain("Others");
+
+    // Missing error class when empty after OCR return
+    expect(eventSelect.classes()).toContain("input-error");
+
+    // Select an option and verify update
+    await eventSelect.setValue("Client Meeting");
+    expect(receipt.eventType).toBe("Client Meeting");
+    expect(eventSelect.classes()).not.toContain("input-error");
+  });
 });

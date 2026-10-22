@@ -90,6 +90,7 @@ describe("ReimbursementFormView — Submit Confirmation Modal", () => {
         merchantName: "Merchant",
         amount: 100,
         categoryId: "cat-1",
+        eventType: "Client Meeting",
         date: "2026-10-01",
         isUploading: false,
       },

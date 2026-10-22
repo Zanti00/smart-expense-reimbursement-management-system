@@ -14,6 +14,7 @@ import {
   receiptFinancials,
   isReceiptFieldMissing,
 } from "@/utils/receiptUtils";
+import { REIMBURSEMENT_EVENT_TYPES } from "@/utils/constants";
 import CurrencySelect from "@/components/base/CurrencySelect.vue";
 import BaseReceiptImage from "@/components/base/BaseReceiptImage.vue";
 import ReceiptImagePreview from "@/components/base/ReceiptImagePreview.vue";
@@ -101,6 +102,7 @@ function syncOcrData(receipt) {
     receipt.ocrData.amount = receipt.amount;
     receipt.ocrData.vat = receipt.tax;
     receipt.ocrData.expense_category_id = receipt.categoryId;
+    receipt.ocrData.event_type = receipt.eventType;
   }
 }
 
@@ -318,40 +320,78 @@ function removeReceiptItem(receipt, index) {
               </span>
             </div>
 
-            <!-- Category with AI badge -->
-            <div class="input-wrapper">
-              <label class="input-label"
-                >Category (AI Auto-Detected) <span class="text-danger">*</span></label
-              >
-              <div class="flex gap-2">
-                <div class="relative flex-1">
+            <!-- Category & Type of Event (2-column layout to save space) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <!-- Category with AI badge -->
+              <div class="input-wrapper">
+                <label class="input-label"
+                  >Category (AI Auto-Detected) <span class="text-danger">*</span></label
+                >
+                <div class="flex gap-2">
+                  <div class="relative flex-1">
+                    <select
+                      class="input appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      :class="{
+                        'cursor-not-allowed bg-slate-100 text-slate-500': disabled,
+                        'input-error !border-danger focus:!border-danger': isReceiptFieldMissing(receipt, 'categoryId'),
+                      }"
+                      v-model="receipt.categoryId"
+                      :disabled="disabled || receipt.isUploading || receipt.isProcessing"
+                      @change="syncCategoryName(receipt)"
+                    >
+                      <option value="" disabled>Select category</option>
+                      <option
+                        v-for="cat in getCategoryOptions()"
+                        :key="cat.id"
+                        :value="Number(cat.id)"
+                      >
+                        {{ cat.name }}
+                      </option>
+                    </select>
+                    <ChevronDown
+                      class="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                    />
+                  </div>
+                </div>
+                <span v-if="isReceiptFieldMissing(receipt, 'categoryId')" class="text-[10px] text-danger font-medium mt-0.5">
+                  Category is required
+                </span>
+              </div>
+
+              <!-- Type of Event -->
+              <div class="input-wrapper">
+                <label class="input-label"
+                  >Type of Event <span class="text-danger">*</span></label
+                >
+                <div class="relative">
                   <select
+                    data-testid="receipt-event-type-select"
                     class="input appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     :class="{
                       'cursor-not-allowed bg-slate-100 text-slate-500': disabled,
-                      'input-error !border-danger focus:!border-danger': isReceiptFieldMissing(receipt, 'categoryId'),
+                      'input-error !border-danger focus:!border-danger': isReceiptFieldMissing(receipt, 'eventType'),
                     }"
-                    v-model="receipt.categoryId"
+                    v-model="receipt.eventType"
                     :disabled="disabled || receipt.isUploading || receipt.isProcessing"
-                    @change="syncCategoryName(receipt)"
+                    @change="syncOcrData(receipt)"
                   >
-                    <option value="" disabled>Select category</option>
+                    <option value="" disabled>Select type of event</option>
                     <option
-                      v-for="cat in getCategoryOptions()"
-                      :key="cat.id"
-                      :value="Number(cat.id)"
+                      v-for="eventType in REIMBURSEMENT_EVENT_TYPES"
+                      :key="eventType"
+                      :value="eventType"
                     >
-                      {{ cat.name }}
+                      {{ eventType }}
                     </option>
                   </select>
                   <ChevronDown
                     class="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
                   />
                 </div>
+                <span v-if="isReceiptFieldMissing(receipt, 'eventType')" class="text-[10px] text-danger font-medium mt-0.5">
+                  Type of event is required
+                </span>
               </div>
-              <span v-if="isReceiptFieldMissing(receipt, 'categoryId')" class="text-[10px] text-danger font-medium mt-0.5">
-                Category is required
-              </span>
             </div>
 
             <!-- Order Items -->
