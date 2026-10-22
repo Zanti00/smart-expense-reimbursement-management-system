@@ -44,25 +44,45 @@ class CheckLiquidationDeadlines extends Command
                 ? "/liquidations?view={$latestLiq->id}"
                 : "/liquidations?advance={$advance->id}";
 
-            if ($daysLeft >= 0 && $daysLeft <= 3) {
-                // Due Soon warning for employee (G2-071 Task 3)
-                $whenLabel = $daysLeft === 0 ? 'due today' : "due in {$daysLeft} " . ($daysLeft === 1 ? 'day' : 'days');
+            if ($daysLeft >= 1 && $daysLeft <= 3) {
+                // Stage 1: Near-deadline warning (1 to 3 days left) (G2-071 Task 3 & G2-077 Task 1)
+                $dayWord = $daysLeft === 1 ? 'day' : 'days';
                 NotificationService::notifyOnce(
                     userId: (int) $advance->user_id,
                     type: 'liquidation_due_soon',
                     module: 'Liquidation',
                     title: 'Liquidation Due Soon',
-                    message: "Your liquidation for Cash Advance #{$advance->id} ({$formattedAmount}) is {$whenLabel} ({$formattedDue}).",
+                    message: "Your liquidation for Cash Advance #{$advance->id} ({$formattedAmount}) is due in {$daysLeft} {$dayWord} ({$formattedDue}).",
                     recordLink: $recordLink,
                     recordType: 'cash_advance',
                     recordId: (int) $advance->id,
                     metadata: [
+                        'status' => 'Due Soon',
+                        'amount' => $formattedAmount,
                         'days_left' => $daysLeft,
-                        'due_date' => $dueDate->toDateString(),
+                        'due_date' => $formattedDue,
+                    ]
+                );
+            } elseif ($daysLeft === 0) {
+                // Stage 2: Due Today reminder (G2-077 Task 1)
+                NotificationService::notifyOnce(
+                    userId: (int) $advance->user_id,
+                    type: 'liquidation_due_today',
+                    module: 'Liquidation',
+                    title: 'Liquidation Due Today',
+                    message: "Your liquidation for Cash Advance #{$advance->id} ({$formattedAmount}) is due today ({$formattedDue}).",
+                    recordLink: $recordLink,
+                    recordType: 'cash_advance',
+                    recordId: (int) $advance->id,
+                    metadata: [
+                        'status' => 'Due Today',
+                        'amount' => $formattedAmount,
+                        'days_left' => 0,
+                        'due_date' => $formattedDue,
                     ]
                 );
             } elseif ($daysLeft < 0) {
-                // Overdue alert for employee and all admins (G2-071 Task 2 & 3)
+                // Stage 3: Overdue alert for employee and all admins (G2-071 Task 2 & 3, G2-077 Task 2)
                 $daysOverdue = abs($daysLeft);
                 $penaltySum = (float) PenaltyRecord::where('cash_advance_id', $advance->id)->sum('penalty_amount');
                 if ($penaltySum <= 0) {
@@ -81,8 +101,12 @@ class CheckLiquidationDeadlines extends Command
                     recordType: 'cash_advance',
                     recordId: (int) $advance->id,
                     metadata: [
+                        'status' => 'Overdue',
+                        'amount' => $formattedAmount,
                         'days_overdue' => $daysOverdue,
                         'penalty_amount' => $penaltySum,
+                        'penalty_formatted' => $formattedPenalty,
+                        'due_date' => $formattedDue,
                     ]
                 );
 
@@ -96,8 +120,12 @@ class CheckLiquidationDeadlines extends Command
                     recordId: (int) $advance->id,
                     metadata: [
                         'employee_name' => $employeeName,
+                        'status' => 'Overdue',
+                        'amount' => $formattedAmount,
                         'days_overdue' => $daysOverdue,
                         'penalty_amount' => $penaltySum,
+                        'penalty_formatted' => $formattedPenalty,
+                        'due_date' => $formattedDue,
                     ],
                     excludeUserId: (int) $advance->user_id
                 );

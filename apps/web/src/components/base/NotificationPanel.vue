@@ -9,6 +9,7 @@ import {
   AlertCircle,
   Clock,
   ArrowRight,
+  Settings,
 } from "lucide-vue-next";
 import { useNotificationStore } from "@/stores/notification";
 
@@ -146,11 +147,21 @@ function handleViewAll() {
       </div>
 
       <!-- Footer Link -->
-      <div class="px-4 py-2.5 bg-slate-50 border-t border-slate-100">
+      <div class="px-4 py-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+        <button
+          type="button"
+          data-testid="panel-notification-settings"
+          class="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-primary transition-colors py-1"
+          @click="emit('close'); router.push('/settings/notifications')"
+        >
+          <Settings class="w-3.5 h-3.5" />
+          <span>Settings</span>
+        </button>
+
         <button
           type="button"
           data-testid="view-all-notifications"
-          class="w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-primary hover:text-primary-hover py-1"
+          class="flex items-center justify-center gap-1.5 text-xs font-semibold text-primary hover:text-primary-hover py-1"
           @click="handleViewAll"
         >
           <span>View all notifications</span>

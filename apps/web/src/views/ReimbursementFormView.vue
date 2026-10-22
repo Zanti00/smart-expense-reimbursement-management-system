@@ -171,7 +171,13 @@ const canProceed = computed(
     cutoffPeriod.value &&
     (isEditMode.value || reportFile.value) &&
     receipts.value.every(
-      (r) => !r.isUploading && !r.isProcessing && r.date && (isEditMode.value || r.categoryId),
+      (r) =>
+        !r.isUploading &&
+        !r.isProcessing &&
+        !r.isRejected &&
+        !String(r.id || "").startsWith("temp-") &&
+        r.date &&
+        (isEditMode.value || r.categoryId),
     ),
 );
 

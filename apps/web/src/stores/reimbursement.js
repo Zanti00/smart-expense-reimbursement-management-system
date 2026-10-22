@@ -60,7 +60,13 @@ export const useReimbursementStore = defineStore("reimbursement", () => {
         method: "POST",
         body: formData,
       });
-      if (!response.ok) throw new Error("Failed to submit reimbursement");
+      if (!response.ok) {
+        const errorJson = await response.json().catch(() => ({}));
+        const message = errorJson.errors
+          ? Object.values(errorJson.errors).flat().join(" ")
+          : errorJson.message || "Failed to submit reimbursement";
+        throw new Error(message);
+      }
       const json = await response.json();
       items.value.unshift(json.data);
       return json.data;

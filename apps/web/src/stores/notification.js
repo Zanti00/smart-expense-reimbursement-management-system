@@ -9,7 +9,12 @@ function inferSeverity(type = "") {
   if (lower.includes("rejected") || lower.includes("overdue") || lower.includes("cancelled")) {
     return "danger";
   }
-  if (lower.includes("revised") || lower.includes("due_soon") || lower.includes("flagged")) {
+  if (
+    lower.includes("revised") ||
+    lower.includes("due_soon") ||
+    lower.includes("due_today") ||
+    lower.includes("flagged")
+  ) {
     return "warning";
   }
   if (
@@ -24,6 +29,18 @@ function inferSeverity(type = "") {
   }
   return "info";
 }
+
+const DEFAULT_SETTINGS = () => ({
+  email_enabled: true,
+  request_submissions: true,
+  status_updates: true,
+  admin_comments: true,
+  near_deadline_reminders: true,
+  overdue_alerts: true,
+  admin_new_requests: true,
+  admin_employee_updates: true,
+  admin_overdue_liquidations: true,
+});
 
 function normalizeNotification(raw) {
   return {
@@ -175,10 +192,65 @@ export const useNotificationStore = defineStore("notification", () => {
     push({ type: "danger", severity: "danger", message });
   }
 
+  const settings = ref(DEFAULT_SETTINGS());
+  const isSavingSettings = ref(false);
+
+  async function fetchSettings() {
+    const res = await apiFetch("/api/serms/notifications/settings");
+    if (!res.ok) {
+      return settings.value;
+    }
+    const payload = await res.json();
+    if (payload?.data) {
+      settings.value = {
+        ...DEFAULT_SETTINGS(),
+        ...payload.data,
+      };
+    }
+    return settings.value;
+  }
+
+  async function saveSettings(updatedSettings) {
+    const { addToast } = useToast();
+    isSavingSettings.value = true;
+    try {
+      const res = await apiFetch("/api/serms/notifications/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedSettings),
+      });
+      if (!res.ok) {
+        addToast({
+          message: "Failed to save notification settings.",
+          type: "error",
+        });
+        throw new Error("Failed to save settings");
+      }
+      const payload = await res.json();
+      if (payload?.data) {
+        settings.value = {
+          ...DEFAULT_SETTINGS(),
+          ...payload.data,
+        };
+      }
+      addToast({
+        message: payload?.message || "Notification settings saved successfully.",
+        type: "success",
+      });
+      return settings.value;
+    } finally {
+      isSavingSettings.value = false;
+    }
+  }
+
   return {
     alerts,
     unreadCount,
     isLoading,
+    settings,
+    isSavingSettings,
+    fetchSettings,
+    saveSettings,
     fetchNotifications,
     markRead,
     markAllRead,

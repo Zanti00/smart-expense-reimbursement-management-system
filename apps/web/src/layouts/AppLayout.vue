@@ -274,6 +274,14 @@ async function logout() {
                 <span>My Profile</span>
               </DropdownMenuItem>
 
+              <DropdownMenuItem
+                data-testid="menu-notification-settings"
+                @select="router.push('/settings/notifications')"
+              >
+                <Bell class="w-4 h-4 text-slate-500 mr-2" />
+                <span>Notification Settings</span>
+              </DropdownMenuItem>
+
               <DropdownMenuSeparator />
 
               <DropdownMenuItem

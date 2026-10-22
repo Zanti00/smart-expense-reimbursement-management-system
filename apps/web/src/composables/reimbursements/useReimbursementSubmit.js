@@ -23,6 +23,13 @@ export function useReimbursementSubmit(emit, router) {
 
     for (let idx = 0; idx < receipts.length; idx++) {
       const r = receipts[idx];
+      if (!r.id || String(r.id).startsWith("temp-")) {
+        addToast({
+          message: `Receipt ${idx + 1} has not finished uploading or failed to upload. Please re-upload.`,
+          type: "error",
+        });
+        return false;
+      }
       if (!r.date) {
         addToast({
           message: `Date is required for receipt ${idx + 1}`,

@@ -11,6 +11,7 @@ import {
   Info,
   AlertCircle,
   Clock,
+  Settings,
 } from "lucide-vue-next";
 
 const store = useNotificationStore();
@@ -80,16 +81,28 @@ onMounted(() => {
         </p>
       </div>
 
-      <BaseButton
-        v-if="store.unreadCount > 0"
-        data-testid="page-mark-all-read"
-        variant="secondary"
-        size="sm"
-        @click="store.markAllRead()"
-      >
-        <CheckCheck class="w-4 h-4 mr-1.5" />
-        Mark all as read
-      </BaseButton>
+      <div class="flex items-center gap-2">
+        <BaseButton
+          data-testid="page-notification-settings"
+          variant="secondary"
+          size="sm"
+          @click="router.push('/settings/notifications')"
+        >
+          <Settings class="w-4 h-4 mr-1.5" />
+          Notification Settings
+        </BaseButton>
+
+        <BaseButton
+          v-if="store.unreadCount > 0"
+          data-testid="page-mark-all-read"
+          variant="secondary"
+          size="sm"
+          @click="store.markAllRead()"
+        >
+          <CheckCheck class="w-4 h-4 mr-1.5" />
+          Mark all as read
+        </BaseButton>
+      </div>
     </div>
 
     <!-- Filter Bar -->
