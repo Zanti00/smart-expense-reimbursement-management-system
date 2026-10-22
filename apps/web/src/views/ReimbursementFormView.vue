@@ -58,6 +58,10 @@ const cutoffPeriod = ref("");
 const reportFile = ref(null);
 const userComment = ref("");
 const fetching = ref(false);
+const existingStatus = ref("");
+const adminNotes = ref("");
+const revisionCount = ref(0);
+const isReviseMode = computed(() => existingStatus.value === "revise");
 const storedForwardedReceipts = ref([]);
 const forwardedSource = ref("My Expense");
 const FORWARDED_RECEIPTS_KEY = "serms_forwarded_reimbursement_receipts";
@@ -282,6 +286,9 @@ onMounted(async () => {
       cutoffPeriod.value = data.cutoff_period;
       reportFile.value = data.report_file_path;
       userComment.value = data.user_comment || "";
+      existingStatus.value = data.status || "";
+      adminNotes.value = data.admin_notes || data.rejection_comment || "";
+      revisionCount.value = data.revision_count || 1;
       
       if (data.receipts && Array.isArray(data.receipts)) {
         localReceipts.value = data.receipts.map((r) => {
@@ -418,6 +425,7 @@ function dismiss() {
     <ReimbursementFormHeader
       v-if="!isEmbeddedForwardedMode"
       :is-edit="isEditMode"
+      :is-revise="isReviseMode"
       @dismiss="dismiss"
     />
 
@@ -432,6 +440,22 @@ function dismiss() {
     </div>
 
     <template v-else>
+      <!-- Revision Feedback Banner (when revising per admin request) -->
+      <div
+        v-if="isReviseMode && adminNotes"
+        class="p-4 rounded-xl border border-orange-200 bg-orange-50 text-orange-800 flex flex-col gap-1 shadow-sm"
+      >
+        <p class="text-[11px] text-orange-600 uppercase tracking-wide font-bold">
+          Needs Revision — Attempt {{ revisionCount || 1 }}/3 <span v-if="(revisionCount || 1) >= 3" class="text-red-600">(final attempt)</span>
+        </p>
+        <p class="text-sm text-orange-900 font-medium">
+          Admin Feedback: "{{ adminNotes }}"
+        </p>
+        <p class="text-xs text-orange-700/80 mt-1">
+          Please make the requested adjustments below and update your reimbursement to resubmit.
+        </p>
+      </div>
+
       <!--  Success State  -->
       <!--  Alert Banner (forwarded mode)  -->
       <div
@@ -521,7 +545,7 @@ function dismiss() {
               aria-hidden="true"
             />
             <Save v-else class="w-4 h-4" />
-            {{ submitting ? (isEditMode ? "Updating..." : "Submitting...") : (isEditMode ? "Update Reimbursement" : "Submit Reimbursement") }}
+            {{ submitting ? (isEditMode ? (isReviseMode ? "Resubmitting..." : "Updating...") : "Submitting...") : (isEditMode ? (isReviseMode ? "Update & Resubmit" : "Update Reimbursement") : "Submit Reimbursement") }}
           </button>
         </div>
       </template>

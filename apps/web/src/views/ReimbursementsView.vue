@@ -188,7 +188,10 @@ function handleNewRequestFiles(e) {
 }
 
 function handleEdit(row) {
-  router.push({ name: "ReimbursementEdit", params: { id: row.id } });
+  const id = typeof row === "object" && row !== null ? row.id : row;
+  if (!id) return;
+  closeDetails();
+  router.push({ name: "ReimbursementEdit", params: { id } });
 }
 
 function handleDelete(row) {

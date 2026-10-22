@@ -274,7 +274,7 @@ function categoryName(record) {
 
             <!-- Needs Revision Banner (employee) -->
             <div
-              v-if="!auth.isAdmin && normalizeStatus(viewingRecord.status) === 'revise'"
+              v-if="(!auth.isAdmin || isOwnSubmission) && normalizeStatus(viewingRecord.status) === 'revise'"
               class="p-4 rounded-lg border border-orange-200 bg-orange-50"
             >
               <p class="text-[11px] text-orange-600 uppercase tracking-wide mb-1 font-bold">Needs Revision — Attempt {{ viewingRecord.revision_count || 1 }}/3 <span v-if="(viewingRecord.revision_count || 1) >= 3" class="text-red-600">(final attempt)</span></p>
@@ -416,15 +416,16 @@ function categoryName(record) {
 
         <!-- Footer Actions (Employee: Revise → Edit) -->
         <footer
-          v-if="!auth.isAdmin && viewingRecord && normalizeStatus(viewingRecord.status) === 'revise'"
+          v-if="(!auth.isAdmin || isOwnSubmission) && viewingRecord && normalizeStatus(viewingRecord.status) === 'revise'"
           class="px-6 py-4 border-t border-orange-100 bg-orange-50/30 shrink-0 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
         >
           <p class="text-sm text-orange-800 text-center sm:text-left">
             Ready to revise? Edit your submission and it will return to Pending.
           </p>
           <button
+            data-testid="edit-resubmit-btn"
             class="px-5 py-2.5 bg-orange-500 text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition-colors shadow-sm whitespace-nowrap"
-            @click="emit('edit', viewingRecord.id)"
+            @click="emit('edit', viewingRecord)"
           >
             Edit & Resubmit
           </button>

@@ -22,6 +22,7 @@ export function statusLabel(status) {
     rejected: "Rejected",
     granted: "Granted",
     processing: "Processing",
+    revise: "Needs Revision",
   };
   return labels[normalizeStatus(status)] || "Pending";
 }
