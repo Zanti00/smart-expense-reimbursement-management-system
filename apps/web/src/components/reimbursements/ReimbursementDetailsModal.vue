@@ -5,6 +5,7 @@ import { formatAmount, formatDate, formatCutoffPeriod } from "@/utils/formatters
 import BaseButton from "@/components/base/BaseButton.vue";
 import StatusBadge from "@/components/base/StatusBadge.vue";
 import BaseReceiptImage from "@/components/base/BaseReceiptImage.vue";
+import BaseAuditTrail from "@/components/base/BaseAuditTrail.vue";
 import { useReportExport } from "@/composables/useReportExport";
 import {
   X,
@@ -362,6 +363,13 @@ function categoryName(record) {
                 </article>
               </div>
             </div>
+
+            <!-- Audit Trail Section -->
+            <BaseAuditTrail
+              :trail="viewingRecord.audit_trail || []"
+              :entity-title="`Reimbursement-#${viewingRecord.id}`"
+              class="mt-5"
+            />
           </template>
         </div>
 

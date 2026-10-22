@@ -16,12 +16,17 @@ import BaseToggleSwitch from "@/components/base/BaseToggleSwitch.vue";
 import FileUpload from "@/components/base/FileUpload.vue";
 import ScannedReceiptsList from "@/components/reimbursements/ScannedReceiptsList.vue";
 import UnifiedRoadmapStepper from "@/components/base/UnifiedRoadmapStepper.vue";
+import BaseAuditTrail from "@/components/base/BaseAuditTrail.vue";
 import { useLiquidationStore } from "@/stores/liquidation";
 import { useOcrMode } from "@/composables/useOcrMode";
 import { useReportExport } from "@/composables/useReportExport";
 import { formatPeso } from "@/utils/formatters";
 
 const props = defineProps({
+  auditTrail: {
+    type: Array,
+    default: () => [],
+  },
   selectedAdvance: {
     type: Object,
     default: null,
@@ -118,6 +123,19 @@ const normalizeStatus = (val) =>
     .toLowerCase()
     .trim()
     .replace(/[\s/_-]+/g, "-");
+
+const resolvedAuditTrail = computed(() => {
+  if (props.existingLiquidation?.audit_trail?.length) {
+    return props.existingLiquidation.audit_trail;
+  }
+  if (props.selectedAdvance?.audit_trail?.length) {
+    return props.selectedAdvance.audit_trail;
+  }
+  if (Array.isArray(props.auditTrail) && props.auditTrail.length) {
+    return props.auditTrail;
+  }
+  return [];
+});
 
 // Phase 2 gate: liquidation is editable only after acknowledgement (signed)
 // or when the workflow has already entered Phase 2. Until then preview-only.
@@ -592,6 +610,14 @@ function attachmentFileSize(file) {
         </BaseButton>
       </div>
     </section>
+
+    <!-- Audit Trail Section -->
+    <BaseAuditTrail
+      v-if="resolvedAuditTrail && resolvedAuditTrail.length"
+      :trail="resolvedAuditTrail"
+      :entity-title="existingLiquidation ? `Liquidation-#${existingLiquidation.id}` : `Advance-#${selectedAdvance?.id}`"
+      class="mt-4"
+    />
 
     <div class="mt-4 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
       <BaseButton

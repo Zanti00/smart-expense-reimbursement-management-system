@@ -16,6 +16,7 @@ use App\Modules\CashAdvances\Http\Requests\AcknowledgeCashAdvanceRequest;
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Auth\Access\AuthorizationException;
+use App\Modules\AuditLogs\Services\AuditLogService;
 
 class CashAdvanceController extends Controller
 {
@@ -145,6 +146,11 @@ class CashAdvanceController extends Controller
         // Alias for cashAdvance.js fallback
         $advance->setAttribute('balance', $advance->outstanding_balance !== null ? (float) $advance->outstanding_balance : (float) ($advance->amount ?? 0));
 
+        if ($advance->getAttribute('audit_trail') === null) {
+            $canManage = request()?->user()?->can('serms.cash_advances.manage') ?? false;
+            AuditLogService::enrichCashAdvance($advance, $canManage);
+        }
+
         return $advance;
     }
 
@@ -166,9 +172,11 @@ class CashAdvanceController extends Controller
             $query->where('user_id', $user->id);
         }
 
-        $advances = $query->get()->map(fn (CashAdvance $a) => $this->enrichAdvance($a));
+        $advances = $query->get();
+        AuditLogService::enrichCashAdvances($advances, $user->can('serms.cash_advances.manage'));
+        $enriched = $advances->map(fn (CashAdvance $a) => $this->enrichAdvance($a));
 
-        return response()->json($advances);
+        return response()->json($enriched);
     }
 
     /**

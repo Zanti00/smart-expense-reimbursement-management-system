@@ -38,7 +38,9 @@ class ReimbursementService
             $query->where('user_id', $user->id);
         }
 
-        return $query->get();
+        $reimbursements = $query->get();
+        AuditLogService::enrichReimbursements($reimbursements, $canManage);
+        return $reimbursements;
     }
 
     /**
@@ -155,6 +157,17 @@ class ReimbursementService
                 );
             }
 
+            AuditLogService::log(
+                actorId: $user->id,
+                actorRole: $user->role ?? 'employee',
+                actionType: 'CLAIM_SUBMITTED',
+                entityType: 'reimbursement',
+                entityId: $reimbursement->id,
+                beforeState: null,
+                afterState: $reimbursement->toArray()
+            );
+
+            AuditLogService::enrichReimbursement($reimbursement, false);
             return $reimbursement->load('receipts');
         });
     }
@@ -170,6 +183,7 @@ class ReimbursementService
             throw new \Illuminate\Auth\Access\AuthorizationException('Forbidden.');
         }
 
+        AuditLogService::enrichReimbursement($reimbursement, $canManage);
         return $reimbursement;
     }
 
@@ -234,6 +248,7 @@ class ReimbursementService
                 recordId: $reimbursement->id
             );
 
+            AuditLogService::enrichReimbursement($reimbursement, true);
             return $reimbursement->load(['receipts.category', 'user', 'expenseCategory', 'payout']);
         });
     }
@@ -315,6 +330,7 @@ class ReimbursementService
                 recordId: $reimbursement->id
             );
 
+            AuditLogService::enrichReimbursement($reimbursement, true);
             return $reimbursement;
         });
     }
@@ -408,6 +424,7 @@ class ReimbursementService
                 recordId: $reimbursement->id
             );
 
+            AuditLogService::enrichReimbursement($reimbursement, true);
             return $reimbursement->load(['receipts.category', 'user', 'expenseCategory', 'payout']);
         });
     }
@@ -476,6 +493,7 @@ class ReimbursementService
                 excludeUserId: $user->id
             );
 
+            AuditLogService::enrichReimbursement($reimbursement, false);
             return $reimbursement->load(['receipts.category', 'user', 'expenseCategory', 'payout']);
         });
     }
@@ -500,6 +518,7 @@ class ReimbursementService
             if (!empty($data['status']) && $data['status'] === 'granted') {
                 throw new \Illuminate\Auth\Access\AuthorizationException('Use POST /{id}/grant with password verification.');
             }
+            $beforeAdmin = $reimbursement->toArray();
             $reimbursement->update($data);
             if (!empty($data['status']) && in_array($data['status'], ['pending', 'approved', 'revise', 'rejected'])) {
                 $this->updateReceiptStatuses(
@@ -507,6 +526,16 @@ class ReimbursementService
                     $data['status'],
                 );
             }
+
+            AuditLogService::log(
+                actorId: $user->id,
+                actorRole: $user->role ?? 'admin',
+                actionType: 'CLAIM_UPDATED',
+                entityType: 'reimbursement',
+                entityId: $reimbursement->id,
+                beforeState: $beforeAdmin,
+                afterState: $reimbursement->fresh()->toArray()
+            );
 
             if (!empty($data['admin_notes'])) {
                 NotificationService::notifyUser(
@@ -534,6 +563,7 @@ class ReimbursementService
                 );
             }
 
+            AuditLogService::enrichReimbursement($reimbursement, true);
             return $reimbursement;
         }
 
@@ -553,6 +583,7 @@ class ReimbursementService
         return DB::transaction(function () use ($reimbursement, $user, $data, $reportFile) {
             $wasRevise = $reimbursement->status === 'revise';
             $previousComment = $reimbursement->user_comment;
+            $beforeState = $reimbursement->toArray();
 
             // Update receipt data if provided
             if (!empty($data['receipts'])) {
@@ -624,6 +655,17 @@ class ReimbursementService
 
             $reimbursement->update($updatePayload);
 
+            $actionType = $wasRevise ? 'CLAIM_RESUBMITTED' : 'CLAIM_UPDATED';
+            AuditLogService::log(
+                actorId: $user->id,
+                actorRole: $user->role ?? 'employee',
+                actionType: $actionType,
+                entityType: 'reimbursement',
+                entityId: $reimbursement->id,
+                beforeState: $beforeState,
+                afterState: $reimbursement->fresh()->toArray()
+            );
+
             if ($wasRevise || $reportFile !== null) {
                 $formattedAmount = NotificationService::formatPeso($reimbursement->amount);
                 NotificationService::notifyAdmins(
@@ -651,6 +693,7 @@ class ReimbursementService
                 );
             }
 
+            AuditLogService::enrichReimbursement($reimbursement, false);
             return $reimbursement->load('receipts');
         });
     }

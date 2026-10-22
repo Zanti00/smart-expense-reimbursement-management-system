@@ -158,4 +158,76 @@ describe("CashAdvanceDetailsModal — Export Report (G2-056, G2-059)", () => {
     const stepper = wrapper.find('[data-testid="stepper"]');
     expect(stepper.attributes("data-layout")).toBe("serpentine");
   });
+
+  it("renders BaseAuditTrail in Admin view", () => {
+    mockAuth.isAdmin = true;
+    const wrapper = mount(CashAdvanceDetailsModal, {
+      props: {
+        isOpen: true,
+        record: {
+          id: 30,
+          userId: 12,
+          amount: 2000,
+          balance: 2000,
+          status: "pending",
+          audit_trail: [
+            {
+              id: "ca-log-1",
+              action_type: "CASH_ADVANCE_SUBMITTED",
+              label: "Submitted",
+              actor_name: "Carlo Gomez",
+              created_at: "2026-10-22T08:00:00Z",
+            },
+          ],
+        },
+      },
+      global: {
+        stubs: {
+          UnifiedRoadmapStepper: true,
+          StatusBadge: true,
+          DecisionConfirmationModal: true,
+          BaseModal: true,
+        },
+      },
+    });
+
+    expect(wrapper.text()).toContain("Audit Trail (1)");
+    expect(wrapper.text()).toContain("Carlo Gomez");
+  });
+
+  it("renders BaseAuditTrail in Employee view", () => {
+    mockAuth.isAdmin = false;
+    const wrapper = mount(CashAdvanceDetailsModal, {
+      props: {
+        isOpen: true,
+        record: {
+          id: 31,
+          userId: 99,
+          amount: 2500,
+          balance: 2500,
+          status: "pending",
+          audit_trail: [
+            {
+              id: "ca-log-2",
+              action_type: "CASH_ADVANCE_SUBMITTED",
+              label: "Submitted",
+              actor_name: "Elena Cruz",
+              created_at: "2026-10-22T09:00:00Z",
+            },
+          ],
+        },
+      },
+      global: {
+        stubs: {
+          UnifiedRoadmapStepper: true,
+          StatusBadge: true,
+          DecisionConfirmationModal: true,
+          BaseModal: true,
+        },
+      },
+    });
+
+    expect(wrapper.text()).toContain("Audit Trail (1)");
+    expect(wrapper.text()).toContain("Elena Cruz");
+  });
 });

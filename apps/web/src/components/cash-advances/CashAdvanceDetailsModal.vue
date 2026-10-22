@@ -10,6 +10,7 @@ import BaseButton from "@/components/base/BaseButton.vue";
 import StatusBadge from "@/components/base/StatusBadge.vue";
 import DecisionConfirmationModal from "@/components/base/DecisionConfirmationModal.vue";
 import UnifiedRoadmapStepper from "@/components/base/UnifiedRoadmapStepper.vue";
+import BaseAuditTrail from "@/components/base/BaseAuditTrail.vue";
 import { formatPeso, formatDate } from "@/utils/formatters";
 import {
   X,
@@ -49,6 +50,18 @@ const linkedLiquidation = computed(() => {
   );
   if (found) return found;
   return props.record.liquidation || props.record.settlement || null;
+});
+
+const combinedAuditTrail = computed(() => {
+  const list = [...(props.record?.audit_trail || [])];
+  if (linkedLiquidation.value?.audit_trail?.length) {
+    for (const item of linkedLiquidation.value.audit_trail) {
+      if (!list.some((existing) => existing.id === item.id)) {
+        list.push(item);
+      }
+    }
+  }
+  return list;
 });
 
 const roadmapCashAdvance = computed(() => {
@@ -650,6 +663,13 @@ async function confirmAcknowledge() {
               </div>
             </div>
           </section>
+
+          <!-- Audit Trail Section -->
+          <BaseAuditTrail
+            :trail="combinedAuditTrail"
+            :entity-title="`Cash-Advance-#${record.id}`"
+            class="mt-4"
+          />
         </div>
 
         <!-- Footer (Admin) -->
@@ -881,6 +901,13 @@ async function confirmAcknowledge() {
               </div>
             </div>
           </section>
+
+          <!-- Audit Trail Section -->
+          <BaseAuditTrail
+            :trail="combinedAuditTrail"
+            :entity-title="`Cash-Advance-#${record.id}`"
+            class="mt-4"
+          />
         </div>
 
         <!-- Footer (Employee) -->

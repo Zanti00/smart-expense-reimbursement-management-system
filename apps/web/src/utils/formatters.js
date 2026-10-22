@@ -107,6 +107,38 @@ export function formatDate(dateStr, options = { year: "numeric", month: "short",
   return d.toLocaleDateString("en-US", options);
 }
 
+/**
+ * Format a date string or timestamp into standard Philippine Medium Date & Time format:
+ * "MMM D, YYYY · h:mm A" (e.g., "Oct 20, 2026 · 2:30 PM").
+ *
+ * @param {string|number|Date|null|undefined} dateStr - Date representation.
+ * @param {Intl.DateTimeFormatOptions} [options] - Optional custom options.
+ * @returns {string} Formatted date time string or "—".
+ */
+export function formatDateTime(dateStr, options) {
+  if (!dateStr) return "—";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return String(dateStr);
+
+  if (options) {
+    return d.toLocaleDateString("en-US", options);
+  }
+
+  const datePart = d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+
+  const timePart = d.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  return `${datePart} · ${timePart}`;
+}
+
 const MONTH_NAMES_SHORT = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",

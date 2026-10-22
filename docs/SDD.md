@@ -155,6 +155,7 @@ app/Modules/{ModuleName}/
 | Service | Namespace / Location | Consumer Modules | Purpose |
 |---------|----------------------|------------------|---------|
 | `AuditLogService::log()` | `App\Modules\AuditLogs\Services\AuditLogService` | All Modules | Central audit log writer — invoked on every database mutation and report export |
+| `AuditLogService::enrich*()` | `App\Modules\AuditLogs\Services\AuditLogService` | `Reimbursements`, `CashAdvances`, `Liquidations` | Batch-enriches request/advance/liquidation models with chronological lifecycle audit trail and masks IP addresses based on user privileges |
 | `NotificationDeliveryService::send()` | `App\Modules\Notifications\Services\NotificationDeliveryService` | `CashAdvances`, `Reimbursements`, `Liquidations` | Template-gated notification dispatcher |
 | `PayloadDecryptionService` | `App\Modules\Shared\Services\PayloadDecryptionService` | `Shared` (`DecryptPayloadMiddleware`) | Server-side RSA-OAEP private key and AES-256-GCM decryption for sensitive client payloads |
 | `PasswordVerificationService` | `App\Modules\Shared\Services\PasswordVerificationService` | `Shared` (`AuthController`) | Proxies high-security password verification requests to `capstone-auth-module` |
@@ -479,6 +480,8 @@ sequenceDiagram
 | **Payload Encryption** | Pre-encryption of JSON payloads (client-side) using AES-256-GCM and RSA wrapper prior to HTTP POST/PUT transmission |
 | **Audit log immutability** | `audit_logs` table has no `updated_at` column; service layer is append-only |
 | **Export Action Auditing** | All exports (XLSX, CSV, PDF) require logging of: `actor_id`, `action_type: EXPORT_REPORTS`, `entity_type: Report`, `after_state: { format, filters_used }` |
+| **Audit trail IP privacy masking** | Client IP addresses (`ip_address`) in enriched audit logs are visible solely to authorized Admins (`serms.reimbursements.manage` / Accounting); masked as `null` for regular employees |
+| **Audit trail diff sanitization** | Field-level diff computation (`computeSanitizedDiff()`) filters out internal primary keys, timestamps, and credential fields before exposing changes |
 
 ---
 
