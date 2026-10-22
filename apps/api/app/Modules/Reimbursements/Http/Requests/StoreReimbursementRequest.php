@@ -46,4 +46,16 @@ class StoreReimbursementRequest extends FormRequest
             'receipts.*.items.*.price' => 'required_with:receipts.*.items|numeric|gt:0',
         ];
     }
+
+    protected function failedValidation(\Illuminate\Contracts\Validation\Validator $validator)
+    {
+        \Illuminate\Support\Facades\Log::warning('StoreReimbursementRequest failed validation', [
+            'errors' => $validator->errors()->toArray(),
+            'receipt_ids' => $this->input('receipt_ids'),
+            'receipts' => $this->input('receipts'),
+            'all_keys' => array_keys($this->all()),
+        ]);
+
+        parent::failedValidation($validator);
+    }
 }

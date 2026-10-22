@@ -87,6 +87,12 @@ const routes = [
         meta: { title: "Notifications" },
       },
       {
+        path: "settings/notifications",
+        name: "NotificationSettings",
+        component: () => import("@/views/NotificationSettingsView.vue"),
+        meta: { title: "Notification Settings" },
+      },
+      {
         path: "admin/policy",
         name: "Policy",
         component: () => import("@/views/admin/PolicyView.vue"),

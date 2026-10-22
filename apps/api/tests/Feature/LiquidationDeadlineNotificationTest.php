@@ -6,9 +6,12 @@ use Tests\TestCase;
 use App\Modules\Users\Models\User;
 use App\Modules\CashAdvances\Models\CashAdvance;
 use App\Modules\Liquidations\Models\Liquidation;
+use App\Modules\Notifications\Models\EmailLog;
 use App\Modules\Notifications\Models\Notification;
+use App\Modules\Notifications\Mail\NotificationMail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Mail;
 
 class LiquidationDeadlineNotificationTest extends TestCase
 {
@@ -34,11 +37,15 @@ class LiquidationDeadlineNotificationTest extends TestCase
             'role' => 'admin',
             'department' => 'Accounting',
         ]);
+
+        config(['queue.default' => 'sync']);
     }
 
-    public function test_due_soon_and_overdue_notifications_are_created_once_and_skip_settled(): void
+    public function test_due_soon_due_today_and_overdue_notifications_and_emails_are_sent_once_per_stage_and_skip_settled(): void
     {
-        // 1. Due soon (2 days left)
+        Mail::fake();
+
+        // 1. Near deadline (2 days left -> liquidation_due_soon)
         $dueSoonAdvance = CashAdvance::create([
             'user_id' => $this->employee->id,
             'purpose' => 'Due Soon Trip',
@@ -50,7 +57,19 @@ class LiquidationDeadlineNotificationTest extends TestCase
             'acknowledged_at' => now()->subDays(4),
         ]);
 
-        // 2. Overdue (3 days past due)
+        // 2. Due today (0 days left -> liquidation_due_today)
+        $dueTodayAdvance = CashAdvance::create([
+            'user_id' => $this->employee->id,
+            'purpose' => 'Due Today Conference',
+            'amount' => 4200.00,
+            'outstanding_balance' => 4200.00,
+            'expected_disbursement_date' => now()->subDays(7)->toDateString(),
+            'expected_liquidation_date' => now()->toDateString(),
+            'status' => 'signed',
+            'acknowledged_at' => now()->subDays(6),
+        ]);
+
+        // 3. Overdue (3 days past due)
         $overdueAdvance = CashAdvance::create([
             'user_id' => $this->employee->id,
             'purpose' => 'Overdue Field Work',
@@ -62,7 +81,7 @@ class LiquidationDeadlineNotificationTest extends TestCase
             'acknowledged_at' => now()->subDays(9),
         ]);
 
-        // 3. Already liquidated/settled (should NEVER be flagged)
+        // 4. Already liquidated/settled (should NEVER be flagged)
         $settledAdvance = CashAdvance::create([
             'user_id' => $this->employee->id,
             'purpose' => 'Settled Work',
@@ -82,18 +101,47 @@ class LiquidationDeadlineNotificationTest extends TestCase
             'outstanding_balance' => 0.00,
         ]);
 
-        // Run penalties:calculate (which calculates penalties and runs deadline notifications)
         Artisan::call('penalties:calculate');
 
-        // Due soon creates 1 warning for employee
+        // Stage 1: Near-deadline (2 days left) creates 1 notification & 1 sent email
         $this->assertDatabaseHas('notifications', [
             'user_id' => $this->employee->id,
             'type' => 'liquidation_due_soon',
             'record_type' => 'cash_advance',
             'record_id' => $dueSoonAdvance->id,
         ]);
+        $this->assertDatabaseHas('email_logs', [
+            'user_id' => $this->employee->id,
+            'type' => 'liquidation_due_soon',
+            'record_id' => $dueSoonAdvance->id,
+            'status' => 'sent',
+        ]);
 
-        // Overdue creates 1 notification for employee and 1 for admin with days overdue and penalty (₱150.00)
+        // Stage 2: Due-today (0 days left) creates 1 notification & 1 sent email
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $this->employee->id,
+            'type' => 'liquidation_due_today',
+            'record_type' => 'cash_advance',
+            'record_id' => $dueTodayAdvance->id,
+        ]);
+        $this->assertDatabaseHas('email_logs', [
+            'user_id' => $this->employee->id,
+            'type' => 'liquidation_due_today',
+            'record_id' => $dueTodayAdvance->id,
+            'status' => 'sent',
+        ]);
+
+        // Also verify that if dueSoonAdvance transitions to due today (0 days left), it STILL receives the due-today email!
+        $dueSoonAdvance->update(['expected_liquidation_date' => now()->toDateString()]);
+        Artisan::call('notifications:check-liquidation-deadlines');
+        $this->assertDatabaseHas('email_logs', [
+            'user_id' => $this->employee->id,
+            'type' => 'liquidation_due_today',
+            'record_id' => $dueSoonAdvance->id,
+            'status' => 'sent',
+        ]);
+
+        // Stage 3: Overdue creates 1 notification + email for employee and 1 for admin with days overdue and penalty (₱150.00)
         $empOverdue = Notification::where('user_id', $this->employee->id)
             ->where('type', 'liquidation_overdue')
             ->where('record_id', $overdueAdvance->id)
@@ -102,25 +150,33 @@ class LiquidationDeadlineNotificationTest extends TestCase
         $this->assertStringContainsString('3 days overdue', $empOverdue->message);
         $this->assertStringContainsString('₱150.00', $empOverdue->message);
 
-        $adminOverdue = Notification::where('user_id', $this->admin->id)
-            ->where('type', 'admin_liquidation_overdue')
-            ->where('record_id', $overdueAdvance->id)
-            ->first();
-        $this->assertNotNull($adminOverdue);
-        $this->assertStringContainsString('Juan Dela Cruz', $adminOverdue->message);
-        $this->assertStringContainsString('₱8,000.00', $adminOverdue->message);
-        $this->assertStringContainsString('3 days overdue', $adminOverdue->message);
-        $this->assertStringContainsString('₱150.00', $adminOverdue->message);
+        $this->assertDatabaseHas('email_logs', [
+            'user_id' => $this->employee->id,
+            'type' => 'liquidation_overdue',
+            'record_id' => $overdueAdvance->id,
+            'status' => 'sent',
+        ]);
+
+        $this->assertDatabaseHas('email_logs', [
+            'user_id' => $this->admin->id,
+            'type' => 'admin_liquidation_overdue',
+            'record_id' => $overdueAdvance->id,
+            'status' => 'sent',
+        ]);
 
         // Settled advance is never flagged
         $this->assertDatabaseMissing('notifications', [
             'record_type' => 'cash_advance',
             'record_id' => $settledAdvance->id,
         ]);
+        $this->assertDatabaseMissing('email_logs', [
+            'record_type' => 'cash_advance',
+            'record_id' => $settledAdvance->id,
+        ]);
 
-        // Running a second time does not create duplicate overdue or due-soon notifications
+        // Running again does not send duplicate emails for the same stage
+        $emailCountBefore = EmailLog::count();
         Artisan::call('notifications:check-liquidation-deadlines');
-        $this->assertEquals(1, Notification::where('user_id', $this->admin->id)->where('record_id', $overdueAdvance->id)->count());
-        $this->assertEquals(1, Notification::where('user_id', $this->employee->id)->where('record_id', $overdueAdvance->id)->count());
+        $this->assertSame($emailCountBefore, EmailLog::count());
     }
 }

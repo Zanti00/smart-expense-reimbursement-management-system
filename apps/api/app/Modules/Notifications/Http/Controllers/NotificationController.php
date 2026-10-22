@@ -154,4 +154,64 @@ class NotificationController extends Controller
             'unread_count' => 0,
         ]);
     }
+
+    /**
+     * Retrieve the authenticated user's email notification settings (G2-078).
+     */
+    public function getSettings(Request $request)
+    {
+        $user = $request->user();
+        $settings = \App\Modules\Notifications\Services\NotificationPreferenceService::getForUser((int) $user->id);
+        $isAdmin = \App\Modules\Notifications\Services\NotificationPreferenceService::isAdminUser($user);
+
+        return response()->json([
+            'data' => $settings,
+            'role_scope' => $isAdmin ? 'admin' : 'employee',
+        ]);
+    }
+
+    /**
+     * Update the authenticated user's email notification settings (G2-078, G2-079).
+     */
+    public function updateSettings(Request $request)
+    {
+        $user = $request->user();
+        $validated = $request->validate([
+            'email_enabled' => ['sometimes', 'boolean'],
+            'request_submissions' => ['sometimes', 'boolean'],
+            'status_updates' => ['sometimes', 'boolean'],
+            'admin_comments' => ['sometimes', 'boolean'],
+            'near_deadline_reminders' => ['sometimes', 'boolean'],
+            'overdue_alerts' => ['sometimes', 'boolean'],
+            'admin_new_requests' => ['sometimes', 'boolean'],
+            'admin_employee_updates' => ['sometimes', 'boolean'],
+            'admin_overdue_liquidations' => ['sometimes', 'boolean'],
+        ]);
+
+        $settings = \App\Modules\Notifications\Services\NotificationPreferenceService::getForUser((int) $user->id);
+
+        DB::transaction(function () use ($settings, $validated, $user, $request) {
+            $before = $settings->toArray();
+            $settings->update($validated);
+
+            AuditLogService::log(
+                actorId: $user->id,
+                actorRole: (string) ($user->role ?? 'employee'),
+                actionType: 'NOTIFICATION_SETTINGS_UPDATED',
+                entityType: 'notification_setting',
+                entityId: $settings->id,
+                beforeState: $before,
+                afterState: $settings->fresh()->toArray(),
+                ipAddress: $request->ip()
+            );
+        });
+
+        $isAdmin = \App\Modules\Notifications\Services\NotificationPreferenceService::isAdminUser($user);
+
+        return response()->json([
+            'message' => 'Notification settings saved successfully.',
+            'data' => $settings->fresh(),
+            'role_scope' => $isAdmin ? 'admin' : 'employee',
+        ]);
+    }
 }
