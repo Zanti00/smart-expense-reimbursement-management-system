@@ -21,6 +21,13 @@ export function useReimbursementSubmit(emit, router) {
       });
       return false;
     }
+    if (receipts.some((r) => !r.eventType)) {
+      addToast({
+        message: "Type of event is required for every receipt.",
+        type: "error",
+      });
+      return false;
+    }
 
     for (let idx = 0; idx < receipts.length; idx++) {
       const r = receipts[idx];
@@ -78,6 +85,9 @@ export function useReimbursementSubmit(emit, router) {
         formData.append("user_comment", userComment);
       }
       formData.append("expense_category_id", receipts[0].categoryId);
+      if (receipts[0]?.eventType) {
+        formData.append("event_type", receipts[0].eventType);
+      }
       formData.append("amount", totalAmount);
       formData.append(
         "date",
@@ -94,6 +104,9 @@ export function useReimbursementSubmit(emit, router) {
         formData.append(`receipts[${index}][id]`, r.id);
         if (r.categoryId) {
           formData.append(`receipts[${index}][expense_category_id]`, r.categoryId);
+        }
+        if (r.eventType) {
+          formData.append(`receipts[${index}][event_type]`, r.eventType);
         }
         formData.append(`receipts[${index}][vendor_name]`, r.merchantName || "");
         formData.append(`receipts[${index}][transaction_date]`, r.date || "");
@@ -204,6 +217,9 @@ export function useReimbursementSubmit(emit, router) {
       if (receipts[0].categoryId) {
         formData.append("expense_category_id", receipts[0].categoryId);
       }
+      if (receipts[0]?.eventType) {
+        formData.append("event_type", receipts[0].eventType);
+      }
       formData.append("amount", totalAmount);
       formData.append(
         "date",
@@ -220,6 +236,9 @@ export function useReimbursementSubmit(emit, router) {
         formData.append(`receipts[${index}][id]`, r.id);
         if (r.categoryId) {
           formData.append(`receipts[${index}][expense_category_id]`, r.categoryId);
+        }
+        if (r.eventType) {
+          formData.append(`receipts[${index}][event_type]`, r.eventType);
         }
         formData.append(`receipts[${index}][vendor_name]`, r.merchantName || "");
         formData.append(`receipts[${index}][transaction_date]`, r.date || "");

@@ -13,6 +13,7 @@ class Reimbursement extends Model
         'description',
         'user_comment',
         'expense_category_id',
+        'event_type',
         'amount',
         'date',
         'status',

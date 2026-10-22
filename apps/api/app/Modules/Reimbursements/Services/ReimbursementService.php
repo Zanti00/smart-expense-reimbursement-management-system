@@ -77,6 +77,7 @@ class ReimbursementService
                     if ($receipt && $receipt->uploaded_by === $user->id) {
                         $receipt->update([
                             'expense_category_id' => $receiptData['expense_category_id'] ?? $receipt->expense_category_id,
+                            'event_type' => $receiptData['event_type'] ?? $receipt->event_type,
                             'vendor_name' => $receiptData['vendor_name'] ?? $receipt->vendor_name,
                             'transaction_date' => $receiptData['transaction_date'] ?? $receipt->transaction_date,
                             'total_amount' => $receiptData['total_amount'] ?? $receipt->total_amount,
@@ -108,6 +109,7 @@ class ReimbursementService
                 'description' => $validated['description'],
                 'user_comment' => $validated['user_comment'] ?? null,
                 'expense_category_id' => $expenseCategoryId,
+                'event_type' => $validated['event_type'] ?? null,
                 'amount' => $validated['amount'],
                 'date' => $validated['date'],
                 'cutoff_period' => $validated['cutoff_period'],
@@ -592,6 +594,7 @@ class ReimbursementService
                     if ($receipt && $receipt->uploaded_by === $user->id) {
                         $receipt->update([
                             'expense_category_id' => $receiptData['expense_category_id'] ?? $receipt->expense_category_id,
+                            'event_type' => $receiptData['event_type'] ?? $receipt->event_type,
                             'vendor_name' => $receiptData['vendor_name'] ?? $receipt->vendor_name,
                             'transaction_date' => $receiptData['transaction_date'] ?? $receipt->transaction_date,
                             'total_amount' => $receiptData['total_amount'] ?? $receipt->total_amount,
@@ -636,6 +639,7 @@ class ReimbursementService
             $updatePayload = array_filter([
                 'description' => $data['description'] ?? null,
                 'expense_category_id' => $data['expense_category_id'] ?? null,
+                'event_type' => $data['event_type'] ?? null,
                 'amount' => $data['amount'] ?? null,
                 'date' => $data['date'] ?? null,
                 'cutoff_period' => $data['cutoff_period'] ?? null,

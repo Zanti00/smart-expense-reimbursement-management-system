@@ -279,6 +279,8 @@ export function isReceiptFieldMissing(receipt, fieldKey) {
       return !receipt.location || !String(receipt.location).trim();
     case "categoryId":
       return !receipt.categoryId;
+    case "eventType":
+      return !receipt.eventType || !String(receipt.eventType).trim();
     case "amount":
       return (
         receipt.amount === "" ||

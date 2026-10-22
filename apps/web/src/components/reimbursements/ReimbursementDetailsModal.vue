@@ -238,6 +238,10 @@ function categoryName(record) {
                 <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-0.5">Period</p>
                 <p class="text-sm text-slate-700">{{ getCutoffPeriod(viewingRecord) }}</p>
               </div>
+              <div v-if="viewingRecord.event_type">
+                <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-0.5">Type of Event</p>
+                <p class="text-sm text-slate-700">{{ viewingRecord.event_type }}</p>
+              </div>
               <div v-if="['approved', 'granted'].includes(normalizeStatus(viewingRecord.status)) || viewingRecord.approved_by">
                 <p class="text-[11px] text-slate-400 uppercase tracking-wide mb-0.5">Approved By</p>
                 <p class="text-sm text-slate-700">
@@ -341,11 +345,16 @@ function categoryName(record) {
                       <StatusBadge :status="receipt.status" />
                     </div>
 
-                    <div class="flex justify-between items-center">
-                      <span class="text-[10px] font-medium uppercase tracking-wide text-primary bg-primary/5 px-2 py-0.5 rounded">
-                        {{ categoryName(receipt) }}
-                      </span>
-                      <span class="text-sm font-semibold text-slate-800">
+                    <div class="flex justify-between items-center gap-2">
+                      <div class="flex flex-wrap items-center gap-1.5">
+                        <span class="text-[10px] font-medium uppercase tracking-wide text-primary bg-primary/5 px-2 py-0.5 rounded">
+                          {{ categoryName(receipt) }}
+                        </span>
+                        <span v-if="receipt.event_type" class="text-[10px] font-medium uppercase tracking-wide text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                          {{ receipt.event_type }}
+                        </span>
+                      </div>
+                      <span class="text-sm font-semibold text-slate-800 shrink-0">
                         {{ formatAmount(receipt.total_amount || 0, receipt.currency || "PHP") }}
                       </span>
                     </div>

@@ -72,6 +72,7 @@ class ReimbursementLogicTest extends TestCase
         ])->post('/api/reimbursements', [
             'description' => 'Business Lunch',
             'expense_category_id' => $category->id,
+            'event_type' => 'Client Meeting',
             'category' => 'Meals',
             'amount' => 100.00,
             'date' => '2026-06-10',
@@ -230,6 +231,7 @@ class ReimbursementLogicTest extends TestCase
             ->post('/api/reimbursements', [
                 'description' => 'Duplicate Claim',
                 'expense_category_id' => $category->id,
+                'event_type' => 'Client Meeting',
                 'category' => 'Meals',
                 'amount' => 100.00,
                 'date' => '2026-06-10',
@@ -457,6 +459,7 @@ class ReimbursementLogicTest extends TestCase
             'description' => 'Client Lunch',
             'user_comment' => $customComment,
             'expense_category_id' => $category->id,
+            'event_type' => 'Client Meeting',
             'amount' => 150.00,
             'date' => '2026-06-15',
             'cutoff_period' => '2026-06-16',
@@ -500,6 +503,7 @@ class ReimbursementLogicTest extends TestCase
         ])->post('/api/reimbursements', [
             'description' => 'Taxi Ride',
             'expense_category_id' => $category->id,
+            'event_type' => 'Client Meeting',
             'amount' => 80.00,
             'date' => '2026-06-16',
             'cutoff_period' => '2026-06-16',
@@ -804,6 +808,128 @@ class ReimbursementLogicTest extends TestCase
             'admin_notes' => 'Trying to edit granted record',
         ]);
         $patchRes->assertStatus(403);
+    }
+
+    public function test_store_reimbursement_requires_event_type(): void
+    {
+        $category = \App\Modules\Reimbursements\Models\ExpenseCategory::firstOrCreate(['name' => 'Meals']);
+        $receipt = Receipt::create([
+            'uploaded_by' => $this->employee->id,
+            'file_path' => 'receipts/rcpt_test.png',
+            'file_hash' => str_repeat('b', 64),
+            'file_type' => 'png',
+            'file_size_bytes' => 1024,
+            'vendor_name' => 'Vendor Test',
+            'total_amount' => 100.00,
+        ]);
+
+        $token = $this->generateMockToken([
+            'email' => $this->employee->email,
+            'role' => $this->employee->role,
+            'first_name' => 'John',
+            'last_name' => 'Doe',
+        ]);
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'Accept' => 'application/json',
+        ])->post('/api/reimbursements', [
+            'description' => 'Meeting Lunch',
+            'expense_category_id' => $category->id,
+            'amount' => 100.00,
+            'date' => '2026-10-01',
+            'cutoff_period' => '2026-10-A',
+            'receipt_ids' => [$receipt->id],
+            'report_file' => UploadedFile::fake()->create('report.pdf', 100, 'application/pdf'),
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['event_type']);
+    }
+
+    public function test_store_and_update_reimbursement_persists_event_type(): void
+    {
+        $category = \App\Modules\Reimbursements\Models\ExpenseCategory::firstOrCreate(['name' => 'Meals']);
+        $receipt = Receipt::create([
+            'uploaded_by' => $this->employee->id,
+            'file_path' => 'receipts/rcpt_test.png',
+            'file_hash' => str_repeat('c', 64),
+            'file_type' => 'png',
+            'file_size_bytes' => 1024,
+            'vendor_name' => 'Vendor Test',
+            'total_amount' => 100.00,
+        ]);
+
+        $token = $this->generateMockToken([
+            'email' => $this->employee->email,
+            'role' => $this->employee->role,
+            'first_name' => 'John',
+            'last_name' => 'Doe',
+        ]);
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'Accept' => 'application/json',
+        ])->post('/api/reimbursements', [
+            'description' => 'Meeting Lunch',
+            'expense_category_id' => $category->id,
+            'event_type' => 'Client Meeting',
+            'amount' => 100.00,
+            'date' => '2026-10-01',
+            'cutoff_period' => '2026-10-A',
+            'receipt_ids' => [$receipt->id],
+            'receipts' => [
+                [
+                    'id' => $receipt->id,
+                    'event_type' => 'Client Meeting',
+                ],
+            ],
+            'report_file' => UploadedFile::fake()->create('report.pdf', 100, 'application/pdf'),
+        ]);
+
+        $response->assertStatus(201);
+        $reimbursementId = $response->json('data.id');
+
+        $this->assertDatabaseHas('reimbursements', [
+            'id' => $reimbursementId,
+            'event_type' => 'Client Meeting',
+        ]);
+
+        $this->assertDatabaseHas('receipts', [
+            'id' => $receipt->id,
+            'event_type' => 'Client Meeting',
+        ]);
+
+        $updateRes = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'Accept' => 'application/json',
+        ])->patch('/api/reimbursements/' . $reimbursementId, [
+            'description' => 'Updated Meeting Lunch',
+            'expense_category_id' => $category->id,
+            'event_type' => 'Conference / Seminar',
+            'amount' => 100.00,
+            'date' => '2026-10-01',
+            'cutoff_period' => '2026-10-A',
+            'receipt_ids' => [$receipt->id],
+            'receipts' => [
+                [
+                    'id' => $receipt->id,
+                    'event_type' => 'Conference / Seminar',
+                ],
+            ],
+        ]);
+
+        $updateRes->assertStatus(200);
+
+        $this->assertDatabaseHas('reimbursements', [
+            'id' => $reimbursementId,
+            'event_type' => 'Conference / Seminar',
+        ]);
+
+        $this->assertDatabaseHas('receipts', [
+            'id' => $receipt->id,
+            'event_type' => 'Conference / Seminar',
+        ]);
     }
 }
 
