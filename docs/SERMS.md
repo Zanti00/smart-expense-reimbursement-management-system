@@ -118,7 +118,7 @@ SBSI granted permission for their on-premises / dedicated server to be used for 
 - **No Hallucinations / No Fabrications:** Financial amounts, approval states, penalty calculations, and OCR outputs must never be guessed or fabricated. Missing fields require explicit clarification.
 
 ### 4.2 Functional Domain Workflows
-- **Expense Reimbursement Submission:** User uploads receipts (JPEG, PNG, PDF <= 2MB). Files are uploaded to Supabase Bucket -> OCR Queue Job dispatches -> external AI processes receipt -> BIR VAT classification and 90-day duplicate check run -> user confirms and submits against an active cutoff period.
+- **Expense Reimbursement Submission:** User uploads receipts (JPEG, PNG, PDF <= 2MB). Files are uploaded to Supabase Bucket -> OCR Queue Job dispatches -> external AI processes receipt -> BIR VAT classification and 90-day duplicate check run -> user confirms and submits the reimbursement request.
 - **Cash Advance & Routing:** Employee submits purpose, amount, expected disbursement, and liquidation dates -> request routes through active `approval_thresholds` -> finance records disbursement reference -> status transitions to `unliquidated`.
 - **Advance Liquidation & Variance:** Employee submits liquidation report with matching receipts -> variance computed -> excess cash returned or shortfall reimbursement claimed -> status marked `liquidated`.
 - **Daily Overdue Penalties:** Nightly queued job scans unliquidated cash advances past their 7-day grace period -> applies configured daily penalty (PHP 50.00/day) -> writes immutable penalty records.
@@ -267,7 +267,7 @@ To ensure financial compliance, auditability, and transparent lifecycle tracking
 | `revise` | `bg-orange-500` | Needs Revision | Admin returned request for employee revision (counts toward 3-strike limit) |
 | `rejected` | `bg-rose-600` | Rejected | Terminal rejection after >3 revise/reject cycles or final admin action |
 | `reject` | `bg-rose-600` | Rejected | Direct reject (alias, increments revision counter) |
-| `automatic-rejected` | `bg-rose-700` | Automatic Rejected | Policy/cutoff engine rejection |
+| `automatic-rejected` | `bg-rose-700` | Automatic Rejected | Policy engine automatic rejection |
 | `final-rejected` | `bg-rose-800` | Final Rejected | Irreversible rejection |
 | `pending-admin-re-review`| `bg-purple-600` | Pending Admin Re-Review | Re-submitted claim awaiting admin review |
 | `draft` | `bg-slate-400` | Draft | Work in progress |

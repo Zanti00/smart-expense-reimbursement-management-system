@@ -2,45 +2,11 @@
 import { describe, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
 import MetaAndAttachments from "./MetaAndAttachments.vue";
-import CutoffPeriodDatePicker from "./CutoffPeriodDatePicker.vue";
 
 describe("MetaAndAttachments", () => {
-  it("renders CutoffPeriodDatePicker instead of a select dropdown", () => {
-    const wrapper = mount(MetaAndAttachments, {
-      props: {
-        cutoffPeriod: "Oct 01 - Oct 15, 2026",
-        reportFile: null,
-      },
-    });
-
-    // select dropdown should no longer exist
-    expect(wrapper.find("select").exists()).toBe(false);
-
-    // CutoffPeriodDatePicker should be rendered
-    const datePicker = wrapper.findComponent(CutoffPeriodDatePicker);
-    expect(datePicker.exists()).toBe(true);
-    expect(datePicker.props("modelValue")).toBe("Oct 01 - Oct 15, 2026");
-  });
-
-  it("relays update:cutoffPeriod when date picker emits update", async () => {
-    const wrapper = mount(MetaAndAttachments, {
-      props: {
-        cutoffPeriod: "",
-        reportFile: null,
-      },
-    });
-
-    const datePicker = wrapper.findComponent(CutoffPeriodDatePicker);
-    await datePicker.vm.$emit("update:modelValue", "Nov 16 - Nov 30, 2026");
-
-    expect(wrapper.emitted("update:cutoffPeriod")).toBeTruthy();
-    expect(wrapper.emitted("update:cutoffPeriod")[0]).toEqual(["Nov 16 - Nov 30, 2026"]);
-  });
-
   it("renders optional comments textarea and relays update:userComment on input", async () => {
     const wrapper = mount(MetaAndAttachments, {
       props: {
-        cutoffPeriod: "Oct 01 - Oct 15, 2026",
         reportFile: null,
         userComment: "Initial note",
       },
@@ -57,26 +23,41 @@ describe("MetaAndAttachments", () => {
     expect(wrapper.emitted("update:userComment")[0]).toEqual(["Updated comment for admin"]);
   });
 
-  it("assigns higher stacking context z-index to Cutoff Period card than Comments card", () => {
+  it("renders report attachment card and comments card with appropriate stacking contexts", () => {
     const wrapper = mount(MetaAndAttachments, {
       props: {
-        cutoffPeriod: "Oct 01 - Oct 15, 2026",
         reportFile: null,
       },
     });
 
     const cards = wrapper.findAll("section.card");
-    expect(cards.length).toBe(3);
+    expect(cards.length).toBe(2);
 
-    // Cutoff Period section (first card) must have z-30
-    expect(cards[0].classes()).toContain("z-30");
+    // Report section (first card) must have z-20
+    expect(cards[0].classes()).toContain("z-20");
 
-    // Report section (second card) must have z-20
-    expect(cards[1].classes()).toContain("z-20");
+    // Comments section (second card) must have z-10
+    expect(cards[1].classes()).toContain("z-10");
+  });
 
-    // Comments section (third card) must have z-10
-    expect(cards[2].classes()).toContain("z-10");
+  it("renders attached report file details and allows removal", async () => {
+    const fakeFile = new File(["dummy content"], "activity-report.pdf", {
+      type: "application/pdf",
+    });
+
+    const wrapper = mount(MetaAndAttachments, {
+      props: {
+        reportFile: fakeFile,
+      },
+    });
+
+    expect(wrapper.text()).toContain("activity-report.pdf");
+
+    const removeBtn = wrapper.find("button[aria-label='Remove report attachment']");
+    expect(removeBtn.exists()).toBe(true);
+
+    await removeBtn.trigger("click");
+    expect(wrapper.emitted("update:reportFile")).toBeTruthy();
+    expect(wrapper.emitted("update:reportFile")[0]).toEqual([null]);
   });
 });
-
-

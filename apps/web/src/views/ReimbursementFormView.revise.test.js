@@ -27,7 +27,6 @@ const mockReimbursement = {
   id: 55,
   status: "revise",
   description: "Office supplies",
-  cutoff_period: "2026-10-A",
   report_file_path: "reports/rep.pdf",
   admin_notes: "Missing detailed receipt for item 2",
   revision_count: 2,

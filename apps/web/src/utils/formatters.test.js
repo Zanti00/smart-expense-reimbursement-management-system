@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatPeso, formatAmount, formatKpiValue, formatDate, formatCutoffPeriod, truncateText } from "./formatters";
+import { formatPeso, formatAmount, formatKpiValue, formatDate, truncateText } from "./formatters";
 
 describe("formatters", () => {
   describe("formatPeso", () => {
@@ -33,35 +33,6 @@ describe("formatters", () => {
 
     it("returns raw string if not a valid parseable date", () => {
       expect(formatDate("Invalid Date String")).toBe("Invalid Date String");
-    });
-  });
-
-  describe("formatCutoffPeriod", () => {
-    it("formats YYYY-M and YYYY-MM strings correctly", () => {
-      expect(formatCutoffPeriod("2026-7")).toBe("Jul 2026");
-      expect(formatCutoffPeriod("2026-07")).toBe("Jul 2026");
-      expect(formatCutoffPeriod("2026-8")).toBe("Aug 2026");
-      expect(formatCutoffPeriod("2026-08")).toBe("Aug 2026");
-      expect(formatCutoffPeriod("2026-1")).toBe("Jan 2026");
-      expect(formatCutoffPeriod("2026-12")).toBe("Dec 2026");
-    });
-
-    it("formats cutoff period half/day suffixes", () => {
-      expect(formatCutoffPeriod("2026-06-A")).toBe("Jun 1 - 15, 2026");
-      expect(formatCutoffPeriod("2026-06-B")).toBe("Jun 16 - 30, 2026");
-      expect(formatCutoffPeriod("2026-07-B")).toBe("Jul 16 - 31, 2026");
-      expect(formatCutoffPeriod("2026-02-B")).toBe("Feb 16 - 28, 2026");
-    });
-
-    it("preserves already human-readable cutoff period strings", () => {
-      expect(formatCutoffPeriod("Jan 01 - Jan 15, 2025")).toBe("Jan 01 - Jan 15, 2025");
-      expect(formatCutoffPeriod("June 1-15, 2026")).toBe("June 1-15, 2026");
-    });
-
-    it("handles null, undefined, and empty string gracefully", () => {
-      expect(formatCutoffPeriod(null)).toBe("—");
-      expect(formatCutoffPeriod(undefined)).toBe("—");
-      expect(formatCutoffPeriod("")).toBe("—");
     });
   });
 

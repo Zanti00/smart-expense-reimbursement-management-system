@@ -45,7 +45,6 @@ describe("useReimbursementSubmit — userComment handling", () => {
     const reportFile = new File(["dummy"], "report.pdf", { type: "application/pdf" });
     const success = await submitReimbursement({
       receipts: [validReceipt],
-      cutoffPeriod: "2026-10-01 - 2026-10-15",
       reportFile,
       totalAmount: 250,
       userComment: "Optional note for finance.",
@@ -57,6 +56,7 @@ describe("useReimbursementSubmit — userComment handling", () => {
     const sentFormData = submitMock.mock.calls[0][0];
     expect(sentFormData.get("user_comment")).toBe("Optional note for finance.");
     expect(sentFormData.get("description")).toBe("Vendor Inc");
+    expect(sentFormData.get("cutoff_period")).toBeNull();
   });
 
   it("omits user_comment or does not append when userComment is not provided", async () => {
@@ -65,7 +65,6 @@ describe("useReimbursementSubmit — userComment handling", () => {
     const reportFile = new File(["dummy"], "report.pdf", { type: "application/pdf" });
     const success = await submitReimbursement({
       receipts: [validReceipt],
-      cutoffPeriod: "2026-10-01 - 2026-10-15",
       reportFile,
       totalAmount: 250,
     });
@@ -82,7 +81,6 @@ describe("useReimbursementSubmit — userComment handling", () => {
 
     const success = await updateReimbursement(1, {
       receipts: [validReceipt],
-      cutoffPeriod: "2026-10-01 - 2026-10-15",
       reportFile: null,
       totalAmount: 250,
       userComment: "Updated rationale.",
@@ -102,7 +100,6 @@ describe("useReimbursementSubmit — userComment handling", () => {
     const reportFile = new File(["dummy"], "report.pdf", { type: "application/pdf" });
     const success = await submitReimbursement({
       receipts: [receiptWithoutEventType],
-      cutoffPeriod: "2026-10-01 - 2026-10-15",
       reportFile,
       totalAmount: 250,
     });
@@ -124,7 +121,6 @@ describe("useReimbursementSubmit — userComment handling", () => {
     const reportFile = new File(["dummy"], "report.pdf", { type: "application/pdf" });
     const success = await submitReimbursement({
       receipts: [receiptWithEvent],
-      cutoffPeriod: "2026-10-01 - 2026-10-15",
       reportFile,
       totalAmount: 250,
     });

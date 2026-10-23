@@ -47,7 +47,6 @@ class AuditLogService
         'description' => 'Description',
         'purpose' => 'Purpose',
         'date' => 'Date',
-        'cutoff_period' => 'Cutoff Period',
         'expected_disbursement_date' => 'Expected Disbursement Date',
         'expected_liquidation_date' => 'Expected Liquidation Date',
         'total_expense_amount' => 'Total Expenses',

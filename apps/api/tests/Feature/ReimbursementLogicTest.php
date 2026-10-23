@@ -76,7 +76,6 @@ class ReimbursementLogicTest extends TestCase
             'category' => 'Meals',
             'amount' => 100.00,
             'date' => '2026-06-10',
-            'cutoff_period' => '2026-06',
             'receipt_ids' => [$receipt->id],
             'report_file' => UploadedFile::fake()->create('report.pdf', 100, 'application/pdf')
         ]);
@@ -147,7 +146,6 @@ class ReimbursementLogicTest extends TestCase
             'category' => 'Meals',
             'amount' => 100.00,
             'date' => Carbon::now(),
-            'cutoff_period' => '2026-06',
             'status' => 'pending',
             'submitted_by_name' => $this->employee->name,
         ]);
@@ -215,7 +213,6 @@ class ReimbursementLogicTest extends TestCase
             'category' => 'Meals',
             'amount' => 100.00,
             'date' => Carbon::now(),
-            'cutoff_period' => '2026-06',
             'status' => 'pending',
             'submitted_by_name' => $this->employee->name,
         ]);
@@ -235,7 +232,6 @@ class ReimbursementLogicTest extends TestCase
                 'category' => 'Meals',
                 'amount' => 100.00,
                 'date' => '2026-06-10',
-                'cutoff_period' => '2026-06',
                 'receipt_ids' => [$receipt->id],
                 'report_file' => UploadedFile::fake()->create('report.pdf', 100, 'application/pdf'),
             ]);
@@ -257,7 +253,6 @@ class ReimbursementLogicTest extends TestCase
             'category' => 'Travel',
             'amount' => 500.00,
             'date' => Carbon::now(),
-            'cutoff_period' => '2026-06',
             'status' => 'pending',
             'submitted_by_name' => $this->admin->name,
         ]);
@@ -289,7 +284,6 @@ class ReimbursementLogicTest extends TestCase
             'category' => 'Supplies',
             'amount' => 50.00,
             'date' => Carbon::now(),
-            'cutoff_period' => '2026-06',
             'status' => 'pending',
             'submitted_by_name' => $this->employee->name,
         ]);
@@ -339,7 +333,6 @@ class ReimbursementLogicTest extends TestCase
             'category' => 'Meals',
             'amount' => 150.00,
             'date' => Carbon::now(),
-            'cutoff_period' => '2026-06',
             'status' => 'pending',
             'submitted_by_name' => $this->employee->name,
         ]);
@@ -409,7 +402,6 @@ class ReimbursementLogicTest extends TestCase
             'category' => 'Meals',
             'amount' => 200.00,
             'date' => Carbon::now(),
-            'cutoff_period' => '2026-06',
             'status' => 'pending',
             'submitted_by_name' => $this->employee->name,
         ]);
@@ -462,7 +454,6 @@ class ReimbursementLogicTest extends TestCase
             'event_type' => 'Client Meeting',
             'amount' => 150.00,
             'date' => '2026-06-15',
-            'cutoff_period' => '2026-06-16',
             'receipt_ids' => [$receipt->id],
             'report_file' => UploadedFile::fake()->create('report.pdf', 100, 'application/pdf')
         ]);
@@ -506,7 +497,6 @@ class ReimbursementLogicTest extends TestCase
             'event_type' => 'Client Meeting',
             'amount' => 80.00,
             'date' => '2026-06-16',
-            'cutoff_period' => '2026-06-16',
             'receipt_ids' => [$receipt->id],
             'report_file' => UploadedFile::fake()->create('report.pdf', 100, 'application/pdf')
         ]);
@@ -541,7 +531,6 @@ class ReimbursementLogicTest extends TestCase
             'expense_category_id' => $category->id,
             'amount' => 50.00,
             'date' => '2026-06-17',
-            'cutoff_period' => '2026-06-16',
             'status' => 'pending',
             'submitted_by_name' => $this->employee->name,
         ]);
@@ -579,7 +568,6 @@ class ReimbursementLogicTest extends TestCase
             'description' => 'Granted Reimbursement',
             'amount' => 1500.00,
             'date' => '2026-10-01',
-            'cutoff_period' => '2026-10-A',
             'status' => 'granted',
             'submitted_by_name' => $this->employee->name,
         ]);
@@ -620,7 +608,6 @@ class ReimbursementLogicTest extends TestCase
             'description' => 'Client Lunch',
             'amount' => 1200.00,
             'date' => '2026-10-01',
-            'cutoff_period' => '2026-10-A',
             'status' => 'pending',
             'submitted_by_name' => $this->employee->name,
         ]);
@@ -650,7 +637,6 @@ class ReimbursementLogicTest extends TestCase
             'description' => 'Conference Travel',
             'amount' => 3500.00,
             'date' => '2026-10-02',
-            'cutoff_period' => '2026-10-A',
             'status' => 'approved',
             'approved_by' => 'Finance Approver',
             'approved_at' => '2026-10-05 12:00:00',
@@ -713,7 +699,6 @@ class ReimbursementLogicTest extends TestCase
             'description' => 'Granted Reimbursement',
             'amount' => 1500.00,
             'date' => '2026-10-01',
-            'cutoff_period' => '2026-10-A',
             'status' => 'granted',
             'submitted_by_name' => $this->employee->name,
         ]);
@@ -789,7 +774,6 @@ class ReimbursementLogicTest extends TestCase
             'description' => 'Locked Granted Claim',
             'amount' => 1500.00,
             'date' => '2026-10-01',
-            'cutoff_period' => '2026-10-A',
             'status' => 'granted',
             'submitted_by_name' => $this->employee->name,
         ]);
@@ -838,7 +822,6 @@ class ReimbursementLogicTest extends TestCase
             'expense_category_id' => $category->id,
             'amount' => 100.00,
             'date' => '2026-10-01',
-            'cutoff_period' => '2026-10-A',
             'receipt_ids' => [$receipt->id],
             'report_file' => UploadedFile::fake()->create('report.pdf', 100, 'application/pdf'),
         ]);
@@ -876,7 +859,6 @@ class ReimbursementLogicTest extends TestCase
             'event_type' => 'Client Meeting',
             'amount' => 100.00,
             'date' => '2026-10-01',
-            'cutoff_period' => '2026-10-A',
             'receipt_ids' => [$receipt->id],
             'receipts' => [
                 [
@@ -909,7 +891,6 @@ class ReimbursementLogicTest extends TestCase
             'event_type' => 'Conference / Seminar',
             'amount' => 100.00,
             'date' => '2026-10-01',
-            'cutoff_period' => '2026-10-A',
             'receipt_ids' => [$receipt->id],
             'receipts' => [
                 [

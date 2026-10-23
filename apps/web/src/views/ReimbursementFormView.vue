@@ -54,7 +54,6 @@ const { addToast } = useToast();
 const router = useRouter();
 
 // State
-const cutoffPeriod = ref("");
 const reportFile = ref(null);
 const userComment = ref("");
 const fetching = ref(false);
@@ -172,7 +171,6 @@ const totalSubtotal = computed(() => totalAmount.value - totalVat.value);
 const canProceed = computed(
   () =>
     receipts.value.length >= 1 &&
-    cutoffPeriod.value &&
     (isEditMode.value || reportFile.value) &&
     receipts.value.every(
       (r) =>
@@ -187,7 +185,7 @@ const canProceed = computed(
 );
 
 const isDirty = computed(() => {
-  return receipts.value.length > 0 || cutoffPeriod.value !== "" || reportFile.value !== null || userComment.value !== "";
+  return receipts.value.length > 0 || reportFile.value !== null || userComment.value !== "";
 });
 
 const isSubmitted = ref(false);
@@ -234,7 +232,6 @@ async function handleSubmit() {
     if (isEditMode.value) {
       success = await updateReimbursement(props.id, {
         receipts: receipts.value,
-        cutoffPeriod: cutoffPeriod.value,
         reportFile: reportFile.value,
         totalAmount: totalAmount.value,
         userComment: userComment.value,
@@ -242,7 +239,6 @@ async function handleSubmit() {
     } else {
       success = await submitReimbursement({
         receipts: receipts.value,
-        cutoffPeriod: cutoffPeriod.value,
         reportFile: reportFile.value,
         totalAmount: totalAmount.value,
         userComment: userComment.value,
@@ -284,7 +280,6 @@ onMounted(async () => {
     fetching.value = true;
     try {
       const data = await reimbursementStore.fetchOne(props.id);
-      cutoffPeriod.value = data.cutoff_period;
       reportFile.value = data.report_file_path;
       userComment.value = data.user_comment || "";
       existingStatus.value = data.status || "";
@@ -521,7 +516,6 @@ function dismiss() {
 
         <!--  CARD 3: Meta & Attachments  -->
         <MetaAndAttachments
-          v-model:cutoff-period="cutoffPeriod"
           v-model:report-file="reportFile"
           v-model:user-comment="userComment"
         />
@@ -529,7 +523,6 @@ function dismiss() {
         <ReimbursementSummaryPanel
           :receipt-count="receipts.length"
           :report-file="reportFile"
-          :cutoff-period="cutoffPeriod"
           :total-amount="totalAmount"
           :currency="summaryCurrency"
         />
