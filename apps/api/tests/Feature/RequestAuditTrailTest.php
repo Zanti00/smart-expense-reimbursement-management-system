@@ -35,7 +35,6 @@ class RequestAuditTrailTest extends TestCase
             'description' => 'Field Client Lunch',
             'amount' => 1200.00,
             'date' => '2026-10-20',
-            'cutoff_period' => '2026-10-B',
             'status' => 'revise',
             'revision_count' => 1,
             'admin_notes' => 'Please attach itemized OR.',
@@ -107,7 +106,6 @@ class RequestAuditTrailTest extends TestCase
             'description' => 'Client Transportation',
             'amount' => 850.00,
             'date' => '2026-10-21',
-            'cutoff_period' => '2026-10-B',
             'status' => 'pending',
             'submitted_by_name' => $employee->name,
         ]);

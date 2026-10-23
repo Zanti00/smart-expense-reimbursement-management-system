@@ -112,7 +112,6 @@ class ReimbursementService
                 'event_type' => $validated['event_type'] ?? null,
                 'amount' => $validated['amount'],
                 'date' => $validated['date'],
-                'cutoff_period' => $validated['cutoff_period'],
                 'report_file_path' => $reportPath,
                 'status' => 'pending',
                 'submitted_by_name' => $user->name,
@@ -642,7 +641,6 @@ class ReimbursementService
                 'event_type' => $data['event_type'] ?? null,
                 'amount' => $data['amount'] ?? null,
                 'date' => $data['date'] ?? null,
-                'cutoff_period' => $data['cutoff_period'] ?? null,
                 'report_file_path' => $reportPath,
             ], fn($v) => $v !== null);
 

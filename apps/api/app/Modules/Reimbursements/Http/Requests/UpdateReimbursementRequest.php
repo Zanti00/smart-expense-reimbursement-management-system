@@ -35,7 +35,6 @@ class UpdateReimbursementRequest extends FormRequest
             'event_type' => 'nullable|string|max:100',
             'amount' => 'sometimes|numeric|min:0.01',
             'date' => 'sometimes|date',
-            'cutoff_period' => 'sometimes|string|max:50',
             'report_file' => 'sometimes|file|mimes:pdf,doc,docx,xlsx,jpeg,png,jpg|max:5120',
             'receipt_ids' => 'sometimes|array',
             'receipt_ids.*' => 'integer|exists:receipts,id',

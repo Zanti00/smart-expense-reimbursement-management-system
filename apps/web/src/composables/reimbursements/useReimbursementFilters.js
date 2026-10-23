@@ -1,5 +1,4 @@
 import { ref, computed, watch } from "vue";
-import { formatCutoffPeriod } from "@/utils/formatters";
 
 export function normalizeStatus(status) {
   const normalized = String(status || "").toLowerCase();
@@ -25,20 +24,6 @@ export function statusLabel(status) {
     revise: "Needs Revision",
   };
   return labels[normalizeStatus(status)] || "Pending";
-}
-
-function getCutoffPeriod(itemOrDate) {
-  if (!itemOrDate) return "--";
-  const val =
-    typeof itemOrDate === "object"
-      ? itemOrDate.cutoff_period ||
-        itemOrDate.cutoffPeriod ||
-        itemOrDate.date ||
-        itemOrDate.created_at ||
-        itemOrDate.submitted_at
-      : itemOrDate;
-  const res = formatCutoffPeriod(val);
-  return res === "—" ? "--" : res;
 }
 
 function getSortValue(row, key) {
@@ -81,7 +66,6 @@ export function useReimbursementFilters(store) {
         null,
       originalStatus: item.status,
       reportDescription: item.description,
-      cutoffPeriod: getCutoffPeriod(item),
       receiptQuantity: Array.isArray(item.receipts)
         ? item.receipts.length
         : Number(item.receipts) || 0,
@@ -114,7 +98,6 @@ export function useReimbursementFilters(store) {
         [
           row.id,
           row.reportDescription,
-          row.cutoffPeriod,
           row.category,
           row.submittedBy,
           row.amount,

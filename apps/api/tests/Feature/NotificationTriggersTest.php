@@ -71,7 +71,6 @@ class NotificationTriggersTest extends TestCase
             'expense_category_id' => $this->category->id,
             'amount' => 4500.10,
             'date' => '2026-10-20',
-            'cutoff_period' => 'Oct 16 - Oct 31, 2026',
             'receipt_ids' => [$receipt->id],
         ], null);
 

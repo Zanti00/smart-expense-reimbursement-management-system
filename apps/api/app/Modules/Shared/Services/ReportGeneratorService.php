@@ -28,28 +28,6 @@ class ReportGeneratorService
         }
     }
 
-    public function formatCutoffPeriod(?string $period): string
-    {
-        if (empty($period)) {
-            return '--';
-        }
-        if (preg_match('/^(\d{4})-(\d{1,2})(?:-([AB12]))?$/i', trim($period), $m)) {
-            $year = (int) $m[1];
-            $month = (int) $m[2];
-            $half = isset($m[3]) ? strtoupper($m[3]) : null;
-            $monthName = Carbon::createFromDate($year, $month, 1)->format('M');
-            if ($half === 'A' || $half === '1') {
-                return "{$monthName} 1 - 15, {$year}";
-            }
-            if ($half === 'B' || $half === '2') {
-                $lastDay = Carbon::createFromDate($year, $month, 1)->endOfMonth()->day;
-                return "{$monthName} 16 - {$lastDay}, {$year}";
-            }
-            return "{$monthName} {$year}";
-        }
-        return $period;
-    }
-
     /**
      * Build a Reimbursement single-record PDF report (G2-054, G2-055, G2-058).
      */
@@ -74,7 +52,6 @@ class ReportGeneratorService
                 'Submitted By' => $submittedBy,
                 'Status' => ucfirst($status),
                 'Total Amount' => $this->formatPeso($reimbursement->amount),
-                'Cutoff Period' => $this->formatCutoffPeriod($reimbursement->cutoff_period ?: (string) $reimbursement->date),
                 'Date Requested' => $this->formatMediumDate($reimbursement->date ?? $reimbursement->created_at),
                 'User Comment' => $reimbursement->user_comment ?: 'No comment provided',
             ],

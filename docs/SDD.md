@@ -342,7 +342,7 @@ The Vue SPA manages the following reactive state through Pinia stores:
 | `receipts.js` | Receipt list, OCR polling state, upload flow |
 | `reimbursement.js` | Reimbursement list, approval workflow state |
 | `liquidation.js` | Liquidation reports and status |
-| `policy.js` | Admin-managed rules (approval thresholds, penalty rules, cutoff periods) |
+| `policy.js` | Admin-managed rules (approval thresholds, penalty rules) |
 | `notification.js` | In-app notification panel state |
 
 ---

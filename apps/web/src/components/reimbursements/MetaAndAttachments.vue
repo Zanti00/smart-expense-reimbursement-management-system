@@ -2,13 +2,8 @@
 import { ref } from "vue";
 import { FileText, UploadCloud, X } from "lucide-vue-next";
 import { useToast } from "@/composables/useToast";
-import CutoffPeriodDatePicker from "./CutoffPeriodDatePicker.vue";
 
 const props = defineProps({
-  cutoffPeriod: {
-    type: String,
-    required: true,
-  },
   reportFile: {
     type: [File, String, Object],
     default: null,
@@ -20,7 +15,6 @@ const props = defineProps({
 });
 
 const emit = defineEmits([
-  "update:cutoffPeriod",
   "update:reportFile",
   "update:userComment",
 ]);
@@ -79,26 +73,8 @@ function removeReportFile() {
 
 <template>
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
-    <!-- Cutoff Period -->
-    <section class="card p-6 flex flex-col gap-4 relative z-30">
-      <div>
-        <h3
-          class="text-base font-bold text-primary mb-1"
-        >
-          Cutoff Period <span class="text-danger">*</span>
-        </h3>
-        <CutoffPeriodDatePicker
-          :model-value="cutoffPeriod"
-          @update:model-value="$emit('update:cutoffPeriod', $event)"
-        />
-        <p class="text-[11px] text-slate-400 mt-2">
-          You can submit one reimbursement per cutoff period. Select the 1st (1st–15th) or 16th (16th–end) of current or future months.
-        </p>
-      </div>
-    </section>
-
     <!-- Report Attachment -->
-    <section class="card p-6 flex flex-col gap-4 relative z-20">
+    <section class="card p-6 flex flex-col gap-4 relative z-20 md:col-span-2">
       <h3
         class="text-base font-bold text-primary"
       >

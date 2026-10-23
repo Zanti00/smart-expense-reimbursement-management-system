@@ -91,7 +91,6 @@ class ReportExportTest extends TestCase
             'user_comment' => 'Urgent reagent transport supplies',
             'amount' => 1250.50,
             'date' => '2026-10-10',
-            'cutoff_period' => '2026-10-A',
             'status' => 'granted',
             'submitted_by_name' => $this->employee->name,
             'approved_by' => 'Finance Admin',
@@ -282,7 +281,6 @@ class ReportExportTest extends TestCase
             'description' => 'Private Claim',
             'amount' => 900.00,
             'date' => '2026-10-10',
-            'cutoff_period' => '2026-10-A',
             'status' => 'pending',
             'submitted_by_name' => $this->employee->name,
         ]);

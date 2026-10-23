@@ -45,7 +45,6 @@ class PrsReimbursementRequestController extends Controller
             'reimbursement.category' => ['nullable', 'string', 'max:100'],
             'reimbursement.amount' => ['required', 'numeric', 'min:0.01'],
             'reimbursement.date' => ['required', 'date'],
-            'reimbursement.cutoff_period' => ['required', 'string', 'max:255'],
         ]);
 
         if ($validator->fails()) {
@@ -116,7 +115,6 @@ class PrsReimbursementRequestController extends Controller
                 'expense_category_id' => $expenseCategoryId,
                 'amount' => $claimData['amount'],
                 'date' => $claimData['date'],
-                'cutoff_period' => $claimData['cutoff_period'],
                 'report_file_path' => null,
                 'status' => 'submitted',
                 'submitted_by_name' => $user->name,

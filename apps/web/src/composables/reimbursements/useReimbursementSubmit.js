@@ -9,9 +9,9 @@ export function useReimbursementSubmit(emit, router) {
   
   const submitting = ref(false);
 
-  async function submitReimbursement({ receipts, cutoffPeriod, reportFile, totalAmount, userComment }) {
+  async function submitReimbursement({ receipts, reportFile, totalAmount, userComment }) {
     if (submitting.value) return false;
-    if (!receipts.length || !cutoffPeriod || !reportFile || receipts.some(r => r.isUploading)) {
+    if (!receipts.length || !reportFile || receipts.some(r => r.isUploading)) {
       return false;
     }
     if (receipts.some((r) => !r.categoryId)) {
@@ -93,7 +93,6 @@ export function useReimbursementSubmit(emit, router) {
         "date",
         receipts[0]?.date || new Date().toISOString().slice(0, 10),
       );
-      formData.append("cutoff_period", cutoffPeriod);
 
       if (reportFile) {
         formData.append("report_file", reportFile);
@@ -160,9 +159,9 @@ export function useReimbursementSubmit(emit, router) {
     }
   }
 
-  async function updateReimbursement(id, { receipts, cutoffPeriod, reportFile, totalAmount, userComment }) {
+  async function updateReimbursement(id, { receipts, reportFile, totalAmount, userComment }) {
     if (submitting.value) return false;
-    if (!receipts.length || !cutoffPeriod || receipts.some(r => r.isUploading)) {
+    if (!receipts.length || receipts.some(r => r.isUploading)) {
       return false;
     }
 
@@ -225,7 +224,6 @@ export function useReimbursementSubmit(emit, router) {
         "date",
         receipts[0]?.date || new Date().toISOString().slice(0, 10),
       );
-      formData.append("cutoff_period", cutoffPeriod);
 
       if (reportFile && reportFile instanceof File) {
         formData.append("report_file", reportFile);
